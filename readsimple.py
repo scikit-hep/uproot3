@@ -46,7 +46,8 @@ class TFile(object):
 
         index = 0
 
-        assert field(self.file, index, "!4s") == "root", "magic"
+        if field(self.file, index, "!4s") != "root":
+            raise IOError("not a ROOT file (wrong magic bytes)")
         index = step(index, "!4s")
 
         self.version, self.begin = fields(self.file, index, "!ii")
@@ -71,7 +72,8 @@ class TFile(object):
 
         nbytes = self.nbytesname + recordSize
 
-        assert nbytes + self.begin <= self.end, "dir header length"
+        if nbytes + self.begin > self.end:
+            raise IOError("TDirectory header length")
 
         self.dir = TDirectory(self.file, self.begin, self.nbytesname)
 
@@ -112,7 +114,8 @@ class TDirectory(object):
         self.title = string(self.file, index)
         index = stepstring(self.file, index)
 
-        assert 10 <= self.nbytesname <= 1000, "directory info"
+        if not 10 <= self.nbytesname <= 1000:
+            raise IOError("directory info")
 
         self.keys = TKeys(self.file, self.seekkeys)
 
@@ -193,7 +196,8 @@ def readversion(file, index):
     bcnt, vers = fields(file, index, "!IH")
     index = step(index, "!IH")
     bcnt = int(numpy.int64(bcnt) & ~readversion.kByteCountMask)
-    assert bcnt != 0, "too old file"
+    if bcnt == 0:
+        raise IOError("readversion byte count is zero")
     return index, (vers, bcnt)
 readversion.kByteCountMask = numpy.int64(0x40000000)
 
@@ -210,7 +214,7 @@ def skiptobject(file, index):
     index = step(index, "!II")
     bits = numpy.uint32(bits) | skiptobject.kIsOnHeap
     if bits & skiptobject.kIsReferenced:
-        index = step(index, "H")
+        index = step(index, "!H")
     return index
 skiptobject.kIsOnHeap = numpy.uint32(0x01000000)
 skiptobject.kIsReferenced = numpy.uint32(1 << 4)
@@ -219,11 +223,15 @@ class TTree(object):
     def __init__(self, file, index):
         self.file = file
 
-        index, (vers, bcnt) = readversion(self.file, index)
-        print "TTree vers, bcnt", vers, bcnt
+        ttree_start = index
+        index, (ttree_vers, ttree_bcnt) = readversion(self.file, index)
 
-        index, (vers, bcnt) = readversion(self.file, index)
-        print "TNamed vers, bcnt", vers, bcnt
+        if ttree_vers < 16:
+            raise NotImplementedError("TTree too old")
+
+        # START TNamed
+        tnamed_start = index
+        index, (tnamed_vers, tnamed_bcnt) = readversion(self.file, index)
 
         index = skipversion(self.file, index)
         index = skiptobject(self.file, index)
@@ -233,9 +241,37 @@ class TTree(object):
         self.title = repr(string(self.file, index))
         index = stepstring(self.file, index)
 
+        if index - tnamed_start != tnamed_bcnt + 4:
+            raise IOError("TNamed byte count")
+        # END TNamed
+
+        # START TAttLine
+        tattline_start = index
+        index, (tattline_vers, tattline_bcnt) = readversion(self.file, index)
+        index = step(index, "!hhh")  # color, style, width
+        if index - tattline_start != tattline_bcnt + 4:
+            raise IOError("TAttLine byte count")
+        # END TAttLine
+
+        # START TAttFill
+        tattfill_start = index
+        index, (tattfill_vers, tattfill_bcnt) = readversion(self.file, index)
+        index = step(index, "!hh")  # color, style
+        if index - tattfill_start != tattfill_bcnt + 4:
+            raise IOError("TAttFill byte count")
+        # END TAttFill
+
+        # START TAttMarker
+        tattmarker_start = index
+        index, (tattmarker_vers, tattmarker_bcnt) = readversion(self.file, index)
+        index = step(index, "!hhf")  # color, style, width
+        if index - tattmarker_start != tattmarker_bcnt + 4:
+            raise IOError("TAttMarker byte count")
+        # END TAttMarker
 
 
-        
+
+
 TKey.classes["TTree"] = TTree
 
 file = TFile("/home/pivarski/storage/data/TrackResonanceNtuple_uncompressed.root")
