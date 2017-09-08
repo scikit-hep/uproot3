@@ -264,7 +264,6 @@ class Deserialized(object):
     @staticmethod
     def deserialize(walker):
         beg = walker.index
-
         bcnt = walker.readfield("!I")
 
         if numpy.int64(bcnt) & Walker.kByteCountMask == 0 or numpy.int64(bcnt) == Walker.kNewClassTag:
@@ -282,9 +281,6 @@ class Deserialized(object):
 
         elif tag == Walker.kNewClassTag:
             cname = walker.readcstring()
-
-            print "cname", cname
-
             if cname not in Deserialized.classes:
                 raise NotImplementedError("class not recognized: {0}".format(cname))
 
@@ -294,6 +290,8 @@ class Deserialized(object):
                 walker.refs[start + Walker.kMapOffset] = fct
             else:
                 walker.refs[len(walker.refs) + 1] = fct
+
+            print "ReadObjectAny justbefore", walker.index
 
             obj = fct(walker)
 
@@ -307,7 +305,7 @@ class Deserialized(object):
         else:
             raise NotImplementedError("FIXME")
 
-class TObjArray(object):
+class TObjArray(Deserialized):
     def __init__(self, walker):
         start = walker.index
         vers, bcnt = walker.readversion()
@@ -336,77 +334,82 @@ class TObjArray(object):
 
 Deserialized.classes["TObjArray"] = TObjArray
 
-class TTree(object):
+class TNamed(Deserialized):
     def __init__(self, walker):
-        ttree_start = walker.index
-        ttree_vers, ttree_bcnt = walker.readversion()
-
-        # START TNamed
-        tnamed_start = walker.index
-        tnamed_vers, tnamed_bcnt = walker.readversion()
+        start = walker.index
+        vers, bcnt = walker.readversion()
         walker.skipversion()
         walker.skiptobject()
 
         self.name = walker.readstring()
         self.title = walker.readstring()
 
-        if walker.index - tnamed_start != tnamed_bcnt + 4:
+        if walker.index - start != bcnt + 4:
             raise IOError("TNamed byte count")
-        # END TNamed
 
-        # START TAttLine
-        tattline_start = walker.index
-        tattline_vers, tattline_bcnt = walker.readversion()
+class TAttLine(Deserialized):
+    def __init__(self, walker):
+        start = walker.index
+        vers, bcnt = walker.readversion()
         walker.skip("!hhh")  # color, style, width
-        if walker.index - tattline_start != tattline_bcnt + 4:
+        if walker.index - start != bcnt + 4:
             raise IOError("TAttLine byte count")
-        # END TAttLine
 
-        # START TAttFill
-        tattfill_start = walker.index
-        tattfill_vers, tattfill_bcnt = walker.readversion()
+class TAttFill(Deserialized):
+    def __init__(self, walker):
+        start = walker.index
+        vers, bcnt = walker.readversion()
         walker.skip("!hh")  # color, style
-        if walker.index - tattfill_start != tattfill_bcnt + 4:
+        if walker.index - start != bcnt + 4:
             raise IOError("TAttFill byte count")
-        # END TAttFill
 
-        # START TAttMarker
-        tattmarker_start = walker.index
-        tattmarker_vers, tattmarker_bcnt = walker.readversion()
+class TAttMarker(Deserialized):
+    def __init__(self, walker):
+        start = walker.index
+        vers, bcnt = walker.readversion()
         walker.skip("!hhf")  # color, style, width
-        if walker.index - tattmarker_start != tattmarker_bcnt + 4:
+        if walker.index - start != bcnt + 4:
             raise IOError("TAttMarker byte count")
-        # END TAttMarker
+
+class TTree(TNamed, TAttLine, TAttFill, TAttMarker):
+    def __init__(self, walker):
+        start = walker.index
+        vers, bcnt = walker.readversion()
+
+        TNamed.__init__(self, walker)
+        TAttLine.__init__(self, walker)
+        TAttFill.__init__(self, walker)
+        TAttMarker.__init__(self, walker)
 
         self.entries, self.totbytes, self.zipbytes = walker.readfields("!qqq")
         print "entries, tot, zip", self.entries, self.totbytes, self.zipbytes
 
-        if ttree_vers < 16:
+        if vers < 16:
             raise NotImplementedError("TTree too old")
 
-        if ttree_vers >= 19:
+        if vers >= 19:
             walker.skip("!q")  # fSavedBytes
 
-        if ttree_vers >= 18:
+        if vers >= 18:
             walker.skip("!q")  # flushed bytes
 
         walker.skip("!diii")   # fWeight, fTimerInterval, fScanField, fUpdate
 
-        if ttree_vers >= 18:
+        if vers >= 18:
             walker.skip("!i")  # fDefaultEntryOffsetLen
 
         nclus = 0
-        if ttree_vers >= 19:
+        if vers >= 19:
             nclus = walker.readfield("!i")  # fNClusterRange
 
         walker.skip("!qqqq")   # fMaxEntries, fMaxEntryLoop, fMaxVirtualSize, fAutoSave
 
-        if ttree_vers >= 18:
+        if vers >= 18:
             walker.skip("!q")  # fAutoFlush
 
         walker.skip("!q")      # fEstimate
 
-        if ttree_vers >= 19:  # "FIXME" in go-hep
+        if vers >= 19:  # "FIXME" in go-hep
             walker.skip("!b{0}qb{0}b".format(nclus))  # ?, fClusterRangeEnd, ?, fClusterSize
 
         tmp = TObjArray(walker)
@@ -414,18 +417,39 @@ class TTree(object):
 
 Deserialized.classes["TTree"] = TTree
 
-class TBranch(object):
+class TBranch(TNamed, TAttFill):
     def __init__(self, walker):
         beg = walker.index
-
         vers, bcnt = walker.readversion()
 
-        print "TBranch", vers, bcnt
+        if vers < 12:
+            raise NotImplementedError("TBranch version too old")
+
+        TNamed.__init__(self, walker)
+        TAttFill.__init__(self, walker)
+
+	self.compress, self.basketSize, self.entryOffsetLen, self.writeBasket, self.entryNumber, self.offset, self.maxBaskets, self.splitLevel, self.entries, self.firstEntry, self.totBytes, self.zipBytes = walker.readfields("!iiiiqiiiqqqq")
+
+        self.branches = TObjArray(walker)
+        self.leaves = TObjArray(walker)
 
 
+        # HERE (baskets)
 
 Deserialized.classes["TBranch"] = TBranch
 
+class TLeaf(TNamed):
+    def __init__(self, walker):
+        walker.readversion()
+
+        start = walker.index
+        vers, bcnt = walker.readversion()
+
+        print "TLeaf", vers, bcnt, "start", start
+
+
+
+Deserialized.classes["TLeafF"] = TLeaf
 
 
 file = TFile("/home/pivarski/storage/data/TrackResonanceNtuple_uncompressed.root")
