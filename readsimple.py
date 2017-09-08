@@ -12,6 +12,7 @@ class Walker(object):
     def __init__(self, data, index=0):
         self.data = data
         self.index = index
+        self.refs = {}
 
     def copy(self, index=None, skip=None):
         if index is None:
@@ -19,6 +20,7 @@ class Walker(object):
         out = Walker(self.data, index)
         if skip is not None:
             out.skip(skip)
+        out.refs = self.refs    # refs are shared among all Walkers that operate on a given file
         return out
 
     def skip(self, format):
@@ -90,10 +92,29 @@ class Walker(object):
     def readstring(self, index=None, length=None):
         return self.string(index, length, True)
 
+    def cstring(self, index=None, read=False):
+        if index is None:
+            index = self.index
+        start = index
+        end = index
+        while self.data[end] != 0:
+            end += 1
+        if read:
+            self.index = end + 1
+        return self.data[start:end].tostring()
+
+    def readcstring(self, index=None):
+        return self.cstring(index, True)
+
     kByteCountMask  = numpy.int64(0x40000000)
     kByteCountVMask = numpy.int64(0x4000)
+    kClassMask      = numpy.int64(0x80000000)
+    kNewClassTag    = numpy.int64(0xFFFFFFFF)
+
     kIsOnHeap       = numpy.uint32(0x01000000)
     kIsReferenced   = numpy.uint32(1 << 4)
+
+    kMapOffset      = 2
 
     def readversion(self):
         bcnt, vers = self.readfields("!IH")
@@ -102,74 +123,16 @@ class Walker(object):
             raise IOError("readversion byte count is zero")
         return vers, bcnt
 
-    # def readversion(file, index):
-    #     bcnt, vers = fields(file, index, "!IH")
-    #     index = step(index, "!IH")
-    #     bcnt = int(numpy.int64(bcnt) & ~self.kByteCountMask)
-    #     if bcnt == 0:
-    #         raise IOError("readversion byte count is zero")
-    #     return index, (vers, bcnt)
-
     def skipversion(self):
         version = self.readfield("!h")
         if numpy.int64(version) & self.kByteCountVMask:
             self.skip("!hh")
-        
-    # def skipversion(file, index):
-    #     version = field(file, index, "!h")
-    #     index = step(index, "!h")
-    #     if numpy.int64(version) & self.kByteCountVMask:
-    #         index = step(index, "!hh")
-    #     return index
 
     def skiptobject(self):
         id, bits = self.readfields("!II")
         bits = numpy.uint32(bits) | self.kIsOnHeap
         if bits & self.kIsReferenced:
             self.skip("!H")
-
-    # def skiptobject(file, index):
-    #     id, bits = fields(file, index, "!II")
-    #     index = step(index, "!II")
-    #     bits = numpy.uint32(bits) | self.kIsOnHeap
-    #     if bits & skiptobject.kIsReferenced:
-    #         index = step(index, "!H")
-    #     return index
-
-# def step(index, format):
-#     return index + struct.calcsize(format)
-
-# def stepstring(file, index, length=None):
-#     if length is None:
-#         length = file[index]
-#         index += 1
-#         if length == 255:
-#             length = file[index : index + 4].view(numpy.uint32)
-#             index += 4
-#     return index + length
-
-# def string(file, index, length=None):
-#     if length is None:
-#         length = file[index]
-#         index += 1
-#         if length == 255:
-#             length = file[index : index + 4].view(numpy.uint32)
-#             index += 4
-#     return file[index : index + length].tostring()
-
-# def field(file, index, format):
-#     return struct.unpack(format, file[index : index + struct.calcsize(format)])[0]
-
-# def fields(file, index, format):
-#     return struct.unpack(format, file[index : index + struct.calcsize(format)])
-
-# def databytes(file, index, dtype, bytes):
-#     return file[index : index + bytes].view(dtype)
-
-# def dataitems(file, index, dtype, items):
-#     if not isinstance(dtype, numpy.dtype):
-#         dtype = numpy.dtype(dtype)
-#     return file[index : index + dtype.itemsize * items].view(dtype)
 
 class TFile(object):
     def __init__(self, filepath):
@@ -201,37 +164,6 @@ class TFile(object):
             raise IOError("TDirectory header length")
 
         self.dir = TDirectory(walker.copy(index=begin), walker.copy(index=begin + nbytesname))
-
-        # if field(self.file, index, "!4s") != "root":
-        #     raise IOError("not a ROOT file (wrong magic bytes)")
-        # index = step(index, "!4s")
-
-        # self.version, self.begin = fields(self.file, index, "!ii")
-        # index = step(index, "!ii")
-
-        # if self.version < 1000000:  # small file
-        #     self.end, self.seekfree, self.nbytesfree, self.nfree, self.nbytesname, self.units, self.compression, self.seekinfo, self.nbytesinfo = fields(self.file, index, "!iiiiiBiii")
-        #     index = step(index, "!iiiiiBiii")
-        # else:
-        #     self.end, self.seekfree, self.nbytesfree, self.nfree, self.nbytesname, self.units, self.compression, self.seekinfo, self.nbytesinfo = fields(self.file, index, "!qqiiiBiqi")
-        #     index = step(index, "!qqiiiBiqi")
-        # self.version %= 1000000
-
-        # self.uuid = field(self.file, index, "!18s")
-        # index = step(index, "!18s")
-
-        # recordSize = 2 + 4 + 4 + 4 + 4   # fVersion, ctime, mtime, nbyteskeys, nbytesname
-        # if self.version >= 40000:
-        #     recordSize += 8 + 8 + 8      # seekdir, seekparent, seekkeys
-        # else:
-        #     recordSize += 4 + 4 + 4      # seekdir, seekparent, seekkeys
-
-        # nbytes = self.nbytesname + recordSize
-
-        # if nbytes + self.begin > self.end:
-        #     raise IOError("TDirectory header length")
-
-        # self.dir = TDirectory(self.file, self.begin, self.nbytesname)
 
     def __repr__(self):
         return "<TFile {0} at 0x{1:012x}>".format(repr(self.filepath), id(self))
@@ -266,42 +198,6 @@ class TDirectory(object):
 
         self.keys = TKeys(walker.copy(index=seekkeys))
 
-
-
-
-        # index = begin + nbytesname
-
-        # self.version, self.ctime, self.mtime = fields(self.file, index, "!hII")
-        # index = step(index, "!hII")
-
-        # self.nbyteskeys, self.nbytesname = fields(self.file, index, "!ii")
-        # index = step(index, "!ii")
-
-        # if self.version <= 1000:
-        #     self.seekdir, self.seekparent, self.seekkeys = fields(self.file, index, "!iii")
-        # else:
-        #     self.seekdir, self.seekparent, self.seekkeys = fields(self.file, index, "!qqq")
-
-        # nk = 4
-        # keyversion = field(self.file, begin + nk, "!h")
-        # if keyversion > 1000:
-        #     nk += 2 + 2*4 + 2*2 + 2*8  # fVersion, fObjectSize*Date, fKeyLength*fCycle, fSeekKey*fSeekParentDirectory
-        # else:
-        #     nk += 2 + 2*4 + 2*2 + 2*4  # fVersion, fObjectSize*Date, fKeyLength*fCycle, fSeekKey*fSeekParentDirectory
-
-        # index = begin + nk
-        # self.classname = string(self.file, index)
-        # index = stepstring(self.file, index)
-        # self.name = string(self.file, index)
-        # index = stepstring(self.file, index)
-        # self.title = string(self.file, index)
-        # index = stepstring(self.file, index)
-
-        # if not 10 <= self.nbytesname <= 1000:
-        #     raise IOError("directory info")
-
-        # self.keys = TKeys(self.file, self.seekkeys)
-
     def __repr__(self):
         return "<TDirectory {0} at 0x{1:012x}>".format(repr(self.name), id(self))
 
@@ -312,28 +208,10 @@ class TDirectory(object):
 class TKeys(object):
     def __init__(self, walker):
         walkerkeys = walker.copy()
-
         self.header = TKey(walker)
-
         walkerkeys.skip(self.header.keylen)
-
         nkeys = walkerkeys.readfield("!i")
-
-        print "nkeys", nkeys
-
         self.keys = [TKey(walkerkeys) for i in range(nkeys)]
-
-        # self.file = file
-        # self.header = TKey(self.file, index)
-
-        # index += self.header.keylen
-        # nkeys = field(self.file, index, "!i")
-        # index = step(index, "!i")
-
-        # self.keys = []
-        # for i in range(nkeys):
-        #     self.keys.append(TKey(self.file, index))
-        #     index = self.keys[-1]._index
 
     def __repr__(self):
         return "<TKeys len={0} at 0x{1:012x}>".format(len(self.keys), id(self))
@@ -348,8 +226,6 @@ class TKeys(object):
         raise KeyError("not found: {0}".format(repr(name)))
 
 class TKey(object):
-    classes = {}
-
     def __init__(self, walker):
         self.bytes, version, self.objlen, datetime, self.keylen, cycle = walker.readfields("!ihiIhh")
 
@@ -361,29 +237,7 @@ class TKey(object):
         self.classname = walker.readstring()
         self.name = walker.readstring()
         self.title = walker.readstring()
-
-        print "KEY", self.classname, self.name, self.title
-
         self.walker = walker.copy(index=self.seekkey + self.keylen)
-
-        # self.file = file
-
-        # self.bytes, self.version, self.objlen, self.datetime, self.keylen, self.cycle = fields(self.file, index, "!ihiIhh")
-        # index = step(index, "!ihiIhh")
-
-        # if self.version > 1000:
-        #     self.seekkey, self.seekpdir = fields(self.file, index, "!qq")
-        #     index = step(index, "!qq")
-        # else:
-        #     self.seekkey, self.seekpdir = fields(self.file, index, "!ii")
-        #     index = step(index, "!ii")
-
-        # self.classname = string(self.file, index)
-        # index = stepstring(self.file, index)
-        # self.name = string(self.file, index)
-        # index = stepstring(self.file, index)
-        # self.title = string(self.file, index)
-        # self._index = stepstring(self.file, index)
 
     def __repr__(self):
         return "<TKey {0} at 0x{1:012x}>".format(repr(self.name), id(self))
@@ -393,13 +247,94 @@ class TKey(object):
         return self.objlen != self.bytes - self.keylen
 
     def get(self):
-        if self.classname not in self.classes:
+        if self.classname not in Deserialized.classes:
             raise NotImplementedError("class not recognized: {0}".format(self.classname))
 
         if self.isCompressed:
             raise NotImplementedError
 
-        return self.classes[self.classname](self.walker)
+        return Deserialized.classes[self.classname](self.walker)
+
+class Deserialized(object):
+    classes = {}
+
+    def __init__(self, *args, **kwds):
+        raise TypeError("Deserialized is an abstract class")
+
+    @staticmethod
+    def deserialize(walker):
+        beg = walker.index
+
+        bcnt = walker.readfield("!I")
+
+        if numpy.int64(bcnt) & Walker.kByteCountMask == 0 or numpy.int64(bcnt) == Walker.kNewClassTag:
+            vers = 0
+            start = 0
+            tag = bcnt
+            bcnt = 0
+        else:
+            vers = 1
+            start = walker.index
+            tag = walker.readfield("!I")
+
+        if numpy.int64(tag) & Walker.kClassMask == 0:
+            raise NotImplementedError("FIXME")
+
+        elif tag == Walker.kNewClassTag:
+            cname = walker.readcstring()
+
+            print "cname", cname
+
+            if cname not in Deserialized.classes:
+                raise NotImplementedError("class not recognized: {0}".format(cname))
+
+            fct = Deserialized.classes[cname]
+
+            if vers > 0:
+                walker.refs[start + Walker.kMapOffset] = fct
+            else:
+                walker.refs[len(walker.refs) + 1] = fct
+
+            obj = fct(walker)
+
+            if vers > 0:
+                walker.refs[beg + Walker.kMapOffset] = obj
+            else:
+                walker.refs[len(walker.refs) + 1] = obj
+
+            return obj
+
+        else:
+            raise NotImplementedError("FIXME")
+
+class TObjArray(object):
+    def __init__(self, walker):
+        start = walker.index
+        vers, bcnt = walker.readversion()
+
+        if vers >= 3:
+            # TObject
+            walker.skipversion()
+            walker.skiptobject()
+
+        if vers >= 2:
+            # not a TObject
+            self.name = walker.readstring()
+
+        nobjs, low = walker.readfields("!ii")
+
+        self.items = [Deserialized.deserialize(walker) for i in range(nobjs)]
+
+        if walker.index - start != bcnt + 4:
+            raise IOError("TObjArray byte count")
+
+    def __repr__(self):
+        return "<TObjArray len={0} at 0x{1:012x}>".format(len(self.items), id(self))
+
+    def __getitem__(self, i):
+        return self.items[i]
+
+Deserialized.classes["TObjArray"] = TObjArray
 
 class TTree(object):
     def __init__(self, walker):
@@ -444,91 +379,54 @@ class TTree(object):
         # END TAttMarker
 
         self.entries, self.totbytes, self.zipbytes = walker.readfields("!qqq")
-        print self.entries, self.totbytes, self.zipbytes
+        print "entries, tot, zip", self.entries, self.totbytes, self.zipbytes
 
-        # self.file = file
+        if ttree_vers < 16:
+            raise NotImplementedError("TTree too old")
 
-        # ttree_start = index
-        # index, (ttree_vers, ttree_bcnt) = readversion(self.file, index)
+        if ttree_vers >= 19:
+            walker.skip("!q")  # fSavedBytes
 
-        # # START TNamed
-        # tnamed_start = index
-        # index, (tnamed_vers, tnamed_bcnt) = readversion(self.file, index)
+        if ttree_vers >= 18:
+            walker.skip("!q")  # flushed bytes
 
-        # index = skipversion(self.file, index)
-        # index = skiptobject(self.file, index)
+        walker.skip("!diii")   # fWeight, fTimerInterval, fScanField, fUpdate
 
-        # self.name = string(self.file, index)
-        # index = stepstring(self.file, index)
-        # self.title = string(self.file, index)
-        # index = stepstring(self.file, index)
+        if ttree_vers >= 18:
+            walker.skip("!i")  # fDefaultEntryOffsetLen
 
-        # if index - tnamed_start != tnamed_bcnt + 4:
-        #     raise IOError("TNamed byte count")
-        # # END TNamed
+        nclus = 0
+        if ttree_vers >= 19:
+            nclus = walker.readfield("!i")  # fNClusterRange
 
-        # # START TAttLine
-        # tattline_start = index
-        # index, (tattline_vers, tattline_bcnt) = readversion(self.file, index)
-        # index = step(index, "!hhh")  # color, style, width
-        # if index - tattline_start != tattline_bcnt + 4:
-        #     raise IOError("TAttLine byte count")
-        # # END TAttLine
+        walker.skip("!qqqq")   # fMaxEntries, fMaxEntryLoop, fMaxVirtualSize, fAutoSave
 
-        # # START TAttFill
-        # tattfill_start = index
-        # index, (tattfill_vers, tattfill_bcnt) = readversion(self.file, index)
-        # index = step(index, "!hh")  # color, style
-        # if index - tattfill_start != tattfill_bcnt + 4:
-        #     raise IOError("TAttFill byte count")
-        # # END TAttFill
+        if ttree_vers >= 18:
+            walker.skip("!q")  # fAutoFlush
 
-        # # START TAttMarker
-        # tattmarker_start = index
-        # index, (tattmarker_vers, tattmarker_bcnt) = readversion(self.file, index)
-        # index = step(index, "!hhf")  # color, style, width
-        # if index - tattmarker_start != tattmarker_bcnt + 4:
-        #     raise IOError("TAttMarker byte count")
-        # # END TAttMarker
+        walker.skip("!q")      # fEstimate
 
-        # self.entries, self.totbytes, self.zipbytes = fields(self.file, index, "!qqq")
-        # index = step(index, "!qqq")
+        if ttree_vers >= 19:  # "FIXME" in go-hep
+            walker.skip("!b{0}qb{0}b".format(nclus))  # ?, fClusterRangeEnd, ?, fClusterSize
 
-        # if ttree_vers < 16:
-        #     raise NotImplementedError("TTree too old")
+        tmp = TObjArray(walker)
+        # HERE
 
-        # if ttree_vers >= 19:
-        #     index = step(index, "!q")  # fSavedBytes
+Deserialized.classes["TTree"] = TTree
 
-        # if ttree_vers >= 18:
-        #     index = step(index, "!q")  # flushed bytes
+class TBranch(object):
+    def __init__(self, walker):
+        beg = walker.index
 
-        # index = step(index, "!diii")   # fWeight, fTimerInterval, fScanField, fUpdate
+        vers, bcnt = walker.readversion()
 
-        # if ttree_vers >= 18:
-        #     index = step(index, "!i")  # fDefaultEntryOffsetLen
-
-        # nclus = 0
-        # if ttree_vers >= 19:
-        #     nclus = field(self.file, index, "!i")
-        #     index = step(index, "!i")  # fNClusterRange
-
-        # index = step(index, "!qqqq")   # fMaxEntries, fMaxEntryLoop, fMaxVirtualSize, fAutoSave
-
-        # if ttree_vers >= 18:
-        #     index = step(index, "!q")  # fAutoFlush
-
-        # index = step(index, "!q")      # fEstimate
-
-        # if ttree_vers >= 19:  # "FIXME" in go-hep
-        #     index = step(index, "!b{0}qb{0}b".format(nclus))  # ?, fClusterRangeEnd, ?, fClusterSize
-
-        # print "TObjArray", readversion(self.file, index)
+        print "TBranch", vers, bcnt
 
 
 
+Deserialized.classes["TBranch"] = TBranch
 
-TKey.classes["TTree"] = TTree
+
 
 file = TFile("/home/pivarski/storage/data/TrackResonanceNtuple_uncompressed.root")
 print file.get("twoMuon")
