@@ -314,6 +314,16 @@ class Deserialized(object):
         else:
             print "deserialize, default"
 
+            ref = int(numpy.int64(tag) & ~Walker.kClassMask)
+
+            print ref, walker.refs
+
+            if ref not in walker.refs:
+                raise IOError("invalid class-tag reference")
+
+            print walker.refs[ref]
+
+
             raise NotImplementedError("FIXME")
 
 class TObjArray(Deserialized):
@@ -332,10 +342,14 @@ class TObjArray(Deserialized):
 
         nobjs, low = walker.readfields("!ii")
 
+        print "nobjs", nobjs
+
         self.items = [Deserialized.deserialize(walker) for i in range(nobjs)]
 
         if walker.index - start != bcnt + 4:
             raise IOError("TObjArray byte count")
+
+        print "finished TObjArray"
 
     def __repr__(self):
         return "<TObjArray len={0} at 0x{1:012x}>".format(len(self.items), id(self))
@@ -426,8 +440,12 @@ class TTree(TNamed, TAttLine, TAttFill, TAttMarker):
         if vers >= 19:  # "FIXME" in go-hep
             walker.skip("!b{0}qb{0}b".format(nclus))  # ?, fClusterRangeEnd, ?, fClusterSize
 
+        here = walker.index
+
         tmp = TObjArray(walker)
         # HERE
+
+        print "HERE", walker.index - here
 
     def __repr__(self):
         return "<TTree {0} len={0} at 0x{1:012x}>".format(repr(self.name), len(self.entries), id(self))
