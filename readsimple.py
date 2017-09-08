@@ -78,6 +78,9 @@ class TFile(object):
     def __repr__(self):
         return "<TFile {0} at 0x{1:012x}>".format(repr(self.filepath), id(self))
 
+    def get(self, name):
+        self.dir.get(name)
+
 class TDirectory(object):
     def __init__(self, file, begin, nbytesname):
         self.file = file
@@ -116,6 +119,10 @@ class TDirectory(object):
     def __repr__(self):
         return "<TDirectory {0} at 0x{1:012x}>".format(repr(self.name), id(self))
 
+    def get(self, name):
+        # FIXME: parse slashes and get subdirectories
+        self.keys.get(name)
+
 class TKeys(object):
     def __init__(self, file, index):
         self.file = file
@@ -136,7 +143,15 @@ class TKeys(object):
     def __getitem__(self, i):
         return self.keys[i]
 
+    def get(self, name):
+        for key in self.keys:
+            if key.name == name:
+                return key.get()
+        raise KeyError("not found: {0}".format(repr(name)))
+
 class TKey(object):
+    classes = {}
+
     def __init__(self, file, index):
         self.file = file
 
@@ -160,5 +175,68 @@ class TKey(object):
     def __repr__(self):
         return "<TKey {0} at 0x{1:012x}>".format(repr(self.name), id(self))
 
-file = TFile("/home/pivarski/storage/data/TrackResonanceNtuple_uncompressed.root")
+    @property
+    def isCompressed(self):
+        return self.objlen != self.bytes - self.keylen
 
+    def get(self):
+        if self.classname not in self.classes:
+            raise NotImplementedError("class not recognized: {0}".format(self.classname))
+
+        if self.isCompressed:
+            raise NotImplementedError
+
+        start = self.seekkey + self.keylen
+        return self.classes[self.classname](self.file, start)
+
+def readversion(file, index):
+    bcnt, vers = fields(file, index, "!IH")
+    index = step(index, "!IH")
+    bcnt = int(numpy.int64(bcnt) & ~readversion.kByteCountMask)
+    assert bcnt != 0, "too old file"
+    return index, (vers, bcnt)
+readversion.kByteCountMask = numpy.int64(0x40000000)
+
+def skipversion(file, index):
+    version = field(file, index, "!h")
+    index = step(index, "!h")
+    if numpy.int64(version) & skipversion.kByteCountVMask:
+        index = step(index, "!hh")
+    return index
+skipversion.kByteCountVMask = numpy.int64(0x4000)
+
+def skiptobject(file, index):
+    id, bits = fields(file, index, "!II")
+    index = step(index, "!II")
+    bits = numpy.uint32(bits) | skiptobject.kIsOnHeap
+    if bits & skiptobject.kIsReferenced:
+        index = step(index, "H")
+    return index
+skiptobject.kIsOnHeap = numpy.uint32(0x01000000)
+skiptobject.kIsReferenced = numpy.uint32(1 << 4)
+
+class TTree(object):
+    def __init__(self, file, index):
+        self.file = file
+
+        index, (vers, bcnt) = readversion(self.file, index)
+        print "TTree vers, bcnt", vers, bcnt
+
+        index, (vers, bcnt) = readversion(self.file, index)
+        print "TNamed vers, bcnt", vers, bcnt
+
+        index = skipversion(self.file, index)
+        index = skiptobject(self.file, index)
+
+        self.name = repr(string(self.file, index))
+        index = stepstring(self.file, index)
+        self.title = repr(string(self.file, index))
+        index = stepstring(self.file, index)
+
+
+
+        
+TKey.classes["TTree"] = TTree
+
+file = TFile("/home/pivarski/storage/data/TrackResonanceNtuple_uncompressed.root")
+print file.get("twoMuon")
