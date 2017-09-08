@@ -61,19 +61,19 @@ class Walker(object):
     def readbytes(self, length, index=None):
         return self.bytes(length, index, True)
 
-    def items(self, dtype, length, index=None, read=False):
+    def array(self, dtype, length, index=None, read=False):
         if index is None:
             index = self.index
         if not isinstance(dtype, numpy.dtype):
             dtype = numpy.dtype(dtype)
         start = index
-        end = index + length
+        end = index + length * dtype.itemsize
         if read:
             self.index = end
         return self.data[start:end].view(dtype)
 
-    def readitems(self, dtype, length, index=None):
-        return self.items(dtype, length, index, True)
+    def readarray(self, dtype, length, index=None):
+        return self.array(dtype, length, index, True)
 
     def string(self, index=None, length=None, read=False):
         if index is None:
@@ -312,6 +312,8 @@ class Deserialized(object):
             return obj
 
         else:
+            print "deserialize, default"
+
             raise NotImplementedError("FIXME")
 
 class TObjArray(Deserialized):
@@ -340,6 +342,9 @@ class TObjArray(Deserialized):
 
     def __getitem__(self, i):
         return self.items[i]
+
+    def __len__(self):
+        return len(self.items)
 
 Deserialized.classes["TObjArray"] = TObjArray
 
@@ -446,10 +451,22 @@ class TBranch(TNamed, TAttFill):
         self.leaves = TObjArray(walker)
         self.baskets = TObjArray(walker)
 
-        # HERE
+        walker.skip(1)  # isArray
+        self.basketBytes = walker.readarray(">i4", self.maxBaskets)  # FIXME: might need slicing
+
+        walker.skip(1)  # isArray
+        self.basketEntry = walker.readarray(">i8", self.maxBaskets)  # FIXME: might need slicing
+
+        walker.skip(1)  # isArray
+        self.basketSeek = walker.readarray(">i8", self.maxBaskets)  # FIXME: might need slicing
+
+        self.fname = walker.readstring()
 
         if walker.index - start != bcnt + 4:
             raise IOError("TBranch byte count")
+
+        if self.splitLevel == 0 and len(self.branches) > 0:
+            self.splitLevel = 1
 
     def __repr__(self):
         return "<TBranch {0} at 0x{1:012x}>".format(repr(self.name), id(self))
@@ -461,16 +478,9 @@ class TLeaf(TNamed):
         start = walker.index
         vers, bcnt = walker.readversion()
 
-        print "TLeaf", vers, bcnt, "start", start
-
         TNamed.__init__(self, walker)
 
-        print self.name, self.title
-
         self.len, self.etype, self.offset, self.hasrange, self.unsigned = walker.readfields("!iii??")
-
-        print self.len, self.etype, self.offset, self.hasrange, self.unsigned
-
         self.count = Deserialized.deserialize(walker)
 
         if walker.index - start != bcnt + 4:
