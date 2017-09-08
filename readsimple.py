@@ -277,8 +277,19 @@ class Deserialized(object):
             tag = walker.readfield("!I")
 
         if numpy.int64(tag) & Walker.kClassMask == 0:
-            raise NotImplementedError("FIXME")
+            if tag == 0:
+                return None
 
+            elif tag == 1:
+                raise NotImplementedError("tag == 1 means self; not implemented yet")
+
+            elif tag not in walker.refs:
+                walker.index = beg + bcnt + 4
+                return None
+
+            else:
+                return walker.refs[tag]
+            
         elif tag == Walker.kNewClassTag:
             cname = walker.readcstring()
             if cname not in Deserialized.classes:
@@ -290,8 +301,6 @@ class Deserialized(object):
                 walker.refs[start + Walker.kMapOffset] = fct
             else:
                 walker.refs[len(walker.refs) + 1] = fct
-
-            print "ReadObjectAny justbefore", walker.index
 
             obj = fct(walker)
 
@@ -415,11 +424,14 @@ class TTree(TNamed, TAttLine, TAttFill, TAttMarker):
         tmp = TObjArray(walker)
         # HERE
 
+    def __repr__(self):
+        return "<TTree {0} len={0} at 0x{1:012x}>".format(repr(self.name), len(self.entries), id(self))
+
 Deserialized.classes["TTree"] = TTree
 
 class TBranch(TNamed, TAttFill):
     def __init__(self, walker):
-        beg = walker.index
+        start = walker.index
         vers, bcnt = walker.readversion()
 
         if vers < 12:
@@ -432,25 +444,59 @@ class TBranch(TNamed, TAttFill):
 
         self.branches = TObjArray(walker)
         self.leaves = TObjArray(walker)
+        self.baskets = TObjArray(walker)
 
+        # HERE
 
-        # HERE (baskets)
+        if walker.index - start != bcnt + 4:
+            raise IOError("TBranch byte count")
+
+    def __repr__(self):
+        return "<TBranch {0} at 0x{1:012x}>".format(repr(self.name), id(self))
 
 Deserialized.classes["TBranch"] = TBranch
 
 class TLeaf(TNamed):
     def __init__(self, walker):
-        walker.readversion()
-
         start = walker.index
         vers, bcnt = walker.readversion()
 
         print "TLeaf", vers, bcnt, "start", start
 
+        TNamed.__init__(self, walker)
 
+        print self.name, self.title
 
-Deserialized.classes["TLeafF"] = TLeaf
+        self.len, self.etype, self.offset, self.hasrange, self.unsigned = walker.readfields("!iii??")
 
+        print self.len, self.etype, self.offset, self.hasrange, self.unsigned
+
+        self.count = Deserialized.deserialize(walker)
+
+        if walker.index - start != bcnt + 4:
+            raise IOError("TLeaf byte count")
+
+        if self.len == 0:
+            self.len = 1
+
+    def __repr__(self):
+        return "<{0} {1} at 0x{2:012x}>".format(self.__class__.__name__, repr(self.name), id(self))
+
+Deserialized.classes["TLeaf"] = TLeaf
+
+class TLeafF(TLeaf):
+    def __init__(self, walker):
+        start = walker.index
+        vers, bcnt = walker.readversion()
+
+        TLeaf.__init__(self, walker)
+
+        self.min, self.max = walker.readfields("!ff")
+
+        if walker.index - start != bcnt + 4:
+            raise IOError("TLeafF byte count")
+
+Deserialized.classes["TLeafF"] = TLeafF
 
 file = TFile("/home/pivarski/storage/data/TrackResonanceNtuple_uncompressed.root")
 print file.get("twoMuon")
