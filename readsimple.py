@@ -39,116 +39,126 @@ def dataitems(file, index, dtype, items):
         dtype = numpy.dtype(dtype)
     return file[index : index + dtype.itemsize * items].view(dtype)
 
-file = numpy.memmap("/home/pivarski/storage/data/TrackResonanceNtuple_uncompressed.root", mode="r")
-index = 0
+class TFile(object):
+    def __init__(self, filepath):
+        self.filepath = filepath
+        self.file = numpy.memmap(self.filepath, mode="r")
 
-# START File.readHeader
+        index = 0
 
-assert field(file, index, "!4s") == "root", "magic"
-index = step(index, "!4s")
+        assert field(self.file, index, "!4s") == "root", "magic"
+        index = step(index, "!4s")
 
-version, begin = fields(file, index, "!ii")
-index = step(index, "!ii")
-
-if version < 1000000:  # small file
-    end, seekfree, nbytesfree, nfree, nbytesname, units, compression, seekinfo, nbytesinfo = fields(file, index, "!iiiiiBiii")
-    index = step(index, "!iiiiiBiii")
-else:
-    end, seekfree, nbytesfree, nfree, nbytesname, units, compression, seekinfo, nbytesinfo = fields(file, index, "!qqiiiBiqi")
-    index = step(index, "!qqiiiBiqi")
-version %= 1000000
-
-uuid = field(file, index, "!18s")
-index = step(index, "!18s")
-
-#     START dir.readDirInfo
-
-#         START dir.recordSize
-
-recordSize = 2 + 4 + 4 + 4 + 4   # fVersion, ctime, mtime, nbyteskeys, nbytesname
-if version >= 40000:
-    recordSize += 8 + 8 + 8      # seekdir, seekparent, seekkeys
-else:
-    recordSize += 4 + 4 + 4      # seekdir, seekparent, seekkeys
-
-#         END dir.recordSize
-
-nbytes = nbytesname + recordSize
-
-assert nbytes + begin <= end, "dir header length"
-
-#         START dir.UnmarshalROOT
-
-def dirUnmarshalROOT(file, index):
-    version, ctime, mtime = fields(file, index, "!hII")
-    index = step(index, "!hII")
-
-    nbyteskeys, nbytesname = fields(file, index, "!ii")
-    index = step(index, "!ii")
-
-    if version <= 1000:
-        seekdir, seekparent, seekkeys = fields(file, index, "!iii")
-    else:
-        seekdir, seekparent, seekkeys = fields(file, index, "!qqq")
-
-    return version, ctime, mtime, nbyteskeys, nbytesname, seekdir, seekparent, seekkeys
-
-dir_version, dir_ctime, dir_mtime, dir_nbyteskeys, dir_nbytesname, dir_seekdir, dir_seekparent, dir_seekkeys = dirUnmarshalROOT(file, begin + nbytesname)
-
-#         END dir.UnmarshalROOT
-
-nk = 4
-dir_keyversion = field(file, begin + nk, "!h")
-if dir_keyversion > 1000:
-    nk += 2 + 2*4 + 2*2 + 2*8  # fVersion, fObjectSize*Date, fKeyLength*fCycle, fSeekKey*fSeekParentDirectory
-else:
-    nk += 2 + 2*4 + 2*2 + 2*4  # fVersion, fObjectSize*Date, fKeyLength*fCycle, fSeekKey*fSeekParentDirectory
-
-dir_index = begin + nk
-dir_classname = string(file, dir_index)
-dir_index = stepstring(file, dir_index)
-dir_name = string(file, dir_index)
-dir_index = stepstring(file, dir_index)
-dir_title = string(file, dir_index)
-dir_index = stepstring(file, dir_index)
-
-assert 10 <= dir_nbytesname <= 1000, "directory info"
-
-#     END dir.readDirInfo
-
-#     BEGIN readStreamerInfo      not unless we have to!
-#     END readStreamerInfo
-
-#     BEGIN dir.readKeys
-
-#         START key.UnmarshalROOT
-
-def keyUnmarshalROOT(file, index):
-    bytes, version, objlen, datetime, keylen, cycle = fields(file, index, "!ihiIhh")
-    index = step(index, "!ihiIhh")
-
-    if version > 1000:
-        seekkey, seekpdir = fields(file, index, "!qq")
-        index = step(index, "!qq")
-    else:
-        seekkey, seekpdir = fields(file, index, "!ii")
+        self.version, self.begin = fields(self.file, index, "!ii")
         index = step(index, "!ii")
 
-    classname = string(file, index)
-    index = stepstring(file, index)
-    name = string(file, index)
-    index = stepstring(file, index)
-    title = string(file, index)
-    index = stepstring(file, index)
+        if self.version < 1000000:  # small file
+            self.end, self.seekfree, self.nbytesfree, self.nfree, self.nbytesname, self.units, self.compression, self.seekinfo, self.nbytesinfo = fields(self.file, index, "!iiiiiBiii")
+            index = step(index, "!iiiiiBiii")
+        else:
+            self.end, self.seekfree, self.nbytesfree, self.nfree, self.nbytesname, self.units, self.compression, self.seekinfo, self.nbytesinfo = fields(self.file, index, "!qqiiiBiqi")
+            index = step(index, "!qqiiiBiqi")
+        self.version %= 1000000
 
-    return bytes, version, objlen, datetime, keylen, cycle, seekkey, seekpdir, classname, name, title
+        self.uuid = field(self.file, index, "!18s")
+        index = step(index, "!18s")
 
-keyhdr_bytes, keyhdr_version, keyhdr_objlen, keyhdr_datetime, keyhdr_keylen, keyhdr_cycle, keyhdr_seekkey, keyhdr_seekpdir, keyhdr_classname, keyhdr_name, keyhdr_title = keyUnmarshalROOT(file, dir_seekkeys)
+        recordSize = 2 + 4 + 4 + 4 + 4   # fVersion, ctime, mtime, nbyteskeys, nbytesname
+        if self.version >= 40000:
+            recordSize += 8 + 8 + 8      # seekdir, seekparent, seekkeys
+        else:
+            recordSize += 4 + 4 + 4      # seekdir, seekparent, seekkeys
 
-#         END key.UnmarshalROOT
+        nbytes = self.nbytesname + recordSize
 
+        assert nbytes + self.begin <= self.end, "dir header length"
 
+        self.dir = TDirectory(self.file, self.begin, self.nbytesname)
 
+    def __repr__(self):
+        return "<TFile {0} at 0x{1:012x}>".format(repr(self.filepath), id(self))
 
-#     END dir.readKeys
+class TDirectory(object):
+    def __init__(self, file, begin, nbytesname):
+        self.file = file
+        index = begin + nbytesname
+
+        self.version, self.ctime, self.mtime = fields(self.file, index, "!hII")
+        index = step(index, "!hII")
+
+        self.nbyteskeys, self.nbytesname = fields(self.file, index, "!ii")
+        index = step(index, "!ii")
+
+        if self.version <= 1000:
+            self.seekdir, self.seekparent, self.seekkeys = fields(self.file, index, "!iii")
+        else:
+            self.seekdir, self.seekparent, self.seekkeys = fields(self.file, index, "!qqq")
+
+        nk = 4
+        keyversion = field(self.file, begin + nk, "!h")
+        if keyversion > 1000:
+            nk += 2 + 2*4 + 2*2 + 2*8  # fVersion, fObjectSize*Date, fKeyLength*fCycle, fSeekKey*fSeekParentDirectory
+        else:
+            nk += 2 + 2*4 + 2*2 + 2*4  # fVersion, fObjectSize*Date, fKeyLength*fCycle, fSeekKey*fSeekParentDirectory
+
+        index = begin + nk
+        self.classname = string(self.file, index)
+        index = stepstring(self.file, index)
+        self.name = string(self.file, index)
+        index = stepstring(self.file, index)
+        self.title = string(self.file, index)
+        index = stepstring(self.file, index)
+
+        assert 10 <= self.nbytesname <= 1000, "directory info"
+
+        self.keys = TKeys(self.file, self.seekkeys)
+
+    def __repr__(self):
+        return "<TDirectory {0} at 0x{1:012x}>".format(repr(self.name), id(self))
+
+class TKeys(object):
+    def __init__(self, file, index):
+        self.file = file
+        self.header = TKey(self.file, index)
+
+        index += self.header.keylen
+        nkeys = field(self.file, index, "!i")
+        index = step(index, "!i")
+
+        self.keys = []
+        for i in range(nkeys):
+            self.keys.append(TKey(self.file, index))
+            index = self.keys[-1]._index
+
+    def __repr__(self):
+        return "<TKeys len={0} at 0x{1:012x}>".format(len(self.keys), id(self))
+
+    def __getitem__(self, i):
+        return self.keys[i]
+
+class TKey(object):
+    def __init__(self, file, index):
+        self.file = file
+
+        self.bytes, self.version, self.objlen, self.datetime, self.keylen, self.cycle = fields(self.file, index, "!ihiIhh")
+        index = step(index, "!ihiIhh")
+
+        if self.version > 1000:
+            self.seekkey, self.seekpdir = fields(self.file, index, "!qq")
+            index = step(index, "!qq")
+        else:
+            self.seekkey, self.seekpdir = fields(self.file, index, "!ii")
+            index = step(index, "!ii")
+
+        self.classname = string(self.file, index)
+        index = stepstring(self.file, index)
+        self.name = string(self.file, index)
+        index = stepstring(self.file, index)
+        self.title = string(self.file, index)
+        self._index = stepstring(self.file, index)
+
+    def __repr__(self):
+        return "<TKey {0} at 0x{1:012x}>".format(repr(self.name), id(self))
+
+file = TFile("/home/pivarski/storage/data/TrackResonanceNtuple_uncompressed.root")
 
