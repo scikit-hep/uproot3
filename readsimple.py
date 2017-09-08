@@ -226,9 +226,6 @@ class TTree(object):
         ttree_start = index
         index, (ttree_vers, ttree_bcnt) = readversion(self.file, index)
 
-        if ttree_vers < 16:
-            raise NotImplementedError("TTree too old")
-
         # START TNamed
         tnamed_start = index
         index, (tnamed_vers, tnamed_bcnt) = readversion(self.file, index)
@@ -268,6 +265,40 @@ class TTree(object):
         if index - tattmarker_start != tattmarker_bcnt + 4:
             raise IOError("TAttMarker byte count")
         # END TAttMarker
+
+        entries, self.totbytes, self.zipbytes = fields(self.file, index, "!qqq")
+        index = step(index, "!qqq")
+
+        if ttree_vers < 16:
+            raise NotImplementedError("TTree too old")
+
+        if ttree_vers >= 19:
+            index = step(index, "!q")  # fSavedBytes
+
+        if ttree_vers >= 18:
+            index = step(index, "!q")  # flushed bytes
+
+        index = step(index, "!diii")   # fWeight, fTimerInterval, fScanField, fUpdate
+
+        if ttree_vers >= 18:
+            index = step(index, "!i")  # fDefaultEntryOffsetLen
+
+        nclus = 0
+        if ttree_vers >= 19:
+            nclus = field(self.file, index, "!i")
+            index = step(index, "!i")  # fNClusterRange
+
+        index = step(index, "!qqqq")   # fMaxEntries, fMaxEntryLoop, fMaxVirtualSize, fAutoSave
+
+        if ttree_vers >= 18:
+            index = step(index, "!q")  # fAutoFlush
+
+        index = step(index, "!q")      # fEstimate
+
+        if ttree_vers >= 19:  # "FIXME" in go-hep
+            index = step(index, "!b{0}qb{0}b".format(nclus))  # ?, fClusterRangeEnd, ?, fClusterSize
+
+        print "TObjArray", readversion(self.file, index)
 
 
 
