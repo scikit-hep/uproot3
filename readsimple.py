@@ -20,7 +20,7 @@ class Walker(object):
         out = Walker(self.data, index)
         if skip is not None:
             out.skip(skip)
-        out.refs = self.refs    # refs are shared among all Walkers that operate on a given file
+        out.refs = self.refs   # refs are shared among all Walkers that operate on a given file
         return out
 
     def skip(self, format):
@@ -238,6 +238,7 @@ class TKey(object):
         self.name = walker.readstring()
         self.title = walker.readstring()
         self.walker = walker.copy(index=self.seekkey + self.keylen)
+        self.walker.seekkey = self.seekkey
 
     def __repr__(self):
         return "<TKey {0} at 0x{1:012x}>".format(repr(self.name), id(self))
@@ -263,7 +264,7 @@ class Deserialized(object):
 
     @staticmethod
     def deserialize(walker):
-        beg = walker.index
+        beg = walker.index - walker.seekkey
         bcnt = walker.readfield("!I")
 
         if numpy.int64(bcnt) & Walker.kByteCountMask == 0 or numpy.int64(bcnt) == Walker.kNewClassTag:
@@ -273,7 +274,7 @@ class Deserialized(object):
             bcnt = 0
         else:
             vers = 1
-            start = walker.index
+            start = walker.index - walker.seekkey
             tag = walker.readfield("!I")
 
         if numpy.int64(tag) & Walker.kClassMask == 0:
@@ -288,6 +289,7 @@ class Deserialized(object):
                 return None
 
             else:
+                print "get", tag
                 return walker.refs[tag]
             
         elif tag == Walker.kNewClassTag:
@@ -298,15 +300,19 @@ class Deserialized(object):
             fct = Deserialized.classes[cname]
 
             if vers > 0:
+                print "put A", start + Walker.kMapOffset
                 walker.refs[start + Walker.kMapOffset] = fct
             else:
+                print "put B", len(walker.refs) + 1
                 walker.refs[len(walker.refs) + 1] = fct
 
             obj = fct(walker)
 
             if vers > 0:
+                print "put C", beg + Walker.kMapOffset
                 walker.refs[beg + Walker.kMapOffset] = obj
             else:
+                print "put D", len(walker.refs) + 1
                 walker.refs[len(walker.refs) + 1] = obj
 
             return obj
@@ -316,7 +322,7 @@ class Deserialized(object):
 
             ref = int(numpy.int64(tag) & ~Walker.kClassMask)
 
-            print ref, walker.refs
+            print "get", ref, walker.refs
 
             if ref not in walker.refs:
                 raise IOError("invalid class-tag reference")
@@ -342,14 +348,10 @@ class TObjArray(Deserialized):
 
         nobjs, low = walker.readfields("!ii")
 
-        print "nobjs", nobjs
-
         self.items = [Deserialized.deserialize(walker) for i in range(nobjs)]
 
         if walker.index - start != bcnt + 4:
             raise IOError("TObjArray byte count")
-
-        print "finished TObjArray"
 
     def __repr__(self):
         return "<TObjArray len={0} at 0x{1:012x}>".format(len(self.items), id(self))
