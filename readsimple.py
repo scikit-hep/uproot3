@@ -454,8 +454,11 @@ class TTree(TNamed, TAttLine, TAttFill, TAttMarker):
 
         walker.skip("!q")      # fEstimate
 
-        if vers >= 19:  # "FIXME" in go-hep
-            walker.skip("!b{0}qb{0}b".format(nclus))  # ?, fClusterRangeEnd, ?, fClusterSize
+        if vers >= 19:         # "FIXME" in go-hep
+            walker.skip(1)
+            walker.skip(nclus * 8)   # fClusterRangeEnd
+            walker.skip(1)
+            walker.skip(nclus * 8)   # fClusterSize
 
         self.branches = TObjArray(walker)
         self.leaves = TObjArray(walker)
@@ -498,13 +501,13 @@ class TBranch(TNamed, TAttFill):
         self.baskets = TObjArray(walker)
 
         walker.skip(1)  # isArray
-        self.basketBytes = walker.readarray(">i4", self.maxBaskets)  # FIXME: might need slicing
+        self.basketBytes = walker.readarray(">i4", self.maxBaskets)[:self.writeBasket]
 
         walker.skip(1)  # isArray
-        self.basketEntry = walker.readarray(">i8", self.maxBaskets)  # FIXME: might need slicing
+        self.basketEntry = walker.readarray(">i8", self.maxBaskets)[:self.writeBasket]
 
         walker.skip(1)  # isArray
-        self.basketSeek = walker.readarray(">i8", self.maxBaskets)  # FIXME: might need slicing
+        self.basketSeek = walker.readarray(">i8", self.maxBaskets)[:self.writeBasket]
 
         self.basketwalkers = [walker.copy(x) for x in self.basketSeek]
 
@@ -522,24 +525,31 @@ class TBranch(TNamed, TAttFill):
         if len(self.leaves) == 1:
             return self.leaves[0].dtype
 
+    def keylen(self, i):
+        bytes, version, objlen, datetime, keylen, cycle = self.basketwalkers[i].fields("!ihiIhh")
+        return keylen
+
+    def basketsize(self, i):
+        return (self.basketBytes[i] - self.keylen(i)) // self.dtype.itemsize
+
     def basket(self, i):
         walker = self.basketwalkers[i]
-        start = walker.index
+        return walker.array(self.dtype, self.basketsize(i), index=walker.index + self.keylen(i))
 
-        key = TKey(walker)
-        if key.classname != b"TBasket":
-            raise IOError("expected TBasket, found {0}".format(repr(key.classname)))
+    def array(self, dtype=None):
+        if dtype is None:
+            dtype = self.dtype
+        size = [self.basketsize(i) for i in range(len(self.basketwalkers))]
 
-        vers, bufsize, nevsize, nevbuf, last, flag = walker.readfields("!HiiiiB")
-        if nevsize < 0:
-            raise IOError("incorrect event buffer size in basket")
-        if last > bufsize:
-            bufsize = last
+        out = numpy.empty(sum(size), dtype=dtype)
 
-        if flag != 0:
-            raise NotImplementedError("look at basket.go")
+        start = 0
+        for i in range(len(self.basketwalkers)):
+            end = start + size[i]
+            out[start:end] = self.basket(i)
+            start = end
 
-        return walker.copy(start + key.keylen).array(self.dtype, (self.basketBytes[i] - key.keylen) // self.dtype.itemsize)
+        return out
 
 Deserialized.classes[b"TBranch"] = TBranch
 
@@ -582,7 +592,7 @@ Deserialized.classes[b"{0}"] = {0}
 
 file = TFile("/home/pivarski/storage/data/TrackResonanceNtuple_uncompressed.root")
 tree = file.get("twoMuon")
-print(tree.branch("mass_mumu").basket(0))
-print(tree.branch("px").basket(0))
-print(tree.branch("py").basket(0))
-print(tree.branch("pz").basket(0))
+print(tree.branch("mass_mumu").array())
+print(tree.branch("px").array())
+print(tree.branch("py").array())
+print(tree.branch("pz").array())
