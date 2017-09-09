@@ -169,7 +169,7 @@ class TFile(object):
         return "<TFile {0} at 0x{1:012x}>".format(repr(self.filepath), id(self))
 
     def get(self, name):
-        self.dir.get(name)
+        return self.dir.get(name)
 
 class TDirectory(object):
     def __init__(self, walker, walkerhead):
@@ -203,7 +203,7 @@ class TDirectory(object):
 
     def get(self, name):
         # FIXME: parse slashes and get subdirectories
-        self.keys.get(name)
+        return self.keys.get(name)
 
 class TKeys(object):
     def __init__(self, walker):
@@ -278,59 +278,64 @@ class Deserialized(object):
             tag = walker.readfield("!I")
 
         if numpy.int64(tag) & Walker.kClassMask == 0:
+            # reference object
             if tag == 0:
-                return None
+                return None                # return null
 
             elif tag == 1:
                 raise NotImplementedError("tag == 1 means self; not implemented yet")
 
             elif tag not in walker.refs:
-                walker.index = beg + bcnt + 4
-                return None
+                # jump past this object
+                walker.index = walker.seekkey + beg + bcnt + 4
+                return None                # return null
 
             else:
-                print "get", tag
-                return walker.refs[tag]
+                return walker.refs[tag]    # return object
             
         elif tag == Walker.kNewClassTag:
+            # new class and object
             cname = walker.readcstring()
+
             if cname not in Deserialized.classes:
                 raise NotImplementedError("class not recognized: {0}".format(cname))
 
             fct = Deserialized.classes[cname]
 
             if vers > 0:
-                print "put A", start + Walker.kMapOffset
                 walker.refs[start + Walker.kMapOffset] = fct
             else:
-                print "put B", len(walker.refs) + 1
                 walker.refs[len(walker.refs) + 1] = fct
 
             obj = fct(walker)
 
             if vers > 0:
-                print "put C", beg + Walker.kMapOffset
                 walker.refs[beg + Walker.kMapOffset] = obj
             else:
-                print "put D", len(walker.refs) + 1
                 walker.refs[len(walker.refs) + 1] = obj
 
-            return obj
+            return obj                     # return object
 
         else:
-            print "deserialize, default"
-
+            # reference class, new object
             ref = int(numpy.int64(tag) & ~Walker.kClassMask)
-
-            print "get", ref, walker.refs
 
             if ref not in walker.refs:
                 raise IOError("invalid class-tag reference")
 
-            print walker.refs[ref]
+            fct = walker.refs[ref]         # reference class
 
+            if fct not in Deserialized.classes.values():
+                raise IOError("invalid class-tag reference (not a factory)")
 
-            raise NotImplementedError("FIXME")
+            obj = fct(walker)              # new object
+
+            if vers > 0:
+                walker.refs[beg + Walker.kMapOffset] = obj
+            else:
+                walker.refs[len(walker.refs) + 1] = obj
+
+            return obj                     # return object
 
 class TObjArray(Deserialized):
     def __init__(self, walker):
@@ -338,12 +343,12 @@ class TObjArray(Deserialized):
         vers, bcnt = walker.readversion()
 
         if vers >= 3:
-            # TObject
+            # TObjArray is a TObject
             walker.skipversion()
             walker.skiptobject()
 
         if vers >= 2:
-            # not a TObject
+            # TObjArray is a not a TObject
             self.name = walker.readstring()
 
         nobjs, low = walker.readfields("!ii")
@@ -442,15 +447,18 @@ class TTree(TNamed, TAttLine, TAttFill, TAttMarker):
         if vers >= 19:  # "FIXME" in go-hep
             walker.skip("!b{0}qb{0}b".format(nclus))  # ?, fClusterRangeEnd, ?, fClusterSize
 
-        here = walker.index
+        self.branches = TObjArray(walker)
+        self.leaves = TObjArray(walker)
 
-        tmp = TObjArray(walker)
-        # HERE
+        for i in range(7):
+            # fAliases, fIndexValues, fIndex, fTreeIndex, fFriends, fUserInfo, fBranchRef
+            Deserialized.deserialize(walker)
 
-        print "HERE", walker.index - here
+        if walker.index - start != bcnt + 4:
+            raise IOError("TTree byte count")
 
     def __repr__(self):
-        return "<TTree {0} len={0} at 0x{1:012x}>".format(repr(self.name), len(self.entries), id(self))
+        return "<TTree {0} len={1} at 0x{2:012x}>".format(repr(self.name), self.entries, id(self))
 
 Deserialized.classes["TTree"] = TTree
 
