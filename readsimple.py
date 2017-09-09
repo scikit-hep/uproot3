@@ -592,7 +592,11 @@ Deserialized.classes[b"{0}"] = {0}
 
 file = TFile("/home/pivarski/storage/data/TrackResonanceNtuple_uncompressed.root")
 tree = file.get("twoMuon")
+
 print(tree.branch("mass_mumu").array())
 print(tree.branch("px").array())
 print(tree.branch("py").array())
 print(tree.branch("pz").array())
+
+# 20 ms to load a tree, 60 ms to get the data (uncompressed)
+# ROOT takes 88 ms to load a tree, 220 ms to get the data
