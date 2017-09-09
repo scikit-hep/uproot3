@@ -25,12 +25,11 @@ func main() {
 	sc, err3 := rootio.NewScannerVars(tree, scanVars...)
 
 	var total float32
-	for sc.Next() {
+	sc.Next()
 		err4 := sc.Scan()
-		// fmt.Printf("%d %v %v %v %v\n", sc.Entry(), mass_mumu, px, py, pz)
+		fmt.Printf("%d %v %v %v %v\n", sc.Entry(), mass_mumu, px, py, pz)
 		total += mass_mumu + px + py + pz
 		_ = err4
-	}
 
 	fmt.Printf("%v\n", total)
 
