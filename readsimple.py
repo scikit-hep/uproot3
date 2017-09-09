@@ -136,10 +136,9 @@ class Walker(object):
 
 class TFile(object):
     def __init__(self, filepath):
-        self.filepath = filepath
-        walker = Walker.memmap(self.filepath)
+        walker = Walker.memmap(filepath)
 
-        if walker.readfield("!4s") != "root":
+        if walker.readfield("!4s") != b"root":
             raise IOError("not a ROOT file (wrong magic bytes)")
 
         version, begin = walker.readfields("!ii")
@@ -166,7 +165,7 @@ class TFile(object):
         self.dir = TDirectory(walker.copy(index=begin), walker.copy(index=begin + nbytesname))
 
     def __repr__(self):
-        return "<TFile {0} at 0x{1:012x}>".format(repr(self.filepath), id(self))
+        return "<TFile {0} at 0x{1:012x}>".format(repr(self.dir.name), id(self))
 
     def get(self, name):
         return self.dir.get(name)
@@ -181,13 +180,14 @@ class TDirectory(object):
         else:
             seekdir, seekparent, seekkeys = walkerhead.readfields("!qqq")
 
-        nk = 4
-        walker.skip(nk)
+        walker.skip(4)
         keyversion = walker.field("!h")
         if keyversion > 1000:
-            nk += 2 + 2*4 + 2*2 + 2*8  # fVersion, fObjectSize*Date, fKeyLength*fCycle, fSeekKey*fSeekParentDirectory
+            nk_minus_4 = 2 + 2*4 + 2*2 + 2*8  # fVersion, fObjectSize*Date, fKeyLength*fCycle, fSeekKey*fSeekParentDirectory
         else:
-            nk += 2 + 2*4 + 2*2 + 2*4  # fVersion, fObjectSize*Date, fKeyLength*fCycle, fSeekKey*fSeekParentDirectory
+            nk_minus_4 = 2 + 2*4 + 2*2 + 2*4  # fVersion, fObjectSize*Date, fKeyLength*fCycle, fSeekKey*fSeekParentDirectory
+
+        walker.skip(nk_minus_4)
 
         classname = walker.readstring()
         self.name = walker.readstring()
@@ -220,6 +220,8 @@ class TKeys(object):
         return self.keys[i]
 
     def get(self, name):
+        if isinstance(name, str):
+            name = name.encode("ascii")
         for key in self.keys:
             if key.name == name:
                 return key.get()
@@ -241,7 +243,7 @@ class TKey(object):
         self.walker.seekkey = self.seekkey
 
     def __repr__(self):
-        return "<TKey {0} at 0x{1:012x}>".format(repr(self.name), id(self))
+        return "<TKey {0} at 0x{1:012x}>".format(repr(self.name.decode("ascii")), id(self))
 
     @property
     def isCompressed(self):
@@ -337,6 +339,10 @@ class Deserialized(object):
 
             return obj                     # return object
 
+    def checkbytecount(self, observed, expected):
+        if observed != expected + 4:
+            raise IOError("{0} byte count".format(self.__class__.__name__))
+
 class TObjArray(Deserialized):
     def __init__(self, walker):
         start = walker.index
@@ -355,8 +361,7 @@ class TObjArray(Deserialized):
 
         self.items = [Deserialized.deserialize(walker) for i in range(nobjs)]
 
-        if walker.index - start != bcnt + 4:
-            raise IOError("TObjArray byte count")
+        self.checkbytecount(walker.index - start, bcnt)
 
     def __repr__(self):
         return "<TObjArray len={0} at 0x{1:012x}>".format(len(self.items), id(self))
@@ -367,7 +372,7 @@ class TObjArray(Deserialized):
     def __len__(self):
         return len(self.items)
 
-Deserialized.classes["TObjArray"] = TObjArray
+Deserialized.classes[b"TObjArray"] = TObjArray
 
 class TNamed(Deserialized):
     def __init__(self, walker):
@@ -379,32 +384,28 @@ class TNamed(Deserialized):
         self.name = walker.readstring()
         self.title = walker.readstring()
 
-        if walker.index - start != bcnt + 4:
-            raise IOError("TNamed byte count")
+        self.checkbytecount(walker.index - start, bcnt)
 
 class TAttLine(Deserialized):
     def __init__(self, walker):
         start = walker.index
         vers, bcnt = walker.readversion()
         walker.skip("!hhh")  # color, style, width
-        if walker.index - start != bcnt + 4:
-            raise IOError("TAttLine byte count")
+        self.checkbytecount(walker.index - start, bcnt)
 
 class TAttFill(Deserialized):
     def __init__(self, walker):
         start = walker.index
         vers, bcnt = walker.readversion()
         walker.skip("!hh")  # color, style
-        if walker.index - start != bcnt + 4:
-            raise IOError("TAttFill byte count")
+        self.checkbytecount(walker.index - start, bcnt)
 
 class TAttMarker(Deserialized):
     def __init__(self, walker):
         start = walker.index
         vers, bcnt = walker.readversion()
         walker.skip("!hhf")  # color, style, width
-        if walker.index - start != bcnt + 4:
-            raise IOError("TAttMarker byte count")
+        self.checkbytecount(walker.index - start, bcnt)
 
 class TTree(TNamed, TAttLine, TAttFill, TAttMarker):
     def __init__(self, walker):
@@ -417,7 +418,6 @@ class TTree(TNamed, TAttLine, TAttFill, TAttMarker):
         TAttMarker.__init__(self, walker)
 
         self.entries, self.totbytes, self.zipbytes = walker.readfields("!qqq")
-        print "entries, tot, zip", self.entries, self.totbytes, self.zipbytes
 
         if vers < 16:
             raise NotImplementedError("TTree too old")
@@ -454,13 +454,12 @@ class TTree(TNamed, TAttLine, TAttFill, TAttMarker):
             # fAliases, fIndexValues, fIndex, fTreeIndex, fFriends, fUserInfo, fBranchRef
             Deserialized.deserialize(walker)
 
-        if walker.index - start != bcnt + 4:
-            raise IOError("TTree byte count")
+        self.checkbytecount(walker.index - start, bcnt)
 
     def __repr__(self):
-        return "<TTree {0} len={1} at 0x{2:012x}>".format(repr(self.name), self.entries, id(self))
+        return "<TTree {0} len={1} at 0x{2:012x}>".format(repr(self.name.decode("ascii")), self.entries, id(self))
 
-Deserialized.classes["TTree"] = TTree
+Deserialized.classes[b"TTree"] = TTree
 
 class TBranch(TNamed, TAttFill):
     def __init__(self, walker):
@@ -473,7 +472,7 @@ class TBranch(TNamed, TAttFill):
         TNamed.__init__(self, walker)
         TAttFill.__init__(self, walker)
 
-	self.compress, self.basketSize, self.entryOffsetLen, self.writeBasket, self.entryNumber, self.offset, self.maxBaskets, self.splitLevel, self.entries, self.firstEntry, self.totBytes, self.zipBytes = walker.readfields("!iiiiqiiiqqqq")
+        self.compress, self.basketSize, self.entryOffsetLen, self.writeBasket, self.entryNumber, self.offset, self.maxBaskets, self.splitLevel, self.entries, self.firstEntry, self.totBytes, self.zipBytes = walker.readfields("!iiiiqiiiqqqq")
 
         self.branches = TObjArray(walker)
         self.leaves = TObjArray(walker)
@@ -490,16 +489,15 @@ class TBranch(TNamed, TAttFill):
 
         self.fname = walker.readstring()
 
-        if walker.index - start != bcnt + 4:
-            raise IOError("TBranch byte count")
+        self.checkbytecount(walker.index - start, bcnt)
 
         if self.splitLevel == 0 and len(self.branches) > 0:
             self.splitLevel = 1
 
     def __repr__(self):
-        return "<TBranch {0} at 0x{1:012x}>".format(repr(self.name), id(self))
+        return "<TBranch {0} at 0x{1:012x}>".format(repr(self.name.decode("ascii")), id(self))
 
-Deserialized.classes["TBranch"] = TBranch
+Deserialized.classes[b"TBranch"] = TBranch
 
 class TLeaf(TNamed):
     def __init__(self, walker):
@@ -511,30 +509,31 @@ class TLeaf(TNamed):
         self.len, self.etype, self.offset, self.hasrange, self.unsigned = walker.readfields("!iii??")
         self.count = Deserialized.deserialize(walker)
 
-        if walker.index - start != bcnt + 4:
-            raise IOError("TLeaf byte count")
+        self.checkbytecount(walker.index - start, bcnt)
 
         if self.len == 0:
             self.len = 1
 
     def __repr__(self):
-        return "<{0} {1} at 0x{2:012x}>".format(self.__class__.__name__, repr(self.name), id(self))
+        return "<{0} {1} at 0x{2:012x}>".format(self.__class__.__name__, repr(self.name.decode("ascii")), id(self))
 
-Deserialized.classes["TLeaf"] = TLeaf
+Deserialized.classes[b"TLeaf"] = TLeaf
 
-class TLeafF(TLeaf):
+for classname, format in [("TLeafF", "!ff")]:
+    exec("""
+class {0}(TLeaf):
     def __init__(self, walker):
         start = walker.index
         vers, bcnt = walker.readversion()
 
         TLeaf.__init__(self, walker)
 
-        self.min, self.max = walker.readfields("!ff")
+        self.min, self.max = walker.readfields("{1}")
 
-        if walker.index - start != bcnt + 4:
-            raise IOError("TLeafF byte count")
+        self.checkbytecount(walker.index - start, bcnt)
 
-Deserialized.classes["TLeafF"] = TLeafF
+Deserialized.classes[b"{0}"] = {0}
+""".format(classname, format), globals())
 
 file = TFile("/home/pivarski/storage/data/TrackResonanceNtuple_uncompressed.root")
-print file.get("twoMuon")
+print(file.get("twoMuon"))
