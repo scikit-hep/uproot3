@@ -17,15 +17,10 @@ class Walker(object):
         if origin is not None:
             self.origin = origin
 
-    def copy(self, index=None, skip=None, origin=None):
+    def copy(self, index=None, origin=None):
         if index is None:
             index = self.index
-        out = Walker(self.data, index)
-        if skip is not None:
-            out.skip(skip)
-        out.refs = self.refs   # refs are shared among all Walkers that operate on a given file
-        if origin is not None:
-            out.origin = origin
+        out = Walker(self.data, index, origin)
         return out
 
     def skip(self, format):
@@ -139,6 +134,94 @@ class Walker(object):
         if bits & self.kIsReferenced:
             self.skip("!H")
 
+class LazyWalker(Walker):
+    def __init__(self, walker, function, length, index, origin):
+        self._original_walker   = walker
+        self._original_function = function
+        self._original_length   = length
+        self._original_index    = index
+        self._original_origin   = origin
+        self._evaluated         = False
+
+    def _evaluate(self):
+        walker   = self._original_walker
+        function = self._original_function
+        length   = self._original_length
+        index    = self._original_index
+        origin   = self._original_origin
+
+        string = self._original_function(walker.bytes(length, index))
+        Walker.__init__(self, numpy.frombuffer(string, dtype=numpy.uint8), 0, origin=origin)
+        self._evaluated = True
+
+    def copy(self, index=None, origin=None):
+        if not self._evaluated: self._evaluate()
+        return super(self, LazyWalker).copy(index, origin)
+
+    def skip(self, format):
+        if not self._evaluated: self._evaluate()
+        return super(self, LazyWalker).skip(format)
+
+    def fields(self, format, index=None, read=False):
+        if not self._evaluated: self._evaluate()
+        return super(self, LazyWalker).fields(format, index, read)
+
+    def readfields(self, format, index=None):
+        if not self._evaluated: self._evaluate()
+        return super(self, LazyWalker).readfields(format, index)
+
+    def field(self, format, index=None, read=False):
+        if not self._evaluated: self._evaluate()
+        return super(self, LazyWalker).field(format, index, read)
+
+    def readfield(self, format, index=None):
+        if not self._evaluated: self._evaluate()
+        return super(self, LazyWalker).readfield(format, index)
+
+    def bytes(self, length, index=None, read=False):
+        if not self._evaluated: self._evaluate()
+        return super(self, LazyWalker).bytes(length, index, read)
+
+    def readbytes(self, length, index=None):
+        if not self._evaluated: self._evaluate()
+        return super(self, LazyWalker).readbytes(length, index)
+
+    def array(self, dtype, length, index=None, read=False):
+        if not self._evaluated: self._evaluate()
+        return super(self, LazyWalker).array(dtype, length, index, read)
+
+    def readarray(self, dtype, length, index=None):
+        if not self._evaluated: self._evaluate()
+        return super(self, LazyWalker).readarray(dtype, length, index)
+
+    def string(self, index=None, length=None, read=False):
+        if not self._evaluated: self._evaluate()
+        return super(self, LazyWalker).string(index, length, read)
+
+    def readstring(self, index=None, length=None):
+        if not self._evaluated: self._evaluate()
+        return super(self, LazyWalker).readstring(index, length)
+
+    def cstring(self, index=None, read=False):
+        if not self._evaluated: self._evaluate()
+        return super(self, LazyWalker).cstring(index, read)
+
+    def readcstring(self, index=None):
+        if not self._evaluated: self._evaluate()
+        return super(self, LazyWalker).readcstring(index)
+
+    def readversion(self):
+        if not self._evaluated: self._evaluate()
+        return super(self, LazyWalker).readversion()
+
+    def skipversion(self):
+        if not self._evaluated: self._evaluate()
+        return super(self, LazyWalker).skipversion()
+
+    def skiptobject(self):
+        if not self._evaluated: self._evaluate()
+        return super(self, LazyWalker).skiptobject()
+
 class TFile(object):
     def __init__(self, filepath):
         walker = Walker.memmap(filepath)
@@ -167,7 +250,7 @@ class TFile(object):
         if nbytes + begin > end:
             raise IOError("TDirectory header length")
 
-        self.dir = TDirectory(walker.copy(index=begin), walker.copy(index=begin + nbytesname))
+        self.dir = TDirectory(walker.copy(begin), walker.copy(begin + nbytesname))
 
     def __repr__(self):
         return "<TFile {0} at 0x{1:012x}>".format(repr(self.dir.name), id(self))
@@ -201,7 +284,7 @@ class TDirectory(object):
         if not 10 <= nbytesname <= 1000:
             raise IOError("directory info")
 
-        self.keys = TKeys(walker.copy(index=seekkeys))
+        self.keys = TKeys(walker.copy(seekkeys))
 
     def __repr__(self):
         return "<TDirectory {0} at 0x{1:012x}>".format(repr(self.name), id(self))
@@ -260,7 +343,7 @@ class TKey(object):
 
         # otherwise, it's uncompressed
         else:
-            self.walker = walker.copy(index=self.seekkey + self.keylen, origin=self.seekkey)
+            self.walker = walker.copy(self.seekkey + self.keylen, self.seekkey)
 
     def __repr__(self):
         return "<TKey {0} at 0x{1:012x}>".format(repr(self.name), id(self))
