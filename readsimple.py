@@ -5,6 +5,11 @@ import zlib
 
 import numpy
 
+try:
+    import lz4framed
+except ImportError:
+    lz4framed = None
+
 class Walker(object):
     @staticmethod
     def memmap(filepath, index=0):
@@ -225,6 +230,31 @@ class LazyWalker(Walker):
         return super(LazyWalker, self).skiptobject()
 
 class TFile(object):
+    @staticmethod
+    def _compression(compression):
+        if compression // 100 <= 1:
+            return "zlib", compression % 100
+        elif compression // 100 == 2:
+            return "lzma", compression % 100
+        elif compression // 100 == 3:
+            return "old", compression % 100
+        elif compression // 100 == 4:
+            return "lz4", compression % 100
+        else:
+            return "unknown", compression % 100
+
+    @staticmethod
+    def _decompressfcn(compression):
+        algo, level = compression
+        if algo == "zlib":
+            return zlib.decompress
+        elif algo == "lz4":
+            if lz4framed is None:
+                raise ImportError("lz4framed library not found")
+            return lz4framed.decompress
+        else:
+            raise NotImplementedError("cannot decompress \"{0}\"".format(algo))
+
     def __init__(self, filepath):
         walker = Walker.memmap(filepath)
 
@@ -234,10 +264,12 @@ class TFile(object):
         version, begin = walker.readfields("!ii")
 
         if version < 1000000:  # small file
-            end, seekfree, nbytesfree, nfree, nbytesname, units, self.compression, seekinfo, nbytesinfo = walker.readfields("!iiiiiBiii")
+            end, seekfree, nbytesfree, nfree, nbytesname, units, compression, seekinfo, nbytesinfo = walker.readfields("!iiiiiBiii")
         else:                  # big file
-            end, seekfree, nbytesfree, nfree, nbytesname, units, self.compression, seekinfo, nbytesinfo = walker.readfields("!qqiiiBiqi")
+            end, seekfree, nbytesfree, nfree, nbytesname, units, compression, seekinfo, nbytesinfo = walker.readfields("!qqiiiBiqi")
         version %= 1000000
+
+        self.compression = TFile._compression(compression)
 
         uuid = walker.readfield("!18s")
 
@@ -252,7 +284,7 @@ class TFile(object):
         if nbytes + begin > end:
             raise IOError("TDirectory header length")
 
-        self.dir = TDirectory(walker.copy(begin), walker.copy(begin + nbytesname))
+        self.dir = TDirectory(walker.copy(begin), walker.copy(begin + nbytesname), self.compression)
 
     def __repr__(self):
         return "<TFile {0} at 0x{1:012x}>".format(repr(self.dir.name), id(self))
@@ -261,7 +293,7 @@ class TFile(object):
         return self.dir.get(name)
 
 class TDirectory(object):
-    def __init__(self, walker, walkerhead):
+    def __init__(self, walker, walkerhead, compression):
         version, ctime, mtime = walkerhead.readfields("!hII")
         nbyteskeys, nbytesname = walkerhead.readfields("!ii")
 
@@ -286,7 +318,7 @@ class TDirectory(object):
         if not 10 <= nbytesname <= 1000:
             raise IOError("directory info")
 
-        self.keys = TKeys(walker.copy(seekkeys))
+        self.keys = TKeys(walker.copy(seekkeys), compression)
 
     def __repr__(self):
         return "<TDirectory {0} at 0x{1:012x}>".format(repr(self.name), id(self))
@@ -296,12 +328,12 @@ class TDirectory(object):
         return self.keys.get(name)
 
 class TKeys(object):
-    def __init__(self, walker):
+    def __init__(self, walker, compression):
         walkerkeys = walker.copy()
-        self.header = TKey(walker)
+        self.header = TKey(walker, compression)
         walkerkeys.skip(self.header.keylen)
         nkeys = walkerkeys.readfield("!i")
-        self.keys = [TKey(walkerkeys) for i in range(nkeys)]
+        self.keys = [TKey(walkerkeys, compression) for i in range(nkeys)]
 
     def __repr__(self):
         return "<TKeys len={0} at 0x{1:012x}>".format(len(self.keys), id(self))
@@ -324,7 +356,7 @@ class TKeys(object):
         raise KeyError("not found: {0}".format(repr(name)))
 
 class TKey(object):
-    def __init__(self, walker):
+    def __init__(self, walker, compression):
         self.bytes, version, self.objlen, datetime, self.keylen, cycle = walker.readfields("!ihiIhh")
 
         if version > 1000:
@@ -340,7 +372,8 @@ class TKey(object):
 
         #  object size != compressed size means it's compressed
         if self.objlen != self.bytes - self.keylen:
-            self.walker = LazyWalker(walker, zlib.decompress, self.bytes - self.keylen, self.seekkey + self.keylen + 9, -self.keylen)
+            function = TFile._decompressfcn(compression)
+            self.walker = LazyWalker(walker, function, self.bytes - self.keylen, self.seekkey + self.keylen + 9, -self.keylen)
 
         # otherwise, it's uncompressed
         else:
@@ -582,27 +615,25 @@ class TBranch(TNamed, TAttFill):
         TNamed.__init__(self, filewalker, walker)
         TAttFill.__init__(self, filewalker, walker)
 
-        self.compress, self.basketSize, self.entryOffsetLen, self.writeBasket, self.entryNumber, self.offset, self.maxBaskets, self.splitLevel, self.entries, self.firstEntry, self.totBytes, self.zipBytes = walker.readfields("!iiiiqiiiqqqq")
+        compression, basketSize, entryOffsetLen, writeBasket, entryNumber, offset, maxBaskets, splitLevel, entries, firstEntry, totBytes, zipBytes = walker.readfields("!iiiiqiiiqqqq")
+        self.compression = TFile._compression(compression)
 
         self.branches = TObjArray(filewalker, walker)
         self.leaves = TObjArray(filewalker, walker)
         self.baskets = TObjArray(filewalker, walker)
 
         walker.skip(1)  # isArray
-        self.basketBytes = walker.readarray(">i4", self.maxBaskets)[:self.writeBasket]
+        self.basketBytes = walker.readarray(">i4", maxBaskets)[:writeBasket]
 
         walker.skip(1)  # isArray
-        self.basketEntry = walker.readarray(">i8", self.maxBaskets)[:self.writeBasket]
+        self.basketEntry = walker.readarray(">i8", maxBaskets)[:writeBasket]
 
         walker.skip(1)  # isArray
-        self.basketSeek = walker.readarray(">i8", self.maxBaskets)[:self.writeBasket]
+        self.basketSeek = walker.readarray(">i8", maxBaskets)[:writeBasket]
 
-        self.fname = walker.readstring()
+        fname = walker.readstring()
 
         self._checkbytecount(walker.index - start, bcnt)
-
-        if self.splitLevel == 0 and len(self.branches) > 0:
-            self.splitLevel = 1
 
         if len(self.leaves) == 1:
             self.dtype = self.leaves[0].dtype
@@ -623,7 +654,8 @@ class TBranch(TNamed, TAttFill):
             seekkey, seekpdir = walker.fields("!ii", index=walker.index + 18)
 
         if objlen != bytes - keylen:
-            walker = LazyWalker(walker, zlib.decompress, bytes - keylen, seekkey + keylen + 9)
+            function = TFile._decompressfcn(self.compression)
+            walker = LazyWalker(walker, function, bytes - keylen, seekkey + keylen + 9)
             return walker.array(self.dtype, self.basketsize[i])
         else:
             return walker.array(self.dtype, self.basketsize[i], index=walker.index + keylen)
