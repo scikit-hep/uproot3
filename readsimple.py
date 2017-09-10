@@ -254,6 +254,8 @@ class TKey(object):
 
     @property
     def isCompressed(self):
+        print "objlen", self.objlen, "bytes - keylen", self.bytes - self.keylen
+
         return self.objlen != self.bytes - self.keylen
 
     def get(self):
@@ -497,7 +499,6 @@ class TBranch(TNamed, TAttFill):
 
         self.branches = TObjArray(walker)
         self.leaves = TObjArray(walker)
-        self.dtype = self._dtype()
         self.baskets = TObjArray(walker)
 
         walker.skip(1)  # isArray
@@ -509,8 +510,6 @@ class TBranch(TNamed, TAttFill):
         walker.skip(1)  # isArray
         self.basketSeek = walker.readarray(">i8", self.maxBaskets)[:self.writeBasket]
 
-        self.basketwalkers = [walker.copy(x) for x in self.basketSeek]
-
         self.fname = walker.readstring()
 
         self._checkbytecount(walker.index - start, bcnt)
@@ -518,34 +517,28 @@ class TBranch(TNamed, TAttFill):
         if self.splitLevel == 0 and len(self.branches) > 0:
             self.splitLevel = 1
 
+        if len(self.leaves) == 1:
+            self.dtype = self.leaves[0].dtype
+        self.basketwalkers = [walker.copy(x) for x in self.basketSeek]
+        self.basketsize = [walker.fields("!ihi")[2] // self.dtype.itemsize for walker in self.basketwalkers]
+
     def __repr__(self):
         return "<TBranch {0} at 0x{1:012x}>".format(repr(self.name), id(self))
 
-    def _dtype(self):
-        if len(self.leaves) == 1:
-            return self.leaves[0].dtype
-
-    def keylen(self, i):
-        bytes, version, objlen, datetime, keylen, cycle = self.basketwalkers[i].fields("!ihiIhh")
-        return keylen
-
-    def basketsize(self, i):
-        return (self.basketBytes[i] - self.keylen(i)) // self.dtype.itemsize
-
     def basket(self, i):
         walker = self.basketwalkers[i]
-        return walker.array(self.dtype, self.basketsize(i), index=walker.index + self.keylen(i))
+        bytes, version, objlen, datetime, keylen = walker.fields("!ihiIh")
+        return walker.array(self.dtype, self.basketsize[i], index=walker.index + keylen)
 
     def array(self, dtype=None):
         if dtype is None:
             dtype = self.dtype
-        size = [self.basketsize(i) for i in range(len(self.basketwalkers))]
 
-        out = numpy.empty(sum(size), dtype=dtype)
+        out = numpy.empty(sum(self.basketsize), dtype=dtype)
 
         start = 0
         for i in range(len(self.basketwalkers)):
-            end = start + size[i]
+            end = start + self.basketsize[i]
             out[start:end] = self.basket(i)
             start = end
 
@@ -590,7 +583,7 @@ class {0}(TLeaf):
 Deserialized.classes[b"{0}"] = {0}
 """.format(classname, format, dtype), globals())
 
-file = TFile("/home/pivarski/storage/data/TrackResonanceNtuple_uncompressed.root")
+file = TFile("/home/pivarski/storage/data/TrackResonanceNtuple_compressed.root")
 tree = file.get("twoMuon")
 
 print(tree.branch("mass_mumu").array())

@@ -4,7 +4,7 @@ import "go-hep.org/x/hep/rootio"
 import "fmt"
 
 func main() {
-	f, err := rootio.Open("/home/pivarski/storage/data/TrackResonanceNtuple_uncompressed.root")
+	f, err := rootio.Open("/home/pivarski/storage/data/TrackResonanceNtuple_compressed.root")
 	obj, err2 := f.Get("twoMuon")
 	tree := obj.(rootio.Tree)
 	fmt.Printf("entries= %v\n", tree.Entries())

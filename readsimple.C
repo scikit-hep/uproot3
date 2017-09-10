@@ -12,7 +12,7 @@ double diff(struct timeval endTime, struct timeval startTime) {
 void readsimple() {
   struct timeval startTime, endTime;
 
-  TFile* f = new TFile("/home/pivarski/storage/data/TrackResonanceNtuple_uncompressed.root");
+  TFile* f = new TFile("/home/pivarski/storage/data/TrackResonanceNtuple_compressed.root");
   TTree* t;
   f->GetObject("twoMuon", t);
 
