@@ -143,6 +143,8 @@ class LazyWalker(Walker):
         self._original_origin   = origin
         self._evaluated         = False
 
+        self.index = 0
+
     def _evaluate(self):
         walker   = self._original_walker
         function = self._original_function
@@ -150,77 +152,79 @@ class LazyWalker(Walker):
         index    = self._original_index
         origin   = self._original_origin
 
+        print "decompressing"
+
         string = self._original_function(walker.bytes(length, index))
         Walker.__init__(self, numpy.frombuffer(string, dtype=numpy.uint8), 0, origin=origin)
         self._evaluated = True
 
     def copy(self, index=None, origin=None):
         if not self._evaluated: self._evaluate()
-        return super(self, LazyWalker).copy(index, origin)
+        return super(LazyWalker, self).copy(index, origin)
 
     def skip(self, format):
         if not self._evaluated: self._evaluate()
-        return super(self, LazyWalker).skip(format)
+        return super(LazyWalker, self).skip(format)
 
     def fields(self, format, index=None, read=False):
         if not self._evaluated: self._evaluate()
-        return super(self, LazyWalker).fields(format, index, read)
+        return super(LazyWalker, self).fields(format, index, read)
 
     def readfields(self, format, index=None):
         if not self._evaluated: self._evaluate()
-        return super(self, LazyWalker).readfields(format, index)
+        return super(LazyWalker, self).readfields(format, index)
 
     def field(self, format, index=None, read=False):
         if not self._evaluated: self._evaluate()
-        return super(self, LazyWalker).field(format, index, read)
+        return super(LazyWalker, self).field(format, index, read)
 
     def readfield(self, format, index=None):
         if not self._evaluated: self._evaluate()
-        return super(self, LazyWalker).readfield(format, index)
+        return super(LazyWalker, self).readfield(format, index)
 
     def bytes(self, length, index=None, read=False):
         if not self._evaluated: self._evaluate()
-        return super(self, LazyWalker).bytes(length, index, read)
+        return super(LazyWalker, self).bytes(length, index, read)
 
     def readbytes(self, length, index=None):
         if not self._evaluated: self._evaluate()
-        return super(self, LazyWalker).readbytes(length, index)
+        return super(LazyWalker, self).readbytes(length, index)
 
     def array(self, dtype, length, index=None, read=False):
         if not self._evaluated: self._evaluate()
-        return super(self, LazyWalker).array(dtype, length, index, read)
+        return super(LazyWalker, self).array(dtype, length, index, read)
 
     def readarray(self, dtype, length, index=None):
         if not self._evaluated: self._evaluate()
-        return super(self, LazyWalker).readarray(dtype, length, index)
+        return super(LazyWalker, self).readarray(dtype, length, index)
 
     def string(self, index=None, length=None, read=False):
         if not self._evaluated: self._evaluate()
-        return super(self, LazyWalker).string(index, length, read)
+        return super(LazyWalker, self).string(index, length, read)
 
     def readstring(self, index=None, length=None):
         if not self._evaluated: self._evaluate()
-        return super(self, LazyWalker).readstring(index, length)
+        return super(LazyWalker, self).readstring(index, length)
 
     def cstring(self, index=None, read=False):
         if not self._evaluated: self._evaluate()
-        return super(self, LazyWalker).cstring(index, read)
+        return super(LazyWalker, self).cstring(index, read)
 
     def readcstring(self, index=None):
         if not self._evaluated: self._evaluate()
-        return super(self, LazyWalker).readcstring(index)
+        return super(LazyWalker, self).readcstring(index)
 
     def readversion(self):
         if not self._evaluated: self._evaluate()
-        return super(self, LazyWalker).readversion()
+        return super(LazyWalker, self).readversion()
 
     def skipversion(self):
         if not self._evaluated: self._evaluate()
-        return super(self, LazyWalker).skipversion()
+        return super(LazyWalker, self).skipversion()
 
     def skiptobject(self):
         if not self._evaluated: self._evaluate()
-        return super(self, LazyWalker).skiptobject()
+        return super(LazyWalker, self).skiptobject()
 
 class TFile(object):
     def __init__(self, filepath):
@@ -338,8 +342,7 @@ class TKey(object):
 
         #  object size != compressed size means it's compressed
         if self.objlen != self.bytes - self.keylen:
-            inflated = zlib.decompress(walker.bytes(self.bytes - self.keylen, index=self.seekkey + self.keylen + 9))
-            self.walker = Walker(numpy.frombuffer(inflated, dtype=numpy.uint8), 0, origin=-self.keylen)
+            self.walker = LazyWalker(walker, zlib.decompress, self.bytes - self.keylen, self.seekkey + self.keylen + 9, -self.keylen)
 
         # otherwise, it's uncompressed
         else:
@@ -614,6 +617,7 @@ class TBranch(TNamed, TAttFill):
     def basket(self, i):
         walker = self.basketwalkers[i]
         bytes, version, objlen, datetime, keylen = walker.fields("!ihiIh")
+
         return walker.array(self.dtype, self.basketsize[i], index=walker.index + keylen)
 
     def array(self, dtype=None):
