@@ -357,12 +357,12 @@ class TKeys(object):
 
 class TKey(object):
     def __init__(self, walker, compression):
-        self.bytes, version, self.objlen, datetime, self.keylen, cycle = walker.readfields("!ihiIhh")
+        bytes, version, objlen, datetime, self.keylen, cycle = walker.readfields("!ihiIhh")
 
         if version > 1000:
-            self.seekkey, seekpdir = walker.readfields("!qq")
+            seekkey, seekpdir = walker.readfields("!qq")
         else:
-            self.seekkey, seekpdir = walker.readfields("!ii")
+            seekkey, seekpdir = walker.readfields("!ii")
 
         self.classname = walker.readstring()
         self.name = walker.readstring()
@@ -371,13 +371,13 @@ class TKey(object):
         self.filewalker = walker
 
         #  object size != compressed size means it's compressed
-        if self.objlen != self.bytes - self.keylen:
+        if objlen != bytes - self.keylen:
             function = TFile._decompressfcn(compression)
-            self.walker = LazyWalker(walker, function, self.bytes - self.keylen, self.seekkey + self.keylen + 9, -self.keylen)
+            self.walker = LazyWalker(walker, function, bytes - self.keylen, seekkey + self.keylen + 9, -self.keylen)
 
         # otherwise, it's uncompressed
         else:
-            self.walker = walker.copy(self.seekkey + self.keylen, self.seekkey)
+            self.walker = walker.copy(seekkey + self.keylen, seekkey)
 
     def __repr__(self):
         return "<TKey {0} at 0x{1:012x}>".format(repr(self.name), id(self))
