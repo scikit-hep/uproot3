@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import struct
+import zlib
 
 import numpy
 
@@ -9,10 +10,12 @@ class Walker(object):
     def memmap(filepath, index=0):
         return Walker(numpy.memmap(filepath, dtype=numpy.uint8, mode="r"), index)
 
-    def __init__(self, data, index=0):
+    def __init__(self, data, index=0, origin=None):
         self.data = data
         self.index = index
         self.refs = {}
+        if origin is not None:
+            self.origin = origin
 
     def copy(self, index=None, skip=None, origin=None):
         if index is None:
@@ -247,25 +250,25 @@ class TKey(object):
         self.classname = walker.readstring()
         self.name = walker.readstring()
         self.title = walker.readstring()
-        self.walker = walker.copy(index=self.seekkey + self.keylen, origin=self.seekkey)
+
+        self.filewalker = walker
+
+        #  object size != compressed size means it's compressed
+        if self.objlen != self.bytes - self.keylen:
+            inflated = zlib.decompress(walker.bytes(self.bytes - self.keylen, index=self.seekkey + self.keylen + 9))
+            self.walker = Walker(numpy.frombuffer(inflated, dtype=numpy.uint8), 0, origin=-self.keylen)
+
+        # otherwise, it's uncompressed
+        else:
+            self.walker = walker.copy(index=self.seekkey + self.keylen, origin=self.seekkey)
 
     def __repr__(self):
         return "<TKey {0} at 0x{1:012x}>".format(repr(self.name), id(self))
 
-    @property
-    def isCompressed(self):
-        print "objlen", self.objlen, "bytes - keylen", self.bytes - self.keylen
-
-        return self.objlen != self.bytes - self.keylen
-
     def get(self):
         if self.classname not in Deserialized.classes:
             raise NotImplementedError("class not recognized: {0}".format(self.classname))
-
-        if self.isCompressed:
-            raise NotImplementedError
-
-        return Deserialized.classes[self.classname](self.walker)
+        return Deserialized.classes[self.classname](self.filewalker, self.walker)
 
 class Deserialized(object):
     classes = {}
@@ -274,7 +277,7 @@ class Deserialized(object):
         raise TypeError("Deserialized is an abstract class")
 
     @staticmethod
-    def deserialize(walker):
+    def deserialize(filewalker, walker):
         beg = walker.index - walker.origin
         bcnt = walker.readfield("!I")
 
@@ -318,7 +321,7 @@ class Deserialized(object):
             else:
                 walker.refs[len(walker.refs) + 1] = fct
 
-            obj = fct(walker)
+            obj = fct(filewalker, walker)
 
             if vers > 0:
                 walker.refs[beg + Walker.kMapOffset] = obj
@@ -339,7 +342,7 @@ class Deserialized(object):
             if fct not in Deserialized.classes.values():
                 raise IOError("invalid class-tag reference (not a factory)")
 
-            obj = fct(walker)              # new object
+            obj = fct(filewalker, walker)  # new object
 
             if vers > 0:
                 walker.refs[beg + Walker.kMapOffset] = obj
@@ -353,7 +356,7 @@ class Deserialized(object):
             raise IOError("{0} byte count".format(self.__class__.__name__))
 
 class TObjArray(Deserialized):
-    def __init__(self, walker):
+    def __init__(self, filewalker, walker):
         start = walker.index
         vers, bcnt = walker.readversion()
 
@@ -368,7 +371,7 @@ class TObjArray(Deserialized):
 
         nobjs, low = walker.readfields("!ii")
 
-        self.items = [Deserialized.deserialize(walker) for i in range(nobjs)]
+        self.items = [Deserialized.deserialize(filewalker, walker) for i in range(nobjs)]
 
         self._checkbytecount(walker.index - start, bcnt)
 
@@ -387,7 +390,7 @@ class TObjArray(Deserialized):
 Deserialized.classes[b"TObjArray"] = TObjArray
 
 class TNamed(Deserialized):
-    def __init__(self, walker):
+    def __init__(self, filewalker, walker):
         start = walker.index
         vers, bcnt = walker.readversion()
         walker.skipversion()
@@ -399,35 +402,35 @@ class TNamed(Deserialized):
         self._checkbytecount(walker.index - start, bcnt)
 
 class TAttLine(Deserialized):
-    def __init__(self, walker):
+    def __init__(self, filewalker, walker):
         start = walker.index
         vers, bcnt = walker.readversion()
         walker.skip("!hhh")  # color, style, width
         self._checkbytecount(walker.index - start, bcnt)
 
 class TAttFill(Deserialized):
-    def __init__(self, walker):
+    def __init__(self, filewalker, walker):
         start = walker.index
         vers, bcnt = walker.readversion()
         walker.skip("!hh")  # color, style
         self._checkbytecount(walker.index - start, bcnt)
 
 class TAttMarker(Deserialized):
-    def __init__(self, walker):
+    def __init__(self, filewalker, walker):
         start = walker.index
         vers, bcnt = walker.readversion()
         walker.skip("!hhf")  # color, style, width
         self._checkbytecount(walker.index - start, bcnt)
 
 class TTree(TNamed, TAttLine, TAttFill, TAttMarker):
-    def __init__(self, walker):
+    def __init__(self, filewalker, walker):
         start = walker.index
         vers, bcnt = walker.readversion()
 
-        TNamed.__init__(self, walker)
-        TAttLine.__init__(self, walker)
-        TAttFill.__init__(self, walker)
-        TAttMarker.__init__(self, walker)
+        TNamed.__init__(self, filewalker, walker)
+        TAttLine.__init__(self, filewalker, walker)
+        TAttFill.__init__(self, filewalker, walker)
+        TAttMarker.__init__(self, filewalker, walker)
 
         self.entries, self.totbytes, self.zipbytes = walker.readfields("!qqq")
 
@@ -462,12 +465,12 @@ class TTree(TNamed, TAttLine, TAttFill, TAttMarker):
             walker.skip(1)
             walker.skip(nclus * 8)   # fClusterSize
 
-        self.branches = TObjArray(walker)
-        self.leaves = TObjArray(walker)
+        self.branches = TObjArray(filewalker, walker)
+        self.leaves = TObjArray(filewalker, walker)
 
         for i in range(7):
             # fAliases, fIndexValues, fIndex, fTreeIndex, fFriends, fUserInfo, fBranchRef
-            Deserialized.deserialize(walker)
+            Deserialized.deserialize(filewalker, walker)
 
         self._checkbytecount(walker.index - start, bcnt)
 
@@ -485,21 +488,21 @@ class TTree(TNamed, TAttLine, TAttFill, TAttMarker):
 Deserialized.classes[b"TTree"] = TTree
 
 class TBranch(TNamed, TAttFill):
-    def __init__(self, walker):
+    def __init__(self, filewalker, walker):
         start = walker.index
         vers, bcnt = walker.readversion()
 
         if vers < 12:
             raise NotImplementedError("TBranch version too old")
 
-        TNamed.__init__(self, walker)
-        TAttFill.__init__(self, walker)
+        TNamed.__init__(self, filewalker, walker)
+        TAttFill.__init__(self, filewalker, walker)
 
         self.compress, self.basketSize, self.entryOffsetLen, self.writeBasket, self.entryNumber, self.offset, self.maxBaskets, self.splitLevel, self.entries, self.firstEntry, self.totBytes, self.zipBytes = walker.readfields("!iiiiqiiiqqqq")
 
-        self.branches = TObjArray(walker)
-        self.leaves = TObjArray(walker)
-        self.baskets = TObjArray(walker)
+        self.branches = TObjArray(filewalker, walker)
+        self.leaves = TObjArray(filewalker, walker)
+        self.baskets = TObjArray(filewalker, walker)
 
         walker.skip(1)  # isArray
         self.basketBytes = walker.readarray(">i4", self.maxBaskets)[:self.writeBasket]
@@ -519,9 +522,9 @@ class TBranch(TNamed, TAttFill):
 
         if len(self.leaves) == 1:
             self.dtype = self.leaves[0].dtype
-        self.basketwalkers = [walker.copy(x) for x in self.basketSeek]
-        self.basketsize = [walker.fields("!ihi")[2] // self.dtype.itemsize for walker in self.basketwalkers]
-
+        self.basketwalkers = [filewalker.copy(x) for x in self.basketSeek]
+        self.basketsize = [filewalker.field("!i", index=x + 6) // self.dtype.itemsize for x in self.basketSeek]
+        
     def __repr__(self):
         return "<TBranch {0} at 0x{1:012x}>".format(repr(self.name), id(self))
 
@@ -547,14 +550,14 @@ class TBranch(TNamed, TAttFill):
 Deserialized.classes[b"TBranch"] = TBranch
 
 class TLeaf(TNamed):
-    def __init__(self, walker):
+    def __init__(self, filewalker, walker):
         start = walker.index
         vers, bcnt = walker.readversion()
 
-        TNamed.__init__(self, walker)
+        TNamed.__init__(self, filewalker, walker)
 
         self.len, self.etype, self.offset, self.hasrange, self.unsigned = walker.readfields("!iii??")
-        self.count = Deserialized.deserialize(walker)
+        self.count = Deserialized.deserialize(filewalker, walker)
 
         self._checkbytecount(walker.index - start, bcnt)
 
@@ -569,11 +572,11 @@ Deserialized.classes[b"TLeaf"] = TLeaf
 for classname, format, dtype in [("TLeafF", "!ff", ">f4")]:
     exec("""
 class {0}(TLeaf):
-    def __init__(self, walker):
+    def __init__(self, filewalker, walker):
         start = walker.index
         vers, bcnt = walker.readversion()
 
-        TLeaf.__init__(self, walker)
+        TLeaf.__init__(self, filewalker, walker)
 
         self.min, self.max = walker.readfields("{1}")
         self.dtype = numpy.dtype("{2}")
