@@ -156,7 +156,7 @@ class LazyWalker(Walker):
         length   = self._original_length
         index    = self._original_index
         origin   = self._original_origin
-
+        
         string = self._original_function(walker.bytes(length, index))
         Walker.__init__(self, numpy.frombuffer(string, dtype=numpy.uint8), 0, origin=origin)
         self._evaluated = True
@@ -234,12 +234,16 @@ class TFile(object):
     def _compression(compression):
         if compression // 100 <= 1:
             return "zlib", compression % 100
+
         elif compression // 100 == 2:
             return "lzma", compression % 100
+
         elif compression // 100 == 3:
             return "old", compression % 100
+
         elif compression // 100 == 4:
             return "lz4", compression % 100
+
         else:
             return "unknown", compression % 100
 
@@ -247,11 +251,18 @@ class TFile(object):
     def _decompressfcn(compression):
         algo, level = compression
         if algo == "zlib":
-            return zlib.decompress
+            # 9-byte skip is this record:
+            # https://github.com/root-project/root/blob/d2e5fc4da04c19d127facc2ffbcab3d4c2aff035/core/zip/src/Bits.h#L646
+            return lambda x: zlib.decompress(x[9:])
+
         elif algo == "lz4":
             if lz4framed is None:
                 raise ImportError("lz4framed library not found")
-            return lz4framed.decompress
+            # 9 or 17-byte skip, depending on ROOT version
+            # https://github.com/root-project/root/blob/088ccca0d3fac55f99e139057135bb776eaaecc4/core/lz4/src/ZipLZ4.cxx#L29
+            # [  4,  34,  77,  24, 104,  64,  94,  41,   0,   0,   0,   0,   0, 0, 221,  32,  13,   0,   0]
+            return lambda x: lz4framed.decompress(numpy.array([4, 34, 77, 24, 96, 64, 130] + numpy.array([len(x) - 9], dtype=numpy.int32).view(numpy.uint8).tolist(), dtype=numpy.uint8).tostring() + x[9:].tostring() + b"\x00\x00\x00\x00")
+
         else:
             raise NotImplementedError("cannot decompress \"{0}\"".format(algo))
 
@@ -373,7 +384,7 @@ class TKey(object):
         #  object size != compressed size means it's compressed
         if objlen != bytes - self.keylen:
             function = TFile._decompressfcn(compression)
-            self.walker = LazyWalker(walker, function, bytes - self.keylen, seekkey + self.keylen + 9, -self.keylen)
+            self.walker = LazyWalker(walker, function, bytes - self.keylen, seekkey + self.keylen, -self.keylen)
 
         # otherwise, it's uncompressed
         else:
@@ -653,10 +664,13 @@ class TBranch(TNamed, TAttFill):
         else:
             seekkey, seekpdir = walker.fields("!ii", index=walker.index + 18)
 
+        #  object size != compressed size means it's compressed
         if objlen != bytes - keylen:
             function = TFile._decompressfcn(self.compression)
-            walker = LazyWalker(walker, function, bytes - keylen, seekkey + keylen + 9)
+            walker = LazyWalker(walker, function, bytes - keylen, seekkey + keylen)
             return walker.array(self.dtype, self.basketsize[i])
+
+        # otherwise, it's uncompressed
         else:
             return walker.array(self.dtype, self.basketsize[i], index=walker.index + keylen)
 
@@ -713,7 +727,7 @@ class {0}(TLeaf):
 Deserialized.classes[b"{0}"] = {0}
 """.format(classname, format, dtype), globals())
 
-file = TFile("/home/pivarski/storage/data/TrackResonanceNtuple_compressed.root")
+file = TFile("/home/pivarski/storage/data/TrackResonanceNtuple_LZ4.root")
 tree = file.get("twoMuon")
 
 print(tree.branch("mass_mumu").array())
