@@ -135,7 +135,7 @@ class Walker(object):
             self.skip("!H")
 
 class LazyWalker(Walker):
-    def __init__(self, walker, function, length, index, origin):
+    def __init__(self, walker, function, length, index, origin=None):
         self._original_walker   = walker
         self._original_function = function
         self._original_length   = length
@@ -151,8 +151,6 @@ class LazyWalker(Walker):
         length   = self._original_length
         index    = self._original_index
         origin   = self._original_origin
-
-        print "decompressing"
 
         string = self._original_function(walker.bytes(length, index))
         Walker.__init__(self, numpy.frombuffer(string, dtype=numpy.uint8), 0, origin=origin)
@@ -616,9 +614,19 @@ class TBranch(TNamed, TAttFill):
 
     def basket(self, i):
         walker = self.basketwalkers[i]
-        bytes, version, objlen, datetime, keylen = walker.fields("!ihiIh")
 
-        return walker.array(self.dtype, self.basketsize[i], index=walker.index + keylen)
+        # DO NOT CHANGE STATE, so that I can parallelize this later
+        bytes, version, objlen, datetime, keylen, cycle = walker.fields("!ihiIhh")
+        if version > 1000:
+            seekkey, seekpdir = walker.fields("!qq", index=walker.index + 18)
+        else:
+            seekkey, seekpdir = walker.fields("!ii", index=walker.index + 18)
+
+        if objlen != bytes - keylen:
+            walker = LazyWalker(walker, zlib.decompress, bytes - keylen, seekkey + keylen + 9)
+            return walker.array(self.dtype, self.basketsize[i])
+        else:
+            return walker.array(self.dtype, self.basketsize[i], index=walker.index + keylen)
 
     def array(self, dtype=None):
         if dtype is None:
