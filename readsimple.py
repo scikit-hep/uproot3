@@ -6,9 +6,19 @@ import zlib
 import numpy
 
 try:
-    import lz4framed
+    from lz4.block import decompress as lz4_decompress
 except ImportError:
-    lz4framed = None
+    def lz4_decompress(*args, **kwds):
+        raise ImportError("\n\nInstall lz4 package with:\n\n    pip install lz4 --user\n\nand restart Python.")
+
+try:
+    from lzma import decompress as lzma_decompress
+except ImportError:
+    try:
+        from backports.lzma import decompress as lzma_decompress
+    except ImportError:
+        def lzma_decompress(*args, **kwds):
+            raise ImportError("\n\nInstall lzma package with:\n\n    pip install backports.lzma --user\n\nand restart Python (or just use Python > 3.3).")
 
 class Walker(object):
     @staticmethod
@@ -248,20 +258,22 @@ class TFile(object):
             return "unknown", compression % 100
 
     @staticmethod
-    def _decompressfcn(compression):
+    def _decompressfcn(compression, objlen):
         algo, level = compression
         if algo == "zlib":
-            # 9-byte skip is this record:
-            # https://github.com/root-project/root/blob/d2e5fc4da04c19d127facc2ffbcab3d4c2aff035/core/zip/src/Bits.h#L646
+            # 9-byte skip for ROOT's custom frame:
+            # https://github.com/root-project/root/blob/master/core/zip/src/Bits.h#L646
             return lambda x: zlib.decompress(x[9:])
 
+        elif algo == "lzma":
+            # 9-byte skip for LZMA, too:
+            # https://github.com/root-project/root/blob/master/core/lzma/src/ZipLZMA.c#L81
+            return lambda x: lzma_decompress(x[9:])
+
         elif algo == "lz4":
-            if lz4framed is None:
-                raise ImportError("lz4framed library not found")
-            # 9 or 17-byte skip, depending on ROOT version
-            # https://github.com/root-project/root/blob/088ccca0d3fac55f99e139057135bb776eaaecc4/core/lz4/src/ZipLZ4.cxx#L29
-            # [  4,  34,  77,  24, 104,  64,  94,  41,   0,   0,   0,   0,   0, 0, 221,  32,  13,   0,   0]
-            return lambda x: lz4framed.decompress(numpy.array([4, 34, 77, 24, 96, 64, 130] + numpy.array([len(x) - 9], dtype=numpy.int32).view(numpy.uint8).tolist(), dtype=numpy.uint8).tostring() + x[9:].tostring() + b"\x00\x00\x00\x00")
+            # 9-byte skip, maybe with 8-byte hash, depending on ROOT version
+            # https://github.com/root-project/root/blob/master/core/lz4/src/ZipLZ4.cxx#L38
+            return lambda x: lz4_decompress(x[9:], uncompressed_size=objlen)
 
         else:
             raise NotImplementedError("cannot decompress \"{0}\"".format(algo))
@@ -383,7 +395,7 @@ class TKey(object):
 
         #  object size != compressed size means it's compressed
         if objlen != bytes - self.keylen:
-            function = TFile._decompressfcn(compression)
+            function = TFile._decompressfcn(compression, objlen)
             self.walker = LazyWalker(walker, function, bytes - self.keylen, seekkey + self.keylen, -self.keylen)
 
         # otherwise, it's uncompressed
@@ -666,7 +678,7 @@ class TBranch(TNamed, TAttFill):
 
         #  object size != compressed size means it's compressed
         if objlen != bytes - keylen:
-            function = TFile._decompressfcn(self.compression)
+            function = TFile._decompressfcn(self.compression, objlen)
             walker = LazyWalker(walker, function, bytes - keylen, seekkey + keylen)
             return walker.array(self.dtype, self.basketsize[i])
 
@@ -727,13 +739,18 @@ class {0}(TLeaf):
 Deserialized.classes[b"{0}"] = {0}
 """.format(classname, format, dtype), globals())
 
-file = TFile("/home/pivarski/storage/data/TrackResonanceNtuple_LZ4.root")
+file = TFile("/home/pivarski/storage/data/TrackResonanceNtuple_LZMA.root")
 tree = file.get("twoMuon")
+
+import time
+starttime = time.time()
 
 print(tree.branch("mass_mumu").array())
 print(tree.branch("px").array())
 print(tree.branch("py").array())
 print(tree.branch("pz").array())
+
+print time.time() - starttime
 
 # 20 ms to load a tree, 60 ms to get the data (uncompressed)
 # ROOT takes 88 ms to load a tree, 220 ms to get the data
