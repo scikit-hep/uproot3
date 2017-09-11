@@ -17,7 +17,6 @@
 import unittest
 
 import numpy
-import ROOT
 
 import uproot
 
@@ -29,4 +28,4 @@ class TestTree(unittest.TestCase):
         tree = uproot.memmap("tests/simple.root").get("tree")
         self.assertEqual(tree.branch("one").array().tolist(), [1, 2, 3, 4])
         self.assertEqual(tree.branch("two").array().tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
-        self.assertEqual(list(tree.branch("three").strings()), ["uno", "dos", "tres", "quatro"])
+        self.assertEqual(list(tree.branch("three").strings()), [b"uno", b"dos", b"tres", b"quatro"])
