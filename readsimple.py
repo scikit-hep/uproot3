@@ -739,18 +739,13 @@ class {0}(TLeaf):
 Deserialized.classes[b"{0}"] = {0}
 """.format(classname, format, dtype), globals())
 
-file = TFile("/home/pivarski/storage/data/TrackResonanceNtuple_LZMA.root")
+file = TFile("/home/pivarski/storage/data/TrackResonanceNtuple_uncompressed.root")
 tree = file.get("twoMuon")
 
-import time
-starttime = time.time()
-
-print(tree.branch("mass_mumu").array())
-print(tree.branch("px").array())
-print(tree.branch("py").array())
-print(tree.branch("pz").array())
-
-print time.time() - starttime
+# print(tree.branch("mass_mumu").array())
+# print(tree.branch("px").array())
+# print(tree.branch("py").array())
+# print(tree.branch("pz").array())
 
 # 20 ms to load a tree, 60 ms to get the data (uncompressed)
 # ROOT takes 88 ms to load a tree, 220 ms to get the data
