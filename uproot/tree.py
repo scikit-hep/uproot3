@@ -95,7 +95,42 @@ class TTree(uproot.core.TNamed,
                     pass
 
         raise KeyError("not found: {0}".format(repr(name)))
-        
+
+    def branchnames(self, recursive=True):
+        for branch in self.branches:
+            yield branch.name
+            if recursive:
+                for x in branch.branchnames(recursive):
+                    yield x
+
+    def arrays(self, branchdtypes=lambda branch: branch.dtype, executor=None, block=True):
+        if isinstance(branchdtypes, list):
+            tmp = lambda branch: branch.dtype if branch.name in branchdtypes and hasattr(branch, "dtype") else None
+            branchdtypes = tmp
+
+        def recurse(obj):
+            for branch in obj.branches:
+                yield branch
+                for x in recurse(branch):
+                    yield x
+
+        out = {}
+        errors = []
+        for branch in recurse(self):
+            dtype = branchdtypes(branch)
+            if dtype is not None:
+                out[branch.name], res = branch.array(dtype, executor, False)
+                errors.append(res)
+
+        if block:
+            for inner in errors:
+                for x in inner:
+                    if x is not None:
+                        raise x
+            return out
+        else:
+            return out, (item for sublist in errors for item in sublist)
+
 uproot.rootio.Deserialized.classes[b"TTree"] = TTree
 
 class TBranch(uproot.core.TNamed,
@@ -174,6 +209,13 @@ class TBranch(uproot.core.TNamed,
             else:
                 self.basketwalkers.append(self.filewalker.copy(seek + keylen, newfile=True))
 
+    def branchnames(self, recursive=True):
+        for branch in self.branches:
+            yield branch.name
+            if recursive:
+                for x in branch.branchnames(recursive):
+                    yield x
+
     def basket(self, i, offsets=False):
         if not hasattr(self, "basketwalkers"):
             self._preparebaskets()
@@ -189,7 +231,7 @@ class TBranch(uproot.core.TNamed,
         else:
             return array[:self.basketborders[i] // self.dtype.itemsize]
 
-    def array(self, dtype=None):
+    def array(self, dtype=None, executor=None, block=True):
         if not hasattr(self, "basketwalkers"):
             self._preparebaskets()
 
@@ -198,13 +240,38 @@ class TBranch(uproot.core.TNamed,
 
         out = numpy.empty(sum(self.basketborders) // self.dtype.itemsize, dtype=dtype)
 
-        start = 0
-        for i in range(len(self.basketwalkers)):
-            end = start + self.basketborders[i] // self.dtype.itemsize
-            out[start:end] = self.basket(i)
-            start = end
+        if executor is None:
+            start = 0
+            for i in range(len(self.basketwalkers)):
+                end = start + self.basketborders[i] // self.dtype.itemsize
+                out[start:end] = self.basket(i)
+                start = end
 
-        return out
+            if block:
+                return out
+            else:
+                return out, ()
+
+        else:
+            ends = (numpy.cumsum(self.basketborders) // self.dtype.itemsize).tolist()
+            starts = [0] + ends[:-1]
+
+            def fill(i):
+                try:
+                    out[starts[i]:ends[i]] = self.basket(i)
+                except Exception as err:
+                    return err
+                else:
+                    return None
+
+            errors = executor.map(fill, range(len(self.basketwalkers)))
+            if block:
+                for x in errors:
+                    if x is not None:
+                        raise x
+                return out
+            else:
+                return out, errors
 
     def strings(self):
         if not hasattr(self, "basketwalkers"):
@@ -251,9 +318,9 @@ class TBranchElement(TBranch):
         else:
             raise NotImplementedError
 
-    def array(self, dtype=None):
+    def array(self, dtype=None, executor=None, block=True):
         if hasattr(self, "dtype"):
-            return TBranch.array(self, dtype)
+            return TBranch.array(self, dtype, executor, block)
         else:
             raise NotImplementedError
 

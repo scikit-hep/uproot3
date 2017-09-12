@@ -14,12 +14,19 @@ The primary goal of uproot is to present data from ROOT files as Numpy arrays, m
 
 ## Status and goals
 
-uproot currently reads flat ntuples and TTrees with fully split nested structures into Numpy arrays (in about 1000 lines of Python code). The following are in scope:
+uproot currently has the following features:
 
-   * writing flat ROOT TTrees (but never reading from and writing to the same file at the same time);
+   * reading flat TTrees;
+   * reading TTrees containing structured objects (fully split);
+   * memory mapped files or standard files;
+   * uncompressed, ZLIB, LZMA, LZ4;
+
+and the following are planned:
+
+   * read/decompress TBaskets in parallel;
+   * writing flat TTrees (not structrued and not from the same file as reading);
    * reading a few basic types of non-TTree objects, relelvant for analysis, such as histograms and graphs;
    * import-on-demand connections to Pandas, Keras, TensorFlow, PySpark, etc.;
-   * read/decompress TBaskets in parallel;
    * remotely access files through XRootD's Python interface;
    * conveniences for dealing with large sets of files (TChain equivalent).
 
