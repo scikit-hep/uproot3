@@ -119,13 +119,13 @@ class TDirectory(object):
             seekdir, seekparent, seekkeys = walkerhead.readfields("!qqq")
 
         walker.skip(4)
-        keyversion = walker.field("!h")
+        keyversion = walker.readfield("!h")
         if keyversion > 1000:
             nk_minus_4 = 2 + 2*4 + 2*2 + 2*8  # fVersion, fObjectSize*Date, fKeyLength*fCycle, fSeekKey*fSeekParentDirectory
         else:
             nk_minus_4 = 2 + 2*4 + 2*2 + 2*4  # fVersion, fObjectSize*Date, fKeyLength*fCycle, fSeekKey*fSeekParentDirectory
 
-        walker.skip(nk_minus_4)
+        walker.skip(nk_minus_4 - 2)
 
         classname = walker.readstring()
         self.name = walker.readstring()

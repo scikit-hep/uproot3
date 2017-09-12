@@ -173,7 +173,7 @@ class TBranch(uproot.core.TNamed,
         if not hasattr(self, "basketwalkers"):
             self._preparebaskets()
 
-        array = self.basketwalkers[i].array(self.dtype, self.basketobjlens[i] // self.dtype.itemsize)
+        array = self.basketwalkers[i].readarray(self.dtype, self.basketobjlens[i] // self.dtype.itemsize)
         self.basketwalkers[i]._unevaluate()
 
         if offsets:

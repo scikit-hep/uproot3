@@ -36,7 +36,10 @@ class LazyArrayWalker(uproot.walker.arraywalker.ArrayWalker):
         index    = self._original_index
         origin   = self._original_origin
         
-        string = self._original_function(walker.bytes(length, index))
+        start = walker.index
+        string = self._original_function(walker.readbytes(length, index))
+        walker.index = start
+
         uproot.walker.arraywalker.ArrayWalker.__init__(self, numpy.frombuffer(string, dtype=numpy.uint8), 0, origin=origin)
         self._evaluated = True
 
@@ -56,49 +59,25 @@ class LazyArrayWalker(uproot.walker.arraywalker.ArrayWalker):
         if not self._evaluated: self._evaluate()
         return super(LazyArrayWalker, self).skip(format)
 
-    def fields(self, format, index=None, read=False):
-        if not self._evaluated: self._evaluate()
-        return super(LazyArrayWalker, self).fields(format, index, read)
-
     def readfields(self, format, index=None):
         if not self._evaluated: self._evaluate()
         return super(LazyArrayWalker, self).readfields(format, index)
-
-    def field(self, format, index=None, read=False):
-        if not self._evaluated: self._evaluate()
-        return super(LazyArrayWalker, self).field(format, index, read)
 
     def readfield(self, format, index=None):
         if not self._evaluated: self._evaluate()
         return super(LazyArrayWalker, self).readfield(format, index)
 
-    def bytes(self, length, index=None, read=False):
-        if not self._evaluated: self._evaluate()
-        return super(LazyArrayWalker, self).bytes(length, index, read)
-
     def readbytes(self, length, index=None):
         if not self._evaluated: self._evaluate()
         return super(LazyArrayWalker, self).readbytes(length, index)
-
-    def array(self, dtype, length, index=None, read=False):
-        if not self._evaluated: self._evaluate()
-        return super(LazyArrayWalker, self).array(dtype, length, index, read)
 
     def readarray(self, dtype, length, index=None):
         if not self._evaluated: self._evaluate()
         return super(LazyArrayWalker, self).readarray(dtype, length, index)
 
-    def string(self, index=None, length=None, read=False):
-        if not self._evaluated: self._evaluate()
-        return super(LazyArrayWalker, self).string(index, length, read)
-
     def readstring(self, index=None, length=None):
         if not self._evaluated: self._evaluate()
         return super(LazyArrayWalker, self).readstring(index, length)
-
-    def cstring(self, index=None, read=False):
-        if not self._evaluated: self._evaluate()
-        return super(LazyArrayWalker, self).cstring(index, read)
 
     def readcstring(self, index=None):
         if not self._evaluated: self._evaluate()

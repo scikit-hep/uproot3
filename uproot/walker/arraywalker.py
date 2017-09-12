@@ -54,53 +54,37 @@ class ArrayWalker(object):
         else:
             self.index += self.size(format)
 
-    def fields(self, format, index=None, read=False):
+    def readfields(self, format, index=None):
         if index is None:
             index = self.index
         start = index
         end = index + self.size(format)
-        if read:
-            self.index = end
+        self.index = end
         return struct.unpack(format, self.data[start:end])
 
-    def readfields(self, format, index=None):
-        return self.fields(format, index, True)
-
-    def field(self, format, index=None, read=False):
-        out, = self.fields(format, index, read)
-        return out
-
     def readfield(self, format, index=None):
-        out, = self.fields(format, index, True)
+        out, = self.readfields(format, index)
         return out
 
-    def bytes(self, length, index=None, read=False):
+    def readbytes(self, length, index=None):
         if index is None:
             index = self.index
         start = index
         end = index + length
-        if read:
-            self.index = end
+        self.index = end
         return self.data[start:end]
 
-    def readbytes(self, length, index=None):
-        return self.bytes(length, index, True)
-
-    def array(self, dtype, length, index=None, read=False):
+    def readarray(self, dtype, length, index=None):
         if index is None:
             index = self.index
         if not isinstance(dtype, numpy.dtype):
             dtype = numpy.dtype(dtype)
         start = index
         end = index + length * dtype.itemsize
-        if read:
-            self.index = end
+        self.index = end
         return self.data[start:end].view(dtype)
 
-    def readarray(self, dtype, length, index=None):
-        return self.array(dtype, length, index, True)
-
-    def string(self, index=None, length=None, read=False):
+    def readstring(self, index=None, length=None):
         if index is None:
             index = self.index
         if length is None:
@@ -110,26 +94,18 @@ class ArrayWalker(object):
                 length = self.data[index : index + 4].view(numpy.uint32)
                 index += 4
         end = index + length
-        if read:
-            self.index = end
+        self.index = end
         return self.data[index : end].tostring()
 
-    def readstring(self, index=None, length=None):
-        return self.string(index, length, True)
-
-    def cstring(self, index=None, read=False):
+    def readcstring(self, index=None):
         if index is None:
             index = self.index
         start = index
         end = index
         while self.data[end] != 0:
             end += 1
-        if read:
-            self.index = end + 1
+        self.index = end + 1
         return self.data[start:end].tostring()
-
-    def readcstring(self, index=None):
-        return self.cstring(index, True)
 
     def readversion(self):
         bcnt, vers = self.readfields("!IH")
