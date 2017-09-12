@@ -40,6 +40,14 @@ class LazyArrayWalker(uproot.walker.arraywalker.ArrayWalker):
         uproot.walker.arraywalker.ArrayWalker.__init__(self, numpy.frombuffer(string, dtype=numpy.uint8), 0, origin=origin)
         self._evaluated = True
 
+    def _unevaluate(self):
+        del self.data
+        del self.index
+        del self.refs
+        if hasattr(self, "origin"):
+            del self.origin
+        self._evaluated = False
+
     def copy(self, index=None, origin=None):
         if not self._evaluated: self._evaluate()
         return super(LazyArrayWalker, self).copy(index, origin)

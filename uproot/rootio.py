@@ -288,3 +288,5 @@ class Deserialized(object):
         if observed != expected + 4:
             raise IOError("{0} byte count".format(self.__class__.__name__))
 
+    def __repr__(self):
+        return "<{0} {1} at 0x{2:012x}>".format(self.__class__.__name__, repr(self.name), id(self))

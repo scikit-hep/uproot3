@@ -1,20 +1,20 @@
-# &mu;proot
+# uproot
 
-&mu;proot (micro-Python ROOT) is an experiment to see how little is needed to read data from a ROOT file. &mu;proot has no dependencies other than Python and Numpy— and the [LZMA](https://pypi.python.org/pypi/backports.lzma) and [LZ4](https://pypi.python.org/pypi/lz4) libraries if you read ROOT files with these compression options enabled (you would be prompted with instructions if this is the case; note that Python 3.3+ has LZMA support built-in). You do not need to have the C++ version of ROOT installed to use &mu;proot.
+uproot (or &mu;proot, micro-Python ROOT) is an experiment to see how little is needed to read data from a ROOT file. uproot has no dependencies other than Python and Numpy— and the [LZMA](https://pypi.python.org/pypi/backports.lzma) and [LZ4](https://pypi.python.org/pypi/lz4) libraries if you read ROOT files with these compression options enabled (you would be prompted with instructions if this is the case; note that Python 3.3+ has LZMA support built-in). You do not need to have the C++ version of ROOT installed to use uproot.
 
-It is important to note that &mu;proot is _not_ maintained by the [ROOT project team](https://root.cern/), and it is _not_ a fully featured ROOT replacement. It is a file format library, intended to make ROOT files accessible in environments where it is difficult to deploy ROOT. Compare to h5py, which only reads HDF5 files, or parquet-python, which only reads Parquet files.
+It is important to note that uproot is _not_ maintained by the [ROOT project team](https://root.cern/), and it is _not_ a fully featured ROOT replacement. It is a file format library, intended to make ROOT files accessible in environments where it is difficult to deploy ROOT. Compare to h5py, which only reads HDF5 files, or parquet-python, which only reads Parquet files.
 
-&mu;proot is just ROOT I/O.
+uproot is just ROOT I/O.
 
 ## Scope
 
-The primary goal of &mu;proot is to present data from ROOT files as Numpy arrays, making them accessible to any scientific Python projects based on Numpy (i.e. all of them). Reading and decompression are lazy, so &mu;proot benefits from the same selective reading as ROOT— you only have to wait for the branches you're interested in. Since most of the time is spent loading data from disk/network, decompression, and Numpy/Numba calculations, &mu;proot can be as fast as reading your ROOT file in C++.
+The primary goal of uproot is to present data from ROOT files as Numpy arrays, making them accessible to any scientific Python projects based on Numpy (i.e. all of them). Reading and decompression are lazy, so uproot benefits from the same selective reading as ROOT— you only have to wait for the branches you're interested in. Since most of the time is spent loading data from disk/network, decompression, and Numpy/Numba calculations, uproot can be as fast as reading your ROOT file in C++.
 
 [**TODO:** performance plots]
 
 ## Status and goals
 
-&mu;proot currently reads flat ROOT TTrees into Numpy arrays (in less than 1000 lines of Python code). The following are in scope:
+uproot currently reads flat ROOT TTrees into Numpy arrays (in less than 1000 lines of Python code). The following are in scope:
 
    * reading fully split, [structured objects into PLUR](https://github.com/diana-hep/plur);
    * writing flat ROOT TTrees (but never reading from and writing to the same file at the same time);

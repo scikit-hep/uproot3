@@ -16,6 +16,7 @@
 
 import numpy
 
+import uproot.walker.arraywalker
 import uproot.walker.lazyarraywalker
 import uproot.rootio
 import uproot.core
@@ -81,9 +82,17 @@ class TTree(uproot.core.TNamed,
     def branch(self, name):
         if isinstance(name, str):
             name = name.encode("ascii")
+
         for branch in self.branches:
             if branch.name == name:
                 return branch
+
+            if isinstance(branch, TBranchElement):
+                try:
+                    return branch.branch(name)
+                except KeyError:
+                    pass
+
         raise KeyError("not found: {0}".format(repr(name)))
         
 uproot.rootio.Deserialized.classes[b"TTree"] = TTree
@@ -105,13 +114,15 @@ class TBranch(uproot.core.TNamed,
 
         self.branches = uproot.core.TObjArray(filewalker, walker)
         self.leaves = uproot.core.TObjArray(filewalker, walker)
-        self.baskets = uproot.core.TObjArray(filewalker, walker)
+        baskets = uproot.core.TObjArray(filewalker, walker)
 
         walker.skip(1)  # isArray
-        self.basketBytes = walker.readarray(">i4", maxBaskets)[:writeBasket]
+        # self.basketBytes = walker.readarray(">i4", maxBaskets)[:writeBasket]
+        walker.skip(4 * maxBaskets)
 
         walker.skip(1)  # isArray
-        self.basketEntry = walker.readarray(">i8", maxBaskets)[:writeBasket]
+        # self.basketEntry = walker.readarray(">i8", maxBaskets)[:writeBasket]
+        walker.skip(8 * maxBaskets)
 
         walker.skip(1)  # isArray
         self.basketSeek = walker.readarray(">i8", maxBaskets)[:writeBasket]
@@ -120,68 +131,79 @@ class TBranch(uproot.core.TNamed,
 
         self._checkbytecount(walker.index - start, bcnt)
 
-        if len(self.leaves) == 1:
+        if len(self.leaves) == 1 and hasattr(self.leaves[0], "dtype"):
             self.dtype = self.leaves[0].dtype
-        self.basketwalkers = [filewalker.copy(x) for x in self.basketSeek]
-        self.basketsize = [filewalker.field("!i", index=x + 6) // self.dtype.itemsize for x in self.basketSeek]
-        
-    def __repr__(self):
-        return "<TBranch {0} at 0x{1:012x}>".format(repr(self.name), id(self))
+        self.filewalker = filewalker
+
+    def _preparebaskets(self):
+        self.basketobjlens = []
+        self.basketkeylens = []
+        self.basketborders = []
+        self.basketwalkers = []
+        for seek in self.basketSeek:
+            basketwalker = self.filewalker.copy(seek)
+
+            bytes, version, objlen, datetime, keylen, cycle = basketwalker.readfields("!ihiIhh")
+            if version > 1000:
+                seekkey, seekpdir = basketwalker.readfields("!qq")
+            else:
+                seekkey, seekpdir = basketwalker.readfields("!ii")
+
+            self.basketobjlens.append(objlen)
+            self.basketkeylens.append(keylen)
+
+            classname = basketwalker.readstring()
+            name = basketwalker.readstring()
+            title = basketwalker.readstring()
+            vers, bufsize, nevsize, nevbuf, last, flag = basketwalker.readfields("!HiiiiB")
+            border = last - keylen
+
+            self.basketborders.append(border)
+
+            #  object size != compressed size means it's compressed
+            if objlen != bytes - keylen:
+                function = uproot.rootio.decompressfcn(self.compression, objlen)
+                self.basketwalkers.append(uproot.walker.lazyarraywalker.LazyArrayWalker(self.filewalker, function, bytes - keylen, seekkey + keylen))
+
+            # otherwise, it's uncompressed
+            else:
+                self.basketwalkers.append(self.filewalker.copy(seek + keylen))
 
     def basket(self, i, offsets=False):
-        walker = self.basketwalkers[i]
+        if not hasattr(self, "basketwalkers"):
+            self._preparebaskets()
 
-        # DO NOT CHANGE STATE, so that I can parallelize this later
-        index = walker.index
-        bytes, version, objlen, datetime, keylen, cycle = walker.fields("!ihiIhh")
-        index += walker.size("!ihiIhh")
-        if version > 1000:
-            seekkey, seekpdir = walker.fields("!qq", index=index)
-            index += walker.size("!qq")
-        else:
-            seekkey, seekpdir = walker.fields("!ii", index=index)
-            index += walker.size("!ii")
+        array = self.basketwalkers[i].array(self.dtype, self.basketobjlens[i] // self.dtype.itemsize)
+        self.basketwalkers[i]._unevaluate()
+
         if offsets:
-            index += walker.sizestring(walker, index)  # classname
-            index += walker.sizestring(walker, index)  # name
-            index += walker.sizestring(walker, index)  # title
-            vers, bufsize, nevsize, nevbuf, last, flag = walker.fields("!HiiiiB", index=index)
-            border = last - keylen
-        # END DO NOT CHANGE STATE
-
-        #  object size != compressed size means it's compressed
-        if objlen != bytes - keylen:
-            function = uproot.rootio.decompressfcn(self.compression, objlen)
-            walker = uproot.walker.lazyarraywalker.LazyArrayWalker(walker, function, bytes - keylen, seekkey + keylen)
-            array = walker.array(self.dtype, self.basketsize[i])
-
-        # otherwise, it's uncompressed
-        else:
-            array = walker.array(self.dtype, self.basketsize[i], index=walker.index + keylen)
-
-        # if requested, do extra deserialization and manipulation to return offsets array
-        if offsets:
-            outdata = array[:border // self.dtype.itemsize]
-            outoff = array.view(numpy.uint8)[border + 4 : -4].view(">i4") - keylen
+            outdata = array[:self.basketborders[i] // self.dtype.itemsize]
+            outoff = array.view(numpy.uint8)[self.basketborders[i] + 4 : -4].view(">i4") - self.basketkeylens[i]
             return outdata, outoff
         else:
-            return array
+            return array[:self.basketborders[i] // self.dtype.itemsize]
 
     def array(self, dtype=None):
+        if not hasattr(self, "basketwalkers"):
+            self._preparebaskets()
+
         if dtype is None:
             dtype = self.dtype
 
-        out = numpy.empty(sum(self.basketsize), dtype=dtype)
+        out = numpy.empty(sum(self.basketborders) // self.dtype.itemsize, dtype=dtype)
 
         start = 0
         for i in range(len(self.basketwalkers)):
-            end = start + self.basketsize[i]
+            end = start + self.basketborders[i] // self.dtype.itemsize
             out[start:end] = self.basket(i)
             start = end
 
         return out
 
     def strings(self):
+        if not hasattr(self, "basketwalkers"):
+            self._preparebaskets()
+
         for i in range(len(self.basketwalkers)):
             data, offsets = self.basket(i, offsets=True)
             for offset in offsets:
@@ -189,6 +211,68 @@ class TBranch(uproot.core.TNamed,
                 yield data[offset + 1 : offset + 1 + size].tostring()
 
 uproot.rootio.Deserialized.classes[b"TBranch"] = TBranch
+
+class TBranchElement(TBranch):
+    def __init__(self, filewalker, walker):
+        start = walker.index
+        vers, bcnt = walker.readversion()
+
+        if vers < 9:
+            raise NotImplementedError("TBranchElement version too old")
+
+        TBranch.__init__(self, filewalker, walker)
+
+        self.classname = walker.readstring()
+        self.parent = walker.readstring()
+        self.clones = walker.readstring()
+
+        checksum = walker.readfield("!I")
+        if vers >= 10:
+            classversion = walker.readfield("!H")
+        else:
+            classversion = walker.readfield("!I")
+        identifier, btype, stype, self.max = walker.readfields("!iiii")
+            
+        bcount1 = uproot.rootio.Deserialized.deserialize(filewalker, walker)
+        bcount2 = uproot.rootio.Deserialized.deserialize(filewalker, walker)
+
+        self._checkbytecount(walker.index - start, bcnt)
+
+    def basket(self, i, offsets=False):
+        if hasattr(self, "dtype"):
+            return TBranch.basket(self, i, offsets)
+        else:
+            raise NotImplementedError
+
+    def array(self, dtype=None):
+        if hasattr(self, "dtype"):
+            return TBranch.array(self, dtype)
+        else:
+            raise NotImplementedError
+
+    def strings(self):
+        if hasattr(self, "dtype"):
+            return TBranch.strings(self)
+        else:
+            raise NotImplementedError
+
+    def branch(self, name):
+        if isinstance(name, str):
+            name = name.encode("ascii")
+
+        for branch in self.branches:
+            if branch.name == name:
+                return branch
+
+            if isinstance(branch, TBranchElement):
+                try:
+                    return branch.branch(name)
+                except KeyError:
+                    pass
+
+        raise KeyError("not found: {0}".format(repr(name)))
+
+uproot.rootio.Deserialized.classes[b"TBranchElement"] = TBranchElement
 
 class TLeaf(uproot.core.TNamed):
     def __init__(self, filewalker, walker):
@@ -204,9 +288,6 @@ class TLeaf(uproot.core.TNamed):
 
         if self.len == 0:
             self.len = 1
-
-    def __repr__(self):
-        return "<{0} {1} at 0x{2:012x}>".format(self.__class__.__name__, repr(self.name), id(self))
 
 uproot.rootio.Deserialized.classes[b"TLeaf"] = TLeaf
 
@@ -236,3 +317,29 @@ class {0}(TLeaf):
 
 uproot.rootio.Deserialized.classes[b"{0}"] = {0}
 """.format(classname, format, dtype), globals())
+
+class TLeafElement(TLeaf):
+    def __init__(self, filewalker, walker):
+        start = walker.index
+        vers, bcnt = walker.readversion()
+
+        TLeaf.__init__(self, filewalker, walker)
+
+        identifier, ltype = walker.readfields("!ii")
+
+        if ltype > 0 and ltype % 20 not in (0, 9, 10, 19):
+            # typename = [
+            #     "", "Char_t",  "Short_t",  "Int_t",  "Long_t",  "Float_t", "Int_t",    "char*",     "Double_t", "Double32_t",
+            #     "", "UChar_t", "UShort_t", "UInt_t", "ULong_t", "UInt_t",  "Long64_t", "ULong64_t", "Bool_t",   "Float16_t"
+            #     ][ltype % 20]
+            self.dtype = numpy.dtype([
+                None, "i1", ">i2", ">i4", ">i8", ">f4", ">i4", "u1",  ">f8",  None,
+                None, "u1", ">u2", ">u4", ">u8", ">u4", ">i8", ">u8", "bool", None
+                ][ltype % 20])
+
+        elif ltype == -1:  # counter
+            self.dtype = numpy.dtype(">i4")
+
+        self._checkbytecount(walker.index - start, bcnt)
+
+uproot.rootio.Deserialized.classes[b"TLeafElement"] = TLeafElement

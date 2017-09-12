@@ -29,14 +29,11 @@ class ArrayWalker(object):
     def size(format):
         return struct.calcsize(format)
 
-    @staticmethod
-    def sizestring(walker, index):
-        length = walker.data[index]
-        out = 1
-        if length == 255:
-            length = walker.data[index + 1 : index + 5].view(numpy.uint32)
-            out += 4
-        return out + length
+    def _evaluate(self):
+        pass
+
+    def _unevaluate(self):
+        pass
 
     def __init__(self, data, index=0, origin=None):
         self.data = data
