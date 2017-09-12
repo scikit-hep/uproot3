@@ -19,8 +19,9 @@ import uproot.rootio
 import uproot.core
 import uproot.tree
 
-def open(file):
-    raise NotImplementedError
+def open(localpath):
+    import uproot.walker.localfilewalker
+    return uproot.rootio.TFile(uproot.walker.localfilewalker.LocalFileWalker(localpath))
 
 def memmap(localpath):
     import uproot.walker.arraywalker

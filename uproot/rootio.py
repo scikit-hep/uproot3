@@ -74,6 +74,7 @@ def decompressfcn(compression, objlen):
 
 class TFile(object):
     def __init__(self, walker):
+        walker.startcontext()
         if walker.readfield("!4s") != b"root":
             raise IOError("not a ROOT file (wrong magic bytes)")
 
@@ -110,6 +111,7 @@ class TFile(object):
 
 class TDirectory(object):
     def __init__(self, walker, walkerhead, compression):
+        walkerhead.startcontext()
         version, ctime, mtime = walkerhead.readfields("!hII")
         nbyteskeys, nbytesname = walkerhead.readfields("!ii")
 
@@ -118,6 +120,7 @@ class TDirectory(object):
         else:
             seekdir, seekparent, seekkeys = walkerhead.readfields("!qqq")
 
+        walker.startcontext()
         walker.skip(4)
         keyversion = walker.readfield("!h")
         if keyversion > 1000:
@@ -145,11 +148,14 @@ class TDirectory(object):
 
 class TKeys(object):
     def __init__(self, walker, compression):
-        walkerkeys = walker.copy()
+        start = walker.index
         self.header = TKey(walker, compression)
-        walkerkeys.skip(self.header.keylen)
-        nkeys = walkerkeys.readfield("!i")
-        self.keys = [TKey(walkerkeys, compression) for i in range(nkeys)]
+        walker.index = start + self.header.keylen
+
+        walker.startcontext()
+        nkeys = walker.readfield("!i")
+
+        self.keys = [TKey(walker, compression) for i in range(nkeys)]
 
     def __repr__(self):
         return "<TKeys len={0} at 0x{1:012x}>".format(len(self.keys), id(self))
@@ -173,8 +179,9 @@ class TKeys(object):
 
 class TKey(object):
     def __init__(self, walker, compression):
+        walker.startcontext()
         bytes, version, objlen, datetime, self.keylen, cycle = walker.readfields("!ihiIhh")
-
+        
         if version > 1000:
             seekkey, seekpdir = walker.readfields("!qq")
         else:
@@ -211,6 +218,7 @@ class Deserialized(object):
 
     @staticmethod
     def deserialize(filewalker, walker):
+        walker.startcontext()
         beg = walker.index - walker.origin
         bcnt = walker.readfield("!I")
 

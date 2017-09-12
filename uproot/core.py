@@ -18,6 +18,7 @@ import uproot.rootio
 
 class TObjArray(uproot.rootio.Deserialized):
     def __init__(self, filewalker, walker):
+        walker.startcontext()
         start = walker.index
         vers, bcnt = walker.readversion()
 
@@ -52,6 +53,7 @@ uproot.rootio.Deserialized.classes[b"TObjArray"] = TObjArray
 
 class TNamed(uproot.rootio.Deserialized):
     def __init__(self, filewalker, walker):
+        walker.startcontext()
         start = walker.index
         vers, bcnt = walker.readversion()
         walker.skipversion()
@@ -64,6 +66,7 @@ class TNamed(uproot.rootio.Deserialized):
 
 class TAttLine(uproot.rootio.Deserialized):
     def __init__(self, filewalker, walker):
+        walker.startcontext()
         start = walker.index
         vers, bcnt = walker.readversion()
         walker.skip("!hhh")  # color, style, width
@@ -71,6 +74,7 @@ class TAttLine(uproot.rootio.Deserialized):
 
 class TAttFill(uproot.rootio.Deserialized):
     def __init__(self, filewalker, walker):
+        walker.startcontext()
         start = walker.index
         vers, bcnt = walker.readversion()
         walker.skip("!hh")  # color, style
@@ -78,6 +82,7 @@ class TAttFill(uproot.rootio.Deserialized):
 
 class TAttMarker(uproot.rootio.Deserialized):
     def __init__(self, filewalker, walker):
+        walker.startcontext()
         start = walker.index
         vers, bcnt = walker.readversion()
         walker.skip("!hhf")  # color, style, width

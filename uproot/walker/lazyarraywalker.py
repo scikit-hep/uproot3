@@ -14,18 +14,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import threading
+
 import numpy
 
 import uproot.walker.arraywalker
 
 class LazyArrayWalker(uproot.walker.arraywalker.ArrayWalker):
-    def __init__(self, walker, function, length, index, origin=None):
+    def __init__(self, walker, function, length, index, origin=None, newfile=False):
         self._original_walker   = walker
         self._original_function = function
         self._original_length   = length
         self._original_index    = index
         self._original_origin   = origin
+        self._newfile           = newfile
         self._evaluated         = False
+
+        if not self._newfile:
+            self._lock = threading.Lock()
 
         self.index = 0
 
@@ -35,10 +41,18 @@ class LazyArrayWalker(uproot.walker.arraywalker.ArrayWalker):
         length   = self._original_length
         index    = self._original_index
         origin   = self._original_origin
-        
-        start = walker.index
-        string = self._original_function(walker.readbytes(length, index))
-        walker.index = start
+
+        if self._newfile:
+            walker = walker.copy(newfile=True)
+            walker.startcontext()
+            string = self._original_function(walker.readbytes(length, index))
+
+        else:
+            with self._lock:
+                start = walker.index
+                walker.startcontext()
+                string = self._original_function(walker.readbytes(length, index))
+                walker.index = start
 
         uproot.walker.arraywalker.ArrayWalker.__init__(self, numpy.frombuffer(string, dtype=numpy.uint8), 0, origin=origin)
         self._evaluated = True
@@ -51,7 +65,7 @@ class LazyArrayWalker(uproot.walker.arraywalker.ArrayWalker):
             del self.origin
         self._evaluated = False
 
-    def copy(self, index=None, origin=None):
+    def copy(self, index=None, origin=None, newfile=False):
         if not self._evaluated: self._evaluate()
         return super(LazyArrayWalker, self).copy(index, origin)
 

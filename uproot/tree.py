@@ -26,6 +26,7 @@ class TTree(uproot.core.TNamed,
             uproot.core.TAttFill,
             uproot.core.TAttMarker):
     def __init__(self, filewalker, walker):
+        walker.startcontext()
         start = walker.index
         vers, bcnt = walker.readversion()
 
@@ -100,6 +101,7 @@ uproot.rootio.Deserialized.classes[b"TTree"] = TTree
 class TBranch(uproot.core.TNamed,
               uproot.core.TAttFill):
     def __init__(self, filewalker, walker):
+        walker.startcontext()
         start = walker.index
         vers, bcnt = walker.readversion()
 
@@ -136,12 +138,15 @@ class TBranch(uproot.core.TNamed,
         self.filewalker = filewalker
 
     def _preparebaskets(self):
+        self.filewalker.startcontext()
+
         self.basketobjlens = []
         self.basketkeylens = []
         self.basketborders = []
         self.basketwalkers = []
         for seek in self.basketSeek:
             basketwalker = self.filewalker.copy(seek)
+            basketwalker.startcontext()
 
             bytes, version, objlen, datetime, keylen, cycle = basketwalker.readfields("!ihiIhh")
             if version > 1000:
@@ -163,16 +168,17 @@ class TBranch(uproot.core.TNamed,
             #  object size != compressed size means it's compressed
             if objlen != bytes - keylen:
                 function = uproot.rootio.decompressfcn(self.compression, objlen)
-                self.basketwalkers.append(uproot.walker.lazyarraywalker.LazyArrayWalker(self.filewalker, function, bytes - keylen, seekkey + keylen))
+                self.basketwalkers.append(uproot.walker.lazyarraywalker.LazyArrayWalker(self.filewalker, function, bytes - keylen, seekkey + keylen, newfile=True))
 
             # otherwise, it's uncompressed
             else:
-                self.basketwalkers.append(self.filewalker.copy(seek + keylen))
+                self.basketwalkers.append(self.filewalker.copy(seek + keylen, newfile=True))
 
     def basket(self, i, offsets=False):
         if not hasattr(self, "basketwalkers"):
             self._preparebaskets()
 
+        self.basketwalkers[i].startcontext()
         array = self.basketwalkers[i].readarray(self.dtype, self.basketobjlens[i] // self.dtype.itemsize)
         self.basketwalkers[i]._unevaluate()
 
@@ -214,6 +220,7 @@ uproot.rootio.Deserialized.classes[b"TBranch"] = TBranch
 
 class TBranchElement(TBranch):
     def __init__(self, filewalker, walker):
+        walker.startcontext()
         start = walker.index
         vers, bcnt = walker.readversion()
 
@@ -276,6 +283,7 @@ uproot.rootio.Deserialized.classes[b"TBranchElement"] = TBranchElement
 
 class TLeaf(uproot.core.TNamed):
     def __init__(self, filewalker, walker):
+        walker.startcontext()
         start = walker.index
         vers, bcnt = walker.readversion()
 
@@ -305,6 +313,7 @@ for classname, format, dtype in [
     exec("""
 class {0}(TLeaf):
     def __init__(self, filewalker, walker):
+        walker.startcontext()
         start = walker.index
         vers, bcnt = walker.readversion()
 
@@ -320,6 +329,7 @@ uproot.rootio.Deserialized.classes[b"{0}"] = {0}
 
 class TLeafElement(TLeaf):
     def __init__(self, filewalker, walker):
+        walker.startcontext()
         start = walker.index
         vers, bcnt = walker.readversion()
 

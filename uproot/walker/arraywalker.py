@@ -15,34 +15,28 @@
 # limitations under the License.
 
 import struct
+import os.path
 
 import numpy
 
-import uproot.const
+import uproot.walker.walker
 
-class ArrayWalker(object):
+class ArrayWalker(uproot.walker.walker.Walker):
     @staticmethod
-    def memmap(filepath, index=0):
-        return ArrayWalker(numpy.memmap(filepath, dtype=numpy.uint8, mode="r"), index)
+    def memmap(localpath, index=0):
+        return ArrayWalker(numpy.memmap(os.path.expanduser(localpath), dtype=numpy.uint8, mode="r"), index)
 
-    @staticmethod
-    def size(format):
-        return struct.calcsize(format)
-
-    def _evaluate(self):
-        pass
-
-    def _unevaluate(self):
-        pass
-
-    def __init__(self, data, index=0, origin=None):
+    def __init__(self, data, index=None, origin=None):
         self.data = data
-        self.index = index
+        if index is None:
+            self.index = 0
+        else:
+            self.index = index
         self.refs = {}
         if origin is not None:
             self.origin = origin
 
-    def copy(self, index=None, origin=None):
+    def copy(self, index=None, origin=None, newfile=False):
         if index is None:
             index = self.index
         out = ArrayWalker(self.data, index, origin)
@@ -91,7 +85,8 @@ class ArrayWalker(object):
             length = self.data[index]
             index += 1
             if length == 255:
-                length = self.data[index : index + 4].view(numpy.uint32)
+                # is this a ROOT thing or a Go thing? shouldn't it be big-endian?
+                length = self.data[index : index + 4].view(numpy.uint32)[0]
                 index += 4
         end = index + length
         self.index = end
@@ -106,21 +101,3 @@ class ArrayWalker(object):
             end += 1
         self.index = end + 1
         return self.data[start:end].tostring()
-
-    def readversion(self):
-        bcnt, vers = self.readfields("!IH")
-        bcnt = int(numpy.int64(bcnt) & ~uproot.const.kByteCountMask)
-        if bcnt == 0:
-            raise IOError("readversion byte count is zero")
-        return vers, bcnt
-
-    def skipversion(self):
-        version = self.readfield("!h")
-        if numpy.int64(version) & uproot.const.kByteCountVMask:
-            self.skip("!hh")
-
-    def skiptobject(self):
-        id, bits = self.readfields("!II")
-        bits = numpy.uint32(bits) | uproot.const.kIsOnHeap
-        if bits & uproot.const.kIsReferenced:
-            self.skip("!H")
