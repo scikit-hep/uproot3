@@ -20,10 +20,10 @@ uproot currently has the following features:
    * reading TTrees containing structured objects (fully split);
    * memory mapped files or standard files;
    * uncompressed, ZLIB, LZMA, LZ4;
+   * read/decompress TBaskets in parallel;
 
 and the following are planned:
 
-   * read/decompress TBaskets in parallel;
    * writing flat TTrees (not structrued and not from the same file as reading);
    * reading a few basic types of non-TTree objects, relelvant for analysis, such as histograms and graphs;
    * import-on-demand connections to Pandas, Keras, TensorFlow, PySpark, etc.;

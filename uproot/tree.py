@@ -104,9 +104,33 @@ class TTree(uproot.core.TNamed,
                     yield x
 
     def arrays(self, branchdtypes=lambda branch: branch.dtype, executor=None, block=True):
-        if isinstance(branchdtypes, list):
-            tmp = lambda branch: branch.dtype if branch.name in branchdtypes and hasattr(branch, "dtype") else None
-            branchdtypes = tmp
+        if callable(branchdtypes):
+            selection = branchdtypes
+
+        elif isinstance(branchdtypes, dict):
+            def selection(branch):
+                if branch.name in branchdtypes:
+                    if hasattr(branch, "dtype"):
+                        return branchdtypes[branch.name]
+                    else:
+                        raise TypeError("cannot produce an array from branch {0}".format(repr(branch.name)))
+                else:
+                    return None
+
+        else:
+            try:
+                iter(branchdtypes)
+            except:
+                raise TypeError("branchdtypes argument not understood")
+            else:
+                def selection(branch):
+                    if branch.name in branchdtypes:
+                        if hasattr(branch, "dtype"):
+                            return branch.dtype
+                        else:
+                            raise TypeError("cannot produce an array from branch {0}".format(repr(branch.name)))
+                    else:
+                        return None
 
         def recurse(obj):
             for branch in obj.branches:
@@ -117,7 +141,7 @@ class TTree(uproot.core.TNamed,
         out = {}
         errors = []
         for branch in recurse(self):
-            dtype = branchdtypes(branch)
+            dtype = selection(branch)
             if dtype is not None:
                 out[branch.name], res = branch.array(dtype, executor, False)
                 errors.append(res)
