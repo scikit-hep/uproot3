@@ -14,9 +14,8 @@ The primary goal of uproot is to present data from ROOT files as Numpy arrays, m
 
 ## Status and goals
 
-uproot currently reads flat ROOT TTrees into Numpy arrays (in less than 1000 lines of Python code). The following are in scope:
+uproot currently reads flat ntuples and TTrees with fully split nested structures into Numpy arrays (in about 1000 lines of Python code). The following are in scope:
 
-   * reading fully split, [structured objects into PLUR](https://github.com/diana-hep/plur);
    * writing flat ROOT TTrees (but never reading from and writing to the same file at the same time);
    * reading a few basic types of non-TTree objects, relelvant for analysis, such as histograms and graphs;
    * import-on-demand connections to Pandas, Keras, TensorFlow, PySpark, etc.;
