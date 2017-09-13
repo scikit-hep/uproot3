@@ -16,6 +16,12 @@ You do not need C++ ROOT to run uproot.
 
 ## Examples
 
+<center>
+  <form action="https://gist.github.com/search?utf8=%E2%9C%93&q=%22import+uproot%22+OR+%22from+uproot%22+language%3Apython&ref=searchresults">
+    <input type="submit" value="Find More" />
+  </form>
+</center>
+
 Load a tree whose name you know:
 
 ```python
