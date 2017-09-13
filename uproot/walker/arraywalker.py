@@ -38,7 +38,7 @@ class ArrayWalker(uproot.walker.walker.Walker):
         if origin is not None:
             self.origin = origin
 
-    def copy(self, index=None, origin=None, newfile=False):
+    def copy(self, index=None, origin=None, parallel=False):
         if index is None:
             index = self.index
         out = ArrayWalker(self.data, index, origin)

@@ -23,11 +23,14 @@ import uproot.walker.walker
 
 class XRootDWalker(uproot.walker.walker.Walker):
     def __init__(self, path, index=None, origin=None, reusefile=None):
+        self.path = path
+
         if reusefile is None:
-            self.path = path
-            self.file = None
+            self.file = pyxrootd.client.File()
+            status, dummy = self.file.open(self.path)
+            if status["error"]:
+                raise IOError(status["message"])
         else:
-            self.path = path
             self.file = reusefile
 
         if index is not None:
@@ -38,21 +41,6 @@ class XRootDWalker(uproot.walker.walker.Walker):
         self.refs = {}
         if origin is not None:
             self.origin = origin
-
-    def _evaluate(self, newfile=False):
-        self._holdfile = self.file
-        if newfile:
-            self.file = None
-
-    def _unevaluate(self):
-        self.file = self._holdfile
-
-    def startcontext(self):
-        if self.file is None:
-            self.file = pyxrootd.client.File()
-            status, dummy = self.file.open(self.path)
-            if status["error"]:
-                raise IOError(status["message"])
 
     def copy(self, index=None, origin=None):
         if index is None:

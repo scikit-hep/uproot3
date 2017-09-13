@@ -28,6 +28,12 @@ class Walker(object):
     def size(format):
         return struct.calcsize(format)
 
+    def _evaluate(self, parallel=False):
+        pass
+
+    def _unevaluate(self):
+        pass
+
     def startcontext(self):
         pass
 
@@ -52,9 +58,3 @@ class Walker(object):
     def skipbcnt(self):
         vers, bcnt = self.readversion()
         self.skip(bcnt + 4 - 6)
-
-    def _evaluate(self, newfile=False):
-        pass
-
-    def _unevaluate(self):
-        pass

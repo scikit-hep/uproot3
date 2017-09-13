@@ -27,13 +27,13 @@ class LazyArrayWalker(uproot.walker.arraywalker.ArrayWalker):
         self._evaluated         = False
         self.index = 0
 
-    def _evaluate(self, newfile=False):
+    def _evaluate(self, parallel=False):
         walker   = self._original_walker
         function = self._original_function
         length   = self._original_length
         origin   = self._original_origin
 
-        walker._evaluate(newfile)
+        walker._evaluate(parallel)
         walker.startcontext()
         start = walker.index
         try:
@@ -53,7 +53,7 @@ class LazyArrayWalker(uproot.walker.arraywalker.ArrayWalker):
             del self.origin
         self._evaluated = False
 
-    def copy(self, index=None, origin=None, newfile=False):
+    def copy(self, index=None, origin=None, parallel=False):
         if not self._evaluated: self._evaluate()
         return super(LazyArrayWalker, self).copy(index, origin)
 
