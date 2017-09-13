@@ -41,6 +41,8 @@ class TTree(uproot.core.TNamed,
 
         if vers < 16:
             raise NotImplementedError("TTree too old")
+        elif vers == 16:
+            walker.skip(8)
 
         if vers >= 19:
             walker.skip("!q")  # fSavedBytes
@@ -53,7 +55,6 @@ class TTree(uproot.core.TNamed,
         if vers >= 18:
             walker.skip("!i")  # fDefaultEntryOffsetLen
 
-        nclus = 0
         if vers >= 19:
             nclus = walker.readfield("!i")  # fNClusterRange
 
@@ -176,7 +177,7 @@ class TBranch(uproot.core.TNamed,
         start = walker.index
         vers, bcnt = walker.readversion()
 
-        if vers < 12:
+        if vers < 11:
             raise NotImplementedError("TBranch version too old")
 
         uproot.core.TNamed.__init__(self, filewalker, walker)

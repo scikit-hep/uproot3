@@ -24,7 +24,9 @@ import uproot.walker.walker
 class ArrayWalker(uproot.walker.walker.Walker):
     @staticmethod
     def memmap(localpath, index=0):
-        return ArrayWalker(numpy.memmap(os.path.expanduser(localpath), dtype=numpy.uint8, mode="r"), index)
+        out = ArrayWalker(numpy.memmap(os.path.expanduser(localpath), dtype=numpy.uint8, mode="r"), index)
+        out.path = localpath
+        return out
 
     def __init__(self, data, index=None, origin=None):
         self.data = data

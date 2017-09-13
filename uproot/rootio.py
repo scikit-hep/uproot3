@@ -101,50 +101,55 @@ class TFile(object):
         if nbytes + begin > end:
             raise IOError("TDirectory header length")
 
-        self.dir = TDirectory(walker.copy(begin), walker.copy(begin + nbytesname), self.compression)
+        self.dir = TDirectory(walker.path, walker.copy(begin + nbytesname), self.compression)
 
     def __repr__(self):
         return "<TFile {0} at 0x{1:012x}>".format(repr(self.dir.name), id(self))
 
-    def get(self, name):
-        return self.dir.get(name)
+    def __getitem__(self, name):
+        return self.get(name)
+
+    def __len__(self):
+        return len(self.keys)
+
+    def __iter__(self):
+        return iter(self.keys)
+
+    def get(self, name, cycle=None):
+        return self.dir.get(name, cycle)
 
 class TDirectory(object):
-    def __init__(self, walker, walkerhead, compression):
-        walkerhead.startcontext()
-        version, ctime, mtime = walkerhead.readfields("!hII")
-        nbyteskeys, nbytesname = walkerhead.readfields("!ii")
-
-        if version <= 1000:
-            seekdir, seekparent, seekkeys = walkerhead.readfields("!iii")
-        else:
-            seekdir, seekparent, seekkeys = walkerhead.readfields("!qqq")
+    def __init__(self, name, walker, compression):
+        self.name = name
 
         walker.startcontext()
-        walker.skip(4)
-        keyversion = walker.readfield("!h")
-        if keyversion > 1000:
-            nk_minus_4 = 2 + 2*4 + 2*2 + 2*8  # fVersion, fObjectSize*Date, fKeyLength*fCycle, fSeekKey*fSeekParentDirectory
+        version, ctime, mtime = walker.readfields("!hII")
+        nbyteskeys, nbytesname = walker.readfields("!ii")
+
+        if version <= 1000:
+            seekdir, seekparent, seekkeys = walker.readfields("!iii")
         else:
-            nk_minus_4 = 2 + 2*4 + 2*2 + 2*4  # fVersion, fObjectSize*Date, fKeyLength*fCycle, fSeekKey*fSeekParentDirectory
-
-        walker.skip(nk_minus_4 - 2)
-
-        classname = walker.readstring()
-        self.name = walker.readstring()
-        self.title = walker.readstring()
-
-        if not 10 <= nbytesname <= 1000:
-            raise IOError("directory info")
+            seekdir, seekparent, seekkeys = walker.readfields("!qqq")
 
         self.keys = TKeys(walker.copy(seekkeys), compression)
 
     def __repr__(self):
         return "<TDirectory {0} at 0x{1:012x}>".format(repr(self.name), id(self))
 
-    def get(self, name):
-        # FIXME: parse slashes and get subdirectories
-        return self.keys.get(name)
+    def __getitem__(self, name):
+        return self.get(name)
+
+    def __len__(self):
+        return len(self.keys)
+
+    def __iter__(self):
+        return iter(self.keys)
+
+    def get(self, name, cycle=None):
+        out = self
+        for n in name.split("/"):
+            out = out.keys.get(n, cycle)
+        return out
 
 class TKeys(object):
     def __init__(self, walker, compression):
@@ -169,18 +174,25 @@ class TKeys(object):
     def __iter__(self):
         return iter(self.keys)
 
-    def get(self, name):
+    def get(self, name, cycle=None):
         if isinstance(name, str):
             name = name.encode("ascii")
+
+        if cycle is None and ";" in name:
+            at = name.rindex(";")
+            name, cycle = name[:at], name[at + 1:]
+            cycle = int(cycle)
+
         for key in self.keys:
             if key.name == name:
-                return key.get()
+                if cycle is None or key.cycle == cycle:
+                    return key.get()
         raise KeyError("not found: {0}".format(repr(name)))
 
 class TKey(object):
     def __init__(self, walker, compression):
         walker.startcontext()
-        bytes, version, objlen, datetime, self.keylen, cycle = walker.readfields("!ihiIhh")
+        bytes, version, objlen, datetime, self.keylen, self.cycle = walker.readfields("!ihiIhh")
         
         if version > 1000:
             seekkey, seekpdir = walker.readfields("!qq")
@@ -192,10 +204,11 @@ class TKey(object):
         self.title = walker.readstring()
 
         self.filewalker = walker
+        self.compression = compression
 
         #  object size != compressed size means it's compressed
         if objlen != bytes - self.keylen:
-            function = decompressfcn(compression, objlen)
+            function = decompressfcn(self.compression, objlen)
             self.walker = uproot.walker.lazyarraywalker.LazyArrayWalker(walker, function, bytes - self.keylen, seekkey + self.keylen, -self.keylen)
 
         # otherwise, it's uncompressed
@@ -203,12 +216,22 @@ class TKey(object):
             self.walker = walker.copy(seekkey + self.keylen, seekkey)
 
     def __repr__(self):
-        return "<TKey {0} at 0x{1:012x}>".format(repr(self.name), id(self))
+        return "<TKey {0} at 0x{1:012x}>".format(repr(self.name + ";" + repr(self.cycle)), id(self))
 
     def get(self):
-        if self.classname not in Deserialized.classes:
-            raise NotImplementedError("class not recognized: {0}".format(self.classname))
-        return Deserialized.classes[self.classname](self.filewalker, self.walker)
+        start = self.walker.index
+
+        try:
+            if self.classname == b"TDirectory":
+                out = TDirectory(self.name, self.walker, self.compression)
+            elif self.classname in Deserialized.classes:
+                out = Deserialized.classes[self.classname](self.filewalker, self.walker)
+            else:
+                raise NotImplementedError("class not recognized: {0}".format(self.classname))
+        finally:
+            self.walker.index = start
+
+        return out
 
 class Deserialized(object):
     classes = {}
