@@ -114,7 +114,8 @@ List directories and branches:
 >>> 
 >>> tree = file("events", cycle=1)
 >>> list(tree.branchnames())
-[b'Type', b'Run', b'Event', b'E1', b'px1', b'py1', b'pz1', b'pt1', b'eta1', b'phi1', b'Q1', b'E2', b'px2', b'py2', b'pz2', b'pt2', b'eta2', b'phi2', b'Q2', b'M']
+[b'Type', b'Run', b'Event', b'E1', b'px1', b'py1', b'pz1', b'pt1', b'eta1', b'phi1',
+ b'Q1', b'E2', b'px2', b'py2', b'pz2', b'pt2', b'eta2', b'phi2', b'Q2', b'M']
 ```
 
 ## Performance plots
