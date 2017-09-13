@@ -70,10 +70,10 @@ class XRootDWalker(uproot.walker.walker.Walker):
         if index is not None:
             self.index = index
         size = self.size(format)
-        self.index += size
         status, data = self.file.read(self.index, size)
         if status["error"]:
             raise IOError(status["message"])
+        self.index += size
         return struct.unpack(format, data)
 
     def readfield(self, format, index=None):
@@ -83,10 +83,10 @@ class XRootDWalker(uproot.walker.walker.Walker):
     def readbytes(self, length, index=None):
         if index is not None:
             self.index = index
-        self.index += length
         status, data = self.file.read(self.index, length)
         if status["error"]:
             raise IOError(status["message"])
+        self.index += length
         return numpy.frombuffer(data, dtype=numpy.uint8)
 
     def readarray(self, dtype, length, index=None):
@@ -94,10 +94,10 @@ class XRootDWalker(uproot.walker.walker.Walker):
             self.index = index
         if not isinstance(dtype, numpy.dtype):
             dtype = numpy.dtype(dtype)
-        self.index += length * dtype.itemsize
         status, data = self.file.read(self.index, length * dtype.itemsize)
         if status["error"]:
             raise IOError(status["message"])
+        self.index += length * dtype.itemsize
         return numpy.frombuffer(data, dtype=dtype)
 
     def readstring(self, index=None, length=None):
@@ -115,10 +115,10 @@ class XRootDWalker(uproot.walker.walker.Walker):
                     raise IOError(status["message"])
                 length = numpy.frombuffer(data, dtype=numpy.uint32)[0]
                 self.index += 4
-        self.index += length
         status, data = self.file.read(self.index, length)
         if status["error"]:
             raise IOError(status["message"])
+        self.index += length
         return data
 
     def readcstring(self, index=None):
@@ -126,9 +126,9 @@ class XRootDWalker(uproot.walker.walker.Walker):
             self.index = index
         out = []
         while len(out) == 0 or ord(out[-1]) != 0:
-            self.index += 1
             status, data = self.file.read(self.index, 1)
             if status["error"]:
                 raise IOError(status["message"])
+            self.index += 1
             out.append(data)
         return b"".join(out[:-1])
