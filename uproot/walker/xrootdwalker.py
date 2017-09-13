@@ -52,7 +52,7 @@ class XRootDWalker(uproot.walker.walker.Walker):
             self.file = pyxrootd.client.File()
             status, dummy = self.file.open(self.path)
             if status["error"]:
-                raise IOError(status.message)
+                raise IOError(status["message"])
 
     def copy(self, index=None, origin=None):
         if index is None:
@@ -73,7 +73,7 @@ class XRootDWalker(uproot.walker.walker.Walker):
         self.index += size
         status, data = self.file.read(self.index, size)
         if status["error"]:
-            raise IOError(status.message)
+            raise IOError(status["message"])
         return struct.unpack(format, data)
 
     def readfield(self, format, index=None):
@@ -86,7 +86,7 @@ class XRootDWalker(uproot.walker.walker.Walker):
         self.index += length
         status, data = self.file.read(self.index, length)
         if status["error"]:
-            raise IOError(status.message)
+            raise IOError(status["message"])
         return numpy.frombuffer(data, dtype=numpy.uint8)
 
     def readarray(self, dtype, length, index=None):
@@ -97,7 +97,7 @@ class XRootDWalker(uproot.walker.walker.Walker):
         self.index += length * dtype.itemsize
         status, data = self.file.read(self.index, length * dtype.itemsize)
         if status["error"]:
-            raise IOError(status.message)
+            raise IOError(status["message"])
         return numpy.frombuffer(data, dtype=dtype)
 
     def readstring(self, index=None, length=None):
@@ -106,19 +106,19 @@ class XRootDWalker(uproot.walker.walker.Walker):
         if length is None:
             status, data = self.file.read(self.index, 1)
             if status["error"]:
-                raise IOError(status.message)
+                raise IOError(status["message"])
             length = ord(data)
             self.index += 1
             if length == 255:
                 status, data = self.file.read(self.index, 4)
                 if status["error"]:
-                    raise IOError(status.message)
+                    raise IOError(status["message"])
                 length = numpy.frombuffer(data, dtype=numpy.uint32)[0]
                 self.index += 4
         self.index += length
         status, data = self.file.read(self.index, length)
         if status["error"]:
-            raise IOError(status.message)
+            raise IOError(status["message"])
         return data
 
     def readcstring(self, index=None):
@@ -129,6 +129,6 @@ class XRootDWalker(uproot.walker.walker.Walker):
             self.index += 1
             status, data = self.file.read(self.index, 1)
             if status["error"]:
-                raise IOError(status.message)
+                raise IOError(status["message"])
             out.append(data)
         return b"".join(out[:-1])
