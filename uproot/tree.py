@@ -80,8 +80,36 @@ class TTree(uproot.core.TNamed,
 
         self._checkbytecount(walker.index - start, bcnt)
 
+        leaves2branches = {}
+        def recurse(obj):
+            for branch in obj.branches:
+                for leaf in branch.leaves:
+                    leaves2branches[leaf.name] = branch.name
+                recurse(branch)
+        recurse(self)
+
+        self.counter = {}
+        def recurse(obj):
+            for branch in obj.branches:
+                for leaf in branch.leaves:
+                    if leaf.counter is not None:
+                        leafname = leaf.counter.name
+                        branchname = leaves2branches[leafname]
+                        self.counter[branch.name] = (branchname, leafname)
+                recurse(branch)
+        recurse(self)
+
     def __repr__(self):
         return "<TTree {0} len={1} at 0x{2:012x}>".format(repr(self.name), self.entries, id(self))
+
+    def __len__(self):
+        return len(self.branches)
+
+    def __iter__(self):
+        return iter(self.branches)
+
+    def __getitem__(self, name):
+        return self.branch(name)
 
     def branch(self, name):
         if isinstance(name, str):
@@ -394,7 +422,7 @@ class TLeaf(uproot.core.TNamed):
         uproot.core.TNamed.__init__(self, filewalker, walker)
 
         self.len, self.etype, self.offset, self.hasrange, self.unsigned = walker.readfields("!iii??")
-        self.count = uproot.rootio.Deserialized.deserialize(filewalker, walker)
+        self.counter = uproot.rootio.Deserialized.deserialize(filewalker, walker)
 
         self._checkbytecount(walker.index - start, bcnt)
 
