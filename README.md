@@ -1,41 +1,129 @@
 # uproot
 
-uproot (or &mu;proot, for "micro-Python ROOT") is a demonstration of how little is needed to read data from a ROOT file. Only about a thousand lines of Python code are needed to convert ROOT TTree data into Numpy arrays.
+uproot (or &mu;proot, for "micro-Python ROOT") is a demonstration of how little is needed to read data from a ROOT file. Only about a thousand lines of Python code can convert ROOT TTrees into Numpy arrays.
 
-It is important to note that uproot is _not_ maintained by the [ROOT project team](https://root.cern/) and it is _not_ a fully featured ROOT replacement. Think of it as a file format library, analogous to h5py, parquet-python, or PyFITS.
+It is important to note that uproot is _not_ maintained by the [ROOT project team](https://root.cern/) and it is _not_ a fully featured ROOT replacement. Think of it as a file format library, analogous to h5py, parquet-python, or PyFITS. It just reads (and someday writes) files.
 
 uproot has the following dependencies:
 
-   * Python 2.7 or 3.4+ (Python 2.6 _might_ work, but it's untested)
+   * Python 2.6, 2.7 or 3.4+
    * Numpy 1.4+
-   * 
+   * [pip install backports.lzma](https://pypi.python.org/pypi/backports.lzma) if you want to read ROOT files compressed with LZMA and you're using Python 2 (lzma is part of Python 3's standard library)
+   * [pip install lz4](https://pypi.python.org/pypi/lz4) if you want to read ROOT files compressed with LZ4
+   * [pip install futures](https://pypi.python.org/pypi/futures) if you want to read and/or decompress basket data in parallel and you're using Python 2 (futures is part of Python 3's standard library)
 
+You do not need C++ ROOT to run uproot.
 
+## Examples
 
+Load a tree whose name you know:
 
-uproot has no dependencies other than Python and Numpy— and the [LZMA](https://pypi.python.org/pypi/backports.lzma) and [LZ4](https://pypi.python.org/pypi/lz4) libraries if you read ROOT files with these compression options enabled (you would be prompted with instructions if this is the case; note that Python 3.3+ has LZMA support built-in). You do not need to have the C++ version of ROOT installed to use uproot.
+```python
+>>> import uproot
+>>> tree = uproot.open("tests/Zmumu.root")["events"]
+>>> tree
+<TTree 'events' len=2304 at 0x73c8a1191450>
+```
 
-It is important to note that uproot is _not_ maintained by the [ROOT project team](https://root.cern/), and it is _not_ a fully featured ROOT replacement. It is a file format library, intended to make ROOT files accessible in environments where it is difficult to deploy ROOT. Compare to h5py, which only reads HDF5 files, or parquet-python, which only reads Parquet files.
+Note that this one-liner would segfault in PyROOT because of a mismatch between ROOT's memory management and Python's. In uproot, there's only one memory manager, Python, and it almost never segfaults.
 
-uproot is just ROOT I/O.
+```python
+>>> import ROOT
+>>> tree = ROOT.TFile("tests/Zmumu.root").Get("events")
+>>> tree
+```
 
-## Scope
+Get all the data as arrays (if you have enough memory):
 
-The primary goal of uproot is to present data from ROOT files as Numpy arrays, making them accessible to any scientific Python projects based on Numpy (i.e. all of them). Reading and decompression are lazy, so uproot benefits from the same selective reading as ROOT— you only have to wait for the branches you're interested in. Since most of the time is spent loading data from disk/network, decompression, and Numpy/Numba calculations, uproot can be as fast as reading your ROOT file in C++.
+```python
+>>> for branchname, array in tree.arrays().items():
+...     print("{}\t{}".format(branchname, array))
+...
+b'Q2'   [-1  1  1 ..., -1 -1 -1]
+b'pz1'  [-68.96496181 -48.77524654 -48.77524654 ..., -74.53243061 -74.53243061
+         -74.80837247]
+b'Q1'   [ 1 -1 -1 ...,  1  1  1]
+b'py1'  [ 17.4332439  -16.57036233 -16.57036233 ...,   1.19940578   1.19940578
+           1.2013503 ]
+b'E2'   [  60.62187459   82.20186639   81.58277833 ...,  168.78012134  170.58313243
+          170.58313243]
+b'Run'  [148031 148031 148031 ..., 148029 148029 148029]
+b'eta2' [-1.05139 -1.21769 -1.21769 ..., -1.4827  -1.4827  -1.4827 ]
+b'Type' [ 2 71 84 ...,  2 71 71]
+b'pt2'  [ 38.8311  44.7322  44.7322 ...,  72.8781  72.8781  72.8781]
+b'E1'   [ 82.20186639  62.34492895  62.34492895 ...,  81.27013558  81.27013558
+          81.56621735]
+b'pz2'  [ -47.42698439  -68.96496181  -68.44725519 ..., -152.2350181  -153.84760383
+         -153.84760383]
+b'pt1'  [ 44.7322  38.8311  38.8311 ...,  32.3997  32.3997  32.3997]
+b'M'    [ 82.46269156  83.62620401  83.30846467 ...,  95.96547966  96.49594381
+          96.65672765]
+b'phi2' [-0.440873  2.74126   2.74126  ..., -2.77524  -2.77524  -2.77524 ]
+b'px1'  [-41.19528764  35.11804977  35.11804977 ...,  32.37749196  32.37749196
+          32.48539387]
+b'px2'  [ 34.14443725 -41.19528764 -40.88332344 ..., -68.04191497 -68.79413604
+         -68.79413604]
+b'Event'        [10507008 10507008 10507008 ..., 99991333 99991333 99991333]
+b'py2'  [-16.11952457  17.4332439   17.29929704 ..., -26.10584737 -26.39840043
+         -26.39840043]
+b'eta1' [-1.21769 -1.05139 -1.05139 ..., -1.57044 -1.57044 -1.57044]
+b'phi1' [ 2.74126   -0.440873  -0.440873  ...,  0.0370275  0.0370275  0.0370275]
+```
 
-[**TODO:** performance plots]
+Get just one array (you surely have enough memory for that!):
 
-## Status and goals
+```python
+>>> tree.array("M")
+array([ 82.46269156,  83.62620401,  83.30846467, ...,  95.96547966,
+        96.49594381,  96.65672765])
+```
 
-uproot currently has the following features:
+Convert the data from ROOT's native big-endian to little endian:
 
-   * reading flat TTrees;
-   * reading TTrees containing structured objects (fully split);
-   * memory mapped files or standard files;
-   * uncompressed, ZLIB, LZMA, LZ4;
-   * read/decompress TBaskets in parallel;
+```python
+>>> tree.array("M", "<f8")
+array([ 82.46269156,  83.62620401,  83.30846467, ...,  95.96547966,
+        96.49594381,  96.65672765])
+>>> 
+>>> tree.arrays({"px1": "<f4", "py1": "<f4", "pz1": "<f4"})
+{b'pz1': array([-68.96495819, -48.77524567, -48.77524567, ..., -74.53243256,
+                -74.53243256, -74.8083725 ], dtype=float32),
+ b'px1': array([-41.1952858 ,  35.11804962,  35.11804962, ...,  32.377491  ,
+                 32.377491  ,  32.48539352], dtype=float32),
+ b'py1': array([ 17.43324471, -16.57036209, -16.57036209, ...,   1.19940579,
+                  1.19940579,   1.20135033], dtype=float32)}
+>>> 
+>>> all_little_endian = tree.arrays(lambda b: b.dtype.newbyteorder("<"))
+```
 
-and the following are planned:
+Load arrays in parallel (basket reading and decompression are parallelized):
+
+```python
+>>> import concurrent.futures
+>>> import multiprocessing
+>>> 
+>>> executor = concurrent.futures.ThreadPoolExecutor(multiprocessing.cpu_count())
+>>> load_fast = tree.arrays(executor=executor)
+```
+
+List directories and branches:
+
+```python
+>>> list(uproot.open("tests/Zmumu.root"))
+[<TKey b'events;1' at 0x726fee9c5c50>]
+>>> 
+>>> tree = file("events", cycle=1)
+>>> list(tree.branchnames())
+[b'Type', b'Run', b'Event', b'E1', b'px1', b'py1', b'pz1', b'pt1', b'eta1', b'phi1', b'Q1', b'E2', b'px2', b'py2', b'pz2', b'pt2', b'eta2', b'phi2', b'Q2', b'M']
+```
+
+## Performance plots
+
+[TODO]
+
+## Status
+
+The following features are planned:
 
    * reading "leaf list" and fixed-sized leaf arrays as Numpy recarrays and multidimensional shapes;
    * writing flat TTrees (not structrued and not from the same file as reading);

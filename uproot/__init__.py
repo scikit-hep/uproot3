@@ -19,9 +19,27 @@ import uproot.rootio
 import uproot.core
 import uproot.tree
 
-def open(localpath):
-    import uproot.walker.localfilewalker
-    return uproot.rootio.TFile(uproot.walker.localfilewalker.LocalFileWalker(localpath))
+def open(path, memmap=True):
+    try:
+        from urlparse import urlparse
+    except ImportError:
+        from urllib.parse import urlparse
+
+    parsed = urlparse(path)
+    if parsed.scheme == "file" or parsed.scheme == "":
+        path = parsed.netloc + parsed.path
+        if memmap:
+            import uproot.walker.arraywalker
+            return uproot.rootio.TFile(uproot.walker.arraywalker.ArrayWalker.memmap(path))
+        else:
+            import uproot.walker.localfilewalker
+            return uproot.rootio.TFile(uproot.walker.localfilewalker.LocalFileWalker(path))
+
+    elif parsed.scheme == "root":
+        return xrootd(path)
+
+    else:
+        raise ValueError("URI scheme not recognized: {0}".format(path))
 
 def memmap(localpath):
     import uproot.walker.arraywalker

@@ -111,11 +111,11 @@ class TTree(uproot.core.TNamed,
     def __len__(self):
         return len(self.branches)
 
-    def __iter__(self):
-        return iter(self.branches)
-
     def __getitem__(self, name):
         return self.branch(name)
+
+    def __iter__(self):
+        return iter(self.branches)
 
     def branch(self, name):
         if isinstance(name, str):
@@ -204,6 +204,27 @@ class TTree(uproot.core.TNamed,
             return out
         else:
             return out, (item for sublist in errors for item in sublist)
+
+    def array(self, branch, dtype=None, executor=None, block=True):
+        branch = branch.encode("ascii") if hasattr(branch, "encode") else branch
+
+        def branchdtypes(b):
+            if branch == b.name:
+                if dtype is None:
+                    return b.dtype
+                else:
+                    return dtype
+            else:
+                return None
+
+        if block:
+            out = self.arrays(branchdtypes, executor, block)
+            out, = out.values()
+            return out
+        else:
+            out, errors = self.arrays(branchdtypes, executor, block)
+            out, = out.values()
+            return out, errors
 
 uproot.rootio.Deserialized.classes[b"TTree"] = TTree
 

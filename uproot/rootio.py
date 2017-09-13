@@ -110,7 +110,7 @@ class TFile(object):
         return self.get(name)
 
     def __len__(self):
-        return len(self.keys)
+        return len(self.dir.keys)
 
     def __iter__(self):
         return iter(self.dir.keys)
@@ -178,8 +178,8 @@ class TKeys(object):
         if isinstance(name, str):
             name = name.encode("ascii")
 
-        if cycle is None and ";" in name:
-            at = name.rindex(";")
+        if cycle is None and b";" in name:
+            at = name.rindex(b";")
             name, cycle = name[:at], name[at + 1:]
             cycle = int(cycle)
 
@@ -216,7 +216,7 @@ class TKey(object):
             self.walker = walker.copy(seekkey + self.keylen, seekkey)
 
     def __repr__(self):
-        return "<TKey {0} at 0x{1:012x}>".format(repr(self.name + ";" + repr(self.cycle)), id(self))
+        return "<TKey {0} at 0x{1:012x}>".format(repr(self.name + b";" + repr(self.cycle).encode("ascii")), id(self))
 
     def get(self):
         start = self.walker.index
