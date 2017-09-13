@@ -16,8 +16,6 @@ You do not need C++ ROOT to run uproot.
 
 ## Examples
 
-<p align="center"><a href="https://gist.github.com/search?utf8=%E2%9C%93&q=%22import+uproot%22+OR+%22from+uproot%22+language%3Apython&ref=searchresults">&gt;&gt;&gt; Find more as GitHub Gists &lt;&lt;&lt;</a></p>
-
 Load a tree whose name you know:
 
 ```python
@@ -80,45 +78,7 @@ array([ 82.46269156,  83.62620401,  83.30846467, ...,  95.96547966,
         96.49594381,  96.65672765])
 ```
 
-Convert the data from ROOT's native big-endian to little endian:
-
-```python
->>> tree.array("M", "<f8")
-array([ 82.46269156,  83.62620401,  83.30846467, ...,  95.96547966,
-        96.49594381,  96.65672765])
->>> 
->>> tree.arrays({"px1": "<f4", "py1": "<f4", "pz1": "<f4"})
-{b'pz1': array([-68.96495819, -48.77524567, -48.77524567, ..., -74.53243256,
-                -74.53243256, -74.8083725 ], dtype=float32),
- b'px1': array([-41.1952858 ,  35.11804962,  35.11804962, ...,  32.377491  ,
-                 32.377491  ,  32.48539352], dtype=float32),
- b'py1': array([ 17.43324471, -16.57036209, -16.57036209, ...,   1.19940579,
-                  1.19940579,   1.20135033], dtype=float32)}
->>> 
->>> all_little_endian = tree.arrays(lambda b: b.dtype.newbyteorder("<"))
-```
-
-Load arrays in parallel (basket reading and decompression are parallelized):
-
-```python
->>> import concurrent.futures
->>> import multiprocessing
->>> 
->>> executor = concurrent.futures.ThreadPoolExecutor(multiprocessing.cpu_count())
->>> load_fast = tree.arrays(executor=executor)
-```
-
-List directories and branches:
-
-```python
->>> list(uproot.open("tests/Zmumu.root"))
-[<TKey b'events;1' at 0x726fee9c5c50>]
->>> 
->>> tree = file("events", cycle=1)
->>> list(tree.branchnames())
-[b'Type', b'Run', b'Event', b'E1', b'px1', b'py1', b'pz1', b'pt1', b'eta1', b'phi1',
- b'Q1', b'E2', b'px2', b'py2', b'pz2', b'pt2', b'eta2', b'phi2', b'Q2', b'M']
-```
+<p align="center"><a href="https://gist.github.com/search?utf8=%E2%9C%93&q=%22import+uproot%22+OR+%22from+uproot%22&ref=searchresults" target="_blank">&gt;&gt;&gt; Find more examples as GitHub Gists &lt;&lt;&lt;</a></p>
 
 ## Performance plots
 
