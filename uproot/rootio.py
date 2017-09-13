@@ -113,7 +113,7 @@ class TFile(object):
         return len(self.keys)
 
     def __iter__(self):
-        return iter(self.keys)
+        return iter(self.dir.keys)
 
     def get(self, name, cycle=None):
         return self.dir.get(name, cycle)
