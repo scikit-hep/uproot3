@@ -45,5 +45,6 @@ def memmap(localpath):
     import uproot.walker.arraywalker
     return uproot.rootio.TFile(uproot.walker.arraywalker.ArrayWalker.memmap(localpath))
 
-def xrootd(remotepath):
-    raise NotImplementedError
+def xrootd(path):
+    import uproot.walker.xrootdwalker
+    return uproot.rootio.TFile(uproot.walker.xrootdwalker.XRootDWalker(path))
