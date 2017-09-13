@@ -4,10 +4,10 @@ uproot (or &mu;proot, for "micro-Python ROOT") is a demonstration of how little 
 
 It is important to note that uproot is _not_ maintained by the [ROOT project team](https://root.cern/) and it is _not_ a fully featured ROOT replacement. Think of it as a file format library, analogous to h5py, parquet-python, or PyFITS. It just reads (and someday writes) files.
 
-uproot has the following dependencies:
+uproot has only two required dependencies and four others that unlock special features:
 
-   * **Python 2.6, 2.7 or 3.4+**
-   * **Numpy 1.4+**
+   * **Python 2.6, 2.7 or 3.4+** _(required)_
+   * **Numpy 1.4+** _(required)_
    * **python-lzma** ([pip](https://pypi.python.org/pypi/backports.lzma), [conda](https://anaconda.org/conda-forge/backports.lzma)) if you want to read ROOT files compressed with LZMA and you're using Python 2 (lzma is part of Python 3's standard library)
    * **python-lz4** ([pip](https://pypi.python.org/pypi/lz4), [conda](https://anaconda.org/anaconda/lz4)) if you want to read ROOT files compressed with LZ4
    * **python-futures** ([pip](https://pypi.python.org/pypi/futures), [conda](https://anaconda.org/anaconda/futures)) if you want to read and/or decompress basket data in parallel and you're using Python 2 (futures is part of Python 3's standard library)
