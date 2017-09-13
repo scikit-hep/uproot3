@@ -16,7 +16,7 @@ You do not need C++ ROOT to run uproot.
 
 ## Examples
 
-<div style="align: center"><a href="https://gist.github.com/search?utf8=%E2%9C%93&q=%22import+uproot%22+OR+%22from+uproot%22+language%3Apython&ref=searchresults">&gt;&gt;&gt; Find more as Gists &lt;&lt;&lt;</a></div>
+<p align="center"><a href="https://gist.github.com/search?utf8=%E2%9C%93&q=%22import+uproot%22+OR+%22from+uproot%22+language%3Apython&ref=searchresults">&gt;&gt;&gt; Find more as GitHub Gists &lt;&lt;&lt;</a></p>
 
 Load a tree whose name you know:
 
