@@ -268,11 +268,11 @@ class TBranch(uproot.core.TNamed,
             #  object size != compressed size means it's compressed
             if objlen != bytes - keylen:
                 function = uproot.rootio.decompressfcn(self.compression, objlen)
-                self.basketwalkers.append(uproot.walker.lazyarraywalker.LazyArrayWalker(self.filewalker, function, bytes - keylen, seekkey + keylen, newfile=True))
+                self.basketwalkers.append(uproot.walker.lazyarraywalker.LazyArrayWalker(self.filewalker, function, bytes - keylen, seekkey + keylen))
 
             # otherwise, it's uncompressed
             else:
-                self.basketwalkers.append(self.filewalker.copy(seek + keylen, newfile=True))
+                self.basketwalkers.append(self.filewalker.copy(seek + keylen))
 
     def branchnames(self, recursive=True):
         for branch in self.branches:
@@ -281,13 +281,19 @@ class TBranch(uproot.core.TNamed,
                 for x in branch.branchnames(recursive):
                     yield x
 
-    def basket(self, i, offsets=False):
+    def basket(self, i, offsets=False, parallel=False):
         if not hasattr(self, "basketwalkers"):
             self._preparebaskets()
 
+        self.basketwalkers[i]._evaluate(parallel)
         self.basketwalkers[i].startcontext()
-        array = self.basketwalkers[i].readarray(self.dtype, self.basketobjlens[i] // self.dtype.itemsize)
-        self.basketwalkers[i]._unevaluate()
+        start = self.basketwalkers[i].index
+
+        try:
+            array = self.basketwalkers[i].readarray(self.dtype, self.basketobjlens[i] // self.dtype.itemsize)
+        finally:
+            self.basketwalkers[i]._unevaluate()
+            self.basketwalkers[i].index = start
 
         if offsets:
             outdata = array[:self.basketborders[i] // self.dtype.itemsize]
@@ -309,7 +315,7 @@ class TBranch(uproot.core.TNamed,
             start = 0
             for i in range(len(self.basketwalkers)):
                 end = start + self.basketborders[i] // self.dtype.itemsize
-                out[start:end] = self.basket(i)
+                out[start:end] = self.basket(i, parallel=False)
                 start = end
 
             if block:
@@ -323,7 +329,7 @@ class TBranch(uproot.core.TNamed,
 
             def fill(i):
                 try:
-                    out[starts[i]:ends[i]] = self.basket(i)
+                    out[starts[i]:ends[i]] = self.basket(i, parallel=True)
                 except Exception as err:
                     return err
                 else:

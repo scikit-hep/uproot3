@@ -53,7 +53,7 @@ class Walker(object):
         vers, bcnt = self.readversion()
         self.skip(bcnt + 4 - 6)
 
-    def _evaluate(self):
+    def _evaluate(self, newfile=False):
         pass
 
     def _unevaluate(self):

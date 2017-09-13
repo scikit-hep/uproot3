@@ -41,18 +41,23 @@ class LocalFileWalker(uproot.walker.walker.Walker):
         if origin is not None:
             self.origin = origin
 
+    def _evaluate(self, newfile=False):
+        self._holdfile = self.file
+        if newfile:
+            self.file = None
+
+    def _unevaluate(self):
+        self.file = self._holdfile
+
     def startcontext(self):
         if self.file is None:
             self.file = open(self.path, "rb")
         self.file.seek(self.index)
 
-    def copy(self, index=None, origin=None, newfile=False):
+    def copy(self, index=None, origin=None):
         if index is None:
             index = self.index
-        if newfile:
-            return LocalFileWalker(self.path, index, origin, None)
-        else:
-            return LocalFileWalker(self.path, index, origin, self.file)
+        return LocalFileWalker(self.path, index, origin, self.file)
         
     def skip(self, format):
         if isinstance(format, int):
