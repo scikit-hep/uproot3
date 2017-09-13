@@ -11,6 +11,7 @@ uproot has the following dependencies:
    * [pip install backports.lzma](https://pypi.python.org/pypi/backports.lzma) if you want to read ROOT files compressed with LZMA and you're using Python 2 (lzma is part of Python 3's standard library)
    * [pip install lz4](https://pypi.python.org/pypi/lz4) if you want to read ROOT files compressed with LZ4
    * [pip install futures](https://pypi.python.org/pypi/futures) if you want to read and/or decompress basket data in parallel and you're using Python 2 (futures is part of Python 3's standard library)
+   * [XRootD](http://xrootd.org/dload.html) if you want to access files over the network.
 
 You do not need C++ ROOT to run uproot.
 
