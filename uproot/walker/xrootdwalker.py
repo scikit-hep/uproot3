@@ -22,7 +22,10 @@ import uproot.walker.walker
 
 class XRootDWalker(uproot.walker.walker.Walker):
     def __init__(self, path, index=None, origin=None, reusefile=None):
-        import pyxrootd.client
+        try:
+            import pyxrootd.client
+        except ImportError:
+            raise ImportError("\n\nInstall pyxrootd package from source and configure PYTHONPATH and LD_LIBRARY_PATH:\n\n    http://xrootd.org/dload.html\n\nAlternatively, try a conda package:\n\n    https://anaconda.org/search?q=xrootd")
 
         self.path = path
 

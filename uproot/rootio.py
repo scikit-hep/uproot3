@@ -25,7 +25,7 @@ try:
     from lz4.block import decompress as lz4_decompress
 except ImportError:
     def lz4_decompress(*args, **kwds):
-        raise ImportError("\n\nInstall lz4 package with:\n\n    pip install lz4 --user\n\nand restart Python.")
+        raise ImportError("\n\nInstall lz4 package with:\n\n    pip install lz4 --user\nor\n    conda install -c anaconda lz4\n\nand restart Python.")
 
 try:
     from lzma import decompress as lzma_decompress
@@ -34,7 +34,7 @@ except ImportError:
         from backports.lzma import decompress as lzma_decompress
     except ImportError:
         def lzma_decompress(*args, **kwds):
-            raise ImportError("\n\nInstall lzma package with:\n\n    pip install backports.lzma --user\n\nand restart Python (or just use Python > 3.3).")
+            raise ImportError("\n\nInstall lzma package with:\n\n    pip install backports.lzma --user\nor\n    conda install -c conda-forge backports.lzma\n\nand restart Python (or just use Python >= 3.3).")
 
 def interpret_compression(compression):
     if compression // 100 <= 1:
