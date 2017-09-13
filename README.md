@@ -16,7 +16,7 @@ You do not need C++ ROOT to run uproot.
 
 ## Examples
 
-Load a tree whose name you know:
+Load a tree from a file:
 
 ```python
 >>> import uproot
@@ -70,7 +70,7 @@ b'eta1'  [-1.21769 -1.05139 -1.05139 ..., -1.57044 -1.57044 -1.57044]
 b'phi1'  [ 2.74126   -0.440873  -0.440873  ...,  0.0370275  0.0370275  0.0370275]
 ```
 
-Get just one array (you surely have enough memory for that!):
+Get just one array:
 
 ```python
 >>> tree.array("M")
@@ -78,7 +78,7 @@ array([ 82.46269156,  83.62620401,  83.30846467, ...,  95.96547966,
         96.49594381,  96.65672765])
 ```
 
-<p align="center"><a href="https://gist.github.com/search?utf8=%E2%9C%93&q=%22import+uproot%22+OR+%22from+uproot%22&ref=searchresults" target="_blank">&gt;&gt;&gt; Find more examples as GitHub Gists &lt;&lt;&lt;</a></p>
+<p align="center"><a href="https://gist.github.com/search?utf8=%E2%9C%93&q=%22import+uproot%22+OR+%22from+uproot%22&ref=searchresults" target="_blank">&gt;&gt;&gt; Find more examples as GitHub Gists! &lt;&lt;&lt;</a></p>
 
 ## Performance plots
 
