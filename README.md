@@ -4,7 +4,7 @@ uproot (or &mu;proot, for "micro-Python ROOT") is a demonstration of how little 
 
 It is important to note that uproot is _not_ maintained by the [ROOT project team](https://root.cern/) and it is _not_ a fully featured ROOT replacement. Think of it as a file format library, analogous to h5py, parquet-python, or PyFITS. It just reads (and someday writes) files.
 
-uproot has only requires Python and Numpy. The others are merely recommended, as they unlock special features:
+uproot has requires only Python and Numpy. The other packages listed below are merely recommended, as they unlock special features:
 
    * **Python 2.6, 2.7 or 3.4+** _(required)_
    * **Numpy 1.4+** _(required)_
@@ -26,7 +26,7 @@ Load a tree from a file:
 <TTree 'events' len=2304 at 0x73c8a1191450>
 ```
 
-Note that this one-liner would segfault in PyROOT because of a mismatch between ROOT's memory management and Python's. In uproot, there's only one memory manager, Python, and it almost never segfaults.
+Note that this one-liner would segfault in PyROOT because of a mismatch between ROOT's memory management and Python's. In uproot, there's only one memory manager, Python, and segfaults are extremely rare.
 
 ```python
 >>> import ROOT
@@ -34,7 +34,7 @@ Note that this one-liner would segfault in PyROOT because of a mismatch between 
 >>> tree
 ```
 
-Get all the data as arrays (if you have enough memory):
+Next, get all the data as arrays (if you have enough memory):
 
 ```python
 >>> for branchname, array in tree.arrays().items():
@@ -71,13 +71,23 @@ b'eta1'  [-1.21769 -1.05139 -1.05139 ..., -1.57044 -1.57044 -1.57044]
 b'phi1'  [ 2.74126   -0.440873  -0.440873  ...,  0.0370275  0.0370275  0.0370275]
 ```
 
-Get just one array:
+Or just get one or a few arrays:
 
 ```python
 >>> tree.array("M")
 array([ 82.46269156,  83.62620401,  83.30846467, ...,  95.96547966,
         96.49594381,  96.65672765])
+>>> 
+>>> tree.arrays(["px1", "py1", "pz1"])
+{'py1': array([ 17.4332439 , -16.57036233, -16.57036233, ...,   1.19940578,
+                 1.19940578,   1.2013503 ]),
+ 'px1': array([-41.19528764,  35.11804977,  35.11804977, ...,  32.37749196,
+                32.37749196,  32.48539387]),
+ 'pz1': array([-68.96496181, -48.77524654, -48.77524654, ..., -74.53243061,
+               -74.53243061, -74.80837247])}
 ```
+
+## More examples
 
 <p align="center"><a href="https://gist.github.com/search?utf8=%E2%9C%93&q=%22import+uproot%22+OR+%22from+uproot%22&ref=searchresults" target="_blank">&gt;&gt;&gt; Find more examples as GitHub Gists! &lt;&lt;&lt;</a></p>
 
