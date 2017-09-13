@@ -209,7 +209,7 @@ class TKey(object):
         #  object size != compressed size means it's compressed
         if objlen != bytes - self.keylen:
             function = decompressfcn(self.compression, objlen)
-            self.walker = uproot.walker.lazyarraywalker.LazyArrayWalker(walker, function, bytes - self.keylen, seekkey + self.keylen, -self.keylen)
+            self.walker = uproot.walker.lazyarraywalker.LazyArrayWalker(walker.copy(seekkey + self.keylen), function, bytes - self.keylen, origin=-self.keylen)
 
         # otherwise, it's uncompressed
         else:
