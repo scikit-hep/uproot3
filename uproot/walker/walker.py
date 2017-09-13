@@ -49,6 +49,10 @@ class Walker(object):
         if bits & uproot.const.kIsReferenced:
             self.skip("!H")
 
+    def skipbcnt(self):
+        vers, bcnt = self.readversion()
+        self.skip(bcnt + 4 - 6)
+
     def _evaluate(self):
         pass
 

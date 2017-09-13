@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+
 import numpy
 
 import uproot.walker.arraywalker
@@ -108,12 +110,22 @@ class TTree(uproot.core.TNamed,
             selection = branchdtypes
 
         elif isinstance(branchdtypes, dict):
+            branchdtypes = dict((name.encode("ascii") if hasattr(name, "encode") else name, dtype) for name, dtype in branchdtypes.items())
+
             def selection(branch):
                 if branch.name in branchdtypes:
                     if hasattr(branch, "dtype"):
                         return branchdtypes[branch.name]
                     else:
                         raise TypeError("cannot produce an array from branch {0}".format(repr(branch.name)))
+                else:
+                    return None
+
+        elif isinstance(branchdtypes, (str, bytes)):
+            branchdtypes = branchdtypes.encode("ascii") if hasattr(branchdtypes, "encode") else branchdtypes
+            def selection(branch):
+                if branch.name == branchdtypes:
+                    return branch.dtype
                 else:
                     return None
 
@@ -175,7 +187,7 @@ class TBranch(uproot.core.TNamed,
 
         self.branches = uproot.core.TObjArray(filewalker, walker)
         self.leaves = uproot.core.TObjArray(filewalker, walker)
-        baskets = uproot.core.TObjArray(filewalker, walker)
+        walker.skipbcnt() # baskets
 
         walker.skip(1)  # isArray
         # self.basketBytes = walker.readarray(">i4", maxBaskets)[:writeBasket]
