@@ -92,7 +92,6 @@ The following features are planned:
    * writing flat TTrees (not structrued and not from the same file as reading);
    * reading a few basic types of non-TTree objects, relelvant for analysis, such as histograms and graphs;
    * import-on-demand connections to Pandas, Keras, TensorFlow, PySpark, etc.;
-   * remotely access files through XRootD's Python interface;
    * conveniences for dealing with large sets of files (TChain equivalent).
 
 ## Acknowledgements

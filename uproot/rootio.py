@@ -115,6 +115,9 @@ class TFile(object):
     def __iter__(self):
         return iter(self.dir.keys)
 
+    def ls(self):
+        return self.dir.ls()
+
     def get(self, name, cycle=None):
         return self.dir.get(name, cycle)
 
@@ -145,6 +148,9 @@ class TDirectory(object):
     def __iter__(self):
         return iter(self.keys)
 
+    def ls(self):
+        return self.keys.ls()
+
     def get(self, name, cycle=None):
         out = self
         for n in name.split("/"):
@@ -173,6 +179,9 @@ class TKeys(object):
 
     def __iter__(self):
         return iter(self.keys)
+
+    def ls(self):
+        return dict((x.name, x.classname) for x in self.keys)
 
     def get(self, name, cycle=None):
         if isinstance(name, str):
