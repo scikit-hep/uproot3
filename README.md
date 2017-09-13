@@ -1,6 +1,19 @@
 # uproot
 
-uproot (or &mu;proot, micro-Python ROOT) is an experiment to see how little is needed to read data from a ROOT file. uproot has no dependencies other than Python and Numpy— and the [LZMA](https://pypi.python.org/pypi/backports.lzma) and [LZ4](https://pypi.python.org/pypi/lz4) libraries if you read ROOT files with these compression options enabled (you would be prompted with instructions if this is the case; note that Python 3.3+ has LZMA support built-in). You do not need to have the C++ version of ROOT installed to use uproot.
+uproot (or &mu;proot, for "micro-Python ROOT") is a demonstration of how little is needed to read data from a ROOT file. Only about a thousand lines of Python code are needed to convert ROOT TTree data into Numpy arrays.
+
+It is important to note that uproot is _not_ maintained by the [ROOT project team](https://root.cern/) and it is _not_ a fully featured ROOT replacement. Think of it as a file format library, analogous to h5py, parquet-python, or PyFITS.
+
+uproot has the following dependencies:
+
+   * Python 2.7 or 3.4+ (Python 2.6 _might_ work, but it's untested)
+   * Numpy 1.4+
+   * 
+
+
+
+
+uproot has no dependencies other than Python and Numpy— and the [LZMA](https://pypi.python.org/pypi/backports.lzma) and [LZ4](https://pypi.python.org/pypi/lz4) libraries if you read ROOT files with these compression options enabled (you would be prompted with instructions if this is the case; note that Python 3.3+ has LZMA support built-in). You do not need to have the C++ version of ROOT installed to use uproot.
 
 It is important to note that uproot is _not_ maintained by the [ROOT project team](https://root.cern/), and it is _not_ a fully featured ROOT replacement. It is a file format library, intended to make ROOT files accessible in environments where it is difficult to deploy ROOT. Compare to h5py, which only reads HDF5 files, or parquet-python, which only reads Parquet files.
 

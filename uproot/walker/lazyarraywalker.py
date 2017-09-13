@@ -19,11 +19,10 @@ import numpy
 import uproot.walker.arraywalker
 
 class LazyArrayWalker(uproot.walker.arraywalker.ArrayWalker):
-    def __init__(self, walker, function, length, index, origin=None):
+    def __init__(self, walker, function, length, origin=None):
         self._original_walker   = walker
         self._original_function = function
         self._original_length   = length
-        self._original_index    = index
         self._original_origin   = origin
         self._evaluated         = False
         self.index = 0
@@ -32,14 +31,13 @@ class LazyArrayWalker(uproot.walker.arraywalker.ArrayWalker):
         walker   = self._original_walker
         function = self._original_function
         length   = self._original_length
-        index    = self._original_index
         origin   = self._original_origin
 
         walker._evaluate(newfile)
         walker.startcontext()
         start = walker.index
         try:
-            string = self._original_function(walker.readbytes(length, index))
+            string = self._original_function(walker.readbytes(length))
         finally:
             walker.index = start
             walker._unevaluate()

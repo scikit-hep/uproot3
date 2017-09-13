@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
+import sys
 
 import numpy
 
@@ -23,6 +23,12 @@ import uproot.walker.lazyarraywalker
 import uproot.rootio
 import uproot.core
 
+def _delayedraise(cls, err, trc):
+    if sys.version_info[0] <= 2:
+        exec("raise cls, err, trc")
+    else:
+        raise err.with_traceback(trc)
+    
 class TTree(uproot.core.TNamed,
             uproot.core.TAttLine,
             uproot.core.TAttFill,
@@ -127,6 +133,15 @@ class TTree(uproot.core.TNamed,
 
         raise KeyError("not found: {0}".format(repr(name)))
 
+    @property
+    def allbranches(self):
+        def recurse(obj):
+            for branch in obj.branches:
+                yield branch
+                for x in recurse(branch):
+                    yield x
+        return recurse(self)
+
     def branchnames(self, recursive=True):
         for branch in self.branches:
             yield branch.name
@@ -173,25 +188,19 @@ class TTree(uproot.core.TNamed,
                     else:
                         return None
 
-        def recurse(obj):
-            for branch in obj.branches:
-                yield branch
-                for x in recurse(branch):
-                    yield x
-
         out = {}
-        errors = []
-        for branch in recurse(self):
+        nested = []
+        for branch in self.allbranches:
             dtype = selection(branch)
             if dtype is not None:
                 out[branch.name], res = branch.array(dtype, executor, False)
-                errors.append(res)
+                nested.append(res)
 
         if block:
-            for inner in errors:
-                for x in inner:
-                    if x is not None:
-                        raise x
+            for errors in nested:
+                for cls, err, trc in errors:
+                    if cls is not None:
+                        _delayedraise(cls, err, trc)
             return out
         else:
             return out, (item for sublist in errors for item in sublist)
@@ -268,7 +277,7 @@ class TBranch(uproot.core.TNamed,
             #  object size != compressed size means it's compressed
             if objlen != bytes - keylen:
                 function = uproot.rootio.decompressfcn(self.compression, objlen)
-                self.basketwalkers.append(uproot.walker.lazyarraywalker.LazyArrayWalker(self.filewalker, function, bytes - keylen, seekkey + keylen))
+                self.basketwalkers.append(uproot.walker.lazyarraywalker.LazyArrayWalker(self.filewalker.copy(seekkey + keylen), function, bytes - keylen))
 
             # otherwise, it's uncompressed
             else:
@@ -282,9 +291,6 @@ class TBranch(uproot.core.TNamed,
                     yield x
 
     def basket(self, i, offsets=False, parallel=False):
-        if not hasattr(self, "basketwalkers"):
-            self._preparebaskets()
-
         self.basketwalkers[i]._evaluate(parallel)
         self.basketwalkers[i].startcontext()
         start = self.basketwalkers[i].index
@@ -331,15 +337,15 @@ class TBranch(uproot.core.TNamed,
                 try:
                     out[starts[i]:ends[i]] = self.basket(i, parallel=True)
                 except Exception as err:
-                    return err
+                    return sys.exc_info()
                 else:
-                    return None
+                    return None, None, None
 
             errors = executor.map(fill, range(len(self.basketwalkers)))
             if block:
-                for x in errors:
-                    if x is not None:
-                        raise x
+                for cls, err, trc in errors:
+                    if cls is not None:
+                        _delayedraise(cls, err, trc)
                 return out
             else:
                 return out, errors
@@ -383,9 +389,9 @@ class TBranchElement(TBranch):
 
         self._checkbytecount(walker.index - start, bcnt)
 
-    def basket(self, i, offsets=False):
+    def basket(self, i, offsets=False, parallel=False):
         if hasattr(self, "dtype"):
-            return TBranch.basket(self, i, offsets)
+            return TBranch.basket(self, i, offsets, parallel)
         else:
             raise NotImplementedError
 
