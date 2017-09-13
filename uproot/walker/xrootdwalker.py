@@ -17,12 +17,13 @@
 import struct
 
 import numpy
-import pyxrootd.client
 
 import uproot.walker.walker
 
 class XRootDWalker(uproot.walker.walker.Walker):
     def __init__(self, path, index=None, origin=None, reusefile=None):
+        import pyxrootd.client
+
         self.path = path
 
         if reusefile is None:

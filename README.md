@@ -6,12 +6,12 @@ It is important to note that uproot is _not_ maintained by the [ROOT project tea
 
 uproot has the following dependencies:
 
-   * Python 2.6, 2.7 or 3.4+
-   * Numpy 1.4+
-   * [pip install backports.lzma](https://pypi.python.org/pypi/backports.lzma) if you want to read ROOT files compressed with LZMA and you're using Python 2 (lzma is part of Python 3's standard library)
-   * [pip install lz4](https://pypi.python.org/pypi/lz4) if you want to read ROOT files compressed with LZ4
-   * [pip install futures](https://pypi.python.org/pypi/futures) if you want to read and/or decompress basket data in parallel and you're using Python 2 (futures is part of Python 3's standard library)
-   * [XRootD](http://xrootd.org/dload.html) if you want to access files over the network.
+   * **Python 2.6, 2.7 or 3.4+**
+   * **Numpy 1.4+**
+   * **python-lzma** ([pip](https://pypi.python.org/pypi/backports.lzma), [conda](https://anaconda.org/conda-forge/backports.lzma)) if you want to read ROOT files compressed with LZMA and you're using Python 2 (lzma is part of Python 3's standard library)
+   * **python-lz4** ([pip](https://pypi.python.org/pypi/lz4), [conda](https://anaconda.org/anaconda/lz4)) if you want to read ROOT files compressed with LZ4
+   * **python-futures** ([pip](https://pypi.python.org/pypi/futures), [conda](https://anaconda.org/anaconda/futures)) if you want to read and/or decompress basket data in parallel and you're using Python 2 (futures is part of Python 3's standard library)
+   * **pyxrootd** (no pip, [conda](https://anaconda.org/search?q=xrootd), [source](http://xrootd.org/dload.html)) if you want to access files with XRootD (`root://`) protocol. (Hint: if you install from source, you may have to set `PYTHONPATH` and `LD_LIBRARY_PATH`.)
 
 You do not need C++ ROOT to run uproot.
 
@@ -90,10 +90,9 @@ array([ 82.46269156,  83.62620401,  83.30846467, ...,  95.96547966,
 The following features are planned:
 
    * reading "leaf list" and fixed-sized leaf arrays as Numpy recarrays and multidimensional shapes;
-   * writing flat TTrees (not structrued and not from the same file as reading);
+   * writing flat TTrees (not structrued, and also not from the same file as reading);
    * reading a few basic types of non-TTree objects, relelvant for analysis, such as histograms and graphs;
    * import-on-demand connections to Pandas, Keras, TensorFlow, PySpark, etc.;
-   * conveniences for dealing with large sets of files (TChain equivalent).
 
 ## Acknowledgements
 
