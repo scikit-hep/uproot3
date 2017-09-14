@@ -123,7 +123,7 @@ Next is the time to read nearly all branches, exactly the same as [the test](htt
 | C++ ROOT | 4.62 sec          | 1.9 MHz    |  230 MB/sec  |
 | uproot   | 0.93 sec          | 9.2 MHz    | 1160 MB/sec  |
 
-Finally, we load only one branch (replacing `TTree::GetEntry` with `TBranch::GetEntry` in C++ ROOT). uproot is about 4 times faster.
+Finally, we load only one branch (replacing `TTree::GetEntry` with `TBranch::GetEntry` in C++ ROOT to avoid a performance penalty). uproot is about 4 times faster.
 
 |          | Time to read 1 branch | Event rate | Data rate    |
 |---------:|:---------------------:|:----------:|:------------:|
