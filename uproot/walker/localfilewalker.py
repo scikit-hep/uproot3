@@ -47,6 +47,8 @@ class LocalFileWalker(uproot.walker.walker.Walker):
             self.file = None
 
     def _unevaluate(self):
+        if self.file is not self._holdfile:
+            self.file.close()
         self.file = self._holdfile
 
     def startcontext(self):
