@@ -182,9 +182,9 @@ Finally, we load only one branch (replacing `TTree::GetEntry` with `TBranch::Get
 
 -->
 
-All of the tests above are single-threaded, and you'd be right to wonder if uproot scales poorly because of Python's Global Interpreter Lock (GIL). However, most external calls release the GIL, allowing parallel threads to be effective.
+All of the above tests are single-threaded, and you'd be right to wonder if uproot scales poorly because of Python's Global Interpreter Lock (GIL). However, most external calls release the GIL, allowing parallel threads to be effective.
 
-The tests below were performed on a Knight's Landing processor, which supports 256 threads. The left is the whole file test and the right is a single branch, which shows some interesting structure that gets smoothed over when all branches use the same thread pool. Threads were pinned to cores, and this file is compressed with LZMA, which is slow to decompress (to emphasize parallel processing).
+The tests below were performed on a Knight's Landing processor, which supports 256 threads. The left is the whole file test and the right is a single branch, which shows some interesting structure that gets smoothed over when all branches use the same thread pool. Threads were pinned to cores, and this file is compressed with LZMA, which requires the most CPU time to decompress (to emphasize parallel processing).
 
 C++ ROOT is not on this plot because decompressing baskets in parallel is [an upcoming feature](https://github.com/root-project/root/pull/785).
 
