@@ -6,7 +6,7 @@ It is important to note that uproot is _not_ maintained by the [ROOT project tea
 
 ## Installation
 
-uproot has requires only Python and Numpy. Install with
+uproot requires only Python and Numpy. Install it with
 
 ```bash
 pip install uproot --user
@@ -99,26 +99,34 @@ array([ 82.46269156,  83.62620401,  83.30846467, ...,  95.96547966,
 
 [&gt;&gt;&gt; Find more examples as GitHub Gists! &lt;&lt;&lt;](https://gist.github.com/search?utf8=%E2%9C%93&q=%22import+uproot%22+OR+%22from+uproot%22&ref=searchresults)
 
-## Performance plots
+## Performance
 
-I repeated the procedure described in [Jakob Blomer's ACAT 2017 talk](https://indico.cern.ch/event/567550/contributions/2628878/) with the [same data](https://cernbox.cern.ch/index.php/s/ub43DwvQIFwxfxs) on an otherwise idle physical machine (`techlab-gpu-nvidiak20-04.cern.ch`).
+Normally, you'd think that a library written in Python would be slow. If you're loading gigabytes from a ROOT file, however, most of the time is spent in operating system calls, decompression routines, or Numpy. These external calls do not suffer from the dynamic checks that are performed between each Python byte-instruction and are therefore as fast as compiled code. They even release Python's Global Interpreter Lock (allowing multithreaded performance).
 
-uncompressed file, warm cache
+Therefore, uproot doesn't pay a performance penalty for being written in Python. As it turns out, it's also faster than C++ ROOT because it does much less work.
+
+[Jakob Blomer's ACAT 2017 talk](https://indico.cern.ch/event/567550/contributions/2628878/) evaluates ROOT performance for analysis (and other formats); I repeated his procedure with the [same data](https://cernbox.cern.ch/index.php/s/ub43DwvQIFwxfxs) on an otherwise idle physical machine (`techlab-gpu-nvidiak20-04.cern.ch`). I used the uncompressed file with a warmed filesystem cache to emphasize time spent by the library over disk-reading or decompression.
+
+The first comparison is time spent opening the file and loading the TTree. This is relevant if you are executing a procedure on a large set of files (TChain). uproot is 16 times faster.
 
 |          | Time to open file |
 |---------:|:-----------------:|
 | C++ ROOT | 0.50 sec          |
 | uproot   | 0.03 sec          |
 
+The second is the time to read nearly all branches (18), exactly the [same as his test](https://github.com/jblomer/iotools/blob/acat17/precision_test.cc). uproot is 5 times faster.
+
 |          | Time to read file | Event rate | Data rate    |
 |---------:|:-----------------:|:----------:|:------------:|
 | C++ ROOT | 4.62 sec          | 1.9 MHz    |  230 MB/sec  |
 | uproot   | 0.93 sec          | 9.2 MHz    | 1160 MB/sec  |
 
+The third loads only one branch (replacing `TTree::GetEntry` with `TBranch::GetEntry` in C++ ROOT). uproot is 4 times faster.
+
 |          | Time to read 1 branch | Event rate | Data rate    |
 |---------:|:---------------------:|:----------:|:------------:|
-| C++ ROOT | 1.18 sec              |   7.3 MHz  |   56 MB/sec  |
-| uproot   | 0.06 sec              | 133 MHz    | 1018 MB/sec  |
+| C++ ROOT | 0.256 sec             |  33 MHz    |  260 MB/sec  |
+| uproot   | 0.064 sec             | 133 MHz    | 1020 MB/sec  |
 
 <!--
 
@@ -154,12 +162,12 @@ uncompressed file, warm cache
 
 (/ (+ 0.521247 0.49853 0.499854 0.505716 0.499476) 5.0)
 0.5049646
-(/ (+ 1.04041 1.35 1.0473 1.34855 1.05253) 5.0)
-1.167758
-(* (/ 8556118 1.167758) 1e-6)
-7.326961579368327
-(/ 68448944 1.167758 1024 1024)
-55.90028060431158
+(/ (+ 0.233674 0.270155 0.260323 0.255569 0.259329) 5.0)
+0.25581
+(* (/ 8556118 0.25581) 1e-6)
+33.44716000156366
+(/ 68448944 0.25581 1024 1024)
+255.18157960177356
 
 ; uproot
 
@@ -173,6 +181,11 @@ uncompressed file, warm cache
 1017.5459742391145
 
 -->
+
+![nearly all branches](docs/uproot-scaling.png) ![just one branch](docs/uproot-scaling-2.png)
+
+
+
 
 ## Status
 
