@@ -192,7 +192,7 @@ C++ ROOT is not on this plot because decompressing baskets in parallel is [an up
 
 <img src="docs/uproot-scaling.png" width="400"/> <img src="docs/uproot-scaling-2.png" width="400"/>
 
-uproot scales to about 30 cores, after which synchronization limits the rate to 2.5 million events decompressed per second.
+uproot scales to about 30 cores, after which the rate levels off to 2.5 million LZMA-decompressed events per second.
 
 ## Status
 
