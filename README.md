@@ -188,7 +188,7 @@ The tests below were performed on a Knight's Landing processor, which supports 2
 
 <img src="docs/uproot-scaling.png" width="400"/> <img src="docs/uproot-scaling-2.png" width="400"/>
 
-uproot scales up to about 40 cores, after which the synchronization of Python's GIL limits the rate to 2.5 million events per second.
+uproot scales to about 40 cores, after which synchronization limits the rate to 2.5 million events per second.
 
 ## Status
 
