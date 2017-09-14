@@ -23,7 +23,7 @@ The other packages listed below are merely recommended (and may be installed at 
    * **python-futures** ([pip](https://pypi.python.org/pypi/futures), [conda](https://anaconda.org/anaconda/futures)) if you want to read and/or decompress basket data in parallel and you're using Python 2 (futures is part of Python 3's standard library)
    * **pyxrootd** (no pip, [conda](https://anaconda.org/search?q=xrootd), [source](http://xrootd.org/dload.html)) if you want to access files with XRootD (`root://`) protocol. (Hint: if you install from source, you may have to set `PYTHONPATH` and `LD_LIBRARY_PATH`.)
 
-You do not need C++ ROOT to run uproot.
+_You do not need C++ ROOT to run uproot._
 
 ## Examples
 
