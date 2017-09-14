@@ -179,7 +179,7 @@ class TTree(uproot.core.TNamed,
 
         else:
             try:
-                iter(branchdtypes)
+                branchdtypes = [x.encode("ascii") if hasattr(x, "encode") else x for x in branchdtypes]
             except:
                 raise TypeError("branchdtypes argument not understood")
             else:
