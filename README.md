@@ -103,7 +103,7 @@ array([ 82.46269156,  83.62620401,  83.30846467, ...,  95.96547966,
 
 Normally, you'd think that a library written in Python would be slow. If you're loading gigabytes from a ROOT file, however, most of the time is spent in operating system calls, decompression routines, or Numpy. These external calls do not suffer from the dynamic checks that are performed between each Python byte-instruction and are therefore as fast as compiled code.
 
-Therefore, uproot doesn't pay a performance penalty for being written in Python. As it turns out, it's also faster than C++ ROOT because it does much less work.
+So uproot doesn't pay a performance penalty for being written in Python. As it turns out, it's also faster than C++ ROOT because it does much less work.
 
 [Jakob Blomer's ACAT 2017 talk](https://indico.cern.ch/event/567550/contributions/2628878/) evaluates ROOT performance for analysis (and other formats); I repeated his procedure with the [same data](https://cernbox.cern.ch/index.php/s/ub43DwvQIFwxfxs) on an otherwise idle physical machine (`techlab-gpu-nvidiak20-04.cern.ch`). I used the uncompressed file with a warmed filesystem cache to emphasize time spent by the library over disk-reading or decompression.
 
