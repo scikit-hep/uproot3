@@ -197,9 +197,9 @@ uproot scales to about 40 cores, after which synchronization limits the rate to 
 The following features are planned:
 
    * reading "leaf list" and fixed-sized leaf arrays as Numpy recarrays and multidimensional shapes;
-   * writing flat TTrees (not structrued, and also not from the same file as reading);
    * reading a few basic types of non-TTree objects, relelvant for analysis, such as histograms and graphs;
-   * import-on-demand connections to Pandas, Keras, TensorFlow, PySpark, etc.;
+   * writing flat TTrees (not structrued, and not into the same file as reading);
+   * import-on-demand connections to Pandas, Keras, TensorFlow, PySpark, etc.
 
 ## Acknowledgements
 
