@@ -107,21 +107,21 @@ Therefore, uproot doesn't pay a performance penalty for being written in Python.
 
 [Jakob Blomer's ACAT 2017 talk](https://indico.cern.ch/event/567550/contributions/2628878/) evaluates ROOT performance for analysis (and other formats); I repeated his procedure with the [same data](https://cernbox.cern.ch/index.php/s/ub43DwvQIFwxfxs) on an otherwise idle physical machine (`techlab-gpu-nvidiak20-04.cern.ch`). I used the uncompressed file with a warmed filesystem cache to emphasize time spent by the library over disk-reading or decompression.
 
-The first comparison is time spent opening the file and loading the TTree. This is relevant if you are executing a procedure on a large set of files (TChain). uproot is 16 times faster.
+The first comparison is time spent opening the file and loading the TTree. This is relevant if you are executing a procedure on a large set of files (TChain). uproot is about 16 times faster.
 
 |          | Time to open file |
 |---------:|:-----------------:|
 | C++ ROOT | 0.50 sec          |
 | uproot   | 0.03 sec          |
 
-The second is the time to read nearly all branches (18), exactly the [same as his test](https://github.com/jblomer/iotools/blob/acat17/precision_test.cc). uproot is 5 times faster.
+The second is the time to read nearly all branches (18), exactly the [same as his test](https://github.com/jblomer/iotools/blob/acat17/precision_test.cc). uproot is about 5 times faster.
 
 |          | Time to read file | Event rate | Data rate    |
 |---------:|:-----------------:|:----------:|:------------:|
 | C++ ROOT | 4.62 sec          | 1.9 MHz    |  230 MB/sec  |
 | uproot   | 0.93 sec          | 9.2 MHz    | 1160 MB/sec  |
 
-The third loads only one branch (replacing `TTree::GetEntry` with `TBranch::GetEntry` in C++ ROOT). uproot is 4 times faster.
+The third loads only one branch (replacing `TTree::GetEntry` with `TBranch::GetEntry` in C++ ROOT). uproot is about 4 times faster.
 
 |          | Time to read 1 branch | Event rate | Data rate    |
 |---------:|:---------------------:|:----------:|:------------:|
