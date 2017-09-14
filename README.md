@@ -114,14 +114,14 @@ The first comparison is time spent opening the file and loading the TTree. This 
 | C++ ROOT | 0.50 sec          |
 | uproot   | 0.03 sec          |
 
-The second is the time to read nearly all branches (18), exactly the [same as his test](https://github.com/jblomer/iotools/blob/acat17/precision_test.cc). uproot is about 5 times faster.
+Next is the time to read nearly all branches (18), exactly the [same as his test](https://github.com/jblomer/iotools/blob/acat17/precision_test.cc). uproot is about 5 times faster.
 
 |          | Time to read file | Event rate | Data rate    |
 |---------:|:-----------------:|:----------:|:------------:|
 | C++ ROOT | 4.62 sec          | 1.9 MHz    |  230 MB/sec  |
 | uproot   | 0.93 sec          | 9.2 MHz    | 1160 MB/sec  |
 
-The third loads only one branch (replacing `TTree::GetEntry` with `TBranch::GetEntry` in C++ ROOT). uproot is about 4 times faster.
+Finally, we load only one branch (replacing `TTree::GetEntry` with `TBranch::GetEntry` in C++ ROOT). uproot is about 4 times faster.
 
 |          | Time to read 1 branch | Event rate | Data rate    |
 |---------:|:---------------------:|:----------:|:------------:|
