@@ -18,8 +18,8 @@ The other packages listed below are merely recommended (and may be installed at 
 
    * **Python 2.6, 2.7 or 3.4+** _(required)_
    * **Numpy 1.4+** _(required)_
-   * **python-lzma** ([pip](https://pypi.python.org/pypi/backports.lzma), [conda](https://anaconda.org/conda-forge/backports.lzma)) if you want to read ROOT files compressed with LZMA and you're using Python 2 (lzma is part of Python 3's standard library)
-   * **python-lz4** ([pip](https://pypi.python.org/pypi/lz4), [conda](https://anaconda.org/anaconda/lz4)) if you want to read ROOT files compressed with LZ4
+   * **python-lzma** ([pip](https://pypi.python.org/pypi/backports.lzma), [conda](https://anaconda.org/conda-forge/backports.lzma)) if you want to read ROOT files compressed with lzma and you're using Python 2 (lzma is part of Python 3's standard library)
+   * **python-lz4** ([pip](https://pypi.python.org/pypi/lz4), [conda](https://anaconda.org/anaconda/lz4)) if you want to read ROOT files compressed with lz4
    * **python-futures** ([pip](https://pypi.python.org/pypi/futures), [conda](https://anaconda.org/anaconda/futures)) if you want to read and/or decompress basket data in parallel and you're using Python 2 (futures is part of Python 3's standard library)
    * **pyxrootd** (no pip, [conda](https://anaconda.org/search?q=xrootd), [source](http://xrootd.org/dload.html)) if you want to access files with XRootD (`root://`) protocol. (Hint: if you install from source, you may have to set `PYTHONPATH` and `LD_LIBRARY_PATH`.)
 
@@ -186,13 +186,13 @@ Finally, we load only one branch (replacing `TTree::GetEntry` with `TBranch::Get
 
 All of the above tests are single-threaded, and you'd be right to wonder if uproot scales poorly because of Python's Global Interpreter Lock (GIL). However, most external calls release the GIL, allowing parallel threads to be effective.
 
-The tests below were performed on a Knight's Landing processor, which has hundreds of physical cores. The left is the whole file test and the right is the single branch test, which shows some interesting structure that gets smoothed over when all branches use the same thread pool. Threads were pinned to cores, and this file is compressed with LZMA, which requires the most CPU time to decompress (to emphasize parallel processing).
+The tests below were performed on a Knight's Landing processor, which has hundreds of physical cores. The left is the whole file test and the right is the single branch test, which shows some interesting structure that gets smoothed over when all branches use the same thread pool. Threads were pinned to cores, and this file is compressed with lzma, which requires the most CPU time to decompress (to emphasize parallel processing).
 
 C++ ROOT is not on this plot because decompressing baskets in parallel is [an upcoming feature](https://github.com/root-project/root/pull/785).
 
 <img src="docs/uproot-scaling.png" width="400"/> <img src="docs/uproot-scaling-2.png" width="400"/>
 
-uproot scales to about 30 cores, after which the rate levels off to 2.5 million LZMA-decompressed events per second.
+uproot scales to about 30 cores, after which the rate levels off to 2.5 million lzma-decompressed events per second.
 
 ## Status
 
