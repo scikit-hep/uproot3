@@ -4,7 +4,15 @@ uproot (or &mu;proot, for "micro-Python ROOT") is a demonstration of how little 
 
 It is important to note that uproot is _not_ maintained by the [ROOT project team](https://root.cern/) and it is _not_ a fully featured ROOT replacement. Think of it as a file format library, analogous to h5py, parquet-python, or PyFITS. It just reads (and someday writes) files.
 
-uproot has requires only Python and Numpy. The other packages listed below are merely recommended, as they unlock special features:
+## Installation
+
+uproot has requires only Python and Numpy. Install with
+
+```bash
+pip install uproot --user
+```
+
+The other packages listed below are merely recommended (and may be installed at any time in the future), as they unlock special features:
 
    * **Python 2.6, 2.7 or 3.4+** _(required)_
    * **Numpy 1.4+** _(required)_
