@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import namedtuple
+
 import numpy
 
 import uproot.const
@@ -36,23 +38,25 @@ except ImportError:
         def lzma_decompress(*args, **kwds):
             raise ImportError("\n\nInstall lzma package with:\n\n    pip install backports.lzma --user\nor\n    conda install -c conda-forge backports.lzma\n\nand restart Python (or just use Python >= 3.3).")
 
-def interpret_compression(compression):
+Compression = namedtuple("Compression", ["algo", "level"])
+
+def _interpret_compression(compression):
     if compression // 100 <= 1:
-        return "zlib", compression % 100
+        return Compression("zlib", compression % 100)
 
     elif compression // 100 == 2:
-        return "lzma", compression % 100
+        return Compression("lzma", compression % 100)
 
     elif compression // 100 == 3:
-        return "old", compression % 100
+        return Compression("old", compression % 100)
 
     elif compression // 100 == 4:
-        return "lz4", compression % 100
+        return Compression("lz4", compression % 100)
 
     else:
-        return "unknown", compression % 100
+        return Compression("unknown", compression % 100)
 
-def decompressfcn(compression, objlen):
+def _decompressfcn(compression, objlen):
     algo, level = compression
     if algo == "zlib":
         # 9-byte skip for ROOT's custom frame:
@@ -86,7 +90,7 @@ class TFile(object):
             end, seekfree, nbytesfree, nfree, nbytesname, units, compression, seekinfo, nbytesinfo = walker.readfields("!qqiiiBiqi")
         version %= 1000000
 
-        self.compression = interpret_compression(compression)
+        self.compression = _interpret_compression(compression)
 
         uuid = walker.readfield("!18s")
 
@@ -160,8 +164,8 @@ class TDirectory(object):
 class TKeys(object):
     def __init__(self, walker, compression):
         start = walker.index
-        self.header = TKey(walker, compression)
-        walker.index = start + self.header.keylen
+        self._header = TKey(walker, compression)
+        walker.index = start + self._header._keylen
 
         walker.startcontext()
         nkeys = walker.readfield("!i")
@@ -201,7 +205,7 @@ class TKeys(object):
 class TKey(object):
     def __init__(self, walker, compression):
         walker.startcontext()
-        bytes, version, objlen, datetime, self.keylen, self.cycle = walker.readfields("!ihiIhh")
+        bytes, version, objlen, datetime, self._keylen, self.cycle = walker.readfields("!ihiIhh")
         
         if version > 1000:
             seekkey, seekpdir = walker.readfields("!qq")
@@ -212,33 +216,33 @@ class TKey(object):
         self.name = walker.readstring()
         self.title = walker.readstring()
 
-        self.filewalker = walker
+        self._filewalker = walker
         self.compression = compression
 
         #  object size != compressed size means it's compressed
-        if objlen != bytes - self.keylen:
-            function = decompressfcn(self.compression, objlen)
-            self.walker = uproot.walker.lazyarraywalker.LazyArrayWalker(walker.copy(seekkey + self.keylen), function, bytes - self.keylen, origin=-self.keylen)
+        if objlen != bytes - self._keylen:
+            function = _decompressfcn(self.compression, objlen)
+            self._walker = uproot.walker.lazyarraywalker.LazyArrayWalker(walker.copy(seekkey + self._keylen), function, bytes - self._keylen, origin=-self._keylen)
 
         # otherwise, it's uncompressed
         else:
-            self.walker = walker.copy(seekkey + self.keylen, seekkey)
+            self._walker = walker.copy(seekkey + self._keylen, seekkey)
 
     def __repr__(self):
         return "<TKey {0} at 0x{1:012x}>".format(repr(self.name + b";" + repr(self.cycle).encode("ascii")), id(self))
 
     def get(self):
-        start = self.walker.index
+        start = self._walker.index
 
         try:
             if self.classname == b"TDirectory":
-                out = TDirectory(self.name, self.walker, self.compression)
+                out = TDirectory(self.name, self._walker, self.compression)
             elif self.classname in Deserialized.classes:
-                out = Deserialized.classes[self.classname](self.filewalker, self.walker)
+                out = Deserialized.classes[self.classname](self._filewalker, self._walker)
             else:
                 raise NotImplementedError("class not recognized: {0}".format(self.classname))
         finally:
-            self.walker.index = start
+            self._walker.index = start
 
         return out
 
@@ -329,4 +333,7 @@ class Deserialized(object):
             raise IOError("{0} byte count".format(self.__class__.__name__))
 
     def __repr__(self):
-        return "<{0} {1} at 0x{2:012x}>".format(self.__class__.__name__, repr(self.name), id(self))
+        if hasattr(self, "name"):
+            return "<{0} at 0x{1:012x}>".format(self.__class__.__name__, id(self))
+        else:
+            return "<{0} {1} at 0x{2:012x}>".format(self.__class__.__name__, repr(self.name), id(self))
