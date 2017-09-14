@@ -105,7 +105,7 @@ Normally, you'd think that a library written in Python would be slow. If you're 
 
 So uproot doesn't pay a performance penalty for being written in Python. As it turns out, it's also faster than C++ ROOT because it does much less work.
 
-[Jakob Blomer's ACAT 2017 talk](https://indico.cern.ch/event/567550/contributions/2628878/) evaluates ROOT performance for analysis (and other formats); I repeated his procedure with the [same data](https://cernbox.cern.ch/index.php/s/ub43DwvQIFwxfxs) on an otherwise idle physical machine (`techlab-gpu-nvidiak20-04.cern.ch`). I used the uncompressed file with a warmed filesystem cache to emphasize time spent by the library over disk-reading or decompression.
+[Jakob Blomer's ACAT 2017 talk](https://indico.cern.ch/event/567550/contributions/2628878/) evaluates ROOT performance for analysis (and other formats); I repeated his procedure with [the same data](https://cernbox.cern.ch/index.php/s/ub43DwvQIFwxfxs) on an otherwise idle physical machine (`techlab-gpu-nvidiak20-04.cern.ch`). I used the uncompressed file with a warmed filesystem cache to emphasize time spent by the library over disk-reading or decompression.
 
 The first comparison is time spent opening the file and loading the TTree. This is relevant if you are executing a procedure on a large set of files (TChain). uproot is about 16 times faster.
 
