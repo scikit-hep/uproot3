@@ -203,4 +203,4 @@ The following features are planned:
 
 ## Acknowledgements
 
-Conversations with Philippe Canal were essential for context, finding my way through 20 years of living codebase. Brian Bockelman's BulkIO additions to C++ ROOT also helped to clarify the distinction between I/O and interface. Also, Sebastien Binet's [go-hep](https://github.com/go-hep/hep) provided a clean implementation to ~~pillage~~ replicate.
+Conversations with Philippe Canal were essential for understanding ROOT I/O. Working with Brian Bockelman on his BulkIO additions to C++ ROOT helped to clarify the distinction between what is I/O and what is user interface. Finally, Sebastien Binet's [go-hep](https://github.com/go-hep/hep) provided a clean implementation to ~~pillage~~ imitate, resolving many questions about byte-by-byte interpretations and serialized class versions.
