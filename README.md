@@ -36,7 +36,7 @@ Load a tree from a file:
 <TTree 'events' len=2304 at 0x73c8a1191450>
 ```
 
-Note that this one-liner would segfault in PyROOT because of a mismatch between ROOT's memory management and Python's. In uproot, there's only one memory manager, Python, and segfaults are extremely rare.
+Note that this one-liner would segfault in PyROOT because of a mismatch between ROOT's memory management and Python's. In uproot, there's only one memory manager: Python.
 
 ```python
 >>> import ROOT
