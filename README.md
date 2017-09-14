@@ -186,6 +186,8 @@ All of the tests above are single-threaded, and you'd be right to wonder if upro
 
 The tests below were performed on a Knight's Landing processor, which supports 256 threads. The left is the whole file test and the right is a single branch, which shows some interesting structure that gets smoothed over when all branches use the same thread pool. Threads were pinned to cores, and this file is compressed with LZMA, which is slow to decompress (to emphasize parallel processing).
 
+C++ ROOT is not on this plot because decompressing baskets in parallel is [an upcoming feature](https://github.com/root-project/root/pull/785).
+
 <img src="docs/uproot-scaling.png" width="400"/> <img src="docs/uproot-scaling-2.png" width="400"/>
 
 uproot scales to about 40 cores, after which synchronization limits the rate to 2.5 million events decompressed per second.
