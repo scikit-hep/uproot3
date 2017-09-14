@@ -99,7 +99,7 @@ array([ 82.46269156,  83.62620401,  83.30846467, ...,  95.96547966,
 
 ## More examples
 
-[&gt;&gt;&gt; Find more examples as GitHub Gists! &lt;&lt;&lt;](https://gist.github.com/search?utf8=%E2%9C%93&q=%22import+uproot%22+OR+%22from+uproot%22&ref=searchresults)
+[&gt;&gt;&gt; Find more examples on GitHub Gists! &lt;&lt;&lt;](https://gist.github.com/search?utf8=%E2%9C%93&q=%22import+uproot%22+OR+%22from+uproot%22&ref=searchresults)
 
 ## Performance
 
