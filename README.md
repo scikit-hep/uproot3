@@ -4,7 +4,7 @@ uproot (or &mu;proot, for "micro-Python ROOT") is a demonstration of how little 
 
 It is important to note that uproot is _not_ maintained by the [ROOT project team](https://root.cern/) and it is _not_ a fully featured ROOT replacement. Think of it as a file format library, analogous to h5py, parquet-python, or PyFITS. It just reads (and someday writes) files.
 
-Post bug reports in the issues tab here, _not_ on the ROOT forum!
+_Post bug reports in the issues tab here, not on the ROOT forum!_
 
 ## Installation
 
