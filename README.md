@@ -101,7 +101,7 @@ array([ 82.46269156,  83.62620401,  83.30846467, ...,  95.96547966,
 
 ## Performance
 
-Normally, you'd think that a library written in Python would be slow. If you're loading gigabytes from a ROOT file, however, most of the time is spent in operating system calls, decompression routines, or Numpy. These external calls do not suffer from the dynamic checks that are performed between each Python byte-instruction and are therefore as fast as compiled code. They even release Python's Global Interpreter Lock (allowing multithreaded performance).
+Normally, you'd think that a library written in Python would be slow. If you're loading gigabytes from a ROOT file, however, most of the time is spent in operating system calls, decompression routines, or Numpy. These external calls do not suffer from the dynamic checks that are performed between each Python byte-instruction and are therefore as fast as compiled code.
 
 Therefore, uproot doesn't pay a performance penalty for being written in Python. As it turns out, it's also faster than C++ ROOT because it does much less work.
 
@@ -182,13 +182,13 @@ The third loads only one branch (replacing `TTree::GetEntry` with `TBranch::GetE
 
 -->
 
+All of the tests above are single-threaded, and you'd be right to wonder if uproot scales poorly because of Python's Global Interpreter Lock (GIL). However, most external calls release the GIL, allowing parallel threads to be effective.
+
+The tests below were performed on a Knight's Landing processor, which supports 256 threads. The left is the whole file test and the right is a single branch, which shows some interesting structure that gets smoothed over when all branches use the same thread pool. Threads were pinned to cores, and this file is compressed with LZMA, which is slow to decompress (to emphasize parallel processing).
+
 <img src="docs/uproot-scaling.png" width="400"/> <img src="docs/uproot-scaling-2.png" width="400"/>
 
-
-here
-
-
-
+uproot scales up to about 40 cores, after which the synchronization of Python's GIL limits the rate to 2.5 million events per second.
 
 ## Status
 
