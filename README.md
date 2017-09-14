@@ -110,15 +110,15 @@ uncompressed file, warm cache
 | C++ ROOT | 0.50 sec          |
 | uproot   | 0.03 sec          |
 
-|          | Time to read file | Events/sec | MB/sec |
-|---------:|:-----------------:|:----------:|:------:|
-| C++ ROOT | 4.62 sec          | 1.9 MHz    |  230   |
-| uproot   | 0.93 sec          | 9.2 MHz    | 1160   |
+|          | Time to read file | Event rate | Data rate    |
+|---------:|:-----------------:|:----------:|:------------:|
+| C++ ROOT | 4.62 sec          | 1.9 MHz    |  230 MB/sec  |
+| uproot   | 0.93 sec          | 9.2 MHz    | 1160 MB/sec  |
 
-|          | Time to read 1 branch | Events/sec | MB/sec |
-|---------:|:---------------------:|:----------:|:------:|
-| C++ ROOT | 1.18 sec              |   7.3 MHz  |   56   |
-| uproot   | 0.06 sec              | 133 MHz    | 1018   |
+|          | Time to read 1 branch | Event rate | Data rate    |
+|---------:|:---------------------:|:----------:|:------------:|
+| C++ ROOT | 1.18 sec              |   7.3 MHz  |   56 MB/sec  |
+| uproot   | 0.06 sec              | 133 MHz    | 1018 MB/sec  |
 
 <!--
 
