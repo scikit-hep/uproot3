@@ -182,7 +182,10 @@ The third loads only one branch (replacing `TTree::GetEntry` with `TBranch::GetE
 
 -->
 
-![nearly all branches](docs/uproot-scaling.png | width=400) ![just one branch](docs/uproot-scaling-2.png | width=400)
+<img src="docs/uproot-scaling.png" width="400"/> <img src="docs/uproot-scaling-2.png" width="400"/>
+
+
+here
 
 
 
