@@ -97,6 +97,20 @@ array([ 82.46269156,  83.62620401,  83.30846467, ...,  95.96547966,
                -74.53243061, -74.80837247])}
 ```
 
+Or iterate over arrays with a fixed number of entries each:
+
+```python
+>>> import numpy
+>>> for px1, py1 in tree.iterator(2000, ["px1", "py1"], outputtype=tuple):
+...     print(numpy.sqrt(px1**2 + py1**2))
+... 
+[ 44.7322  38.8311  38.8311 ...,  73.6439  73.6052  33.716  ]
+[ 45.9761  45.9761  45.8338 ...,  32.3997  32.3997  32.5076 ]
+  ...
+```
+
+(Strings and other variable-length data are handled appropriately.)
+
 ## More examples
 
 [&gt;&gt;&gt; Find more examples on GitHub Gists! &lt;&lt;&lt;](https://gist.github.com/search?utf8=%E2%9C%93&q=%22import+uproot%22+OR+%22from+uproot%22&ref=searchresults)
@@ -192,7 +206,7 @@ C++ ROOT is not on this plot because decompressing baskets in parallel is [an up
 
 <img src="docs/uproot-scaling.png" width="400"/> <img src="docs/uproot-scaling-2.png" width="400"/>
 
-uproot scales to about 30 threads, after which the rate levels off to 2.5 million _lzma-compressed_ events per second.
+uproot scales to about 30 threads, which is more cores than many machines have. After that, split your job into multiple processes (Python's `multiprocessing` module).
 
 ## Status
 

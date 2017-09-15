@@ -24,8 +24,197 @@ class TestTree(unittest.TestCase):
     def runTest(self):
         pass
     
-    def test_simple(self):
-        tree = uproot.memmap("tests/simple.root").get("tree")
+    def test_branch_array(self):
+        file = uproot.open("tests/simple.root")
+
+        tree = file["tree"]
         self.assertEqual(tree.branch("one").array().tolist(), [1, 2, 3, 4])
         self.assertEqual(tree.branch("two").array().tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
-        self.assertEqual(list(tree.branch("three").strings()), [b"uno", b"dos", b"tres", b"quatro"])
+        self.assertEqual(tree.branch("three").array().tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+
+        # get branches again
+        self.assertEqual(tree.branch("one").array().tolist(), [1, 2, 3, 4])
+        self.assertEqual(tree.branch("two").array().tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
+        self.assertEqual(tree.branch("three").array().tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+
+        # get tree again
+        tree = file["tree"]
+        self.assertEqual(tree.branch("one").array().tolist(), [1, 2, 3, 4])
+        self.assertEqual(tree.branch("two").array().tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
+        self.assertEqual(tree.branch("three").array().tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+
+    def test_tree_arrays(self):
+        file = uproot.open("tests/simple.root")
+
+        tree = file["tree"]
+        arrays = tree.arrays()
+        self.assertEqual(arrays[b"one"].tolist(), [1, 2, 3, 4])
+        self.assertEqual(arrays[b"two"].tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
+        self.assertEqual(arrays[b"three"].tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+
+        # get arrays again
+        arrays = tree.arrays()
+        self.assertEqual(arrays[b"one"].tolist(), [1, 2, 3, 4])
+        self.assertEqual(arrays[b"two"].tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
+        self.assertEqual(arrays[b"three"].tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+
+        # get tree again
+        tree = file["tree"]
+        arrays = tree.arrays()
+        self.assertEqual(arrays[b"one"].tolist(), [1, 2, 3, 4])
+        self.assertEqual(arrays[b"two"].tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
+        self.assertEqual(arrays[b"three"].tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+
+    def test_tree_iterator1(self):
+        # one big array
+        for arrays in uproot.open("tests/foriter.root")["foriter"].iterator(1000):
+            self.assertEqual(arrays[b"data"].tolist(), list(range(46)))
+
+        # size is equal to basket size (for most baskets)
+        i = 0
+        for arrays in uproot.open("tests/foriter.root")["foriter"].iterator(6):
+            self.assertEqual(arrays[b"data"].tolist(), list(range(i, min(i + 6, 46))))
+            i += 6
+
+        # size is smaller
+        i = 0
+        for arrays in uproot.open("tests/foriter.root")["foriter"].iterator(3):
+            self.assertEqual(arrays[b"data"].tolist(), list(range(i, min(i + 3, 46))))
+            i += 3
+        i = 0
+        for arrays in uproot.open("tests/foriter.root")["foriter"].iterator(4):
+            self.assertEqual(arrays[b"data"].tolist(), list(range(i, min(i + 4, 46))))
+            i += 4
+
+        # size is larger
+        i = 0
+        for arrays in uproot.open("tests/foriter.root")["foriter"].iterator(12):
+            self.assertEqual(arrays[b"data"].tolist(), list(range(i, min(i + 12, 46))))
+            i += 12
+        i = 0
+        for arrays in uproot.open("tests/foriter.root")["foriter"].iterator(10):
+            self.assertEqual(arrays[b"data"].tolist(), list(range(i, min(i + 10, 46))))
+            i += 10
+
+        # singleton case
+        i = 0
+        for arrays in uproot.open("tests/foriter.root")["foriter"].iterator(1):
+            self.assertEqual(arrays[b"data"].tolist(), list(range(i, min(i + 1, 46))))
+            i += 1
+
+    def test_tree_iterator2(self):
+        words = [b"zero", b"one", b"two", b"three", b"four", b"five", b"six", b"seven", b"eight", b"nine", b"ten", b"eleven", b"twelve", b"thirteen", b"fourteen", b"fifteen", b"sixteen", b"seventeen", b"eighteen", b"ninteen", b"twenty", b"twenty-one", b"twenty-two", b"twenty-three", b"twenty-four", b"twenty-five", b"twenty-six", b"twenty-seven", b"twenty-eight", b"twenty-nine", b"thirty"]
+
+        # one big array
+        for arrays in uproot.open("tests/foriter2.root")["foriter2"].iterator(1000):
+            self.assertEqual(arrays[b"data"].tolist(), words)
+
+        # size is equal to basket size (for most baskets)
+        i = 0
+        for arrays in uproot.open("tests/foriter2.root")["foriter2"].iterator(6):
+            self.assertEqual(arrays[b"data"].tolist(), words[i:i + 6])
+            i += 6
+
+        # size is smaller
+        i = 0
+        for arrays in uproot.open("tests/foriter2.root")["foriter2"].iterator(3):
+            self.assertEqual(arrays[b"data"].tolist(), words[i:i + 3])
+            i += 3
+        i = 0
+        for arrays in uproot.open("tests/foriter2.root")["foriter2"].iterator(4):
+            self.assertEqual(arrays[b"data"].tolist(), words[i:i + 4])
+            i += 4
+
+        # size is larger
+        i = 0
+        for arrays in uproot.open("tests/foriter2.root")["foriter2"].iterator(12):
+            self.assertEqual(arrays[b"data"].tolist(), words[i:i + 12])
+            i += 12
+        i = 0
+        for arrays in uproot.open("tests/foriter2.root")["foriter2"].iterator(10):
+            self.assertEqual(arrays[b"data"].tolist(), words[i:i + 10])
+            i += 10
+
+        # singleton case
+        i = 0
+        for arrays in uproot.open("tests/foriter2.root")["foriter2"].iterator(1):
+            self.assertEqual(arrays[b"data"].tolist(), words[i:i + 1])
+            i += 1
+
+    def test_tree_iterator3(self):
+        source = list(range(46)) + list(range(46))
+
+        # one big array
+        for arrays in uproot.iterator(1000, ["tests/foriter.root", "tests/foriter.root"], "foriter"):
+            self.assertEqual(arrays[b"data"].tolist(), source)
+
+        # size is equal to basket size (for most baskets)
+        i = 0
+        for arrays in uproot.iterator(6, ["tests/foriter.root", "tests/foriter.root"], "foriter"):
+            self.assertEqual(arrays[b"data"].tolist(), source[i:min(i + 6, 46*2)])
+            i += 6
+
+        # size is smaller
+        i = 0
+        for arrays in uproot.iterator(3, ["tests/foriter.root", "tests/foriter.root"], "foriter"):
+            self.assertEqual(arrays[b"data"].tolist(), source[i:min(i + 3, 46*2)])
+            i += 3
+        i = 0
+        for arrays in uproot.iterator(4, ["tests/foriter.root", "tests/foriter.root"], "foriter"):
+            self.assertEqual(arrays[b"data"].tolist(), source[i:min(i + 4, 46*2)])
+            i += 4
+
+        # size is larger
+        i = 0
+        for arrays in uproot.iterator(12, ["tests/foriter.root", "tests/foriter.root"], "foriter"):
+            self.assertEqual(arrays[b"data"].tolist(), source[i:min(i + 12, 46*2)])
+            i += 12
+        i = 0
+        for arrays in uproot.iterator(10, ["tests/foriter.root", "tests/foriter.root"], "foriter"):
+            self.assertEqual(arrays[b"data"].tolist(), source[i:min(i + 10, 46*2)])
+            i += 10
+
+        # singleton case
+        i = 0
+        for arrays in uproot.iterator(1, ["tests/foriter.root", "tests/foriter.root"], "foriter"):
+            self.assertEqual(arrays[b"data"].tolist(), source[i:min(i + 1, 46*2)])
+            i += 1
+
+    def test_tree_iterator4(self):
+        words2 = [b"zero", b"one", b"two", b"three", b"four", b"five", b"six", b"seven", b"eight", b"nine", b"ten", b"eleven", b"twelve", b"thirteen", b"fourteen", b"fifteen", b"sixteen", b"seventeen", b"eighteen", b"ninteen", b"twenty", b"twenty-one", b"twenty-two", b"twenty-three", b"twenty-four", b"twenty-five", b"twenty-six", b"twenty-seven", b"twenty-eight", b"twenty-nine", b"thirty"] * 2
+
+        # one big array
+        for arrays in uproot.iterator(1000, ["tests/foriter2.root", "tests/foriter2.root"], "foriter2"):
+            self.assertEqual(arrays[b"data"].tolist(), words2)
+
+        # size is equal to basket size (for most baskets)
+        i = 0
+        for arrays in uproot.iterator(6, ["tests/foriter2.root", "tests/foriter2.root"], "foriter2"):
+            self.assertEqual(arrays[b"data"].tolist(), words2[i:i + 6])
+            i += 6
+
+        # size is smaller
+        i = 0
+        for arrays in uproot.iterator(3, ["tests/foriter2.root", "tests/foriter2.root"], "foriter2"):
+            self.assertEqual(arrays[b"data"].tolist(), words2[i:i + 3])
+            i += 3
+        i = 0
+        for arrays in uproot.iterator(4, ["tests/foriter2.root", "tests/foriter2.root"], "foriter2"):
+            self.assertEqual(arrays[b"data"].tolist(), words2[i:i + 4])
+            i += 4
+
+        # size is larger
+        i = 0
+        for arrays in uproot.iterator(12, ["tests/foriter2.root", "tests/foriter2.root"], "foriter2"):
+            self.assertEqual(arrays[b"data"].tolist(), words2[i:i + 12])
+            i += 12
+        i = 0
+        for arrays in uproot.iterator(10, ["tests/foriter2.root", "tests/foriter2.root"], "foriter2"):
+            self.assertEqual(arrays[b"data"].tolist(), words2[i:i + 10])
+            i += 10
+
+        # singleton case
+        i = 0
+        for arrays in uproot.iterator(1, ["tests/foriter2.root", "tests/foriter2.root"], "foriter2"):
+            self.assertEqual(arrays[b"data"].tolist(), words2[i:i + 1])
+            i += 1
