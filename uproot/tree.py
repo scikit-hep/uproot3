@@ -199,6 +199,8 @@ class TTree(uproot.core.TNamed,
 
     def arrayiter(self, entries, branchdtypes=lambda branch: branch.dtype, executor=None, reportentries=False):
         if isinstance(entries, int):
+            if entries < 1:
+                raise ValueError("number of entries per iteration must be at least 1")
             if sys.version_info[0] <= 2:
                 ranges = ((x, x + entries) for x in xrange(0, self.entries, entries))
             else:
