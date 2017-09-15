@@ -19,8 +19,8 @@ from collections import namedtuple
 import numpy
 
 import uproot.const
-import uproot.walker.arraywalker
-import uproot.walker.lazyarraywalker
+import uproot._walker.arraywalker
+import uproot._walker.lazyarraywalker
 
 from zlib import decompress as zlib_decompress
 try:
@@ -222,7 +222,7 @@ class TKey(object):
         #  object size != compressed size means it's compressed
         if objlen != bytes - self._keylen:
             function = _decompressfcn(self.compression, objlen)
-            self._walker = uproot.walker.lazyarraywalker.LazyArrayWalker(walker.copy(seekkey + self._keylen), function, bytes - self._keylen, origin=-self._keylen)
+            self._walker = uproot._walker.lazyarraywalker.LazyArrayWalker(walker.copy(seekkey + self._keylen), function, bytes - self._keylen, origin=-self._keylen)
 
         # otherwise, it's uncompressed
         else:

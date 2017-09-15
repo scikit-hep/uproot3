@@ -19,9 +19,9 @@ import os.path
 
 import numpy
 
-import uproot.walker.walker
+import uproot._walker.walker
 
-class ArrayWalker(uproot.walker.walker.Walker):
+class ArrayWalker(uproot._walker.walker.Walker):
     @staticmethod
     def memmap(localpath, index=0):
         out = ArrayWalker(numpy.memmap(os.path.expanduser(localpath), dtype=numpy.uint8, mode="r"), index)

@@ -19,9 +19,9 @@ import os.path
 
 import numpy
 
-import uproot.walker.walker
+import uproot._walker.walker
 
-class LocalFileWalker(uproot.walker.walker.Walker):
+class LocalFileWalker(uproot._walker.walker.Walker):
     def __init__(self, localpath, index=None, origin=None, reusefile=None):
         if reusefile is None:
             self.path = os.path.abspath(os.path.expanduser(localpath))

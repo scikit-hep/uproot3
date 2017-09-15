@@ -16,9 +16,9 @@
 
 import numpy
 
-import uproot.walker.arraywalker
+import uproot._walker.arraywalker
 
-class LazyArrayWalker(uproot.walker.arraywalker.ArrayWalker):
+class LazyArrayWalker(uproot._walker.arraywalker.ArrayWalker):
     def __init__(self, walker, function, length, origin=None):
         self._original_walker   = walker
         self._original_function = function
@@ -42,7 +42,7 @@ class LazyArrayWalker(uproot.walker.arraywalker.ArrayWalker):
             walker.index = start
             walker._unevaluate()
 
-        uproot.walker.arraywalker.ArrayWalker.__init__(self, numpy.frombuffer(string, dtype=numpy.uint8), 0, origin=origin)
+        uproot._walker.arraywalker.ArrayWalker.__init__(self, numpy.frombuffer(string, dtype=numpy.uint8), 0, origin=origin)
         self._evaluated = True
 
     def _unevaluate(self):

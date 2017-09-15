@@ -29,11 +29,11 @@ def open(path, memmap=True):
     if parsed.scheme == "file" or parsed.scheme == "":
         path = parsed.netloc + parsed.path
         if memmap:
-            import uproot.walker.arraywalker
-            return uproot.rootio.TFile(uproot.walker.arraywalker.ArrayWalker.memmap(path))
+            import uproot._walker.arraywalker
+            return uproot.rootio.TFile(uproot._walker.arraywalker.ArrayWalker.memmap(path))
         else:
-            import uproot.walker.localfilewalker
-            return uproot.rootio.TFile(uproot.walker.localfilewalker.LocalFileWalker(path))
+            import uproot._walker.localfilewalker
+            return uproot.rootio.TFile(uproot._walker.localfilewalker.LocalFileWalker(path))
 
     elif parsed.scheme == "root":
         return xrootd(path)
@@ -42,12 +42,12 @@ def open(path, memmap=True):
         raise ValueError("URI scheme not recognized: {0}".format(path))
 
 def memmap(localpath):
-    import uproot.walker.arraywalker
-    return uproot.rootio.TFile(uproot.walker.arraywalker.ArrayWalker.memmap(localpath))
+    import uproot._walker.arraywalker
+    return uproot.rootio.TFile(uproot._walker.arraywalker.ArrayWalker.memmap(localpath))
 
 def xrootd(path):
-    import uproot.walker.xrootdwalker
-    return uproot.rootio.TFile(uproot.walker.xrootdwalker.XRootDWalker(path))
+    import uproot._walker.xrootdwalker
+    return uproot.rootio.TFile(uproot._walker.xrootdwalker.XRootDWalker(path))
 
 def iterator(entries, path, treepath, branchdtypes=lambda branch: branch.dtype, memmap=True, executor=None, outputtype=dict, reportentries=False):
     import sys

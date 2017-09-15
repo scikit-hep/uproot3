@@ -19,8 +19,8 @@ import sys
 
 import numpy
 
-import uproot.walker.arraywalker
-import uproot.walker.lazyarraywalker
+import uproot._walker.arraywalker
+import uproot._walker.lazyarraywalker
 import uproot.rootio
 import uproot.core
 
@@ -341,7 +341,7 @@ class TBranch(uproot.core.TNamed,
 
         self.branches = list(uproot.core.TObjArray(filewalker, walker))
         self.leaves = list(uproot.core.TObjArray(filewalker, walker))
-        walker.skipbcnt() # baskets
+        walker.skipbcnt() # reading baskets is expensive and useless
 
         walker.skip(1)  # isArray
         # self.basketBytes = walker.readarray(">i4", maxBaskets)[:writeBasket]
@@ -426,7 +426,7 @@ class TBranch(uproot.core.TNamed,
             #  object size != compressed size means it's compressed
             if objlen != bytes - keylen:
                 function = uproot.rootio._decompressfcn(self.compression, objlen)
-                self._basketwalkers.append(uproot.walker.lazyarraywalker.LazyArrayWalker(self._filewalker.copy(seekkey + keylen), function, bytes - keylen))
+                self._basketwalkers.append(uproot._walker.lazyarraywalker.LazyArrayWalker(self._filewalker.copy(seekkey + keylen), function, bytes - keylen))
 
             # otherwise, it's uncompressed
             else:

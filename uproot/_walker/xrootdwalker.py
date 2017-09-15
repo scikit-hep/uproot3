@@ -18,9 +18,9 @@ import struct
 
 import numpy
 
-import uproot.walker.walker
+import uproot._walker.walker
 
-class XRootDWalker(uproot.walker.walker.Walker):
+class XRootDWalker(uproot._walker.walker.Walker):
     def __init__(self, path, index=None, origin=None, reusefile=None):
         try:
             import pyxrootd.client
