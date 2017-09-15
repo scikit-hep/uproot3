@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""ROOT constants used in deserialization."""
+
 import numpy
 
 kByteCountMask  = numpy.int64(0x40000000)

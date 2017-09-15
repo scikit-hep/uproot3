@@ -34,6 +34,29 @@ class TTree(uproot.core.TNamed,
             uproot.core.TAttLine,
             uproot.core.TAttFill,
             uproot.core.TAttMarker):
+    """Represents a TTree, a table of data (possibly a ragged table, as some types allow for multiple items per TTree entry).
+
+    Reading data:
+
+        * `tree.arrays(...)` gets all or selected branches as arrays. It has many options; see help(TTree.arrays).
+        * `tree.array(branch, ...)` gets a single branch as an array. It has many options; see help(TTree.array).
+        * `tree.iterator(entries, ...)` iterates over a fixed number of entries at a time. It has many options; see help(TTree.iterator).
+
+    Information about the tree:
+
+        * `tree.entries` is the number of entries.
+        * `tree.branch(name)` gets a branch object by name.
+        * `tree.branches` are the TBranch objects directly attached to the TTree's root.
+        * `tree.allbranches` are all the TBranch objects, recursively following branches' branches.
+        * `tree.branchnames` are all the directly attached branch names.
+        * `tree.allbranchnames` are all the branch names, recursively following branches' branches.
+        * `tree.leaves` are all the TLeaf objects.
+        * `tree.counter` is a dict from branch names to Counter(branch, leaf) for branches that may have multiple items per TTree entry.
+
+    `tree[name]` is a synonym for `tree.branch(name)`.
+
+    TTree is not iterable, but `len(tree)` is a synonym for `tree.entries`.
+    """
     def __init__(self, filewalker, walker):
         walker.startcontext()
         start = walker.index
@@ -83,7 +106,7 @@ class TTree(uproot.core.TNamed,
 
         for i in range(7):
             # fAliases, fIndexValues, fIndex, fTreeIndex, fFriends, fUserInfo, fBranchRef
-            uproot.rootio.Deserialized.deserialize(filewalker, walker)
+            uproot.rootio.Deserialized._deserialize(filewalker, walker)
 
         self._checkbytecount(walker.index - start, bcnt)
 
@@ -122,6 +145,8 @@ class TTree(uproot.core.TNamed,
         raise TypeError("'TTree' object is not iterable")
 
     def branch(self, name):
+        """Get a branch object by name.
+        """
         if isinstance(name, str):
             name = name.encode("ascii")
 
@@ -212,6 +237,40 @@ class TTree(uproot.core.TNamed,
                         raise ValueError("cannot find branch {0}".format(repr(name)))
 
     def iterator(self, entries, branchdtypes=lambda branch: branch.dtype, executor=None, outputtype=dict, reportentries=False):
+        """Iterates over a fixed number of entries at a time.
+
+        Instead of loading all entries from a tree with `tree.arrays()`, load a manageable number that will fit in memory at once and apply a continuous process to it. Example use:
+
+            for px, py in tree.iterator(10000, ["px", "py"], outputtype=tuple):
+                do_something(sqrt(px**2 + py**2))
+
+        Arguments:
+
+            * `entries` *(required)*
+
+              If a positive integer, the number of entries to yield in each step of iteration.
+              Otherwise, `entries` is interpreted as an iterable over `(entrystart, entryend)` ranges, which must be strictly increasing.
+
+            * `branchdtypes` (same as in `TTree.arrays`)
+
+              If a single string, the string names the only branch to load.
+              If an iterable of strings, all of these are loaded (in the specified order).
+              If a dict of `{name: dtype}`, load the specified branch names and cast them into a given `dtype` (such as conversion to little endian).
+              If a function from branch names to `dtype` or `None`, load the branches into the given `dtypes` and don't load the branches mapped to `None`.
+
+            * `executor` (same as in `TTree.arrays`)
+
+              A `concurrent.futures.Executor` that would be used to parallelize the basket loading/decompression.
+              If `None`, the process is serial.
+
+            * `outputtype` (same as in `TTree.arrays`)
+
+              Constructor for the objects to yield in the iterator. Good choices include `dict`, `tuple`, `namedtuple`, `list`.
+
+            * `reportentries`
+
+              If `True`, yield `(entrystart, entryend, data)` instead of just `data`. Intended as a convenience or cross-check for analysis.
+        """
         if isinstance(entries, int):
             if entries < 1:
                 raise ValueError("number of entries per iteration must be at least 1")
@@ -267,6 +326,33 @@ class TTree(uproot.core.TNamed,
                 yield out
 
     def arrays(self, branchdtypes=lambda branch: branch.dtype, executor=None, outputtype=dict, block=True):
+        """Extracts whole branches into Numpy arrays.
+
+        Individual branches from TTrees are typically small enough to fit into memory. If this is not your case, consider `tree.iterator(entries)` to load a given number of entries at a time.
+
+        Arguments:
+
+            * `branchdtypes` (same as in `TTree.iterator`)
+
+              If a single string, the string names the only branch to load.
+              If an iterable of strings, all of these are loaded (in the specified order).
+              If a dict of `{name: dtype}`, load the specified branch names and cast them into a given `dtype` (such as conversion to little endian).
+              If a function from branch names to `dtype` or `None`, load the branches into the given `dtypes` and don't load the branches mapped to `None`.
+
+            * `executor` (same as in `TTree.iterator`)
+
+              A `concurrent.futures.Executor` that would be used to parallelize the basket loading/decompression.
+              If `None`, the process is serial.
+
+            * `outputtype` (same as in `TTree.iterator`)
+
+              Constructor for the objects to yield in the iterator. Good choices include `dict`, `tuple`, `namedtuple`, `list`.
+
+            * `block`
+
+              If `True` and parallel processing with an `executor`, return `data, errors` instead of just `data`, where `errors` is a generator of exceptions raised by the parallel threads.
+              When you're ready to wait for all threads to finish, evaluate the `errors` generator.
+        """
         toget = []
         for branch, dtype in self._normalizeselection(branchdtypes, self.allbranches):
             toget.append((branch, dtype))
@@ -301,6 +387,30 @@ class TTree(uproot.core.TNamed,
             return out, (item for sublist in errors for item in sublist)
 
     def array(self, branch, dtype=None, executor=None, block=True):
+        """Extracts a whole branch into a Numpy array.
+
+        Individual branches from TTrees are typically small enough to fit into memory. If this is not your case, consider `tree.iterator(entries)` to load a given number of entries at a time.
+
+        Arguments:
+
+            * `branch` *(required)*
+
+               Branch name to extract.
+
+            * `dtype`
+
+               If not `None`, cast the array into a given `dtype` (such as conversion to little endian).
+
+            * `executor` (same as in `TTree.arrays`)
+
+              A `concurrent.futures.Executor` that would be used to parallelize the basket loading/decompression.
+              If `None`, the process is serial.
+
+            * `block`
+
+              If `True` and parallel processing with an `executor`, return `data, errors` instead of just `data`, where `errors` is a generator of exceptions raised by the parallel threads.
+              When you're ready to wait for all threads to finish, evaluate the `errors` generator.
+        """
         branch = branch.encode("ascii") if hasattr(branch, "encode") else branch
 
         def branchdtypes(b):
@@ -325,6 +435,25 @@ uproot.rootio.Deserialized.classes[b"TTree"] = TTree
 
 class TBranch(uproot.core.TNamed,
               uproot.core.TAttFill):
+    """Represents a TBranch, a single column of data in a TTree.
+
+    Reading data:
+
+        * `branch.array(...)` gets the branch as an array. It has many options; see help(TBranch.array).
+        * `tree.iterator(entries, ...)` iterates over a fixed number of entries at a time. It has many options; see help(TTree.iterator).
+
+    Information about the branch:
+
+        * `branch.numbaskets` is the number of baskets.
+        * `branch.branch(name)` gets a subbranch object by name.
+        * `branch.branches` are the subbranches directly attached to this TBranch.
+        * `branch.allbranches` are all the subbranches, recursively following subbranches' branches.
+        * `branch.branchnames` are all the directly attached subbranch names.
+        * `branch.allbranchnames` are all the subbranch names, recursively following subbranches' branches.
+        * `branch.leaves` are all the TLeaf objects directly attached to this TBranch.
+
+    `branch[name]` is a synonym for `branch.branch(name)`.
+    """
     def __init__(self, filewalker, walker):
         walker.startcontext()
         start = walker.index
@@ -381,7 +510,16 @@ class TBranch(uproot.core.TNamed,
     def allbranchnames(self):
         return [branch.name for branch in self.allbranches]
 
+    def __getitem__(self, name):
+        return self.branch(name)
+
+    def __iter__(self):
+        # prevent Python's attempt to interpret __getitem__ as iteration
+        raise TypeError("'TBranch' object is not iterable")
+
     def branch(self, name):
+        """Get a subbranch object by name.
+        """
         if isinstance(name, str):
             name = name.encode("ascii")
 
@@ -549,6 +687,28 @@ class TBranch(uproot.core.TNamed,
             return outdata
 
     def array(self, dtype=None, executor=None, block=True):
+        """Extracts the whole branch into a Numpy array.
+
+        Individual branches are typically small enough to fit into memory. If this is not your case, consider `tree.iterator(entries)` to load a given number of entries at a time.
+
+        Arguments:
+
+            * `dtype`
+
+               If not `None`, cast the array into a given `dtype` (such as conversion to little endian).
+               If an array object, fill that array instead of creating a new one (shape must match).
+
+            * `executor` (same as in `TTree.array`)
+
+              A `concurrent.futures.Executor` that would be used to parallelize the basket loading/decompression.
+              If `None`, the process is serial.
+
+            * `block`
+
+              If `True` and parallel processing with an `executor`, return `data, errors` instead of just `data`, where `errors` is a generator of exceptions raised by the parallel threads.
+              When you're ready to wait for all threads to finish, evaluate the `errors` generator.
+        """
+
         if not hasattr(self, "basketwalkers"):
             self._preparebaskets()
 
@@ -643,6 +803,10 @@ class TBranch(uproot.core.TNamed,
 uproot.rootio.Deserialized.classes[b"TBranch"] = TBranch
 
 class TBranchElement(TBranch):
+    """Represents a TBranchElement, a column of data represented an object that has been split.
+
+    All methods and members are the same as TBranch.
+    """
     def __init__(self, filewalker, walker):
         walker.startcontext()
         start = walker.index
@@ -664,12 +828,33 @@ class TBranchElement(TBranch):
             classversion = walker.readfield("!I")
         identifier, btype, stype, themax = walker.readfields("!iiii")
             
-        bcount1 = uproot.rootio.Deserialized.deserialize(filewalker, walker)
-        bcount2 = uproot.rootio.Deserialized.deserialize(filewalker, walker)
+        bcount1 = uproot.rootio.Deserialized._deserialize(filewalker, walker)
+        bcount2 = uproot.rootio.Deserialized._deserialize(filewalker, walker)
 
         self._checkbytecount(walker.index - start, bcnt)
 
     def array(self, dtype=None, executor=None, block=True):
+        """Extracts the whole branch into a Numpy array.
+
+        Individual branches are typically small enough to fit into memory. If this is not your case, consider `tree.iterator(entries)` to load a given number of entries at a time.
+
+        Arguments:
+
+            * `dtype`
+
+               If not `None`, cast the array into a given `dtype` (such as conversion to little endian).
+               If an array object, fill that array instead of creating a new one (shape must match).
+
+            * `executor` (same as in `TTree.array`)
+
+              A `concurrent.futures.Executor` that would be used to parallelize the basket loading/decompression.
+              If `None`, the process is serial.
+
+            * `block`
+
+              If `True` and parallel processing with an `executor`, return `data, errors` instead of just `data`, where `errors` is a generator of exceptions raised by the parallel threads.
+              When you're ready to wait for all threads to finish, evaluate the `errors` generator.
+        """
         if hasattr(self, "dtype"):
             return TBranch.array(self, dtype, executor, block)
         else:
@@ -678,6 +863,8 @@ class TBranchElement(TBranch):
 uproot.rootio.Deserialized.classes[b"TBranchElement"] = TBranchElement
 
 class TLeaf(uproot.core.TNamed):
+    """Represents a TLeaf object, which is only used for type and dimensionality information.
+    """
     def __init__(self, filewalker, walker):
         walker.startcontext()
         start = walker.index
@@ -686,7 +873,7 @@ class TLeaf(uproot.core.TNamed):
         uproot.core.TNamed.__init__(self, filewalker, walker)
 
         len, etype, offset, hasrange, unsigned = walker.readfields("!iii??")
-        self.counter = uproot.rootio.Deserialized.deserialize(filewalker, walker)
+        self.counter = uproot.rootio.Deserialized._deserialize(filewalker, walker)
 
         self._checkbytecount(walker.index - start, bcnt)
 
@@ -705,6 +892,7 @@ for classname, format, dtype in [
     ]:
     exec("""
 class {0}(TLeaf):
+    "Represents a {0} object, which is only used for type and dimensionality information."
     def __init__(self, filewalker, walker):
         walker.startcontext()
         start = walker.index
@@ -721,6 +909,8 @@ uproot.rootio.Deserialized.classes[b"{0}"] = {0}
 """.format(classname, format, dtype), globals())
 
 class TLeafElement(TLeaf):
+    """Represents a TLeafElement object, which is only used for type and dimensionality information.
+    """
     def __init__(self, filewalker, walker):
         walker.startcontext()
         start = walker.index
