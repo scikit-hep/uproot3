@@ -78,8 +78,8 @@ class TTree(uproot.core.TNamed,
             walker.skip(1)
             walker.skip(nclus * 8)   # fClusterSize
 
-        self.branches = uproot.core.TObjArray(filewalker, walker)
-        self.leaves = uproot.core.TObjArray(filewalker, walker)
+        self.branches = list(uproot.core.TObjArray(filewalker, walker))
+        self.leaves = list(uproot.core.TObjArray(filewalker, walker))
 
         for i in range(7):
             # fAliases, fIndexValues, fIndex, fTreeIndex, fFriends, fUserInfo, fBranchRef
@@ -139,19 +139,19 @@ class TTree(uproot.core.TNamed,
 
     @property
     def allbranches(self):
-        def recurse(obj):
-            for branch in obj.branches:
-                yield branch
-                for x in recurse(branch):
-                    yield x
-        return recurse(self)
-
-    def branchnames(self, recursive=True):
+        out = []
         for branch in self.branches:
-            yield branch.name
-            if recursive:
-                for x in branch.branchnames(recursive):
-                    yield x
+            out.append(branch)
+            out.extend(branch.allbranches)
+        return out
+
+    @property
+    def branchnames(self):
+        return [branch.name for branch in self.branches]
+
+    @property
+    def allbranchnames(self):
+        return [branch.name for branch in self.allbranches]
 
     def _normalizeselection(self, branchdtypes):
         if callable(branchdtypes):
@@ -197,7 +197,7 @@ class TTree(uproot.core.TNamed,
 
         return selection
 
-    def arrayiter(self, entries, branchdtypes=lambda branch: branch.dtype, executor=None, outputtype=dict, reportentries=False):
+    def iterator(self, entries, branchdtypes=lambda branch: branch.dtype, executor=None, outputtype=dict, reportentries=False):
         if isinstance(entries, int):
             if entries < 1:
                 raise ValueError("number of entries per iteration must be at least 1")
@@ -331,8 +331,8 @@ class TBranch(uproot.core.TNamed,
         compression, basketSize, entryOffsetLen, writeBasket, entryNumber, offset, maxBaskets, splitLevel, entries, firstEntry, totBytes, zipBytes = walker.readfields("!iiiiqiiiqqqq")
         self.compression = uproot.rootio._interpret_compression(compression)
 
-        self.branches = uproot.core.TObjArray(filewalker, walker)
-        self.leaves = uproot.core.TObjArray(filewalker, walker)
+        self.branches = list(uproot.core.TObjArray(filewalker, walker))
+        self.leaves = list(uproot.core.TObjArray(filewalker, walker))
         walker.skipbcnt() # baskets
 
         walker.skip(1)  # isArray
@@ -357,12 +357,21 @@ class TBranch(uproot.core.TNamed,
     def numbaskets(self):
         return len(self._basketSeek)
 
-    def branchnames(self, recursive=True):
+    @property
+    def allbranches(self):
+        out = []
         for branch in self.branches:
-            yield branch.name
-            if recursive:
-                for x in branch.branchnames(recursive):
-                    yield x
+            out.append(branch)
+            out.extend(branch.allbranches)
+        return out
+
+    @property
+    def branchnames(self):
+        return [branch.name for branch in self.branches]
+
+    @property
+    def allbranchnames(self):
+        return [branch.name for branch in self.allbranches]
 
     def branch(self, name):
         if isinstance(name, str):

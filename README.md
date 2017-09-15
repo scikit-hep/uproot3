@@ -101,7 +101,7 @@ Or iterate over arrays with a fixed number of entries each:
 
 ```python
 >>> import numpy
->>> for px1, py1 in tree.arrayiter(2000, ["px1", "py1"], outputtype=tuple):
+>>> for px1, py1 in tree.iterator(2000, ["px1", "py1"], outputtype=tuple):
 ...     print(numpy.sqrt(px1**2 + py1**2))
 ... 
 [ 44.7322  38.8311  38.8311 ...,  73.6439  73.6052  33.716  ]

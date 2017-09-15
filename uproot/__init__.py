@@ -48,3 +48,6 @@ def memmap(localpath):
 def xrootd(path):
     import uproot.walker.xrootdwalker
     return uproot.rootio.TFile(uproot.walker.xrootdwalker.XRootDWalker(path))
+
+def iterator(self, entries, path, treename, branchdtypes=lambda branch: branch.dtype, executor=None, outputtype=dict, reportentries=False):
+    pass
