@@ -20,6 +20,20 @@ import uproot.core
 import uproot.tree
 
 def open(path, memmap=True):
+    """Opens a single file for reading.
+
+    Arguments:
+
+        * `path`
+
+          The name of the file, possibly a URL for XRootD.
+
+        * `memmap` (same as in `uproot.iterator`)
+
+          If `True`, load local files as memory maps. If `False`, load normally.
+          The advantage of memory maps is that parallel reads only require one file handle, and random access (of which there is a *lot* in ROOT) is more efficient.
+          The advantage of normal files is that memory maps sometimes load more data from disk than intended, which might (?) be a performance issue for slow disks.
+    """
     try:
         from urlparse import urlparse
     except ImportError:
@@ -41,15 +55,63 @@ def open(path, memmap=True):
     else:
         raise ValueError("URI scheme not recognized: {0}".format(path))
 
-def memmap(localpath):
-    import uproot._walker.arraywalker
-    return uproot.rootio.TFile(uproot._walker.arraywalker.ArrayWalker.memmap(localpath))
-
 def xrootd(path):
+    """Opens a single remote file for reading.
+
+    Although `uproot.open` will use XRootD when it encounters a URL, this function *always* invokes XRootD.
+    """
     import uproot._walker.xrootdwalker
     return uproot.rootio.TFile(uproot._walker.xrootdwalker.XRootDWalker(path))
 
 def iterator(entries, path, treepath, branchdtypes=lambda branch: branch.dtype, memmap=True, executor=None, outputtype=dict, reportentries=False):
+    """Iterates over a collection of files, a fixed number of entries at a time (even across the gap between files).
+
+    Use this function when you have a huge dataset, too large to load into memory, spread across many files. Example use:
+
+        for px, py in uproot.iterator(10000, "/bigdisk/mydata*.root", "events", ["px", "py"], outputtype=tuple):
+            do_something(sqrt(px**2 + py**2))
+
+    Arguments:
+
+        * `entries` *(required)*
+
+          If a positive integer, the number of entries to yield in each step of iteration.
+          Otherwise, `entries` is interpreted as an iterable over `(entrystart, entryend)` ranges, which must be strictly increasing.
+
+        * `path` *(required)*
+
+          If a single string, the name of the file, possibly a URL for XRootD.
+          If an iterable, a set of names or URLs.
+          Local files can be glob patterns (`mydata*.root`).
+          After expansion, paths will be traversed in *sorted* order. This is to ensure that entry numbers for the same file set have the same meaning from run to run.
+
+        * `branchdtypes` (same as in `TTree.iterator`)
+
+          If a single string, the string names the only branch to load.
+          If an iterable of strings, all of these are loaded (in the specified order).
+          If a dict of `{name: dtype}`, load the specified branch names and cast them into a given `dtype` (such as conversion to little endian).
+          If a function from branch names to `dtype` or `None`, load the branches into the given `dtypes` and don't load the branches mapped to `None`.
+
+        * `memmap` (same as in `uproot.open`)
+
+          If `True`, load local files as memory maps. If `False`, load normally.
+          The advantage of memory maps is that parallel reads only require one file handle, and random access (of which there is a *lot* in ROOT) is more efficient.
+          The advantage of normal files is that memory maps sometimes load more data from disk than intended, which might (?) be a performance issue for slow disks.
+
+        * `executor` (same as in `TTree.iterator`)
+
+          A `concurrent.futures.Executor` that would be used to parallelize the basket loading/decompression.
+          If `None`, the process is serial.
+
+        * `outputtype` (same as in `TTree.iterator`)
+
+          Constructor for the objects to yield in the iterator. Good choices include `dict`, `tuple`, `namedtuple`, `list`.
+
+        * `reportentries`
+
+          If `True`, yield `(entrystart, entryend, data)` instead of just `data`. Intended as a convenience or cross-check for analysis.
+          These are not entry numbers in any one file, they're global numbers for the whole set of files (much like TChain in ROOT).
+    """
     import sys
     import glob
     import os.path

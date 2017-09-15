@@ -17,6 +17,10 @@
 import uproot.rootio
 
 class TObjArray(uproot.rootio.Deserialized):
+    """Represents a TObjArray, an arbitrary-length list of objects in a ROOT file.
+
+    Supports a list-like interface, including iteration, `len`, and `__getitem__`.
+    """
     def __init__(self, filewalker, walker):
         walker.startcontext()
         start = walker.index
@@ -33,7 +37,7 @@ class TObjArray(uproot.rootio.Deserialized):
 
         nobjs, low = walker.readfields("!ii")
 
-        self.items = [uproot.rootio.Deserialized.deserialize(filewalker, walker) for i in range(nobjs)]
+        self.items = [uproot.rootio.Deserialized._deserialize(filewalker, walker) for i in range(nobjs)]
 
         self._checkbytecount(walker.index - start, bcnt)
 
@@ -52,6 +56,8 @@ class TObjArray(uproot.rootio.Deserialized):
 uproot.rootio.Deserialized.classes[b"TObjArray"] = TObjArray
 
 class TNamed(uproot.rootio.Deserialized):
+    """Represents a TNamed; implemented only because it's a supertype of other classes.
+    """
     def __init__(self, filewalker, walker):
         walker.startcontext()
         start = walker.index
@@ -65,6 +71,8 @@ class TNamed(uproot.rootio.Deserialized):
         self._checkbytecount(walker.index - start, bcnt)
 
 class TAttLine(uproot.rootio.Deserialized):
+    """Represents a TAttLine; implemented only because it's a supertype of other classes.
+    """
     def __init__(self, filewalker, walker):
         walker.startcontext()
         start = walker.index
@@ -73,6 +81,8 @@ class TAttLine(uproot.rootio.Deserialized):
         self._checkbytecount(walker.index - start, bcnt)
 
 class TAttFill(uproot.rootio.Deserialized):
+    """Represents a TAttFill; implemented only because it's a supertype of other classes.
+    """
     def __init__(self, filewalker, walker):
         walker.startcontext()
         start = walker.index
@@ -81,6 +91,8 @@ class TAttFill(uproot.rootio.Deserialized):
         self._checkbytecount(walker.index - start, bcnt)
 
 class TAttMarker(uproot.rootio.Deserialized):
+    """Represents a TAttMarker; implemented only because it's a supertype of other classes.
+    """
     def __init__(self, filewalker, walker):
         walker.startcontext()
         start = walker.index

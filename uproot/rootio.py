@@ -77,6 +77,18 @@ def _decompressfcn(compression, objlen):
         raise NotImplementedError("cannot decompress \"{0}\"".format(algo))
 
 class TFile(object):
+    """Represents a ROOT file; use to extract objects.
+
+        * `file.get(name, cycle=None)` to extract an object (aware of '/' and ';' notations).
+        * `file.ls()` for a `{name: classname}` dict of objects in the top directory.
+        * `file.compression` for a Compression(algo, level) namedtuple.
+        * `file.dir` is the top directory.
+
+    `file[name]` is a synonym for `file.get(name)`.
+
+    TFile is iterable (iterate over keys) with a `len(file)` for the number of keys.
+    """
+
     def __init__(self, walker):
         walker.startcontext()
         if walker.readfield("!4s") != b"root":
@@ -120,12 +132,30 @@ class TFile(object):
         return iter(self.dir.keys)
 
     def ls(self):
+        """Get a `{name: classname}` dict of objects in the top directory.
+        """
         return self.dir.ls()
 
     def get(self, name, cycle=None):
+        """Get an object from the file, interpreting '/' as subdirectories and ';' to delimit cycle number.
+
+        Synonym for `file[name]`.
+
+        An explicit `cycle` overrides ';'.
+        """
         return self.dir.get(name, cycle)
 
 class TDirectory(object):
+    """Represents a ROOT directory; use to extract objects.
+
+        * `dir.get(name, cycle=None)` to extract an object (aware of '/' and ';' notations).
+        * `dir.ls()` for a `{name: classname}` dict of objects in this directory.
+        * `dir.keys` is the keys.
+
+    `dir[name]` is a synonym for `dir.get(name)`.
+
+    TDirectory is iterable (iterate over keys) with a `len(dir)` for the number of keys.
+    """
     def __init__(self, name, walker, compression):
         self.name = name
 
@@ -153,15 +183,32 @@ class TDirectory(object):
         return iter(self.keys)
 
     def ls(self):
+        """Get a `{name: classname}` dict of objects in this directory.
+        """
         return self.keys.ls()
 
     def get(self, name, cycle=None):
+        """Get an object from the directory, interpreting '/' as subdirectories and ';' to delimit cycle number.
+
+        Synonym for `dir[name]`.
+
+        An explicit `cycle` overrides ';'.
+        """
         out = self
         for n in name.split("/"):
             out = out.keys.get(n, cycle)
         return out
 
 class TKeys(object):
+    """Represents a collection of keys.
+
+        * `keys.get(name, cycle=None)` to extract an object (aware of ';' notation).
+        * `keys.ls()` for a `{name: classname}` dict.
+
+    `keys[name]` is a synonym for `keys.get(name)`.
+
+    TKeys is iterable (iterate over keys) with a `len(keys)` for the number of keys.
+    """
     def __init__(self, walker, compression):
         start = walker.index
         self._header = TKey(walker, compression)
@@ -175,8 +222,8 @@ class TKeys(object):
     def __repr__(self):
         return "<TKeys len={0} at 0x{1:012x}>".format(len(self.keys), id(self))
 
-    def __getitem__(self, i):
-        return self.keys[i]
+    def __getitem__(self, name):
+        return self.get(name)
 
     def __len__(self):
         return len(self.keys)
@@ -185,9 +232,15 @@ class TKeys(object):
         return iter(self.keys)
 
     def ls(self):
+        """Get a `{name: classname}` dict.
+        """
         return dict((x.name, x.classname) for x in self.keys)
 
     def get(self, name, cycle=None):
+        """Get an object from the keys, interpreting ';' to delimit cycle number.
+
+        An explicit `cycle` overrides ';'.
+        """
         if isinstance(name, str):
             name = name.encode("ascii")
 
@@ -203,6 +256,13 @@ class TKeys(object):
         raise KeyError("not found: {0}".format(repr(name)))
 
 class TKey(object):
+    """Represents a key; for seeking to an object in a ROOT file.
+
+        * `key.get()` to extract an object (initiates file-reading and possibly decompression).
+        * `key.classname` for the class name.
+        * `key.name` for the object name.
+        * `key.title` for the object title.
+    """
     def __init__(self, walker, compression):
         walker.startcontext()
         bytes, version, objlen, datetime, self._keylen, self.cycle = walker.readfields("!ihiIhh")
@@ -217,11 +277,11 @@ class TKey(object):
         self.title = walker.readstring()
 
         self._filewalker = walker
-        self.compression = compression
+        self._compression = compression
 
         #  object size != compressed size means it's compressed
         if objlen != bytes - self._keylen:
-            function = _decompressfcn(self.compression, objlen)
+            function = _decompressfcn(self._compression, objlen)
             self._walker = uproot._walker.lazyarraywalker.LazyArrayWalker(walker.copy(seekkey + self._keylen), function, bytes - self._keylen, origin=-self._keylen)
 
         # otherwise, it's uncompressed
@@ -232,11 +292,15 @@ class TKey(object):
         return "<TKey {0} at 0x{1:012x}>".format(repr(self.name + b";" + repr(self.cycle).encode("ascii")), id(self))
 
     def get(self):
+        """Extract the object this key points to.
+
+        Objects are not read or decompressed until this function is explicitly called.
+        """
         start = self._walker.index
 
         try:
             if self.classname == b"TDirectory":
-                out = TDirectory(self.name, self._walker, self.compression)
+                out = TDirectory(self.name, self._walker, self._compression)
             elif self.classname in Deserialized.classes:
                 out = Deserialized.classes[self.classname](self._filewalker, self._walker)
             else:
@@ -247,13 +311,20 @@ class TKey(object):
         return out
 
 class Deserialized(object):
+    """Superclass for all types that can be deserialized from a ROOT file.
+
+        * `Deserialized.classes` is a dictionary from class names (as written in the file) to Python classes that can hold their data.
+
+    This is an abstract base class; it can't be instantiated.
+    """
+
     classes = {}
 
     def __init__(self, *args, **kwds):
         raise TypeError("Deserialized is an abstract class")
 
     @staticmethod
-    def deserialize(filewalker, walker):
+    def _deserialize(filewalker, walker):
         walker.startcontext()
         beg = walker.index - walker.origin
         bcnt = walker.readfield("!I")
