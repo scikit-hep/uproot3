@@ -385,7 +385,7 @@ class TBranch(uproot.core.TNamed,
             return array
 
     def _addtocache(self, cache, entrystart, entryend, parallel=False):
-        print("_addtocache", cache)
+        print("_addtocache", [(xi, repr(xdata.tostring()), xoff) for xi, xdata, xoff in cache])
 
         if len(cache) == 0:
             i = 0
@@ -396,10 +396,10 @@ class TBranch(uproot.core.TNamed,
             data, off = self._basket(i, True, parallel)
             cache.append((i, data, off))
             i += 1
-            print("    ", cache)
+            print("    ", [(xi, repr(xdata.tostring()), xoff) for xi, xdata, xoff in cache])
 
     def _delfromcache(self, cache, entrystart):
-        print("_delfromcache", cache)
+        print("_delfromcache", [(xi, repr(xdata.tostring()), xoff) for xi, xdata, xoff in cache])
 
         firsttokeep = 0
         for i, data, off in cache:
@@ -408,31 +408,32 @@ class TBranch(uproot.core.TNamed,
             else:
                 break
         del cache[:firsttokeep]
-        print("    ", cache)
+        print("    ", [(xi, repr(xdata.tostring()), xoff) for xi, xdata, xoff in cache])
 
     def _getfromcache(self, cache, entrystart, entryend, dtype):
-        print("_getfromcache", cache)
+        print("_getfromcache", [(xi, repr(xdata.tostring()), xoff) for xi, xdata, xoff in cache])
 
         if len(cache) == 0:
             return numpy.array([], dtype=dtype)
 
         i, firstdata, off = cache[0]
-        if off is None:
-            istart = entrystart - self._basketEntry[i]
-        else:
-            istart = off[entrystart - self._basketEntry[i]]
+        istart = entrystart - self._basketEntry[i]
+        if off is not None:
+            istart = off[istart]
 
         i, lastdata, off = cache[-1]
+        iend = entryend - self._basketEntry[i]
         if off is None:
-            iend = entryend - self._basketEntry[i]
+            iend = min(iend, len(lastdata))
+        elif iend < len(off):
+            iend = off[iend]
         else:
-            iend = off[entryend - self._basketEntry[i]]
-        iend = min(iend, len(lastdata))
+            iend = len(lastdata)
 
         print("istart", istart, "iend", iend)
 
         if len(cache) == 1:
-            print("len(cache) == 1, firstdata[istart:iend] ==", firstdata[istart:iend])
+            print("len(cache) == 1, firstdata[istart:iend] ==", repr(firstdata[istart:iend].tostring()))
 
             if dtype == firstdata.dtype:
                 return firstdata[istart:iend]
@@ -448,17 +449,17 @@ class TBranch(uproot.core.TNamed,
 
             i = len(firstdata) - istart
             out[:i] = firstdata[istart:]
-            print("fill out[:i]", out[:i])
+            print("fill out[:i]", repr(out[:i].tostring()))
 
             for mi, mdata, moff in middle:
                 out[i:i + len(mdata)] = mdata
-                print("fill out[i:i + len(mdata)]", out[i:i + len(mdata)])
+                print("fill out[i:i + len(mdata)]", repr(out[i:i + len(mdata)].tostring()))
                 i += len(mdata)
 
             out[i:] = lastdata[:iend]
-            print("fill out[i:]", out[i:])
+            print("fill out[i:]", repr(out[i:].tostring()))
 
-            print("finally, out ==", out)
+            print("finally, out ==", repr(out.tostring()))
             return out
 
     def array(self, dtype=None, executor=None, block=True):
