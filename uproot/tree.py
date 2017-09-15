@@ -208,6 +208,8 @@ class TTree(uproot.core.TNamed,
         for branch in self.allbranches:
             dtype = selection(branch)
             if dtype is not None:
+                if not isinstance(dtype, numpy.dtype):
+                    dtype = numpy.dtype(dtype)
                 toget.append((branch, dtype, []))
                 if not hasattr(branch, "basketwalkers"):
                     branch._preparebaskets()
@@ -241,6 +243,8 @@ class TTree(uproot.core.TNamed,
         for branch in self.allbranches:
             dtype = selection(branch)
             if dtype is not None:
+                if not isinstance(dtype, numpy.dtype):
+                    dtype = numpy.dtype(dtype)
                 out[branch.name], res = branch.array(dtype, executor, False)
                 errorslist.append(res)
 
@@ -313,6 +317,10 @@ class TBranch(uproot.core.TNamed,
         if len(self.leaves) == 1 and hasattr(self.leaves[0], "dtype"):
             self.dtype = self.leaves[0].dtype
         self._filewalker = filewalker
+
+    @property
+    def numbaskets(self):
+        return len(self._basketSeek)
 
     def _preparebaskets(self):
         self._filewalker.startcontext()
@@ -412,39 +420,66 @@ class TBranch(uproot.core.TNamed,
         if len(cache) == 0:
             return numpy.array([], dtype=dtype)
 
-        i, firstdata, off = cache[0]
-        istart = entrystart - self._basketEntry[i]
-        if off is not None:
-            istart = off[istart]
-
-        i, lastdata, off = cache[-1]
-        iend = entryend - self._basketEntry[i]
-        if off is None:
-            iend = min(iend, len(lastdata))
-        elif iend < len(off):
-            iend = off[iend]
+        i, firstdata, firstoff = cache[0]
+        istartoff = entrystart - self._basketEntry[i]
+        if firstoff is None:
+            istart = istartoff
         else:
+            istart = firstoff[istartoff]
+
+        i, lastdata, lastoff = cache[-1]
+        iendoff = entryend - self._basketEntry[i]
+        if lastoff is None:
+            iend = min(iendoff, len(lastdata))
+        elif iendoff < len(lastoff):
+            iendoff = min(iendoff, len(lastoff))
+            iend = lastoff[iendoff]
+        else:
+            iendoff = min(iendoff, len(lastoff))
             iend = len(lastdata)
 
+        strings = (dtype == numpy.dtype(object))
+
         if len(cache) == 1:
-            if dtype == firstdata.dtype:
-                return firstdata[istart:iend]
+            outdata = firstdata[istart:iend]
+            if not strings:
+                outdata = numpy.array(outdata, dtype=dtype)
             else:
-                return numpy.array(firstdata[istart:iend], dtype=dtype)
+                outoff = firstoff[istartoff:iendoff] - istart
 
         else:
             middle = cache[1:-1]
-            out = numpy.empty((len(firstdata) - istart) + sum(len(mdata) for mi, mdata, moff in middle) + (iend), dtype=dtype)
+            outdata = numpy.empty((len(firstdata) - istart) + sum(len(mdata) for mi, mdata, moff in middle) + (iend), dtype=numpy.uint8 if strings else dtype)
+            if strings:
+                outoff = numpy.empty((len(firstoff) - istartoff) + sum(len(moff) for mi, mdata, moff in middle) + (iendoff), dtype=firstoff.dtype)
 
             i = len(firstdata) - istart
-            out[:i] = firstdata[istart:]
+            outdata[:i] = firstdata[istart:]
+            if strings:
+                ioff = len(firstoff) - istartoff
+                outoff[:ioff] = firstoff[istartoff:] - istart
+                correction = i
 
             for mi, mdata, moff in middle:
-                out[i:i + len(mdata)] = mdata
+                outdata[i:i + len(mdata)] = mdata
                 i += len(mdata)
+                if strings:
+                    outoff[ioff:ioff + len(moff)] = moff + correction
+                    ioff += len(moff)
+                    correction += len(mdata)
 
-            out[i:] = lastdata[:iend]
+            outdata[i:] = lastdata[:iend]
+            if strings:
+                outoff[ioff:] = lastoff[:iendoff] + correction
+
+        if strings:
+            out = numpy.empty(len(outoff), dtype=numpy.dtype(object))
+            for j, offset in enumerate(outoff):
+                size = outdata[offset]
+                out[j] = outdata[offset + 1:offset + 1 + size].tostring()
             return out
+        else:
+            return outdata
 
     def array(self, dtype=None, executor=None, block=True):
         if not hasattr(self, "basketwalkers"):
