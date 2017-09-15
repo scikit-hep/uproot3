@@ -364,12 +364,18 @@ class TBranch(uproot.core.TNamed,
         start = self._basketwalkers[i].index
 
         try:
-            array = self._basketwalkers[i].readarray(self.dtype, self._basketobjlens[i] // self.dtype.itemsize)
+            if self.dtype == numpy.dtype(object):
+                array = self._basketwalkers[i].readarray(numpy.uint8, self._basketobjlens[i])
+            else:
+                array = self._basketwalkers[i].readarray(self.dtype, self._basketobjlens[i] // self.dtype.itemsize)
         finally:
             self._basketwalkers[i]._unevaluate()
             self._basketwalkers[i].index = start
 
-        dataend = self._basketborders[i] // self.dtype.itemsize
+        if self.dtype == numpy.dtype(object):
+            dataend = self._basketborders[i]
+        else:
+            dataend = self._basketborders[i] // self.dtype.itemsize
         if offsets:
             if dataend == len(array):
                 return array, None
@@ -389,7 +395,7 @@ class TBranch(uproot.core.TNamed,
             i = cache[-1][0] + 1
 
         while i < len(self._basketEntry) and entryend > self._basketEntry[i]:
-            data, off = self._basket(i, True, parallel)
+            data, off = self._basket(i, offsets=True, parallel=parallel)
             cache.append((i, data, off))
             i += 1
 
@@ -447,12 +453,18 @@ class TBranch(uproot.core.TNamed,
         if dtype is None:
             dtype = self.dtype
 
-        out = numpy.empty(sum(self._basketborders) // self.dtype.itemsize, dtype=dtype)
+        if not isinstance(dtype, numpy.dtype):
+            dtype = numpy.dtype(dtype)
+
+        if dtype == numpy.dtype(object):
+            return self._strings(executor, block)
+
+        out = numpy.empty(sum(self._basketborders) // dtype.itemsize, dtype=dtype)
 
         if executor is None:
             start = 0
             for i in range(len(self._basketwalkers)):
-                end = start + self._basketborders[i] // self.dtype.itemsize
+                end = start + self._basketborders[i] // dtype.itemsize
                 out[start:end] = self._basket(i, parallel=False)
                 start = end
 
@@ -462,13 +474,13 @@ class TBranch(uproot.core.TNamed,
                 return out, ()
 
         else:
-            ends = (numpy.cumsum(self._basketborders) // self.dtype.itemsize).tolist()
+            ends = (numpy.cumsum(self._basketborders) // dtype.itemsize).tolist()
             starts = [0] + ends[:-1]
 
             def fill(i):
                 try:
                     out[starts[i]:ends[i]] = self._basket(i, parallel=True)
-                except Exception as err:
+                except:
                     return sys.exc_info()
                 else:
                     return None, None, None
@@ -482,15 +494,41 @@ class TBranch(uproot.core.TNamed,
             else:
                 return out, errors
 
-    def strings(self):
-        if not hasattr(self, "basketwalkers"):
-            self._preparebaskets()
+    def _strings(self, executor, block):
+        out = numpy.empty(sum((self._basketobjlens[i] - self._basketborders[i] - 8) // 4 for i in range(len(self._basketobjlens))), dtype=numpy.dtype(object))
 
-        for i in range(len(self._basketwalkers)):
-            data, offsets = self._basket(i, offsets=True)
-            for offset in offsets:
-                size = data[offset]
-                yield data[offset + 1 : offset + 1 + size].tostring()
+        if executor is None:
+            for i in range(len(self._basketwalkers)):
+                data, offsets = self._basket(i, offsets=True, parallel=False)
+                for j, offset in enumerate(offsets):
+                    size = data[offset]
+                    out[self._basketEntry[i] + j] = data[offset + 1:offset + 1 + size].tostring()
+
+            if block:
+                return out
+            else:
+                return out, ()
+
+        else:
+            def fill(i):
+                try:
+                    data, offsets = self._basket(i, offsets=True, parallel=True)
+                    for j, offset in enumerate(offsets):
+                        size = data[offset]
+                        out[self._basketEntry[i] + j] = data[offset + 1:offset + 1 + size].tostring()
+                except:
+                    return sys.exc_info()
+                else:
+                    return None, None, None
+
+            errors = executor.map(fill, range(len(self._basketwalkers)))
+            if block:
+                for cls, err, trc in errors:
+                    if cls is not None:
+                        _delayedraise(cls, err, trc)
+                return out
+            else:
+                return out, errors
 
 uproot.rootio.Deserialized.classes[b"TBranch"] = TBranch
 
@@ -551,12 +589,6 @@ class TBranchElement(TBranch):
         else:
             raise NotImplementedError
 
-    def strings(self):
-        if hasattr(self, "dtype"):
-            return TBranch.strings(self)
-        else:
-            raise NotImplementedError
-
     def branch(self, name):
         if isinstance(name, str):
             name = name.encode("ascii")
@@ -598,8 +630,8 @@ for classname, format, dtype in [
     ("TLeafL", "!qq", ">i8"),
     ("TLeafF", "!ff", ">f4"),
     ("TLeafD", "!dd", ">f8"),
-    ("TLeafC", "!ii", "u1"),
-    ("TLeafObject", "!ii", "u1"),
+    ("TLeafC", "!ii", "object"),
+    ("TLeafObject", "!ii", "object"),
     ]:
     exec("""
 class {0}(TLeaf):
