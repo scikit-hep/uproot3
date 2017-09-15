@@ -153,7 +153,7 @@ class TTree(uproot.core.TNamed,
                 for x in branch.branchnames(recursive):
                     yield x
 
-    def arrays(self, branchdtypes=lambda branch: branch.dtype, executor=None, block=True):
+    def _normalizeselection(self, branchdtypes):
         if callable(branchdtypes):
             selection = branchdtypes
 
@@ -192,16 +192,62 @@ class TTree(uproot.core.TNamed,
                     else:
                         return None
 
+        return selection
+
+    def arrayiter(self, entries, branchdtypes=lambda branch: branch.dtype, executor=None, reportentries=False):
+        if isinstance(entries, int):
+            if sys.version_info[0] <= 2:
+                ranges = ((x, x + entries) for x in xrange(0, self.entries, entries))
+            else:
+                ranges = ((x, x + entries) for x in range(0, self.entries, entries))
+        else:
+            ranges = entries
+
+        selection = self._normalizeselection(branchdtypes)
+        toget = []
+        for branch in self.allbranches:
+            dtype = selection(branch)
+            if dtype is not None:
+                toget.append((branch, dtype, []))
+                if not hasattr(branch, "basketwalkers"):
+                    branch._preparebaskets()
+
+        for entrystart, entryend in ranges:
+            print("entrystart, entryend", entrystart, entryend)
+
+            def dobranch(branchdtypecache):
+                branch, dtype, cache = branchdtypecache
+
+                # always addtocache before delfromcache so that it doesn't forget the last basketnumber (i)
+                branch._addtocache(cache, entrystart, entryend, executor is not None)
+                branch._delfromcache(cache, entrystart)
+
+                return branch.name, branch._getfromcache(cache, entrystart, entryend, dtype)
+
+            if executor is None:
+                if reportentries:
+                    yield entrystart, entryend, dict(dobranch(x) for x in toget)
+                else:
+                    yield dict(dobranch(x) for x in toget)
+            else:
+                if reportentries:
+                    yield entrystart, entryend, dict(executor.map(dobranch, toget))
+                else:
+                    yield dict(executor.map(dobranch, toget))
+
+    def arrays(self, branchdtypes=lambda branch: branch.dtype, executor=None, block=True):
+        selection = self._normalizeselection(branchdtypes)
+
         out = {}
-        nested = []
+        errorslist = []
         for branch in self.allbranches:
             dtype = selection(branch)
             if dtype is not None:
                 out[branch.name], res = branch.array(dtype, executor, False)
-                nested.append(res)
+                errorslist.append(res)
 
         if block:
-            for errors in nested:
+            for errors in errorslist:
                 for cls, err, trc in errors:
                     if cls is not None:
                         _delayedraise(cls, err, trc)
@@ -257,8 +303,7 @@ class TBranch(uproot.core.TNamed,
         walker.skip(4 * maxBaskets)
 
         walker.skip(1)  # isArray
-        # self.basketEntry = walker.readarray(">i8", maxBaskets)[:writeBasket]
-        walker.skip(8 * maxBaskets)
+        self._basketEntry = walker.readarray(">i8", maxBaskets)[:writeBasket]
 
         walker.skip(1)  # isArray
         self._basketSeek = walker.readarray(">i8", maxBaskets)[:writeBasket]
@@ -315,7 +360,7 @@ class TBranch(uproot.core.TNamed,
                 for x in branch.branchnames(recursive):
                     yield x
 
-    def basket(self, i, offsets=False, parallel=False):
+    def _basket(self, i, offsets=False, parallel=False):
         self._basketwalkers[i]._evaluate(parallel)
         self._basketwalkers[i].startcontext()
         start = self._basketwalkers[i].index
@@ -326,12 +371,95 @@ class TBranch(uproot.core.TNamed,
             self._basketwalkers[i]._unevaluate()
             self._basketwalkers[i].index = start
 
+        dataend = self._basketborders[i] // self.dtype.itemsize
         if offsets:
-            outdata = array[:self._basketborders[i] // self.dtype.itemsize]
-            outoff = array.view(numpy.uint8)[self._basketborders[i] + 4 : -4].view(">i4") - self._basketkeylens[i]
-            return outdata, outoff
+            if dataend == len(array):
+                return array, None
+            else:
+                outdata = array[:dataend]
+                outoff = array.view(numpy.uint8)[self._basketborders[i] + 4 : -4].view(">i4") - self._basketkeylens[i]
+                return outdata, outoff
+        elif dataend < len(array):
+            return array[:dataend]
         else:
-            return array[:self._basketborders[i] // self.dtype.itemsize]
+            return array
+
+    def _addtocache(self, cache, entrystart, entryend, parallel=False):
+        print("_addtocache", cache)
+
+        if len(cache) == 0:
+            i = 0
+        else:
+            i = cache[-1][0] + 1
+
+        while i < len(self._basketEntry) and entryend > self._basketEntry[i]:
+            data, off = self._basket(i, True, parallel)
+            cache.append((i, data, off))
+            i += 1
+            print("    ", cache)
+
+    def _delfromcache(self, cache, entrystart):
+        print("_delfromcache", cache)
+
+        firsttokeep = 0
+        for i, data, off in cache:
+            if i + 1 < len(self._basketEntry) and self._basketEntry[i + 1] <= entrystart:
+                firsttokeep += 1
+            else:
+                break
+        del cache[:firsttokeep]
+        print("    ", cache)
+
+    def _getfromcache(self, cache, entrystart, entryend, dtype):
+        print("_getfromcache", cache)
+
+        if len(cache) == 0:
+            return numpy.array([], dtype=dtype)
+
+        i, firstdata, off = cache[0]
+        if off is None:
+            istart = entrystart - self._basketEntry[i]
+        else:
+            istart = off[entrystart - self._basketEntry[i]]
+
+        i, lastdata, off = cache[-1]
+        if off is None:
+            iend = entryend - self._basketEntry[i]
+        else:
+            iend = off[entryend - self._basketEntry[i]]
+        iend = min(iend, len(lastdata))
+
+        print("istart", istart, "iend", iend)
+
+        if len(cache) == 1:
+            print("len(cache) == 1, firstdata[istart:iend] ==", firstdata[istart:iend])
+
+            if dtype == firstdata.dtype:
+                return firstdata[istart:iend]
+            else:
+                return numpy.array(firstdata[istart:iend], dtype=dtype)
+
+        else:
+            middle = cache[1:-1]
+            out = numpy.empty((len(firstdata) - istart) + sum(len(mdata) for mi, mdata, moff in middle) + (iend), dtype=dtype)
+
+            print("len(middle)", len(middle))
+            print("len(out)", len(out))
+
+            i = len(firstdata) - istart
+            out[:i] = firstdata[istart:]
+            print("fill out[:i]", out[:i])
+
+            for mi, mdata, moff in middle:
+                out[i:i + len(mdata)] = mdata
+                print("fill out[i:i + len(mdata)]", out[i:i + len(mdata)])
+                i += len(mdata)
+
+            out[i:] = lastdata[:iend]
+            print("fill out[i:]", out[i:])
+
+            print("finally, out ==", out)
+            return out
 
     def array(self, dtype=None, executor=None, block=True):
         if not hasattr(self, "basketwalkers"):
@@ -346,7 +474,7 @@ class TBranch(uproot.core.TNamed,
             start = 0
             for i in range(len(self._basketwalkers)):
                 end = start + self._basketborders[i] // self.dtype.itemsize
-                out[start:end] = self.basket(i, parallel=False)
+                out[start:end] = self._basket(i, parallel=False)
                 start = end
 
             if block:
@@ -360,7 +488,7 @@ class TBranch(uproot.core.TNamed,
 
             def fill(i):
                 try:
-                    out[starts[i]:ends[i]] = self.basket(i, parallel=True)
+                    out[starts[i]:ends[i]] = self._basket(i, parallel=True)
                 except Exception as err:
                     return sys.exc_info()
                 else:
@@ -380,7 +508,7 @@ class TBranch(uproot.core.TNamed,
             self._preparebaskets()
 
         for i in range(len(self._basketwalkers)):
-            data, offsets = self.basket(i, offsets=True)
+            data, offsets = self._basket(i, offsets=True)
             for offset in offsets:
                 size = data[offset]
                 yield data[offset + 1 : offset + 1 + size].tostring()
@@ -414,9 +542,27 @@ class TBranchElement(TBranch):
 
         self._checkbytecount(walker.index - start, bcnt)
 
-    def basket(self, i, offsets=False, parallel=False):
+    def _basket(self, i, offsets=False, parallel=False):
         if hasattr(self, "dtype"):
-            return TBranch.basket(self, i, offsets, parallel)
+            return TBranch._basket(self, i, offsets, parallel)
+        else:
+            raise NotImplementedError
+
+    def _addtocache(self, cache, entrystart, entryend, parallel=False):
+        if hasattr(self, "dtype"):
+            return TBranch._addtocache(self, cache, entrystart, entryend, parallel=False)
+        else:
+            raise NotImplementedError
+        
+    def _delfromcache(self, cache, entrystart):
+        if hasattr(self, "dtype"):
+            return TBranch._delfromcache(self, cache, entrystart)
+        else:
+            raise NotImplementedError
+
+    def _getfromcache(self, cache, entrystart, entryend, dtype):
+        if hasattr(self, "dtype"):
+            return TBranch._getfromcache(self, cache, entrystart, entryend, dtype)
         else:
             raise NotImplementedError
 
