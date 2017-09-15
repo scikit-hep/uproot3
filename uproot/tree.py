@@ -552,16 +552,24 @@ class TBranch(uproot.core.TNamed,
         if not hasattr(self, "basketwalkers"):
             self._preparebaskets()
 
-        if dtype is None:
-            dtype = self.dtype
+        if isinstance(dtype, numpy.ndarray):
+            out = dtype
+            dtype = out.dtype
+            expected = sum(self._basketborders) // dtype.itemsize
+            if out.shape != (expected,):
+                raise ValueError("array supplied does not have the right shape: {0}".format(expected))
 
-        if not isinstance(dtype, numpy.dtype):
-            dtype = numpy.dtype(dtype)
+        else:
+            if dtype is None:
+                dtype = self.dtype
 
-        if dtype == numpy.dtype(object):
-            return self._strings(executor, block)
+            if not isinstance(dtype, numpy.dtype):
+                dtype = numpy.dtype(dtype)
 
-        out = numpy.empty(sum(self._basketborders) // dtype.itemsize, dtype=dtype)
+            if dtype == numpy.dtype(object):
+                return self._strings(executor, block)
+
+            out = numpy.empty(sum(self._basketborders) // dtype.itemsize, dtype=dtype)
 
         if executor is None:
             start = 0
