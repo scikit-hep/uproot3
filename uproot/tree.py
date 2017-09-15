@@ -213,8 +213,6 @@ class TTree(uproot.core.TNamed,
                     branch._preparebaskets()
 
         for entrystart, entryend in ranges:
-            print("entrystart, entryend", entrystart, entryend)
-
             def dobranch(branchdtypecache):
                 branch, dtype, cache = branchdtypecache
 
@@ -385,8 +383,6 @@ class TBranch(uproot.core.TNamed,
             return array
 
     def _addtocache(self, cache, entrystart, entryend, parallel=False):
-        print("_addtocache", [(xi, repr(xdata.tostring()), xoff) for xi, xdata, xoff in cache])
-
         if len(cache) == 0:
             i = 0
         else:
@@ -396,11 +392,8 @@ class TBranch(uproot.core.TNamed,
             data, off = self._basket(i, True, parallel)
             cache.append((i, data, off))
             i += 1
-            print("    ", [(xi, repr(xdata.tostring()), xoff) for xi, xdata, xoff in cache])
 
     def _delfromcache(self, cache, entrystart):
-        print("_delfromcache", [(xi, repr(xdata.tostring()), xoff) for xi, xdata, xoff in cache])
-
         firsttokeep = 0
         for i, data, off in cache:
             if i + 1 < len(self._basketEntry) and self._basketEntry[i + 1] <= entrystart:
@@ -408,11 +401,8 @@ class TBranch(uproot.core.TNamed,
             else:
                 break
         del cache[:firsttokeep]
-        print("    ", [(xi, repr(xdata.tostring()), xoff) for xi, xdata, xoff in cache])
 
     def _getfromcache(self, cache, entrystart, entryend, dtype):
-        print("_getfromcache", [(xi, repr(xdata.tostring()), xoff) for xi, xdata, xoff in cache])
-
         if len(cache) == 0:
             return numpy.array([], dtype=dtype)
 
@@ -430,11 +420,7 @@ class TBranch(uproot.core.TNamed,
         else:
             iend = len(lastdata)
 
-        print("istart", istart, "iend", iend)
-
         if len(cache) == 1:
-            print("len(cache) == 1, firstdata[istart:iend] ==", repr(firstdata[istart:iend].tostring()))
-
             if dtype == firstdata.dtype:
                 return firstdata[istart:iend]
             else:
@@ -444,22 +430,14 @@ class TBranch(uproot.core.TNamed,
             middle = cache[1:-1]
             out = numpy.empty((len(firstdata) - istart) + sum(len(mdata) for mi, mdata, moff in middle) + (iend), dtype=dtype)
 
-            print("len(middle)", len(middle))
-            print("len(out)", len(out))
-
             i = len(firstdata) - istart
             out[:i] = firstdata[istart:]
-            print("fill out[:i]", repr(out[:i].tostring()))
 
             for mi, mdata, moff in middle:
                 out[i:i + len(mdata)] = mdata
-                print("fill out[i:i + len(mdata)]", repr(out[i:i + len(mdata)].tostring()))
                 i += len(mdata)
 
             out[i:] = lastdata[:iend]
-            print("fill out[i:]", repr(out[i:].tostring()))
-
-            print("finally, out ==", repr(out.tostring()))
             return out
 
     def array(self, dtype=None, executor=None, block=True):
