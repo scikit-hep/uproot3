@@ -153,49 +153,63 @@ class TTree(uproot.core.TNamed,
     def allbranchnames(self):
         return [branch.name for branch in self.allbranches]
 
-    def _normalizeselection(self, branchdtypes):
+    @staticmethod
+    def _normalizeselection(branchdtypes, allbranches):
         if callable(branchdtypes):
-            selection = branchdtypes
+            for branch in allbranches:
+                dtype = branchdtypes(branch)
+                if dtype is not None:
+                    if not isinstance(dtype, numpy.dtype):
+                        dtype = numpy.dtype(dtype)
+                    yield branch, dtype
 
         elif isinstance(branchdtypes, dict):
-            branchdtypes = dict((name.encode("ascii") if hasattr(name, "encode") else name, dtype) for name, dtype in branchdtypes.items())
-
-            def selection(branch):
-                if branch.name in branchdtypes:
+            allbranches = dict((x.name, x) for x in allbranches)
+            for name, dtype in branchdtypes.items():
+                if hasattr(name, "encode"):
+                    name = name.encode("ascii")
+                if name in allbranches:
+                    branch = allbranches[name]
                     if hasattr(branch, "dtype"):
-                        return branchdtypes[branch.name]
+                        if not isinstance(dtype, numpy.dtype):
+                            dtype = numpy.dtype(dtype)
+                        yield branch, dtype
                     else:
-                        raise TypeError("cannot produce an array from branch {0}".format(repr(branch.name)))
+                        raise ValueError("cannot produce an array from branch {0}".format(repr(name)))
                 else:
-                    return None
+                    raise ValueError("cannot find branch {0}".format(repr(name)))
 
         elif isinstance(branchdtypes, (str, bytes)):
-            branchdtypes = branchdtypes.encode("ascii") if hasattr(branchdtypes, "encode") else branchdtypes
-            def selection(branch):
-                if branch.name == branchdtypes:
-                    if hasattr(branch, "dtype"):
-                        return branch.dtype
-                    else:
-                        raise TypeError("cannot produce an array from branch {0}".format(repr(branch.name)))
+            if hasattr(branchdtypes, "encode"):
+                name = branchdtypes.encode("ascii")
+            else:
+                name = branchdtypes
+
+            branch = [x for x in allbranches if x.name == name]
+            if len(branch) == 1:
+                if hasattr(branch[0], "dtype"):
+                    yield branch[0], branch[0].dtype
                 else:
-                    return None
+                    raise ValueError("cannot produce an array from branch {0}".format(repr(name)))
+            else:
+                raise ValueError("cannot find branch {0}".format(repr(name)))
 
         else:
             try:
-                branchdtypes = [x.encode("ascii") if hasattr(x, "encode") else x for x in branchdtypes]
+                names = [x.encode("ascii") if hasattr(x, "encode") else x for x in branchdtypes]
             except:
                 raise TypeError("branchdtypes argument not understood")
             else:
-                def selection(branch):
-                    if branch.name in branchdtypes:
+                allbranches = dict((x.name, x) for x in allbranches)
+                for name in names:
+                    if name in allbranches:
+                        branch = allbranches[name]
                         if hasattr(branch, "dtype"):
-                            return branch.dtype
+                            yield branch, dtype
                         else:
-                            raise TypeError("cannot produce an array from branch {0}".format(repr(branch.name)))
+                            raise ValueError("cannot produce an array from branch {0}".format(repr(name)))
                     else:
-                        return None
-
-        return selection
+                        raise ValueError("cannot find branch {0}".format(repr(name)))
 
     def iterator(self, entries, branchdtypes=lambda branch: branch.dtype, executor=None, outputtype=dict, reportentries=False):
         if isinstance(entries, int):
@@ -208,21 +222,21 @@ class TTree(uproot.core.TNamed,
         else:
             ranges = entries
 
-        selection = self._normalizeselection(branchdtypes)
         toget = []
-        for branch in self.allbranches:
-            dtype = selection(branch)
-            if dtype is not None:
-                if not isinstance(dtype, numpy.dtype):
-                    dtype = numpy.dtype(dtype)
-                toget.append((branch, dtype, []))
-                if not hasattr(branch, "basketwalkers"):
-                    branch._preparebaskets()
+        for branch, dtype in self._normalizeselection(branchdtypes, self.allbranches):
+            toget.append((branch, dtype, []))
+            if not hasattr(branch, "basketwalkers"):
+                branch._preparebaskets()
 
         if outputtype == namedtuple:
             outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, dtype, cache in toget])
 
+        lastentryend = None
         for entrystart, entryend in ranges:
+            if lastentryend is not None and entrystart < lastentryend:
+                raise ValueError("entries expressed as (entrystart, entryend) pairs must always have entrystart[i+1] >= entryend[i], but entrystart[i+1] is {0} and entryend[i] is {1}".format(entrystart, lastentryend))
+            lastentryend = entryend
+
             def dobranch(branchdtypecache):
                 branch, dtype, cache = branchdtypecache
 
@@ -242,28 +256,22 @@ class TTree(uproot.core.TNamed,
             else:
                 out = list(executor.map(dobranch, toget))
 
-            if issubclass(outputtype, (dict, tuple, list)):
+            if issubclass(outputtype, dict) or outputtype == tuple or outputtype == list:
                 out = outputtype(out)
             else:
                 out = outputtype(*out)
 
             if reportentries:
-                yield entrystart, entryend, out
+                yield entrystart, min(entryend, self.entries), out
             else:
                 yield out
 
     def arrays(self, branchdtypes=lambda branch: branch.dtype, executor=None, outputtype=dict, block=True):
-        selection = self._normalizeselection(branchdtypes)
-
         toget = []
-        for branch in self.allbranches:
-            dtype = selection(branch)
-            if dtype is not None:
-                if not isinstance(dtype, numpy.dtype):
-                    dtype = numpy.dtype(dtype)
-                toget.append((branch, dtype))
-                if not hasattr(branch, "basketwalkers"):
-                    branch._preparebaskets()
+        for branch, dtype in self._normalizeselection(branchdtypes, self.allbranches):
+            toget.append((branch, dtype))
+            if not hasattr(branch, "basketwalkers"):
+                branch._preparebaskets()
 
         if outputtype == namedtuple:
             outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, dtype in toget])
@@ -278,7 +286,7 @@ class TTree(uproot.core.TNamed,
                 out.append(outi)
             errorslist.append(res)
 
-        if issubclass(outputtype, (dict, tuple, list)):
+        if issubclass(outputtype, dict) or outputtype == tuple or outputtype == list:
             out = outputtype(out)
         else:
             out = outputtype(*out)
