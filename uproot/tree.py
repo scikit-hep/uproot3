@@ -232,7 +232,7 @@ class TTree(uproot.core.TNamed,
 
                 out = branch._getfromcache(cache, entrystart, entryend, dtype)
 
-                if outputtype == dict:
+                if issubclass(outputtype, dict):
                     return branch.name, out
                 else:
                     return out
@@ -242,7 +242,7 @@ class TTree(uproot.core.TNamed,
             else:
                 out = list(executor.map(dobranch, toget))
 
-            if outputtype in (dict, tuple, list):
+            if issubclass(outputtype, (dict, tuple, list)):
                 out = outputtype(out)
             else:
                 out = outputtype(*out)
@@ -278,7 +278,7 @@ class TTree(uproot.core.TNamed,
                 out.append(outi)
             errorslist.append(res)
 
-        if outputtype in (dict, tuple, list):
+        if issubclass(outputtype, (dict, tuple, list)):
             out = outputtype(out)
         else:
             out = outputtype(*out)

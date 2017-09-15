@@ -49,5 +49,35 @@ def xrootd(path):
     import uproot.walker.xrootdwalker
     return uproot.rootio.TFile(uproot.walker.xrootdwalker.XRootDWalker(path))
 
-def iterator(self, entries, path, treename, branchdtypes=lambda branch: branch.dtype, executor=None, outputtype=dict, reportentries=False):
-    pass
+def iterator(self, entries, path, treepath, branchdtypes=lambda branch: branch.dtype, memmap=True, executor=None, outputtype=dict, reportentries=False):
+    import sys
+    import glob
+
+    if hasattr(path, "decode"):
+        path = path.decode("ascii")
+
+    def explode(x):
+        parsed = urlparse(x)
+        if parsed.scheme == "file" or parsed.scheme == "":
+            return sorted(glob.glob(os.path.expanduser(parsed.netloc + parsed.path)))
+        else:
+            return [x]
+
+    if (sys.version_info[0] <= 2 and isinstance(path, unicode)) or \
+       (sys.version_info[0] > 2 and isinstance(path, str)):
+        paths = explode(path)
+    else:
+        paths = [y for x in path for y in explode(path)]
+    
+    if outputtype == namedtuple:
+        outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, dtype in toget])
+
+    class Tmp(dict):
+        def __init__(self, data):
+            self.data = data
+
+    for path in paths:
+        tree = open(path, memmap)[treepath]
+
+
+        tree.iterator(entries, branchdtypes, executor=executor, outputtype=Tmp, reportentries=True)
