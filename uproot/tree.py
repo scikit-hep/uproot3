@@ -173,7 +173,10 @@ class TTree(uproot.core.TNamed,
             branchdtypes = branchdtypes.encode("ascii") if hasattr(branchdtypes, "encode") else branchdtypes
             def selection(branch):
                 if branch.name == branchdtypes:
-                    return branch.dtype
+                    if hasattr(branch, "dtype"):
+                        return branch.dtype
+                    else:
+                        raise TypeError("cannot produce an array from branch {0}".format(repr(branch.name)))
                 else:
                     return None
 
@@ -322,6 +325,27 @@ class TBranch(uproot.core.TNamed,
     def numbaskets(self):
         return len(self._basketSeek)
 
+    def branchnames(self, recursive=True):
+        for branch in self.branches:
+            yield branch.name
+            if recursive:
+                for x in branch.branchnames(recursive):
+                    yield x
+
+    def branch(self, name):
+        if isinstance(name, str):
+            name = name.encode("ascii")
+
+        for branch in self.branches:
+            if branch.name == name:
+                return branch
+            try:
+                return branch.branch(name)
+            except KeyError:
+                pass
+
+        raise KeyError("not found: {0}".format(repr(name)))
+
     def _preparebaskets(self):
         self._filewalker.startcontext()
 
@@ -358,13 +382,6 @@ class TBranch(uproot.core.TNamed,
             # otherwise, it's uncompressed
             else:
                 self._basketwalkers.append(self._filewalker.copy(seek + keylen))
-
-    def branchnames(self, recursive=True):
-        for branch in self.branches:
-            yield branch.name
-            if recursive:
-                for x in branch.branchnames(recursive):
-                    yield x
 
     def _basket(self, i, offsets=False, parallel=False):
         self._basketwalkers[i]._evaluate(parallel)
@@ -403,8 +420,9 @@ class TBranch(uproot.core.TNamed,
             i = cache[-1][0] + 1
 
         while i < len(self._basketEntry) and entryend > self._basketEntry[i]:
-            data, off = self._basket(i, offsets=True, parallel=parallel)
-            cache.append((i, data, off))
+            if i + 1 >= len(self._basketEntry) or self._basketEntry[i + 1] > entrystart:
+                data, off = self._basket(i, offsets=True, parallel=parallel)
+                cache.append((i, data, off))
             i += 1
 
     def _delfromcache(self, cache, entrystart):
@@ -594,51 +612,11 @@ class TBranchElement(TBranch):
 
         self._checkbytecount(walker.index - start, bcnt)
 
-    def _basket(self, i, offsets=False, parallel=False):
-        if hasattr(self, "dtype"):
-            return TBranch._basket(self, i, offsets, parallel)
-        else:
-            raise NotImplementedError
-
-    def _addtocache(self, cache, entrystart, entryend, parallel=False):
-        if hasattr(self, "dtype"):
-            return TBranch._addtocache(self, cache, entrystart, entryend, parallel=False)
-        else:
-            raise NotImplementedError
-        
-    def _delfromcache(self, cache, entrystart):
-        if hasattr(self, "dtype"):
-            return TBranch._delfromcache(self, cache, entrystart)
-        else:
-            raise NotImplementedError
-
-    def _getfromcache(self, cache, entrystart, entryend, dtype):
-        if hasattr(self, "dtype"):
-            return TBranch._getfromcache(self, cache, entrystart, entryend, dtype)
-        else:
-            raise NotImplementedError
-
     def array(self, dtype=None, executor=None, block=True):
         if hasattr(self, "dtype"):
             return TBranch.array(self, dtype, executor, block)
         else:
             raise NotImplementedError
-
-    def branch(self, name):
-        if isinstance(name, str):
-            name = name.encode("ascii")
-
-        for branch in self.branches:
-            if branch.name == name:
-                return branch
-
-            if isinstance(branch, TBranchElement):
-                try:
-                    return branch.branch(name)
-                except KeyError:
-                    pass
-
-        raise KeyError("not found: {0}".format(repr(name)))
 
 uproot.rootio.Deserialized.classes[b"TBranchElement"] = TBranchElement
 
