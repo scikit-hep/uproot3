@@ -197,7 +197,7 @@ class TTree(uproot.core.TNamed,
 
         return selection
 
-    def arrayiter(self, entries, branchdtypes=lambda branch: branch.dtype, executor=None, reportentries=False):
+    def arrayiter(self, entries, branchdtypes=lambda branch: branch.dtype, executor=None, outputtype=dict, reportentries=False):
         if isinstance(entries, int):
             if entries < 1:
                 raise ValueError("number of entries per iteration must be at least 1")
@@ -219,6 +219,9 @@ class TTree(uproot.core.TNamed,
                 if not hasattr(branch, "basketwalkers"):
                     branch._preparebaskets()
 
+        if outputtype == namedtuple:
+            outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, dtype, cache in toget])
+
         for entrystart, entryend in ranges:
             def dobranch(branchdtypecache):
                 branch, dtype, cache = branchdtypecache
@@ -227,31 +230,58 @@ class TTree(uproot.core.TNamed,
                 branch._addtocache(cache, entrystart, entryend, executor is not None)
                 branch._delfromcache(cache, entrystart)
 
-                return branch.name, branch._getfromcache(cache, entrystart, entryend, dtype)
+                out = branch._getfromcache(cache, entrystart, entryend, dtype)
+
+                if outputtype == dict:
+                    return branch.name, out
+                else:
+                    return out
 
             if executor is None:
-                if reportentries:
-                    yield entrystart, entryend, dict(dobranch(x) for x in toget)
-                else:
-                    yield dict(dobranch(x) for x in toget)
+                out = [dobranch(x) for x in toget]
             else:
-                if reportentries:
-                    yield entrystart, entryend, dict(executor.map(dobranch, toget))
-                else:
-                    yield dict(executor.map(dobranch, toget))
+                out = list(executor.map(dobranch, toget))
 
-    def arrays(self, branchdtypes=lambda branch: branch.dtype, executor=None, block=True):
+            if outputtype in (dict, tuple, list):
+                out = outputtype(out)
+            else:
+                out = outputtype(*out)
+
+            if reportentries:
+                yield entrystart, entryend, out
+            else:
+                yield out
+
+    def arrays(self, branchdtypes=lambda branch: branch.dtype, executor=None, outputtype=dict, block=True):
         selection = self._normalizeselection(branchdtypes)
 
-        out = {}
-        errorslist = []
+        toget = []
         for branch in self.allbranches:
             dtype = selection(branch)
             if dtype is not None:
                 if not isinstance(dtype, numpy.dtype):
                     dtype = numpy.dtype(dtype)
-                out[branch.name], res = branch.array(dtype, executor, False)
-                errorslist.append(res)
+                toget.append((branch, dtype))
+                if not hasattr(branch, "basketwalkers"):
+                    branch._preparebaskets()
+
+        if outputtype == namedtuple:
+            outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, dtype in toget])
+
+        out = []
+        errorslist = []
+        for branch, dtype in toget:
+            outi, res = branch.array(dtype, executor, False)
+            if outputtype == dict:
+                out.append((branch.name, outi))
+            else:
+                out.append(outi)
+            errorslist.append(res)
+
+        if outputtype in (dict, tuple, list):
+            out = outputtype(out)
+        else:
+            out = outputtype(*out)
 
         if block:
             for errors in errorslist:
