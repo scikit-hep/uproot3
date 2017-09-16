@@ -19,6 +19,8 @@ import uproot.rootio
 import uproot.core
 import uproot.tree
 
+del uproot
+
 def open(path, memmap=True):
     """Opens a single file for reading.
 
@@ -38,6 +40,7 @@ def open(path, memmap=True):
         from urlparse import urlparse
     except ImportError:
         from urllib.parse import urlparse
+    import uproot.rootio
 
     parsed = urlparse(path)
     if parsed.scheme == "file" or parsed.scheme == "":
@@ -61,6 +64,7 @@ def xrootd(path):
     Although `uproot.open` will use XRootD when it encounters a URL, this function *always* invokes XRootD.
     """
     import uproot._walker.xrootdwalker
+    import uproot.rootio
     return uproot.rootio.TFile(uproot._walker.xrootdwalker.XRootDWalker(path))
 
 def iterator(entries, path, treepath, branchdtypes=lambda branch: branch.dtype, memmap=True, executor=None, outputtype=dict, reportentries=False):
@@ -120,8 +124,8 @@ def iterator(entries, path, treepath, branchdtypes=lambda branch: branch.dtype, 
         from urlparse import urlparse
     except ImportError:
         from urllib.parse import urlparse
-
     import numpy
+    import uproot.tree
 
     if hasattr(path, "decode"):
         path = path.decode("ascii")
