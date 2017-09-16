@@ -16,6 +16,7 @@
 
 from collections import namedtuple
 from functools import reduce
+import re
 import sys
 
 import numpy
@@ -196,7 +197,7 @@ class TTree(uproot.core.TNamed,
                 dtype = branchdtypes(branch)
                 if dtype is not None:
                     if isinstance(dtype, numpy.ndarray):
-                        dtype = dtype.reshape(reduce(lambda x, y: x*y, dtype.shape))
+                        dtype = dtype.reshape(reduce(lambda x, y: x*y, dtype.shape, 1))
                     elif not isinstance(dtype, numpy.dtype):
                         dtype = numpy.dtype(dtype)
                     yield branch, dtype
@@ -210,7 +211,7 @@ class TTree(uproot.core.TNamed,
                     branch = allbranches[name]
                     if hasattr(branch, "dtype"):
                         if isinstance(dtype, numpy.ndarray):
-                            dtype = dtype.reshape(reduce(lambda x, y: x*y, dtype.shape))
+                            dtype = dtype.reshape(reduce(lambda x, y: x*y, dtype.shape, 1))
                         elif not isinstance(dtype, numpy.dtype):
                             dtype = numpy.dtype(dtype)
                         yield branch, dtype
@@ -458,7 +459,7 @@ class TBranch(uproot.core.TNamed,
 
     Information about the branch:
 
-        * `branch.numbaskets` is the number of baskets.
+        * `branch.itemdims` are the fixed (non-counter) dimensions of this branch, derived from its title.
         * `branch.branch(name)` gets a subbranch object by name.
         * `branch.branches` are the subbranches directly attached to this TBranch.
         * `branch.allbranches` are all the subbranches, recursively following subbranches' branches.
@@ -467,6 +468,7 @@ class TBranch(uproot.core.TNamed,
         * `branch.branchtypes` is a `{name: dtype}` dict of all the directly attached subbranch names.
         * `branch.allbranchtypes` is a `{name: dtype}` dict of all the subbranch names, recursively following subbranches' branches.
         * `branch.leaves` are all the TLeaf objects directly attached to this TBranch.
+        * `branch.numbaskets` is the number of baskets.
 
     `branch[name]` is a synonym for `branch.branch(name)`.
     """
@@ -505,6 +507,10 @@ class TBranch(uproot.core.TNamed,
         if len(self.leaves) == 1 and hasattr(self.leaves[0], "dtype"):
             self.dtype = self.leaves[0].dtype
         self._filewalker = filewalker
+
+        self.itemdims = tuple(int(x) for x in re.findall(self._itemdimpattern, self.title))
+
+    _itemdimpattern = re.compile("\[([1-9][0-9]*)\]")
 
     @property
     def numbaskets(self):
@@ -624,6 +630,17 @@ class TBranch(uproot.core.TNamed,
         else:
             return array
 
+    def _adddimensions(self, array):
+        if self.itemdims == () or len(array.shape) != 1:
+            return array
+        else:
+            product = reduce(lambda x, y: x*y, self.itemdims, 1)
+            if len(array) % product != 0:
+                return array
+            else:
+                newlen = len(array) // product
+                return array.reshape((newlen,) + self.itemdims)
+
     def _addtocache(self, cache, entrystart, entryend, parallel=False):
         if len(cache) == 0:
             i = 0
@@ -648,13 +665,13 @@ class TBranch(uproot.core.TNamed,
     def _getfromcache(self, cache, entrystart, entryend, dtype):
         if len(cache) == 0:
             if isinstance(dtype, numpy.ndarray):
-                out = dtype.reshape(reduce(lambda x, y: x*y, dtype.shape))
+                out = dtype.reshape(reduce(lambda x, y: x*y, dtype.shape, 1))
                 dtype = out.dtype
                 if out.shape != (0,):
                     raise ValueError("provided array does not have the right number of elements: {0}".format(0))
-                return out
+                return self._adddimensions(out)
             else:
-                return numpy.array([], dtype=dtype)
+                return self._adddimensions(numpy.array([], dtype=dtype))
 
         i, firstdata, firstoff = cache[0]
         istartoff = entrystart - self._basketEntry[i]
@@ -731,9 +748,9 @@ class TBranch(uproot.core.TNamed,
             for j, offset in enumerate(outoff):
                 size = outdata[offset]
                 out[j] = outdata[offset + 1:offset + 1 + size].tostring()
-            return out
+            return self._adddimensions(out)
         else:
-            return outdata
+            return self._adddimensions(outdata)
 
     def array(self, dtype=None, executor=None, block=True):
         """Extracts the whole branch into a Numpy array.
@@ -762,7 +779,7 @@ class TBranch(uproot.core.TNamed,
             self._preparebaskets()
 
         if isinstance(dtype, numpy.ndarray):
-            out = dtype.reshape(reduce(lambda x, y: x*y, dtype.shape))
+            out = dtype.reshape(reduce(lambda x, y: x*y, dtype.shape, 1))
             dtype = out.dtype
             expected = sum(self._basketborders) // dtype.itemsize
             if out.shape != (expected,):
@@ -776,7 +793,7 @@ class TBranch(uproot.core.TNamed,
                 dtype = numpy.dtype(dtype)
 
             if dtype == numpy.dtype(object):
-                return self._strings(executor, block)
+                return self._adddimensions(self._strings(executor, block))
 
             out = numpy.empty(sum(self._basketborders) // dtype.itemsize, dtype=dtype)
 
@@ -788,9 +805,9 @@ class TBranch(uproot.core.TNamed,
                 start = end
 
             if block:
-                return out
+                return self._adddimensions(out)
             else:
-                return out, ()
+                return self._adddimensions(out), ()
 
         else:
             ends = (numpy.cumsum(self._basketborders) // dtype.itemsize).tolist()
@@ -809,9 +826,9 @@ class TBranch(uproot.core.TNamed,
                 for cls, err, trc in errors:
                     if cls is not None:
                         _delayedraise(cls, err, trc)
-                return out
+                return self._adddimensions(out)
             else:
-                return out, errors
+                return self._adddimensions(out), errors
 
     def _strings(self, executor, block):
         out = numpy.empty(sum((self._basketobjlens[i] - self._basketborders[i] - 8) // 4 for i in range(len(self._basketobjlens))), dtype=numpy.dtype(object))
@@ -949,7 +966,7 @@ class {0}(TLeaf):
 
         TLeaf.__init__(self, filewalker, walker)
 
-        self.min, self.max = walker.readfields("{1}")
+        min, max = walker.readfields("{1}")
         self.dtype = numpy.dtype("{2}")
 
         self._checkbytecount(walker.index - start, bcnt)

@@ -212,9 +212,9 @@ uproot scales to about 30 threads, which is more cores than many machines have. 
 
 The following features are planned:
 
-   * reading "leaf list" and fixed-sized leaf arrays as Numpy recarrays and multidimensional shapes;
+   * reading "leaf list" TBranches as Numpy recarrays;
    * reading a few basic types of non-TTree objects, relelvant for analysis, such as histograms and graphs;
-   * writing flat TTrees (not structrued, and not into the same file as reading);
+   * writing flat TTrees (flat: no structrue! and not into the same file as reading);
    * import-on-demand connections to Pandas, Keras, TensorFlow, PySpark, etc.
 
 ## Acknowledgements
