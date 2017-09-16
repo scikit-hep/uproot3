@@ -29,16 +29,13 @@ class TestTypes(unittest.TestCase):
         return x.dtype == y.dtype and x.shape == y.shape and numpy.array_equal(x, y)
 
     def test_socalled_flat(self):
-        ### NOTE! In this file, so-called "UInts" are actually *signed*. PyROOT agrees.
-        ### I don't think there's a way to make leaves unsigned without TLeafElements.
-
         tree = uproot.open("tests/small-flat-tree.root")["tree"]
 
         hundred = list(range(100))
         self.assertTrue(self.check(tree.array("Int32"), numpy.array(hundred, dtype=">i4")))
         self.assertTrue(self.check(tree.array("Int64"), numpy.array(hundred, dtype=">i8")))
-        self.assertTrue(self.check(tree.array("UInt32"), numpy.array(hundred, dtype=">i4")))
-        self.assertTrue(self.check(tree.array("UInt64"), numpy.array(hundred, dtype=">i8")))
+        self.assertTrue(self.check(tree.array("UInt32"), numpy.array(hundred, dtype=">u4")))
+        self.assertTrue(self.check(tree.array("UInt64"), numpy.array(hundred, dtype=">u8")))
         self.assertTrue(self.check(tree.array("Float32"), numpy.array(hundred, dtype=">f4")))
         self.assertTrue(self.check(tree.array("Float64"), numpy.array(hundred, dtype=">f8")))
 
@@ -48,8 +45,8 @@ class TestTypes(unittest.TestCase):
         hundredarrays = [[x] * 10 for x in range(100)]
         self.assertTrue(self.check(tree.array("ArrayInt32"), numpy.array(hundredarrays, dtype=">i4")))
         self.assertTrue(self.check(tree.array("ArrayInt64"), numpy.array(hundredarrays, dtype=">i8")))
-        self.assertTrue(self.check(tree.array("ArrayUInt32"), numpy.array(hundredarrays, dtype=">i4")))
-        self.assertTrue(self.check(tree.array("ArrayUInt64"), numpy.array(hundredarrays, dtype=">i8")))
+        self.assertTrue(self.check(tree.array("ArrayUInt32"), numpy.array(hundredarrays, dtype=">u4")))
+        self.assertTrue(self.check(tree.array("ArrayUInt64"), numpy.array(hundredarrays, dtype=">u8")))
         self.assertTrue(self.check(tree.array("ArrayFloat32"), numpy.array(hundredarrays, dtype=">f4")))
         self.assertTrue(self.check(tree.array("ArrayFloat64"), numpy.array(hundredarrays, dtype=">f8")))
 
@@ -60,14 +57,12 @@ class TestTypes(unittest.TestCase):
 
         self.assertTrue(self.check(tree.array("SliceInt32"), numpy.array(flattened, dtype=">i4")))
         self.assertTrue(self.check(tree.array("SliceInt64"), numpy.array(flattened, dtype=">i8")))
-        self.assertTrue(self.check(tree.array("SliceUInt32"), numpy.array(flattened, dtype=">i4")))
-        self.assertTrue(self.check(tree.array("SliceUInt64"), numpy.array(flattened, dtype=">i8")))
+        self.assertTrue(self.check(tree.array("SliceUInt32"), numpy.array(flattened, dtype=">u4")))
+        self.assertTrue(self.check(tree.array("SliceUInt64"), numpy.array(flattened, dtype=">u8")))
         self.assertTrue(self.check(tree.array("SliceFloat32"), numpy.array(flattened, dtype=">f4")))
         self.assertTrue(self.check(tree.array("SliceFloat64"), numpy.array(flattened, dtype=">f8")))
 
     def test_splitobject(self):
-        ### In this file, "UInts" really are unsigned.
-
         tree = uproot.open("tests/small-evnt-tree-fullsplit.root")["tree"]
         
         self.assertTrue(self.check(tree.array("Beg"), numpy.array(["beg-{0:03d}".format(x) for x in range(100)], dtype=object)))

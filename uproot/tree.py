@@ -966,23 +966,23 @@ class TLeaf(uproot.core.TNamed):
 
         uproot.core.TNamed.__init__(self, filewalker, walker)
 
-        len, etype, offset, hasrange, unsigned = walker.readfields("!iii??")
+        len, etype, offset, hasrange, self.unsigned = walker.readfields("!iii??")
         self.counter = uproot.rootio.Deserialized._deserialize(filewalker, walker)
 
         self._checkbytecount(walker.index - start, bcnt)
 
 uproot.rootio.Deserialized.classes[b"TLeaf"] = TLeaf
 
-for classname, format, dtype in [
-    ("TLeafO", "!??", "bool"),
-    ("TLeafB", "!bb", "i1"),
-    ("TLeafS", "!hh", ">i2"),
-    ("TLeafI", "!ii", ">i4"),
-    ("TLeafL", "!qq", ">i8"),
-    ("TLeafF", "!ff", ">f4"),
-    ("TLeafD", "!dd", ">f8"),
-    ("TLeafC", "!ii", "object"),
-    ("TLeafObject", "!ii", "object"),
+for classname, format, dtype1, dtype2 in [
+    ("TLeafO", "!??", "bool", "bool"),
+    ("TLeafB", "!bb", "i1", "u1"),
+    ("TLeafS", "!hh", ">i2", ">u2"),
+    ("TLeafI", "!ii", ">i4", ">u4"),
+    ("TLeafL", "!qq", ">i8", ">u8"),
+    ("TLeafF", "!ff", ">f4", ">f4"),
+    ("TLeafD", "!dd", ">f8", ">f8"),
+    ("TLeafC", "!ii", "object", "object"),
+    ("TLeafObject", "!ii", "object", "object"),
     ]:
     exec("""
 class {0}(TLeaf):
@@ -995,13 +995,16 @@ class {0}(TLeaf):
         TLeaf.__init__(self, filewalker, walker)
 
         min, max = walker.readfields("{1}")
-        self.dtype = numpy.dtype("{2}")
+        if self.unsigned:
+            self.dtype = numpy.dtype("{3}")
+        else:
+            self.dtype = numpy.dtype("{2}")
         self._speedbumps = False
-
+        
         self._checkbytecount(walker.index - start, bcnt)
 
 uproot.rootio.Deserialized.classes[b"{0}"] = {0}
-""".format(classname, format, dtype), globals())
+""".format(classname, format, dtype1, dtype2), globals())
 
 class TLeafElement(TLeaf):
     """Represents a TLeafElement object, which is only used for type and dimensionality information.
