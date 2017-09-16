@@ -293,9 +293,8 @@ class TTree(uproot.core.TNamed,
             if entries < 1:
                 raise ValueError("number of entries per iteration must be at least 1")
             if sys.version_info[0] <= 2:
-                ranges = ((x, x + entries) for x in xrange(0, self.entries, entries))
-            else:
-                ranges = ((x, x + entries) for x in range(0, self.entries, entries))
+                range = xrange
+            ranges = ((x, x + entries) for x in range(0, self.entries, entries))
         else:
             ranges = entries
 
@@ -506,6 +505,8 @@ class TBranch(uproot.core.TNamed,
 
         if len(self.leaves) == 1 and hasattr(self.leaves[0], "dtype"):
             self.dtype = self.leaves[0].dtype
+            self._speedbumps = self.leaves[0]._speedbumps
+
         self._filewalker = filewalker
 
         self.itemdims = tuple(int(x) for x in re.findall(self._itemdimpattern, self.title))
@@ -569,6 +570,7 @@ class TBranch(uproot.core.TNamed,
         self._basketobjlens = []
         self._basketkeylens = []
         self._basketborders = []
+        self._basketlengths = []
         self._basketwalkers = []
         for seek in self._basketSeek:
             basketwalker = self._filewalker.copy(seek)
@@ -590,6 +592,10 @@ class TBranch(uproot.core.TNamed,
             border = last - keylen
 
             self._basketborders.append(border)
+            if self._speedbumps:
+                self._basketlengths.append(border - (objlen - border - 8) // 4)
+            else:
+                self._basketlengths.append(border)
 
             #  object size != compressed size means it's compressed
             if objlen != bytes - keylen:
@@ -606,7 +612,7 @@ class TBranch(uproot.core.TNamed,
         start = self._basketwalkers[i].index
 
         try:
-            if self.dtype == numpy.dtype(object):
+            if self.dtype == numpy.dtype(object) or self._speedbumps:
                 array = self._basketwalkers[i].readarray(numpy.uint8, self._basketobjlens[i])
             else:
                 array = self._basketwalkers[i].readarray(self.dtype, self._basketobjlens[i] // self.dtype.itemsize)
@@ -614,10 +620,29 @@ class TBranch(uproot.core.TNamed,
             self._basketwalkers[i]._unevaluate()
             self._basketwalkers[i].index = start
 
+        if self._speedbumps:
+            offs = array[self._basketborders[i] + 4:].view(">i4") - self._basketkeylens[i]
+            offs[-1] = self._basketborders[i]
+
+            outdata = numpy.empty(self._basketborders[i] - (len(offs) - 1), dtype=numpy.uint8)
+            if sys.version_info[0] <= 2:
+                range = xrange
+            outi = 0
+            for i in range(len(offs) - 1):
+                length = offs[i + 1] - offs[i] - 1
+                outdata[outi:outi + length] = array[offs[i] + 1:offs[i + 1]]
+                outi += length
+
+            if offsets:
+                return outdata.view(self.dtype), None
+            else:
+                return outdata.view(self.dtype)
+
         if self.dtype == numpy.dtype(object):
             dataend = self._basketborders[i]
         else:
             dataend = self._basketborders[i] // self.dtype.itemsize
+                
         if offsets:
             if dataend == len(array):
                 return array, None
@@ -625,8 +650,10 @@ class TBranch(uproot.core.TNamed,
                 outdata = array[:dataend]
                 outoff = array.view(numpy.uint8)[self._basketborders[i] + 4 : -4].view(">i4") - self._basketkeylens[i]
                 return outdata, outoff
+
         elif dataend < len(array):
             return array[:dataend]
+
         else:
             return array
 
@@ -781,7 +808,7 @@ class TBranch(uproot.core.TNamed,
         if isinstance(dtype, numpy.ndarray):
             out = dtype.reshape(reduce(lambda x, y: x*y, dtype.shape, 1))
             dtype = out.dtype
-            expected = sum(self._basketborders) // dtype.itemsize
+            expected = sum(self._basketlengths) // dtype.itemsize
             if out.shape != (expected,):
                 raise ValueError("provided array does not have the right number of elements: {0}".format(expected))
 
@@ -795,12 +822,12 @@ class TBranch(uproot.core.TNamed,
             if dtype == numpy.dtype(object):
                 return self._adddimensions(self._strings(executor, block))
 
-            out = numpy.empty(sum(self._basketborders) // dtype.itemsize, dtype=dtype)
+            out = numpy.empty(sum(self._basketlengths) // dtype.itemsize, dtype=dtype)
 
         if executor is None:
             start = 0
             for i in range(len(self._basketwalkers)):
-                end = start + self._basketborders[i] // dtype.itemsize
+                end = start + self._basketlengths[i] // dtype.itemsize
                 out[start:end] = self._basket(i, parallel=False)
                 start = end
 
@@ -810,7 +837,7 @@ class TBranch(uproot.core.TNamed,
                 return self._adddimensions(out), ()
 
         else:
-            ends = (numpy.cumsum(self._basketborders) // dtype.itemsize).tolist()
+            ends = (numpy.cumsum(self._basketlengths) // dtype.itemsize).tolist()
             starts = [0] + ends[:-1]
 
             def fill(i):
@@ -968,6 +995,7 @@ class {0}(TLeaf):
 
         min, max = walker.readfields("{1}")
         self.dtype = numpy.dtype("{2}")
+        self._speedbumps = False
 
         self._checkbytecount(walker.index - start, bcnt)
 
@@ -986,7 +1014,10 @@ class TLeafElement(TLeaf):
 
         identifier, ltype = walker.readfields("!ii")
 
-        if ltype > 0 and ltype % 20 not in (0, 9, 10, 19):
+        if ltype == 65:
+            self.dtype = numpy.dtype(object)
+
+        elif ltype > 0 and ltype % 20 not in (0, 9, 10, 19):
             # typename = [
             #     "", "Char_t",  "Short_t",  "Int_t",  "Long_t",  "Float_t", "Int_t",    "char*",     "Double_t", "Double32_t",
             #     "", "UChar_t", "UShort_t", "UInt_t", "ULong_t", "UInt_t",  "Long64_t", "ULong64_t", "Bool_t",   "Float16_t"
@@ -998,6 +1029,8 @@ class TLeafElement(TLeaf):
 
         elif ltype == -1:  # counter
             self.dtype = numpy.dtype(">i4")
+
+        self._speedbumps = 40 <= ltype < 60
 
         self._checkbytecount(walker.index - start, bcnt)
 
