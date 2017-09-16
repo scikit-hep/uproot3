@@ -624,6 +624,7 @@ class TBranch(uproot.core.TNamed,
             offs = array[self._basketborders[i] + 4:].view(">i4") - self._basketkeylens[i]
             offs[-1] = self._basketborders[i]
 
+            ## TODO: this loop here is a good candidate for acceleration with Numba...
             outdata = numpy.empty(self._basketborders[i] - (len(offs) - 1), dtype=numpy.uint8)
             if sys.version_info[0] <= 2:
                 range = xrange
