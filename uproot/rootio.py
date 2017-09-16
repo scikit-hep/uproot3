@@ -59,19 +59,19 @@ def _interpret_compression(compression):
 def _decompressfcn(compression, objlen):
     algo, level = compression
     if algo == "zlib":
-        # 9-byte skip for ROOT's custom frame:
+        # skip 9-byte header for ROOT's custom frame:
         # https://github.com/root-project/root/blob/master/core/zip/src/Bits.h#L646
         return lambda x: zlib_decompress(x[9:])
 
     elif algo == "lzma":
-        # 9-byte skip for LZMA, too:
+        # skip 9-byte header for LZMA, too:
         # https://github.com/root-project/root/blob/master/core/lzma/src/ZipLZMA.c#L81
         return lambda x: lzma_decompress(x[9:])
 
     elif algo == "lz4":
-        # 9-byte skip, maybe with 8-byte hash, depending on ROOT version
+        # skip 9-byte header plus 8-byte hash: are there any official ROOT versions without the hash?
         # https://github.com/root-project/root/blob/master/core/lz4/src/ZipLZ4.cxx#L38
-        return lambda x: lz4_decompress(x[9:], uncompressed_size=objlen)
+        return lambda x: lz4_decompress(x[9 + 8:], uncompressed_size=objlen)
 
     else:
         raise NotImplementedError("cannot decompress \"{0}\"".format(algo))

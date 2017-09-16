@@ -384,7 +384,7 @@ class TTree(uproot.core.TNamed,
                         _delayedraise(cls, err, trc)
             return out
         else:
-            return out, (item for sublist in errors for item in sublist)
+            return out, (item for sublist in errorslist for item in sublist)
 
     def array(self, branch, dtype=None, executor=None, block=True):
         """Extracts a whole branch into a Numpy array.
@@ -423,12 +423,10 @@ class TTree(uproot.core.TNamed,
                 return None
 
         if block:
-            out = self.arrays(branchdtypes, executor, block)
-            out, = out.values()
+            out, = self.arrays(branchdtypes=branchdtypes, executor=executor, outputtype=tuple, block=block)
             return out
         else:
-            out, errors = self.arrays(branchdtypes, executor, block)
-            out, = out.values()
+            (out,), errors = self.arrays(branchdtypes=branchdtypes, executor=executor, outputtype=tuple, block=block)
             return out, errors
 
 uproot.rootio.Deserialized.classes[b"TTree"] = TTree
