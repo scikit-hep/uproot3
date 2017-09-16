@@ -42,7 +42,7 @@ It is important to note that uproot is *not* maintained by the `ROOT project tea
       license = "BSD 3-clause",
       test_suite = "tests",
       install_requires = ["numpy"],
-      tests_require = [],
+      tests_require = ["backports.lzma", "lz4", "futures"],
       classifiers = [
           "Development Status :: 4 - Beta",
           "Intended Audience :: Developers",
