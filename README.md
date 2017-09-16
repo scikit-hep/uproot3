@@ -213,6 +213,7 @@ uproot scales to about 30 threads, which is more cores than many machines have. 
 The following features are planned:
 
    * reading "leaf list" TBranches as Numpy recarrays;
+   * reading std::vector and std::string types (the vectors need some repository for their counts);
    * reading a few basic types of non-TTree objects, relelvant for analysis, such as histograms and graphs;
    * writing flat TTrees (flat: no structrue! and not into the same file as reading);
    * import-on-demand connections to Pandas, Keras, TensorFlow, PySpark, etc.
