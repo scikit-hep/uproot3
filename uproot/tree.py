@@ -15,6 +15,7 @@
 # limitations under the License.
 
 from collections import namedtuple
+from functools import reduce
 import sys
 
 import numpy
@@ -50,6 +51,8 @@ class TTree(uproot.core.TNamed,
         * `tree.allbranches` are all the TBranch objects, recursively following branches' branches.
         * `tree.branchnames` are all the directly attached branch names.
         * `tree.allbranchnames` are all the branch names, recursively following branches' branches.
+        * `tree.branchtypes` is a `{name: dtype}` dict of all the directly attached branch names.
+        * `tree.allbranchtypes` is a `{name: dtype}` dict of all the branch names, recursively following branches' branches.
         * `tree.leaves` are all the TLeaf objects.
         * `tree.counter` is a dict from branch names to Counter(branch, leaf) for branches that may have multiple items per TTree entry.
 
@@ -178,13 +181,23 @@ class TTree(uproot.core.TNamed,
     def allbranchnames(self):
         return [branch.name for branch in self.allbranches]
 
+    @property
+    def branchtypes(self):
+        return dict((branch.name, branch.dtype) for branch in self.branches)
+
+    @property
+    def allbranchtypes(self):
+        return dict((branch.name, branch.dtype) for branch in self.allbranches)
+
     @staticmethod
     def _normalizeselection(branchdtypes, allbranches):
         if callable(branchdtypes):
             for branch in allbranches:
                 dtype = branchdtypes(branch)
                 if dtype is not None:
-                    if not isinstance(dtype, numpy.dtype):
+                    if isinstance(dtype, numpy.ndarray):
+                        dtype = dtype.reshape(reduce(lambda x, y: x*y, dtype.shape))
+                    elif not isinstance(dtype, numpy.dtype):
                         dtype = numpy.dtype(dtype)
                     yield branch, dtype
 
@@ -196,7 +209,9 @@ class TTree(uproot.core.TNamed,
                 if name in allbranches:
                     branch = allbranches[name]
                     if hasattr(branch, "dtype"):
-                        if not isinstance(dtype, numpy.dtype):
+                        if isinstance(dtype, numpy.ndarray):
+                            dtype = dtype.reshape(reduce(lambda x, y: x*y, dtype.shape))
+                        elif not isinstance(dtype, numpy.dtype):
                             dtype = numpy.dtype(dtype)
                         yield branch, dtype
                     else:
@@ -257,6 +272,8 @@ class TTree(uproot.core.TNamed,
               If an iterable of strings, all of these are loaded (in the specified order).
               If a dict of `{name: dtype}`, load the specified branch names and cast them into a given `dtype` (such as conversion to little endian).
               If a function from branch names to `dtype` or `None`, load the branches into the given `dtypes` and don't load the branches mapped to `None`.
+
+              If any `dtypes` are actually arrays, rather than `dtype` objects, then those arrays will be filled instead of creating new ones (shape must match).
 
             * `executor` (same as in `TTree.arrays`)
 
@@ -339,6 +356,8 @@ class TTree(uproot.core.TNamed,
               If a dict of `{name: dtype}`, load the specified branch names and cast them into a given `dtype` (such as conversion to little endian).
               If a function from branch names to `dtype` or `None`, load the branches into the given `dtypes` and don't load the branches mapped to `None`.
 
+              If any `dtypes` are actually arrays, rather than `dtype` objects, then those arrays will be filled instead of creating new ones (shape must match).
+
             * `executor` (same as in `TTree.iterator`)
 
               A `concurrent.futures.Executor` that would be used to parallelize the basket loading/decompression.
@@ -400,6 +419,7 @@ class TTree(uproot.core.TNamed,
             * `dtype`
 
                If not `None`, cast the array into a given `dtype` (such as conversion to little endian).
+               If an array object, fill that array instead of creating a new one (shape must match).
 
             * `executor` (same as in `TTree.arrays`)
 
@@ -413,14 +433,10 @@ class TTree(uproot.core.TNamed,
         """
         branch = branch.encode("ascii") if hasattr(branch, "encode") else branch
 
-        def branchdtypes(b):
-            if branch == b.name:
-                if dtype is None:
-                    return b.dtype
-                else:
-                    return dtype
-            else:
-                return None
+        if dtype is None:
+            branchdtypes = branch
+        else:
+            branchdtypes = {branch: dtype}
 
         if block:
             out, = self.arrays(branchdtypes=branchdtypes, executor=executor, outputtype=tuple, block=block)
@@ -448,6 +464,8 @@ class TBranch(uproot.core.TNamed,
         * `branch.allbranches` are all the subbranches, recursively following subbranches' branches.
         * `branch.branchnames` are all the directly attached subbranch names.
         * `branch.allbranchnames` are all the subbranch names, recursively following subbranches' branches.
+        * `branch.branchtypes` is a `{name: dtype}` dict of all the directly attached subbranch names.
+        * `branch.allbranchtypes` is a `{name: dtype}` dict of all the subbranch names, recursively following subbranches' branches.
         * `branch.leaves` are all the TLeaf objects directly attached to this TBranch.
 
     `branch[name]` is a synonym for `branch.branch(name)`.
@@ -507,6 +525,14 @@ class TBranch(uproot.core.TNamed,
     @property
     def allbranchnames(self):
         return [branch.name for branch in self.allbranches]
+
+    @property
+    def branchtypes(self):
+        return dict((branch.name, branch.dtype) for branch in self.branches)
+
+    @property
+    def allbranchtypes(self):
+        return dict((branch.name, branch.dtype) for branch in self.allbranches)
 
     def __getitem__(self, name):
         return self.branch(name)
@@ -621,7 +647,14 @@ class TBranch(uproot.core.TNamed,
 
     def _getfromcache(self, cache, entrystart, entryend, dtype):
         if len(cache) == 0:
-            return numpy.array([], dtype=dtype)
+            if isinstance(dtype, numpy.ndarray):
+                out = dtype.reshape(reduce(lambda x, y: x*y, dtype.shape))
+                dtype = out.dtype
+                if out.shape != (0,):
+                    raise ValueError("provided array does not have the right number of elements: {0}".format(0))
+                return out
+            else:
+                return numpy.array([], dtype=dtype)
 
         i, firstdata, firstoff = cache[0]
         istartoff = entrystart - self._basketEntry[i]
@@ -646,13 +679,31 @@ class TBranch(uproot.core.TNamed,
         if len(cache) == 1:
             outdata = firstdata[istart:iend]
             if not strings:
-                outdata = numpy.array(outdata, dtype=dtype)
+                if isinstance(dtype, numpy.ndarray):
+                    out = dtype
+                    dtype = out.dtype
+                    expected = len(firstdata)
+                    if out.shape != (expected,):
+                        raise ValueError("provided array does not have the right number of elements: {0}".format(expected))
+                    out[:] = outdata
+                    outdata = out
+                else:
+                    outdata = numpy.array(outdata, dtype=dtype)
             else:
                 outoff = firstoff[istartoff:iendoff] - istart
 
         else:
             middle = cache[1:-1]
-            outdata = numpy.empty((len(firstdata) - istart) + sum(len(mdata) for mi, mdata, moff in middle) + (iend), dtype=numpy.uint8 if strings else dtype)
+            size = (len(firstdata) - istart) + sum(len(mdata) for mi, mdata, moff in middle) + (iend)
+
+            if isinstance(dtype, numpy.ndarray):
+                outdata = dtype
+                dtype = outdata.dtype
+                if outdata.shape != (size,):
+                    raise ValueError("provided array does not have the right number of elements: {0}".format(size))
+            else:
+                outdata = numpy.empty(size, dtype=numpy.uint8 if strings else dtype)
+
             if strings:
                 outoff = numpy.empty((len(firstoff) - istartoff) + sum(len(moff) for mi, mdata, moff in middle) + (iendoff), dtype=firstoff.dtype)
 
@@ -711,11 +762,11 @@ class TBranch(uproot.core.TNamed,
             self._preparebaskets()
 
         if isinstance(dtype, numpy.ndarray):
-            out = dtype
+            out = dtype.reshape(reduce(lambda x, y: x*y, dtype.shape))
             dtype = out.dtype
             expected = sum(self._basketborders) // dtype.itemsize
             if out.shape != (expected,):
-                raise ValueError("array supplied does not have the right shape: {0}".format(expected))
+                raise ValueError("provided array does not have the right number of elements: {0}".format(expected))
 
         else:
             if dtype is None:
