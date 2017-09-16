@@ -192,7 +192,7 @@ def iterator(entries, path, treepath, branchdtypes=lambda branch: branch.dtype, 
 
         def ranges():
             x = 0
-            while x < tree.entries:
+            while x < tree.numentries:
                 if x == 0 and holdoverentries != 0:
                     nextx = x + (entries - holdoverentries)
                     yield (x, nextx)

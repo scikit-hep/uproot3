@@ -42,11 +42,11 @@ class TTree(uproot.core.TNamed,
 
         * `tree.arrays(...)` gets all or selected branches as arrays. It has many options; see help(TTree.arrays).
         * `tree.array(branch, ...)` gets a single branch as an array. It has many options; see help(TTree.array).
-        * `tree.iterator(entries, ...)` iterates over a fixed number of entries at a time. It has many options; see help(TTree.iterator).
+        * `tree.iterator(numentries, ...)` iterates over a fixed number of numentries at a time. It has many options; see help(TTree.iterator).
 
     Information about the tree:
 
-        * `tree.entries` is the number of entries.
+        * `tree.numentries` is the number of entries.
         * `tree.branch(name)` gets a branch object by name.
         * `tree.branches` are the TBranch objects directly attached to the TTree's root.
         * `tree.allbranches` are all the TBranch objects, recursively following branches' branches.
@@ -59,7 +59,7 @@ class TTree(uproot.core.TNamed,
 
     `tree[name]` is a synonym for `tree.branch(name)`.
 
-    TTree is not iterable, but `len(tree)` is a synonym for `tree.entries`.
+    TTree is not iterable, but `len(tree)` is a synonym for `tree.numentries`.
     """
     def __init__(self, filewalker, walker):
         walker.startcontext()
@@ -71,7 +71,7 @@ class TTree(uproot.core.TNamed,
         uproot.core.TAttFill.__init__(self, filewalker, walker)
         uproot.core.TAttMarker.__init__(self, filewalker, walker)
 
-        self.entries, totbytes, zipbytes = walker.readfields("!qqq")
+        self.numentries, totbytes, zipbytes = walker.readfields("!qqq")
 
         if vers < 16:
             raise NotImplementedError("TTree too old")
@@ -136,10 +136,10 @@ class TTree(uproot.core.TNamed,
     Counter = namedtuple("Counter", ["branch", "leaf"])
 
     def __repr__(self):
-        return "<TTree {0} len={1} at 0x{2:012x}>".format(repr(self.name), self.entries, id(self))
+        return "<TTree {0} len={1} at 0x{2:012x}>".format(repr(self.name), self.numentries, id(self))
 
     def __len__(self):
-        return len(self.entries)
+        return len(self.numentries)
 
     def __getitem__(self, name):
         return self.branch(name)
@@ -294,7 +294,7 @@ class TTree(uproot.core.TNamed,
                 raise ValueError("number of entries per iteration must be at least 1")
             if sys.version_info[0] <= 2:
                 range = xrange
-            ranges = ((x, x + entries) for x in range(0, self.entries, entries))
+            ranges = ((x, x + entries) for x in range(0, self.numentries, entries))
         else:
             ranges = entries
 
@@ -338,7 +338,7 @@ class TTree(uproot.core.TNamed,
                 out = outputtype(*out)
 
             if reportentries:
-                yield entrystart, min(entryend, self.entries), out
+                yield entrystart, min(entryend, self.numentries), out
             else:
                 yield out
 
