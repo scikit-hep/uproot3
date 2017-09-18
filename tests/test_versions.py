@@ -20,108 +20,6 @@ import numpy
 
 import uproot
 
-def makesample():
-    out = {}
-
-    out["n"] = []
-
-    # out["b"] = []
-    # out["ab"] = []
-    # out["Ab"] = [], [True], [True, True], [True, True, True], [True, True, True, True], [], [False], [False, False], [False, False, False], [False, False, False, False], [], [True], [True, True], [True, True, True], [True, True, True, True], [], [False], [False, False], [False, False, False], [False, False, False, False], [], [True], [True, True], [True, True, True], [True, True, True, True], [], [False], [False, False], [False, False, False], [False, False, False, False],
-
-
-
-
-    # out["i1"] = []
-    # out["ai1"] = []
-    # out["Ai1"] = []
-
-    # out["u1"] = []
-    # out["au1"] = []
-    # out["Au1"] = []
-
-    # out["i2"] = []
-    # out["ai2"] = []
-    # out["Ai2"] = []
-
-    # out["u2"] = []
-    # out["au2"] = []
-    # out["Au2"] = []
-
-    # out["i4"] = []
-    # out["ai4"] = []
-    # out["Ai4"] = []
-
-    # out["u4"] = []
-    # out["au4"] = []
-    # out["Au4"] = []
-
-    # out["i8"] = []
-    # out["ai8"] = []
-    # out["Ai8"] = []
-
-    # out["u8"] = []
-    # out["au8"] = []
-    # out["Au8"] = []
-
-    # out["f4"] = []
-    # out["af4"] = []
-    # out["Af4"] = []
-
-    # out["f8"] = []
-    # out["af8"] = []
-    # out["Af8"] = []
-
-    # out["str"] = []
-
-    # for i in range(30):
-    #     out["n"].append(i % 5)
-
-    #     out["b"].append(i % 2 == 0)
-    #     out["ab"].append([i % 2 == 1, i % 2 == 0, i % 2 == 1])
-    #     for j in range(out["n"][-1]):
-    #         out["Ab"].append((i + j) % 2 == 0)
-
-    #     out["i1"].append(i - 15)
-    #     out["i2"].append(i - 15)
-    #     out["i4"].append(i - 15)
-    #     out["i8"].append(i - 15)
-    #     out["ai1"].append([i - 14, i - 13, i - 12])
-    #     out["ai2"].append([i - 14, i - 13, i - 12])
-    #     out["ai4"].append([i - 14, i - 13, i - 12])
-    #     out["ai8"].append([i - 14, i - 13, i - 12])
-    #     for j in range(out["n"][-1]):
-    #         out["Ai1"].append(i - 15 + j)
-    #         out["Ai2"].append(i - 15 + j)
-    #         out["Ai4"].append(i - 15 + j)
-    #         out["Ai8"].append(i - 15 + j)
-
-    #     out["u1"].append(i)
-    #     out["u2"].append(i)
-    #     out["u4"].append(i)
-    #     out["u8"].append(i)
-    #     out["au1"].append([i + 1, i + 2, i + 3])
-    #     out["au2"].append([i + 1, i + 2, i + 3])
-    #     out["au4"].append([i + 1, i + 2, i + 3])
-    #     out["au8"].append([i + 1, i + 2, i + 3])
-    #     for j in range(out["n"][-1]):
-    #         out["Au1"].append(i + j)
-    #         out["Au2"].append(i + j)
-    #         out["Au4"].append(i + j)
-    #         out["Au8"].append(i + j)
-
-    #     out["f4"].append(numpy.float32(i) - numpy.float32(14.9))
-    #     out["f8"].append(i - 14.9)
-    #     out["af4"].append([numpy.float32(i) - numpy.float32(13.9), numpy.float32(i) - numpy.float32(12.9), numpy.float32(i) - numpy.float32(11.9)])
-    #     out["af8"].append([i - 13.9, i - 12.9, i - 11.9])
-    #     for j in range(out["n"][-1]):
-    #         out["Af4"].append(numpy.float32(i) - numpy.float32(14.9) + j*numpy.float32(0.1))
-    #         out["Af8"].append(i - 14.9 + j*0.1)
-
-    #     out["str"].append("hey-{0}".format(i).encode("ascii"))
-
-    # return out
-
 class TestVersions(unittest.TestCase):
     def runTest(self):
         pass
@@ -183,41 +81,51 @@ class TestVersions(unittest.TestCase):
             self.assertEqual(arrays[name].tolist(), expect)
 
     def test_5_23_02(self):
+        # 2009-02-26, TTree version 16
         for compression in "uncompressed", "zlib":
             self.compare(uproot.open("tests/sample-5.23.02-{0}.root".format(compression))["sample"].arrays())
     
     def test_5_24_00(self):
+        # 2009-06-30, TTree version 16
         for compression in "uncompressed", "zlib":
             self.compare(uproot.open("tests/sample-5.24.00-{0}.root".format(compression))["sample"].arrays())
     
     def test_5_25_02(self):
+        # 2009-10-01, TTree version 17
         for compression in "uncompressed", "zlib":
             self.compare(uproot.open("tests/sample-5.25.02-{0}.root".format(compression))["sample"].arrays())
     
     def test_5_26_00(self):
+        # 2009-12-14, TTree version 18
         for compression in "uncompressed", "zlib":
             self.compare(uproot.open("tests/sample-5.26.00-{0}.root".format(compression))["sample"].arrays())
 
     def test_5_27_02(self):
+        # 2010-04-27, TTree version 18
         for compression in "uncompressed", "zlib":
             self.compare(uproot.open("tests/sample-5.27.02-{0}.root".format(compression))["sample"].arrays())
 
     def test_5_28_00(self):
+        # 2010-12-15, TTree version 18
         for compression in "uncompressed", "zlib":
             self.compare(uproot.open("tests/sample-5.28.00-{0}.root".format(compression))["sample"].arrays())
 
     def test_5_29_02(self):
+        # 2011-04-21, TTree version 18
         for compression in "uncompressed", "zlib":
             self.compare(uproot.open("tests/sample-5.29.02-{0}.root".format(compression))["sample"].arrays())
 
     def test_5_30_00(self):
+        # 2011-06-28, TTree version 19
         for compression in "uncompressed", "zlib", "lzma":
             self.compare(uproot.open("tests/sample-5.30.00-{0}.root".format(compression))["sample"].arrays())
 
     def test_6_08_04(self):
+        # 2017-01-13, TTree version 19
         for compression in "uncompressed", "zlib", "lzma":
             self.compare(uproot.open("tests/sample-6.08.04-{0}.root".format(compression))["sample"].arrays())
 
     def test_6_10_05(self):
+        # 2017-07-28, TTree version 19
         for compression in "uncompressed", "zlib", "lzma", "lz4":
             self.compare(uproot.open("tests/sample-6.10.05-{0}.root".format(compression))["sample"].arrays())

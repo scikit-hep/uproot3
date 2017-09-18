@@ -73,6 +73,8 @@ class TTree(uproot.core.TNamed,
 
         self.numentries, totbytes, zipbytes = walker.readfields("!qqq")
 
+        print "vers", vers
+
         if vers < 16:
             raise NotImplementedError("TTree too old")
 
