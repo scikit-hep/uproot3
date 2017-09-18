@@ -18,14 +18,13 @@
 | nested directories, cycle numbers, '/' and ';' notation                   | &#x2713; |
 | arrays interface                                                          | &#x2713; |
 | iterator interface                                                        | &#x2713; |
-| selection by list of branch names                                         | **no!** |
-| pass array to fill, rather than `dtype`                                   | **no!** |
-| different `outputtypes`                                                   | **no!** |
+| selection by list of branch names                                         | &#x2713; |
+| pass array to fill, rather than `dtype`                                   | &#x2713; |
+| different `outputtypes`                                                   | &#x2713; |
 | memory-mapped files                                                       | &#x2713; |
 | standard files (not using; remove?)                                       | **no!** |
 | XRootD (would have to get XRootD library into `tests_require` somehow...) | **no!** |
 | big files (64-bit addresses in TFile header)                              | **no!** |
 | parallel processing (not deterministic: hard to include in test suite)    | **no!** |
 | exception raising!                                                        | **no!** |
-| `repr` print-outs                                                         | **no!** |
 | informational methods (keys/branches listings)                            | **partial** |

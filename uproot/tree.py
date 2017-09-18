@@ -177,19 +177,19 @@ class TTree(uproot.core.TNamed,
 
     @property
     def branchnames(self):
-        return [branch.name for branch in self.branches]
+        return [branch.name for branch in self.branches if hasattr(branch, "dtype")]
 
     @property
     def allbranchnames(self):
-        return [branch.name for branch in self.allbranches]
+        return [branch.name for branch in self.allbranches if hasattr(branch, "dtype")]
 
     @property
     def branchtypes(self):
-        return dict((branch.name, branch.dtype) for branch in self.branches)
+        return dict((branch.name, branch.dtype) for branch in self.branches if hasattr(branch, "dtype"))
 
     @property
     def allbranchtypes(self):
-        return dict((branch.name, branch.dtype) for branch in self.allbranches)
+        return dict((branch.name, branch.dtype) for branch in self.allbranches if hasattr(branch, "dtype"))
 
     @staticmethod
     def _normalizeselection(branchdtypes, allbranches):
@@ -549,19 +549,19 @@ class TBranch(uproot.core.TNamed,
 
     @property
     def branchnames(self):
-        return [branch.name for branch in self.branches]
+        return [branch.name for branch in self.branches if hasattr(branch, "dtype")]
 
     @property
     def allbranchnames(self):
-        return [branch.name for branch in self.allbranches]
+        return [branch.name for branch in self.allbranches if hasattr(branch, "dtype")]
 
     @property
     def branchtypes(self):
-        return dict((branch.name, branch.dtype) for branch in self.branches)
+        return dict((branch.name, branch.dtype) for branch in self.branches if hasattr(branch, "dtype"))
 
     @property
     def allbranchtypes(self):
-        return dict((branch.name, branch.dtype) for branch in self.allbranches)
+        return dict((branch.name, branch.dtype) for branch in self.allbranches if hasattr(branch, "dtype"))
 
     def __getitem__(self, name):
         return self.branch(name)
@@ -824,7 +824,7 @@ class TBranch(uproot.core.TNamed,
         if isinstance(dtype, numpy.ndarray):
             out = dtype.reshape(reduce(lambda x, y: x*y, dtype.shape, 1))
             dtype = out.dtype
-            expected = sum(self._basketlengths) // dtype.itemsize
+            expected = sum(self._basketlengths) // self.dtype.itemsize
             if out.shape != (expected,):
                 raise ValueError("provided array does not have the right number of elements: {0}".format(expected))
 
@@ -838,12 +838,12 @@ class TBranch(uproot.core.TNamed,
             if dtype == numpy.dtype(object):
                 return self._adddimensions(self._strings(executor, block))
 
-            out = numpy.empty(sum(self._basketlengths) // dtype.itemsize, dtype=dtype)
+            out = numpy.empty(sum(self._basketlengths) // self.dtype.itemsize, dtype=dtype)
 
         if executor is None:
             start = 0
             for i in range(len(self._basketwalkers)):
-                end = start + self._basketlengths[i] // dtype.itemsize
+                end = start + self._basketlengths[i] // self.dtype.itemsize
                 out[start:end] = self._basket(i, parallel=False)
                 start = end
 
@@ -853,7 +853,7 @@ class TBranch(uproot.core.TNamed,
                 return self._adddimensions(out), ()
 
         else:
-            ends = (numpy.cumsum(self._basketlengths) // dtype.itemsize).tolist()
+            ends = (numpy.cumsum(self._basketlengths) // self.dtype.itemsize).tolist()
             starts = [0] + ends[:-1]
 
             def fill(i):

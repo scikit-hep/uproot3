@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import namedtuple
 import unittest
 
 import numpy
@@ -26,8 +27,12 @@ class TestTree(unittest.TestCase):
     
     def test_branch_array(self):
         file = uproot.open("tests/simple.root")
+        repr(file)
 
         tree = file["tree"]
+        repr(tree)
+        repr(tree.branch("one"))
+        repr(tree.branch("one"))
         self.assertEqual(tree.branch("one").array().tolist(), [1, 2, 3, 4])
         self.assertEqual(tree.branch("two").array().tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
         self.assertEqual(tree.branch("three").array().tolist(), [b"uno", b"dos", b"tres", b"quatro"])
@@ -243,3 +248,71 @@ class TestTree(unittest.TestCase):
         self.assertEqual(dict((name, array.tolist()) for name, array in file["one/tree;1"].arrays(["one", "two", "three"]).items()), {b"one": [1, 2, 3, 4], b"two": [1.100000023841858, 2.200000047683716, 3.299999952316284, 4.400000095367432], b"three": [b"uno", b"dos", b"tres", b"quatro"]})
         self.assertEqual(file["one/two/tree;1"].array("Int32").shape, (100,))
         self.assertEqual(file["three/tree;1"].array("I32").shape, (100,))
+
+    def test_cast(self):
+        tree = uproot.open("tests/Zmumu.root")["events"]
+        one = numpy.cast[numpy.int32](numpy.floor(tree.array("M")))
+        two = tree.array("M", numpy.int32)
+        self.assertEqual(one.dtype, two.dtype)
+        self.assertEqual(one.shape, two.shape)
+        self.assertTrue(numpy.array_equal(one, two))
+
+        for (one,) in tree.iterator(10000, "M", outputtype=tuple):
+            one = numpy.cast[numpy.int32](numpy.floor(one))
+        for (two,) in tree.iterator(10000, {"M": numpy.int32}, outputtype=tuple):
+            pass
+        self.assertEqual(one.dtype, two.dtype)
+        self.assertEqual(one.shape, two.shape)
+        self.assertTrue(numpy.array_equal(one, two))
+
+    def test_pass_array(self):
+        tree = uproot.open("tests/Zmumu.root")["events"]
+        one = numpy.cast[numpy.int32](numpy.floor(tree.array("M")))
+        two = numpy.zeros(one.shape, dtype=one.dtype)
+        tree.array("M", two)
+        self.assertTrue(numpy.array_equal(one, two))
+
+        for (one,) in tree.iterator(10000, "M", outputtype=tuple):
+            one = numpy.cast[numpy.int32](numpy.floor(one))
+            two = numpy.zeros(one.shape, dtype=one.dtype)
+            for (two,) in tree.iterator(10000, {"M": numpy.int32}, outputtype=tuple):
+                self.assertTrue(numpy.array_equal(one, two))
+
+    def test_outputtype(self):
+        tree = uproot.open("tests/simple.root")["tree"]
+
+        arrays = tree.arrays(["three", "two", "one"], outputtype=dict)
+        self.assertTrue(isinstance(arrays, dict))
+        self.assertEqual(arrays[b"one"].tolist(), [1, 2, 3, 4])
+        self.assertEqual(arrays[b"three"].tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+
+        arrays = tree.arrays(["three", "two", "one"], outputtype=tuple)
+        self.assertTrue(isinstance(arrays, tuple))
+        self.assertEqual(arrays[2].tolist(), [1, 2, 3, 4])
+        self.assertEqual(arrays[0].tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+
+        arrays = tree.arrays(["three", "two", "one"], outputtype=namedtuple)
+        self.assertEqual(arrays.one.tolist(), [1, 2, 3, 4])
+        self.assertEqual(arrays.three.tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+
+        arrays = tree.arrays(["three", "two", "one"], outputtype=list)
+        self.assertTrue(isinstance(arrays, list))
+        self.assertEqual(arrays[2].tolist(), [1, 2, 3, 4])
+        self.assertEqual(arrays[0].tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+
+        class Awesome(object):
+            def __init__(self, one, two, three):
+                self.one = one
+                self.two = two
+                self.three = three
+
+        arrays = tree.arrays(["one", "two", "three"], outputtype=Awesome)
+        self.assertTrue(isinstance(arrays, Awesome))
+        self.assertEqual(arrays.one.tolist(), [1, 2, 3, 4])
+        self.assertEqual(arrays.three.tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+
+    def test_informational(self):
+        self.assertEqual(uproot.open("tests/simple.root")["tree"].branchnames, [b"one", b"two", b"three"])
+        self.assertEqual(uproot.open("tests/simple.root")["tree"].branchtypes, {b"two": numpy.dtype(">f4"), b"one": numpy.dtype(">i4"), b"three": numpy.dtype("O")})
+        self.assertEqual(uproot.open("tests/small-evnt-tree-fullsplit.root")["tree"].allbranchnames, ["evt", b"Beg", b"I16", b"I32", b"I64", b"U16", b"U32", b"U64", b"F32", b"F64", b"Str", b"P3.Px", b"P3.Py", b"P3.Pz", b"ArrayI16[10]", b"ArrayI32[10]", b"ArrayI64[10]", b"ArrayU16[10]", b"ArrayU32[10]", b"ArrayU64[10]", b"ArrayF32[10]", b"ArrayF64[10]", b"N", b"SliceI16", b"SliceI32", b"SliceI64", b"SliceU16", b"SliceU32", b"SliceU64", b"SliceF32", b"SliceF64", b"End"])
+        self.assertEqual(uproot.open("tests/small-evnt-tree-fullsplit.root")["tree"].allbranchtypes, {b"Str": numpy.dtype("O"), b"P3.Px": numpy.dtype(">i4"), b"I64": numpy.dtype(">i8"), b"U64": numpy.dtype(">u8"), b"ArrayF32[10]": numpy.dtype(">f4"), b"SliceI16": numpy.dtype(">i2"), b"ArrayI64[10]": numpy.dtype(">i8"), b"evt": numpy.dtype(">i4"), b"SliceF64": numpy.dtype(">f8"), b"End": numpy.dtype("O"), b"U32": numpy.dtype(">u4"), b"Beg": numpy.dtype("O"), b"I32": numpy.dtype(">i4"), b"N": numpy.dtype(">i4"), b"SliceI32": numpy.dtype(">i4"), b"P3.Py": numpy.dtype(">f8"), b"U16": numpy.dtype(">u2"), b"SliceU32": numpy.dtype(">u4"), b"P3.Pz": numpy.dtype(">i4"), b"ArrayI32[10]": numpy.dtype(">i4"), b"ArrayF64[10]": numpy.dtype(">f8"), b"I16": numpy.dtype(">i2"), b"SliceU64": numpy.dtype(">u8"), b"F64": numpy.dtype(">f8"), b"ArrayI16[10]": numpy.dtype(">i2"), b"ArrayU16[10]": numpy.dtype(">u2"), b"ArrayU32[10]": numpy.dtype(">u4"), b"F32": numpy.dtype(">f4"), b"SliceF32": numpy.dtype(">f4"), b"ArrayU64[10]": numpy.dtype(">u8"), b"SliceU16": numpy.dtype(">u2"), b"SliceI64": numpy.dtype(">i8")})

@@ -48,15 +48,15 @@ class TestCompression(unittest.TestCase):
         self.assertEqual(uproot.open("tests/HZZ-uncompressed.root").compression.level, 0)
 
     def test_compression_keys(self):
-        keys = uproot.open("tests/Zmumu-uncompressed.root").ls()
-        self.assertEqual(uproot.open("tests/Zmumu-zlib.root").ls(), keys)
-        self.assertEqual(uproot.open("tests/Zmumu-lzma.root").ls(), keys)
-        self.assertEqual(uproot.open("tests/Zmumu-lz4.root").ls(), keys)
+        keys = uproot.open("tests/Zmumu-uncompressed.root").contents
+        self.assertEqual(uproot.open("tests/Zmumu-zlib.root").contents, keys)
+        self.assertEqual(uproot.open("tests/Zmumu-lzma.root").contents, keys)
+        self.assertEqual(uproot.open("tests/Zmumu-lz4.root").contents, keys)
 
-        keys = uproot.open("tests/HZZ-uncompressed.root").ls()
-        self.assertEqual(uproot.open("tests/HZZ-zlib.root").ls(), keys)
-        self.assertEqual(uproot.open("tests/HZZ-lzma.root").ls(), keys)
-        self.assertEqual(uproot.open("tests/HZZ-lz4.root").ls(), keys)
+        keys = uproot.open("tests/HZZ-uncompressed.root").contents
+        self.assertEqual(uproot.open("tests/HZZ-zlib.root").contents, keys)
+        self.assertEqual(uproot.open("tests/HZZ-lzma.root").contents, keys)
+        self.assertEqual(uproot.open("tests/HZZ-lz4.root").contents, keys)
 
     def test_compression_branches(self):
         branches = uproot.open("tests/Zmumu-uncompressed.root")["events"].branchnames
