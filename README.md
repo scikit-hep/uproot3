@@ -208,14 +208,27 @@ C++ ROOT is not on this plot because decompressing baskets in parallel is [an up
 
 uproot scales to about 30 threads, which is more cores than many machines have. After that, split your job into multiple processes (Python's `multiprocessing` module).
 
+## What works and what doesn't
+
+| ROOT type | Numpy type | Status |
+|:---------:|:----------:|:------:|
+| single-leaf numeric branches (boolean, signed/unsigned integers, floating point) | corresponding Numpy arrays with big-endian `dtype`; if native endian arrays are important to you (e.g. for Numba), cast on the fly by passing an explicit `dtype` | done |
+| single-leaf string branches like `LeafC` or `TString` | Numpy object array of Python strings (`bytes` objects); if performance is important and you can handle a `uint8` array of raw bytes, pass `uint8` as the `dtype` | done |
+| multi-leaf branches (a.k.a. "leaf list") | Numpy recarrays | **TODO!** |
+| fixed-length array of items per entry, declared as `myleaf[10]` | Numpy array with a multidimensional `shape` | done |
+| variable-length array of items per entry, declared as `myleaf[N]` | Numpy array with no boundaries between entries; use the corresponding counter (`N` in this example) to distinguish events | done |
+| fully-split C++ classes, stored in the TTree as one branch per class member | one array per class member, following the rules above | done |
+| `TClonesArray` of several fully-split class objects per entry | same as above, use counters to determine how many objects per event | done |
+| unsplit class objects | much too complicated and not useful to view as Numpy | will not do |
+| `std::vector` and `std::string` | complicated encoding, would be slow to navigate in Python, yet widespread in analysis | is it worthwhile? |
+
 ## Status
 
 The following features are planned:
 
-   * reading "leaf list" TBranches as Numpy recarrays;
-   * reading std::vector and std::string types (the vectors need some repository for their counts);
+   * the TODO items in the above table;
    * reading a few basic types of non-TTree objects, relelvant for analysis, such as histograms and graphs;
-   * writing flat TTrees (flat: no structrue! and not into the same file as reading);
+   * writing TTrees: flat, no structure, and no reading and writing to the same file;
    * import-on-demand connections to Pandas, Keras, TensorFlow, PySpark, etc.
 
 ## Acknowledgements
