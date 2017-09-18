@@ -211,7 +211,7 @@ uproot scales to about 30 threads, which is more cores than many machines have. 
 ## What works and what doesn't
 
 | ROOT type | Numpy type | Status |
-|:---------:|:----------:|:------:|
+|:----------|:-----------|:------:|
 | single-leaf numeric branches (boolean, signed/unsigned integers, floating point) | corresponding Numpy arrays with big-endian `dtype`; if native endian arrays are important to you (e.g. for Numba), cast on the fly by passing an explicit `dtype` | done |
 | single-leaf string branches like `LeafC` or `TString` | Numpy object array of Python strings (`bytes` objects); if performance is important and you can handle a `uint8` array of raw bytes, pass `uint8` as the `dtype` | done |
 | multi-leaf branches (a.k.a. "leaf list") | Numpy recarrays | **TODO!** |
@@ -222,11 +222,9 @@ uproot scales to about 30 threads, which is more cores than many machines have. 
 | unsplit class objects | much too complicated and not useful to view as Numpy | will not do |
 | `std::vector` and `std::string` | complicated encoding, would be slow to navigate in Python, yet widespread in analysis | is it worthwhile? |
 
-## Status
+## Planned features
 
-The following features are planned:
-
-   * the TODO items in the above table;
+   * the **TODO** items in the above table;
    * reading a few basic types of non-TTree objects, relelvant for analysis, such as histograms and graphs;
    * writing TTrees: flat, no structure, and no reading and writing to the same file;
    * import-on-demand connections to Pandas, Keras, TensorFlow, PySpark, etc.
