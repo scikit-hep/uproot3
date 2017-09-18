@@ -80,8 +80,9 @@ class TFile(object):
     """Represents a ROOT file; use to extract objects.
 
         * `file.get(name, cycle=None)` to extract an object (aware of '/' and ';' notations).
-        * `file.ls()` for a `{name: classname}` dict of objects in the top directory.
-        * `file.compression` for a Compression(algo, level) namedtuple.
+        * `file.contents` is a `{name: classname}` dict of objects in the top directory.
+        * `file.allcontents` is a `{name: classname}` dict of all objects in the file.
+        * `file.compression` is a Compression(algo, level) namedtuple describing the compression.
         * `file.dir` is the top directory.
 
     `file[name]` is a synonym for `file.get(name)`.
@@ -134,10 +135,13 @@ class TFile(object):
     def __iter__(self):
         return iter(self.dir.keys)
 
-    def ls(self):
-        """Get a `{name: classname}` dict of objects in the top directory.
-        """
-        return self.dir.ls()
+    @property
+    def contents(self):
+        return self.dir.contents
+
+    @property
+    def allcontents(self):
+        return self.dir.allcontents
 
     def get(self, name, cycle=None):
         """Get an object from the file, interpreting '/' as subdirectories and ';' to delimit cycle number.
@@ -152,7 +156,8 @@ class TDirectory(object):
     """Represents a ROOT directory; use to extract objects.
 
         * `dir.get(name, cycle=None)` to extract an object (aware of '/' and ';' notations).
-        * `dir.ls()` for a `{name: classname}` dict of objects in this directory.
+        * `dir.contents` is a `{name: classname}` dict of objects in this directory.
+        * `dir.allcontents` is a `{name: classname}` dict of all objects under this directory.
         * `dir.keys` is the keys.
 
     `dir[name]` is a synonym for `dir.get(name)`.
@@ -188,10 +193,13 @@ class TDirectory(object):
     def __iter__(self):
         return iter(self.keys)
 
-    def ls(self):
-        """Get a `{name: classname}` dict of objects in this directory.
-        """
-        return self.keys.ls()
+    @property
+    def contents(self):
+        return self.keys.contents
+
+    @property
+    def allcontents(self):
+        return self.keys.allcontents
 
     def get(self, name, cycle=None):
         """Get an object from the directory, interpreting '/' as subdirectories and ';' to delimit cycle number.
@@ -209,7 +217,8 @@ class TKeys(object):
     """Represents a collection of keys.
 
         * `keys.get(name, cycle=None)` to extract an object (aware of ';' notation).
-        * `keys.ls()` for a `{name: classname}` dict.
+        * `keys.contents` is a `{name: classname}` dict of objects directly in this set of TKeys.
+        * `keys.allcontents` is a `{name: classname}` dict of all objects under this set of TKeys.
 
     `keys[name]` is a synonym for `keys.get(name)`.
 
@@ -240,10 +249,21 @@ class TKeys(object):
     def __iter__(self):
         return iter(self.keys)
 
-    def ls(self):
-        """Get a `{name: classname}` dict.
+    @property
+    def contents(self):
+        return dict(("{0};{1}".format(x.name.decode("ascii"), x.cycle).encode("ascii"), x.classname) for x in self.keys)
+
+    @property
+    def allcontents(self):
+        """Get a `{name: classname}` dict of objects directly in this set of TKeys.
         """
-        return dict((x.name, x.classname) for x in self.keys)
+        out = {}
+        for name, classname in self.contents.items():
+            out[name] = classname
+            if classname == b"TDirectory":
+                for name2, classname2 in self.get(name).allcontents.items():
+                    out["{0}/{1}".format(name[:name.rindex(b";")].decode("ascii"), name2.decode("ascii")).encode("ascii")] = classname2
+        return out
 
     def get(self, name, cycle=None):
         """Get an object from the keys, interpreting ';' to delimit cycle number.

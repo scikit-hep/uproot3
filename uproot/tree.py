@@ -247,13 +247,13 @@ class TTree(uproot.core.TNamed,
                     if name in allbranches:
                         branch = allbranches[name]
                         if hasattr(branch, "dtype"):
-                            yield branch, dtype
+                            yield branch, branch.dtype
                         else:
                             raise ValueError("cannot produce an array from branch {0}".format(repr(name)))
                     else:
                         raise ValueError("cannot find branch {0}".format(repr(name)))
 
-    def iterator(self, entries, branchdtypes=lambda branch: branch.dtype, executor=None, outputtype=dict, reportentries=False):
+    def iterator(self, entries, branchdtypes=lambda branch: getattr(branch, "dtype", None), executor=None, outputtype=dict, reportentries=False):
         """Iterates over a fixed number of entries at a time.
 
         Instead of loading all entries from a tree with `tree.arrays()`, load a manageable number that will fit in memory at once and apply a continuous process to it. Example use:
@@ -344,7 +344,7 @@ class TTree(uproot.core.TNamed,
             else:
                 yield out
 
-    def arrays(self, branchdtypes=lambda branch: branch.dtype, executor=None, outputtype=dict, block=True):
+    def arrays(self, branchdtypes=lambda branch: getattr(branch, "dtype", None), executor=None, outputtype=dict, block=True):
         """Extracts whole branches into Numpy arrays.
 
         Individual branches from TTrees are typically small enough to fit into memory. If this is not your case, consider `tree.iterator(entries)` to load a given number of entries at a time.

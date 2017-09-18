@@ -14,8 +14,8 @@
 | `std::vector`, `std::string` (???)                                        | **(unsure)** |
 | branch with "speed bumps"                                                 | &#x2713; |
 | all compression algorithms (none, zlib, lzma, lz4; ignoring "old")        | &#x2713; |
-| `TTree` versions from 16 (2009) to 19 (present)                           | &#x2713; |
-| nested directories                                                        | **no!** |
+| files from 2009 (`TTree` version 16) to present (`TTree` version 19)      | &#x2713; |
+| nested directories, cycle numbers, '/' and ';' notation                   | &#x2713; |
 | arrays interface                                                          | &#x2713; |
 | iterator interface                                                        | &#x2713; |
 | selection by list of branch names                                         | **no!** |
