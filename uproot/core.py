@@ -41,6 +41,9 @@ class TObjArray(uproot.rootio.Deserialized):
 
         self._checkbytecount(walker.index - start, bcnt)
 
+    def __del__(self):
+        del self.items
+
     def __repr__(self):
         return "<TObjArray len={0} at 0x{1:012x}>".format(len(self.items), id(self))
 

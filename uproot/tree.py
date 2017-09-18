@@ -135,6 +135,9 @@ class TTree(uproot.core.TNamed,
 
     Counter = namedtuple("Counter", ["branch", "leaf"])
 
+    def __del__(self):
+        del self.branches
+
     def __repr__(self):
         return "<TTree {0} len={1} at 0x{2:012x}>".format(repr(self.name), self.numentries, id(self))
 
@@ -293,8 +296,9 @@ class TTree(uproot.core.TNamed,
             if entries < 1:
                 raise ValueError("number of entries per iteration must be at least 1")
             if sys.version_info[0] <= 2:
-                range = xrange
-            ranges = ((x, x + entries) for x in range(0, self.numentries, entries))
+                ranges = ((x, x + entries) for x in xrange(0, self.numentries, entries))
+            else:
+                ranges = ((x, x + entries) for x in range(0, self.numentries, entries))
         else:
             ranges = entries
 
@@ -447,6 +451,22 @@ class TTree(uproot.core.TNamed,
 
 uproot.rootio.Deserialized.classes[b"TTree"] = TTree
 
+## TODO: this is a good candidate for acceleration with Numba...
+if sys.version_info[0] <= 2:
+    def _fixspeedbumps(array, outdata, offs):
+        outi = 0
+        for i in xrange(len(offs) - 1):
+            length = offs[i + 1] - offs[i] - 1
+            outdata[outi:outi + length] = array[offs[i] + 1:offs[i + 1]]
+            outi += length
+else:
+    def _fixspeedbumps(array, outdata, offs):
+        outi = 0
+        for i in range(len(offs) - 1):
+            length = offs[i + 1] - offs[i] - 1
+            outdata[outi:outi + length] = array[offs[i] + 1:offs[i + 1]]
+            outi += length
+
 class TBranch(uproot.core.TNamed,
               uproot.core.TAttFill):
     """Represents a TBranch, a single column of data in a TTree.
@@ -511,7 +531,11 @@ class TBranch(uproot.core.TNamed,
 
         self.itemdims = tuple(int(x) for x in re.findall(self._itemdimpattern, self.title))
 
-    _itemdimpattern = re.compile("\[([1-9][0-9]*)\]")
+    _itemdimpattern = re.compile(b"\[([1-9][0-9]*)\]")
+
+    def __del__(self):
+        del self.branches
+        del self._filewalker
 
     @property
     def numbaskets(self):
@@ -624,15 +648,8 @@ class TBranch(uproot.core.TNamed,
             offs = array[self._basketborders[i] + 4:].view(">i4") - self._basketkeylens[i]
             offs[-1] = self._basketborders[i]
 
-            ## TODO: this loop here is a good candidate for acceleration with Numba...
             outdata = numpy.empty(self._basketborders[i] - (len(offs) - 1), dtype=numpy.uint8)
-            if sys.version_info[0] <= 2:
-                range = xrange
-            outi = 0
-            for i in range(len(offs) - 1):
-                length = offs[i + 1] - offs[i] - 1
-                outdata[outi:outi + length] = array[offs[i] + 1:offs[i + 1]]
-                outi += length
+            _fixspeedbumps(array, outdata, offs)
 
             if offsets:
                 return outdata.view(self.dtype), None

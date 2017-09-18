@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
 import os.path
 
 from setuptools import find_packages
@@ -42,7 +43,7 @@ It is important to note that uproot is *not* maintained by the `ROOT project tea
       license = "BSD 3-clause",
       test_suite = "tests",
       install_requires = ["numpy"],
-      tests_require = ["backports.lzma", "lz4", "futures"],
+      tests_require = ["lz4", "backports.lzma", "futures"] if sys.version_info[0] <= 2 else ["lz4"],
       classifiers = [
           "Development Status :: 4 - Beta",
           "Intended Audience :: Developers",

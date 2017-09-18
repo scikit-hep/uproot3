@@ -41,6 +41,10 @@ class LocalFileWalker(uproot._walker.walker.Walker):
         if origin is not None:
             self.origin = origin
 
+    def __del__(self):
+        del self.file
+        del self.refs
+
     def _evaluate(self, parallel=False):
         self._holdfile = self.file
         if parallel:

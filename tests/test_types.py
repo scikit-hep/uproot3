@@ -39,7 +39,7 @@ class TestTypes(unittest.TestCase):
         self.assertTrue(self.check(tree.array("Float32"), numpy.array(hundred, dtype=">f4")))
         self.assertTrue(self.check(tree.array("Float64"), numpy.array(hundred, dtype=">f8")))
 
-        hundredstrings = ["evt-{0:03d}".format(x) for x in range(100)]
+        hundredstrings = ["evt-{0:03d}".format(x).encode("ascii") for x in range(100)]
         self.assertTrue(self.check(tree.array("Str"), numpy.array(hundredstrings, dtype=object)))
 
         hundredarrays = [[x] * 10 for x in range(100)]
@@ -65,7 +65,7 @@ class TestTypes(unittest.TestCase):
     def test_splitobject(self):
         tree = uproot.open("tests/small-evnt-tree-fullsplit.root")["tree"]
         
-        self.assertTrue(self.check(tree.array("Beg"), numpy.array(["beg-{0:03d}".format(x) for x in range(100)], dtype=object)))
+        self.assertTrue(self.check(tree.array("Beg"), numpy.array(["beg-{0:03d}".format(x).encode("ascii") for x in range(100)], dtype=object)))
 
         hundred = list(range(100))
         self.assertTrue(self.check(tree.array("I16"), numpy.array(hundred, dtype=">i2")))
@@ -77,7 +77,7 @@ class TestTypes(unittest.TestCase):
         self.assertTrue(self.check(tree.array("F32"), numpy.array(hundred, dtype=">f4")))
         self.assertTrue(self.check(tree.array("F64"), numpy.array(hundred, dtype=">f8")))
 
-        self.assertTrue(self.check(tree.array("Str"), numpy.array(["evt-{0:03d}".format(x) for x in range(100)], dtype=object)))
+        self.assertTrue(self.check(tree.array("Str"), numpy.array(["evt-{0:03d}".format(x).encode("ascii") for x in range(100)], dtype=object)))
 
         self.assertTrue(self.check(tree.array("P3.Px"), numpy.array(list(range(-1, 99)), dtype=">i4")))
         self.assertTrue(self.check(tree.array("P3.Py"), numpy.array(list(range(0, 100)), dtype=">f8")))
@@ -106,4 +106,4 @@ class TestTypes(unittest.TestCase):
         self.assertTrue(self.check(tree.array("SliceF32"), numpy.array(flattened, dtype=">f4")))
         self.assertTrue(self.check(tree.array("SliceF64"), numpy.array(flattened, dtype=">f8")))
 
-        self.assertTrue(self.check(tree.array("End"), numpy.array(["end-{0:03d}".format(x) for x in range(100)], dtype=object)))
+        self.assertTrue(self.check(tree.array("End"), numpy.array(["end-{0:03d}".format(x).encode("ascii") for x in range(100)], dtype=object)))

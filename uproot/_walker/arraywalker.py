@@ -38,6 +38,10 @@ class ArrayWalker(uproot._walker.walker.Walker):
         if origin is not None:
             self.origin = origin
 
+    def __del__(self):
+        del self.data
+        del self.refs
+
     def copy(self, index=None, origin=None, parallel=False):
         if index is None:
             index = self.index

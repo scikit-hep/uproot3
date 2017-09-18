@@ -53,6 +53,13 @@ class LazyArrayWalker(uproot._walker.arraywalker.ArrayWalker):
             del self.origin
         self._evaluated = False
 
+    def __del__(self):
+        if hasattr(self, "data"):
+            del self.data
+        if hasattr(self, "refs"):
+            del self.refs
+        del self._original_walker
+
     def copy(self, index=None, origin=None, parallel=False):
         if not self._evaluated: self._evaluate()
         return super(LazyArrayWalker, self).copy(index, origin)

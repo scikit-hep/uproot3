@@ -46,6 +46,10 @@ class XRootDWalker(uproot._walker.walker.Walker):
         if origin is not None:
             self.origin = origin
 
+    def __del__(self):
+        del self.file
+        del self.refs
+
     def copy(self, index=None, origin=None):
         if index is None:
             index = self.index

@@ -119,6 +119,9 @@ class TFile(object):
 
         self.dir = TDirectory(walker.path, walker.copy(begin + nbytesname), self.compression)
 
+    def __del__(self):
+        del self.dir
+
     def __repr__(self):
         return "<TFile {0} at 0x{1:012x}>".format(repr(self.dir.name), id(self))
 
@@ -170,6 +173,9 @@ class TDirectory(object):
 
         self.keys = TKeys(walker.copy(seekkeys), compression)
 
+    def __del__(self):
+        del self.keys
+
     def __repr__(self):
         return "<TDirectory {0} at 0x{1:012x}>".format(repr(self.name), id(self))
 
@@ -218,6 +224,9 @@ class TKeys(object):
         nkeys = walker.readfield("!i")
 
         self.keys = [TKey(walker, compression) for i in range(nkeys)]
+
+    def __del__(self):
+        del self.keys
 
     def __repr__(self):
         return "<TKeys len={0} at 0x{1:012x}>".format(len(self.keys), id(self))
@@ -287,6 +296,10 @@ class TKey(object):
         # otherwise, it's uncompressed
         else:
             self._walker = walker.copy(seekkey + self._keylen, seekkey)
+
+    def __del__(self):
+        del self._filewalker
+        del self._walker
 
     def __repr__(self):
         return "<TKey {0} at 0x{1:012x}>".format(repr(self.name + b";" + repr(self.cycle).encode("ascii")), id(self))
