@@ -214,7 +214,7 @@ uproot scales to about 30 threads, which is more cores than many machines have. 
 |:----------|:-----------|:------:|
 | single-leaf numeric branches (boolean, signed/unsigned integers, floating point) | corresponding Numpy arrays with big-endian `dtype`; if native endian arrays are important to you (e.g. for Numba), cast on the fly by passing an explicit `dtype` | done |
 | single-leaf string branches like `LeafC` or `TString` | Numpy object array of Python strings (`bytes` objects); if performance is important and you can handle a `uint8` array of raw bytes, pass `uint8` as the `dtype` | done |
-| multi-leaf branches (a.k.a. "leaf list") | Numpy recarrays | **TODO!** |
+| multi-leaf branches (a.k.a. "leaflist") | Numpy recarrays | **TODO!** |
 | fixed-length array of items per entry, declared as `myleaf[10]` | Numpy array with a multidimensional `shape` | done |
 | variable-length array of items per entry, declared as `myleaf[N]` | Numpy array with no boundaries between entries; use the corresponding counter (`N` in this example) to distinguish events | done |
 | fully-split C++ classes, stored in the TTree as one branch per class member | one array per class member, following the rules above | done |
