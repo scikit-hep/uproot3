@@ -218,9 +218,9 @@ uproot scales to about 30 threads, which is more cores than many machines have. 
 | fixed-length array of items per entry, declared as `myleaf[10]` | Numpy array with a multidimensional `shape` | done |
 | variable-length array of items per entry, declared as `myleaf[N]` | Numpy array with no boundaries between entries; use the corresponding counter (`N` in this example) to distinguish events | done |
 | fully-split C++ class objects, stored in the TTree as one branch per class member | one array per class member, following the rules above | done |
-| `TClonesArray` of several fully-split C++ class objects per entry | same as above, use counters to determine how many objects per event | done |
-| unsplit class objects | much too complicated and not useful to view as Numpy | will not do |
-| `std::vector` and `std::string` | complicated encoding, would be slow to navigate in Python, yet widespread in analysis | is it worthwhile? |
+| `TClonesArray` of several fully-split C++ class objects per entry | same as above; use counters (as above) to determine how many objects per event | done |
+| _unsplit_ class objects | much too complicated and not useful to view as Numpy; always save your ROOT files with maximum split level | will not do |
+| `std::vector` and `std::string` | complicated encoding, would be slow to navigate in Python, yet frequently used in analysis | worthwhile? |
 
 If you need to work with split objects or variable-length arrays and don't want to deal with the flattened array format, [consider using PLUR](https://github.com/diana-hep/plur) to perform calculations on these arrays as though they were objects.
 
