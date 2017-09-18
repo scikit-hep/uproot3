@@ -222,7 +222,7 @@ uproot scales to about 30 threads, which is more cores than many machines have. 
 | _unsplit_ class objects | much too complicated and not useful to view as Numpy; always save your ROOT files with maximum split level | will not do |
 | `std::vector` and `std::string` | complicated encoding, would be slow to navigate in Python, yet frequently used in analysis | worthwhile? |
 
-If you need to work with split objects or variable-length arrays and don't want to deal with the flattened array format, [consider using PLUR](https://github.com/diana-hep/plur) to perform calculations on these arrays as though they were objects.
+If you need to work with split objects or variable-length arrays and don't want to deal with the flattened array format and counters, [consider using PLUR](https://github.com/diana-hep/plur), which allows you to write code as though they were Python objects.
 
 ## Planned features
 
