@@ -3,7 +3,7 @@
 #include "TBranch.h"
 #include "stdio.h"
 
-void makesample(const char* version, const char* compression) {
+void sample4version(const char* version, const char* compression) {
   char filename[200];
   TFile *f;
 
@@ -23,6 +23,12 @@ void makesample(const char* version, const char* compression) {
     sprintf(filename, "sample-%s-lzma.root", version);
     f = new TFile(filename, "RECREATE");
     f->SetCompressionAlgorithm(2);
+    f->SetCompressionLevel(4);
+  }
+  else if (strcmp(compression, "lz4") == 0) {
+    sprintf(filename, "sample-%s-lz4.root", version);
+    f = new TFile(filename, "RECREATE");
+    f->SetCompressionAlgorithm(4);
     f->SetCompressionLevel(4);
   }
   else
@@ -54,11 +60,11 @@ void makesample(const char* version, const char* compression) {
   t->Branch("Au1", Au1, "Au1[n]/b", 50);
 
   Short_t i2;
-  t->Branch("i2", &i2, "i2/s", 50);
+  t->Branch("i2", &i2, "i2/S", 50);
   Short_t ai2[3];
-  t->Branch("ai2", ai2, "ai2[3]/s", 50);
+  t->Branch("ai2", ai2, "ai2[3]/S", 50);
   Short_t Ai2[10];
-  t->Branch("Ai2", Ai2, "Ai2[n]/s", 50);
+  t->Branch("Ai2", Ai2, "Ai2[n]/S", 50);
 
   UShort_t u2;
   t->Branch("u2", &u2, "u2/s", 50);
@@ -68,11 +74,11 @@ void makesample(const char* version, const char* compression) {
   t->Branch("Au2", Au2, "Au2[n]/s", 50);
 
   Int_t i4;
-  t->Branch("i4", &i4, "i4/i", 50);
+  t->Branch("i4", &i4, "i4/I", 50);
   Int_t ai4[3];
-  t->Branch("ai4", ai4, "ai4[3]/i", 50);
+  t->Branch("ai4", ai4, "ai4[3]/I", 50);
   Int_t Ai4[10];
-  t->Branch("Ai4", Ai4, "Ai4[n]/i", 50);
+  t->Branch("Ai4", Ai4, "Ai4[n]/I", 50);
 
   UInt_t u4;
   t->Branch("u4", &u4, "u4/i", 50);
@@ -82,11 +88,11 @@ void makesample(const char* version, const char* compression) {
   t->Branch("Au4", Au4, "Au4[n]/i", 50);
 
   Long64_t i8;
-  t->Branch("i8", &i8, "i8/l", 50);
+  t->Branch("i8", &i8, "i8/L", 50);
   Long64_t ai8[3];
-  t->Branch("ai8", ai8, "ai8[3]/l", 50);
+  t->Branch("ai8", ai8, "ai8[3]/L", 50);
   Long64_t Ai8[10];
-  t->Branch("Ai8", Ai8, "Ai8[n]/l", 50);
+  t->Branch("Ai8", Ai8, "Ai8[n]/L", 50);
 
   ULong64_t u8;
   t->Branch("u8", &u8, "u8/l", 50);

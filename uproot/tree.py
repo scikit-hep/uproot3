@@ -75,10 +75,8 @@ class TTree(uproot.core.TNamed,
 
         if vers < 16:
             raise NotImplementedError("TTree too old")
-        elif vers == 16:
-            walker.skip(8)
 
-        if vers >= 19:
+        if vers >= 16:
             walker.skip("!q")  # fSavedBytes
 
         if vers >= 18:
@@ -86,7 +84,7 @@ class TTree(uproot.core.TNamed,
 
         walker.skip("!diii")   # fWeight, fTimerInterval, fScanField, fUpdate
 
-        if vers >= 18:
+        if vers >= 17:
             walker.skip("!i")  # fDefaultEntryOffsetLen
 
         if vers >= 19:
