@@ -297,33 +297,3 @@ def iterator(partitionset, memmap=True, executor=None, outputtype=dict):
                 yield output(outarrays)
 
 
-
-    # def output(tree, entries):
-    #     arraylists = dict((x, []) for x in partitionset.branchdtypes)
-    #     for arrays in tree.iterator(entries, partitionset.branchdtypes, executor=executor, outputtype=OrderedDict):
-    #         for name, array in arrays.items():
-    #             arraylists[name].append(array)
-
-    #     outarrays = {}
-    #     for name, arraylist in arraylists.items():
-    #         if len(arraylist) == 0:
-    #             outarrays[name] = numpy.array([], dtype=partitionset.branchdtypes[name])
-    #         elif len(arraylist) == 1:
-    #             outarrays[name] = arraylist[0]
-    #         else:
-    #             outarrays[name] = numpy.concatenate(arraylist)
-
-
-    # oldpath = None
-    # for partition in partitionset.partitions:
-    #     for filerange in partition.ranges:
-    #         if oldpath != filerange.path:
-    #             if oldpath is not None:
-    #                 yield output(tree, entries)
-    #             tree = uproot.open(filerange.path, memmap=memmap)[partitionset.treepath]
-    #             entries = []
-    #         entries.append((filerange.entrystart, filerange.entryend))
-    #         oldpath = filerange.path
-
-    # if oldpath is not None:
-    #     yield output(tree, entries)
