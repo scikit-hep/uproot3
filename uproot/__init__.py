@@ -156,7 +156,7 @@ def iterator(entries, path, treepath, branchdtypes=lambda branch: getattr(branch
     outerend = 0
 
     for path in paths:
-        tree = open(path, memmap)[treepath]
+        tree = open(path, memmap=memmap)[treepath]
 
         toget = list(uproot.tree.TTree._normalizeselection(branchdtypes, tree.allbranches))
 

@@ -493,6 +493,7 @@ class TBranch(uproot.core.TNamed,
         * `branch.basketbytes(i)` is the number of bytes used by data in basket i.
         * `branch.basketitems(i)` is the number of items, such as integers, floating point values, or the number of characters in the strings in basket i.
         * `branch.basketentries(i)` is the number of entries in basket i.
+        * `branch.basketstart(i)` is the starting entry for basket i.
 
     `branch[name]` is a synonym for `branch.branch(name)`.
     """
@@ -582,6 +583,11 @@ class TBranch(uproot.core.TNamed,
             return self.numentries - self._basketEntry[i]
         else:
             return self._basketEntry[i + 1] - self._basketEntry[i]
+
+    def basketstart(self, i):
+        if not 0 <= i < len(self._basketEntry):
+            raise IndexError("index {0} out of range for branch with {1} baskets".format(i, len(self._basketEntry)))
+        return self._basketEntry[i]
 
     @property
     def allbranches(self):
