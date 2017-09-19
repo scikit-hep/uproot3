@@ -660,9 +660,15 @@ class TBranch(uproot.core.TNamed,
             border = last - keylen
 
             self._basketborders.append(border)
-            self._basketentries.append((objlen - border) // 4 - 2)
+            if objlen != border:
+                self._basketentries.append((objlen - border) // 4 - 2)
+            else:
+                assert self.dtype != numpy.dtype(object)  # strings must always have entry markers
+                entrysize = reduce(lambda x, y: x*y, self.itemdims, self.dtype.itemsize)
+                self._basketentries.append(border // entrysize)
+
             if self._speedbumps:
-                self._basketlengths.append(border - self._basketentries[-1])
+                self._basketlengths.append(border - (objlen - border) // 4 - 2)
             else:
                 self._basketlengths.append(border)
 
