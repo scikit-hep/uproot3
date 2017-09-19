@@ -240,18 +240,44 @@ def iterator(partitionset, memmap=True, executor=None, outputtype=dict):
     if outputtype == namedtuple:
         outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, dtype, cache in partitionset.branchdtypes])
 
-    def output(arrays):
-        if outputtype == dict or outputtype == OrderedDict:
-            return arrays
-        elif issubclass(outputtype, dict):
-            return outputtype(arrays.items())
-        elif outputtype == tuple or outputtype == list:
-            return outputtype(arrays.values())
-        else:
-            return outputtype(*arrays.values())
-
-    oldpath = None
     treedata = {}
+    def complete(nextpartition):
+        for filerange in partitionset.partitions[nextpartition].ranges:
+            if filerange.path not in treedata or not any(entrystart == filerange.entrystart and entryend == filerange.entryend for entrystart, entryend, arrays in treedata[filerange.path]):
+                return False
+        return True
+
+    def output(nextpartition):
+        arraylists = dict((x, []) for x in partitionset.branchdtypes)
+        for filerange in partitionset.partitions[nextpartition].ranges:
+            for used, (entrystart, entryend, arrays) in enumerate(treedata[filerange.path]):
+                if filerange.entrystart == entrystart and filerange.entryend == entryend:
+                    for name, array in arrays.items():
+                        arraylists[name].append(array)
+                    break
+            treedata[filerange.path] = treedata[filerange.path][used + 1:]
+            if len(treedata[filerange.path]) == 0:
+                del treedata[filerange.path]
+
+        outarrays = {}
+        for name, arraylist in arraylists.items():
+            if len(arraylist) == 0:
+                outarrays[name] = numpy.array([], dtype=partitionset.branchdtypes[name])
+            elif len(arraylist) == 1:
+                outarrays[name] = arraylist[0]
+            else:
+                outarrays[name] = numpy.concatenate(arraylist)
+
+        if outputtype == dict or outputtype == OrderedDict:
+            return outarrays
+        elif issubclass(outputtype, dict):
+            return outputtype(outarrays.items())
+        elif outputtype == tuple or outputtype == list:
+            return outputtype(outarrays.values())
+        else:
+            return outputtype(*outarrays.values())
+        
+    oldpath = None
     nextpartition = 0
     for partition in partitionset.partitions:
         for filerange in partition.ranges:
@@ -263,37 +289,19 @@ def iterator(partitionset, memmap=True, executor=None, outputtype=dict):
             entries.append((filerange.entrystart, filerange.entryend))
             oldpath = filerange.path
 
-        while True:
-            complete = True
-            for filerange in partitionset.partitions[nextpartition].ranges:
-                if filerange.path not in treedata or not any(entrystart == filerange.entrystart and entryend == filerange.entryend for entrystart, entryend, arrays in treedata[filerange.path]):
-                    complete = False
-                    break
-
-            if not complete:
+        while nextpartition < len(partitionset.partitions):
+            if not complete(nextpartition):
                 break
             else:
-                arraylists = dict((x, []) for x in partitionset.branchdtypes)
-                for filerange in partitionset.partitions[nextpartition].ranges:
-                    for used, (entrystart, entryend, arrays) in enumerate(treedata[filerange.path]):
-                        if filerange.entrystart == entrystart and filerange.entryend == entryend:
-                            for name, array in arrays.items():
-                                arraylists[name].append(array)
-                            break
-                    treedata[filerange.path] = treedata[filerange.path][used + 1:]
-                    if len(treedata[filerange.path]) == 0:
-                        del treedata[filerange.path]
-
-                outarrays = {}
-                for name, arraylist in arraylists.items():
-                    if len(arraylist) == 0:
-                        outarrays[name] = numpy.array([], dtype=partitionset.branchdtypes[name])
-                    elif len(arraylist) == 1:
-                        outarrays[name] = arraylist[0]
-                    else:
-                        outarrays[name] = numpy.concatenate(arraylist)
-
+                yield output(nextpartition)
                 nextpartition += 1
-                yield output(outarrays)
 
+    if oldpath is not None:
+        treedata[oldpath] = list(tree.iterator(entries, partitionset.branchdtypes, executor=executor, outputtype=OrderedDict, reportentries=True))
 
+    while nextpartition < len(partitionset.partitions):
+        if not complete(nextpartition):
+            break
+        else:
+            yield output(nextpartition)
+            nextpartition += 1
