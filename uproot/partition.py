@@ -16,11 +16,14 @@
 
 import sys
 import glob
+import json
 import os.path
+from collections import namedtuple
 try:
     from urlparse import urlparse
 except ImportError:
     from urllib.parse import urlparse
+
 import numpy
 
 import uproot
@@ -42,7 +45,7 @@ class BasketData(object):
     def __repr__(self):
         return "BasketData({0}, {1}, {2}, {3}, {4} {5})".format(repr(self.path), repr(self.branchname), self.dtype, self.entrystart, self.entryend, self.numbytes)
 
-class FileRange(object):
+class Range(object):
     def __init__(self, path, entrystart, entryend):
         self.path = path
         self.entrystart = entrystart
@@ -53,123 +56,222 @@ class FileRange(object):
         return self.entryend - self.entrystart
 
     def __repr__(self):
-        return "FileRange({0}, {1}, {2})".format(repr(self.path), self.entrystart, self.entryend)
+        return "Range({0}, {1}, {2})".format(repr(self.path), self.entrystart, self.entryend)
+
+    @property
+    def tuple(self):
+        return self.path, self.entrystart, self.entryend
+
+    def toJson(self):
+        return {"path": self.path, "entrystart": self.entrystart, "entryend": self.entryend}
+
+    @staticmethod
+    def fromJson(obj):
+        return Range(obj["path"], obj["entrystart"], obj["entryend"])
 
 class Partition(object):
-    def __init__(self, *fileranges):
-        self.fileranges = fileranges
+    def __init__(self, i, *ranges):
+        self.i = i
+        self.ranges = ranges
 
     @property
     def numentries(self):
-        return sum(x.numentries for x in self.fileranges)
+        return sum(x.numentries for x in self.ranges)
 
     def __repr__(self):
-        return "Partition({0})".format(", ".join(map(repr, self.fileranges)))
+        return "Partition({0}, {1})".format(self.i, ", ".join(map(repr, self.ranges)))
 
-def partition(path, treepath, branchdtypes=lambda branch: getattr(branch, "dtype", None), by=lambda choices: min(choices, key=lambda x: x.numentries), under=lambda baskets: sum(x.numbytes for x in baskets) < 10*1024**2, memmap=True):
-    if hasattr(path, "decode"):
-        path = path.decode("ascii")
+    @property
+    def tuples(self):
+        return (x.tuple for x in self.ranges)
 
-    def explode(x):
-        parsed = urlparse(x)
-        if parsed.scheme == "file" or parsed.scheme == "":
-            return sorted(glob.glob(os.path.expanduser(parsed.netloc + parsed.path)))
-        else:
-            return [x]
+    def toJson(self):
+        return {"partition": self.i, "ranges": [x.toJson() for x in self.ranges]}
 
-    if (sys.version_info[0] <= 2 and isinstance(path, unicode)) or \
-       (sys.version_info[0] > 2 and isinstance(path, str)):
-        paths = explode(path)
-    else:
-        paths = [y for x in path for y in explode(x)]
+    @staticmethod
+    def fromJson(obj):
+        return Partition(obj["i"], *[Range.fromJson(x) for x in obj["partition"]])
 
-    toget = {}
-    trees = {}
-    def tree(i):
-        if i not in trees:
-            trees[i] = uproot.open(paths[i], memmap=memmap)[treepath]
+class PartitionSet(object):
+    def __init__(self, treepath, branchdtypes, *partitions):
+        if not isinstance(branchdtypes, dict):
+            raise TypeError("branchdtypes must be a dict for PartitionSet constructor")
 
-            newtoget = dict((b.name, d) for b, d in uproot.tree.TTree._normalizeselection(branchdtypes, trees[i].allbranches))
-            if len(toget) != 0:
-                for key in set(toget.keys()).union(set(newtoget.keys())):
-                    if key not in newtoget:
-                        raise ValueError("branch {0} cannot be found in {1}, but it was in {2}".format(repr(key), repr(paths[i]), repr(paths[i - 1])))
-                    if key not in toget:
-                        del newtoget[key]
-                    elif newtoget[key] != newtoget[key]:
-                        raise ValueError("branch {0} is a {1} in {2}, but it was a {3} in {4}".format(repr(key), newtoget[key], repr(paths[i]), toget[key], repr(paths[i - 1])))
-            if len(toget) == 0:
-                toget.update(newtoget)
+        self.treepath = treepath
+        self.branchdtypes = branchdtypes
+        self.partitions = partitions
 
-        return trees[i]
+    def __repr__(self):
+        return "<PartitionSet len={0}>".format(len(self.partitions))
 
-    tree(0)
-    lastpartition = None
-    while lastpartition is None or lastpartition.fileranges[-1].path != paths[-1] or lastpartition.fileranges[-1].entryend < tree(len(paths) - 1).numentries:
-        possiblenext = []
-        for branchname, dtype in toget.items():
-            # start this branch where the global partitioning process left off
-            if lastpartition is None:
-                pathi = 0
-                basketi = 0
-                entryi = 0
-                branch = tree(pathi)[branchname]
+    @property
+    def numentries(self):
+        return sum(x.numentries for x in self.partitions)
+
+    def toJson(self):
+        return {"treepath": self.treepath,
+                "branchdtypes": dict((b, str(d)) for b, d in branchdtypes.items()),
+                "partitions": [p.toJson() for p in self.partitions]}
+
+    @staticmethod
+    def fromJson(obj):
+        return PartitionSet(obj["treepath"],
+                            dict((b, numpy.dtype(d)) for b, d in obj["branchdtypes"]),
+                            [Partition.fromJson(p) for p in obj["partitions"]])
+
+    def toJsonString(self):
+        return json.dumps(self.toJson())
+
+    @staticmethod
+    def fromJsonString(obj):
+        return PartitionSet.fromJson(json.loads(obj))
+
+    @staticmethod
+    def fill(path, treepath, branchdtypes=lambda branch: getattr(branch, "dtype", None), by=lambda choices: min(choices, key=lambda x: x.numentries), under=lambda baskets: sum(x.numbytes for x in baskets) < 10*1024**2, memmap=True, debug=False):
+        if hasattr(path, "decode"):
+            path = path.decode("ascii")
+
+        def explode(x):
+            parsed = urlparse(x)
+            if parsed.scheme == "file" or parsed.scheme == "":
+                return sorted(glob.glob(os.path.expanduser(parsed.netloc + parsed.path)))
             else:
-                pathi = lastpartition.fileranges[-1]._pathi
-                entryi = lastpartition.fileranges[-1].entryend
-                branch = tree(pathi)[branchname]
-                for basketi in range(branch.numbaskets):
-                    if basketi + 1 == branch.numbaskets or branch.basketstart(basketi + 1) > entryi:
-                        break
+                return [x]
 
-            # accumulate until the constraint is satisfied
-            basketdata = []
-            while True:
-                if basketi >= branch.numbaskets:
-                    pathi += 1
+        if (sys.version_info[0] <= 2 and isinstance(path, unicode)) or \
+           (sys.version_info[0] > 2 and isinstance(path, str)):
+            paths = explode(path)
+        else:
+            paths = [y for x in path for y in explode(x)]
+
+        toget = {}
+        trees = {}
+        def tree(i):
+            if i not in trees:
+                trees[i] = uproot.open(paths[i], memmap=memmap)[treepath]
+
+                newtoget = dict((b.name, d) for b, d in uproot.tree.TTree._normalizeselection(branchdtypes, trees[i].allbranches))
+                if len(toget) != 0:
+                    for key in set(toget.keys()).union(set(newtoget.keys())):
+                        if key not in newtoget:
+                            raise ValueError("branch {0} cannot be found in {1}, but it was in {2}".format(repr(key), repr(paths[i]), repr(paths[i - 1])))
+                        if key not in toget:
+                            del newtoget[key]
+                        elif newtoget[key] != newtoget[key]:
+                            raise ValueError("branch {0} is a {1} in {2}, but it was a {3} in {4}".format(repr(key), newtoget[key], repr(paths[i]), toget[key], repr(paths[i - 1])))
+                if len(toget) == 0:
+                    toget.update(newtoget)
+
+            return trees[i]
+
+        tree(0)
+        partitions = []
+        partitioni = 0
+        while len(partitions) == 0 or partitions[-1].ranges[-1].path != paths[-1] or partitions[-1].ranges[-1].entryend < tree(len(paths) - 1).numentries:
+            possiblenext = []
+            for branchname, dtype in toget.items():
+                # start this branch where the global partitioning process left off
+                if len(partitions) == 0:
+                    pathi = 0
                     basketi = 0
-                    if pathi >= len(paths):
+                    entryi = 0
+                    branch = tree(pathi)[branchname]
+                else:
+                    pathi = partitions[-1].ranges[-1]._pathi
+                    entryi = partitions[-1].ranges[-1].entryend
+                    branch = tree(pathi)[branchname]
+                    for basketi in range(branch.numbaskets):
+                        if basketi + 1 == branch.numbaskets or branch.basketstart(basketi + 1) > entryi:
+                            break
+
+                # accumulate until the constraint is satisfied
+                basketdata = []
+                while True:
+                    if basketi >= branch.numbaskets:
+                        pathi += 1
+                        basketi = 0
+                        if pathi >= len(paths):
+                            break
+                        else:
+                            basket = tree(pathi)[branchname]
+
+                    basketdata.append(BasketData(paths[pathi],
+                                                 branchname,
+                                                 dtype,
+                                                 branch.basketstart(basketi),
+                                                 branch.basketstart(basketi) + branch.basketentries(basketi),
+                                                 branch.basketbytes(basketi)))
+                    basketdata[-1]._pathi = pathi
+
+                    if not under(basketdata):
+                        basketdata.pop()
                         break
                     else:
-                        basket = tree(pathi)[branchname]
+                        basketi += 1
 
-                basketdata.append(BasketData(paths[pathi],
-                                             branchname,
-                                             dtype,
-                                             branch.basketstart(basketi),
-                                             branch.basketstart(basketi) + branch.basketentries(basketi),
-                                             branch.basketbytes(basketi)))
-                basketdata[-1]._pathi = pathi
+                if len(basketdata) == 0:
+                    raise ValueError("branch {0} starting at entry {1} in file {2} cannot satisfy the constraint".format(repr(branchname), entryi, repr(paths[pathi])))
 
-                if not under(basketdata):
-                    basketdata.pop()
-                    break
-                else:
-                    basketi += 1
+                # create a possible partition
+                ranges = []
+                for basketdatum in basketdata:
+                    if len(ranges) == 0 or ranges[-1]._pathi != basketdatum._pathi:
+                        ranges.append(Range(basketdatum.path, basketdatum.entrystart, basketdatum.entryend))
+                        ranges[-1]._pathi = basketdatum._pathi
+                    else:
+                        ranges[-1].entryend = basketdatum.entryend
 
-            if len(basketdata) == 0:
-                raise ValueError("branch {0} starting at entry {1} in file {2} cannot satisfy the constraint".format(repr(branchname), entryi, repr(paths[pathi])))
+                if len(partitions) != 0:
+                    if partitions[-1].ranges[-1]._pathi == ranges[0]._pathi:
+                        ranges[0].entrystart = partitions[-1].ranges[-1].entryend
+                    else:
+                        ranges[0].entrystart = 0
 
-            # create a possible partition
-            fileranges = []
-            for basketdatum in basketdata:
-                if len(fileranges) == 0 or fileranges[-1]._pathi != basketdatum._pathi:
-                    fileranges.append(FileRange(basketdatum.path, basketdatum.entrystart, basketdatum.entryend))
-                    fileranges[-1]._pathi = basketdatum._pathi
-                else:
-                    fileranges[-1].entryend = basketdatum.entryend
+                possiblenext.append(Partition(partitioni, *ranges))
 
-            if lastpartition is not None:
-                if lastpartition.fileranges[-1]._pathi == fileranges[0]._pathi:
-                    fileranges[0].entrystart = lastpartition.fileranges[-1].entryend
-                else:
-                    fileranges[0].entrystart = 0
+            partitions.append(by(possiblenext))
+            if debug:
+                print(partitions[-1])
 
-            possiblenext.append(Partition(*fileranges))
+            for todrop in set(pathi for pathi in trees if pathi < partitions[-1].ranges[0]._pathi):
+                del trees[todrop]
 
-        lastpartition = by(possiblenext)
+            partitioni += 1
 
-        for todrop in set(pathi for pathi in trees if pathi < lastpartition.fileranges[0]._pathi):
-            del trees[todrop]
+        return PartitionSet(treepath, toget, *partitions)
 
-        yield lastpartition
+def iterator(partitionset, memmap=True, executor=None, outputtype=dict):
+    if outputtype == namedtuple:
+        outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, dtype, cache in partitionset.branchdtypes])
+
+    def output(arrays):
+        if outputtype == dict or outputtype == OrderedDict:
+            return arrays
+        elif issubclass(outputtype, dict):
+            return outputtype(arrays.items())
+        elif outputtype == tuple or outputtype == list:
+            return outputtype(arrays.values())
+        else:
+            return outputtype(*arrays.values())
+
+    for partition in partitionset.partitions:
+        allarrays = {}
+
+        for path, entrystart, entryend in partition.tuples:
+            tree = uproot.open(path, memmap=memmap)
+
+            arrays, = tree.iterator([(entrystart, entryend)], branchdtypes, executor=executor, outputtype=OrderedDict)
+            for name, array in arrays.items():
+                if name not in allarrays:
+                    allarrays[name] = []
+                allarrays[name].append(array)
+
+        for name, arraylist in allarrays.items():
+            if len(arraylist) == 0:
+                allarrays[name] = numpy.array([], dtype=partitionset.branchdtypes[name])
+            elif len(arraylist) == 1:
+                allarrays[name] = allarrays[name][0]
+            else:
+                allarrays[name] = numpy.concatenate(arraylist)
+
+        yield output(allarrays)

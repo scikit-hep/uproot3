@@ -80,8 +80,7 @@ def iterator(entries, path, treepath, branchdtypes=lambda branch: getattr(branch
         * `entries` *(required)*
 
           If a positive integer, the number of entries to yield in each step of iteration.
-          Otherwise, `entries` is interpreted as an iterable over `(entrystart, entryend)` ranges, which must be strictly increasing.
-
+          
         * `path` *(required)*
 
           If a single string, the name of the file, possibly a URL for XRootD.
@@ -120,6 +119,7 @@ def iterator(entries, path, treepath, branchdtypes=lambda branch: getattr(branch
     import glob
     import os.path
     from collections import namedtuple
+    from collections import OrderedDict
     try:
         from urlparse import urlparse
     except ImportError:
@@ -178,12 +178,14 @@ def iterator(entries, path, treepath, branchdtypes=lambda branch: getattr(branch
             outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, dtype in toget])
 
         def output(arrays, outerstart, outerend):
-            if outputtype == dict:
+            if outputtype == dict or outputtype == OrderedDict:
                 out = arrays
-            elif issubclass(outputtype, dict) or outputtype == tuple or outputtype == list:
+            elif issubclass(outputtype, dict):
                 out = outputtype(arrays.items())
+            elif outputtype == tuple or outputtype == list:
+                out = outputtype(arrays.values())
             else:
-                out = outputtype(*[array for name, array in arrays.items()])
+                out = outputtype(*arrays.values())
 
             if reportentries:
                 return outerstart, outerend, out
@@ -201,7 +203,7 @@ def iterator(entries, path, treepath, branchdtypes=lambda branch: getattr(branch
                     yield (x, x + entries)
                     x += entries
 
-        for entrystart, entryend, arrays in tree.iterator(ranges(), newtoget, executor=executor, outputtype=dict, reportentries=True):
+        for entrystart, entryend, arrays in tree.iterator(ranges(), newtoget, executor=executor, outputtype=OrderedDict, reportentries=True):
             thisentries = entryend - entrystart
 
             if holdover is not None:
