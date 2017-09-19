@@ -485,7 +485,13 @@ class TBranch(uproot.core.TNamed,
         * `branch.branchtypes` is a `{name: dtype}` dict of all the directly attached subbranch names.
         * `branch.allbranchtypes` is a `{name: dtype}` dict of all the subbranch names, recursively following subbranches' branches.
         * `branch.leaves` are all the TLeaf objects directly attached to this TBranch.
-        * `branch.numbaskets` is the number of baskets.
+        * `branch.numbaskets` is the number of baskets (does not read whole baskets).
+        * `branch.numbytes` is the number of bytes used by data in this branch (does not read whole baskets).
+        * `branch.numitems` is the number of items, such as integers, floating point values, or the number of characters in the strings in this branch (does not read whole baskets).
+        * `branch.numentries` is the number of entries in this branch; should match the number of entries in the tree, though calculated differently (does not read whole baskets).
+        * `branch.basketbytes(i)` is the number of bytes used by data in basket i (does not read whole baskets).
+        * `branch.basketitems(i)` is the number of items, such as integers, floating point values, or the number of characters in the strings in basket i (does not read whole baskets).
+        * `branch.basketentries(i)` is the number of entries in basket i (does not read whole baskets).
 
     `branch[name]` is a synonym for `branch.branch(name)`.
     """
@@ -538,6 +544,45 @@ class TBranch(uproot.core.TNamed,
     @property
     def numbaskets(self):
         return len(self._basketSeek)
+
+    @property
+    def numbytes(self):
+        if not hasattr(self, "basketwalkers"):
+            self._preparebaskets()
+        return sum(self._basketlengths)
+
+    @property
+    def numitems(self):
+        if self.dtype == numpy.dtype(object):
+            return self.numbytes - self.numentries
+        else:
+            return self.numbytes // self.dtype.itemsize
+
+    @property
+    def numentries(self):
+        if not hasattr(self, "basketwalkers"):
+            self._preparebaskets()
+        return sum(self._basketentries)
+
+    def basketbytes(self, i):
+        if not hasattr(self, "basketwalkers"):
+            self._preparebaskets()
+        if not 0 <= i < len(self._basketlengths):
+            raise IndexError("index {0} out of range for branch with {1} baskets".format(i, len(self._basketlengths)))
+        return self._basketlengths[i]
+
+    def basketitems(self, i):
+        if self.dtype == numpy.dtype(object):
+            return self.basketbytes(i) - self.basketentries(i)
+        else:
+            return self.basketbytes(i) // self.dtype.itemsize
+
+    def basketentries(self, i):
+        if not hasattr(self, "basketwalkers"):
+            self._preparebaskets()
+        if not 0 <= i < len(self._basketlengths):
+            raise IndexError("index {0} out of range for branch with {1} baskets".format(i, len(self._basketlengths)))
+        return self._basketentries[i]
 
     @property
     def allbranches(self):
@@ -593,6 +638,7 @@ class TBranch(uproot.core.TNamed,
         self._basketkeylens = []
         self._basketborders = []
         self._basketlengths = []
+        self._basketentries = []
         self._basketwalkers = []
         for seek in self._basketSeek:
             basketwalker = self._filewalker.copy(seek)
@@ -614,8 +660,9 @@ class TBranch(uproot.core.TNamed,
             border = last - keylen
 
             self._basketborders.append(border)
+            self._basketentries.append((objlen - border) // 4 - 2)
             if self._speedbumps:
-                self._basketlengths.append(border - (objlen - border - 8) // 4)
+                self._basketlengths.append(border - self._basketentries[-1])
             else:
                 self._basketlengths.append(border)
 
@@ -821,10 +868,20 @@ class TBranch(uproot.core.TNamed,
         if not hasattr(self, "basketwalkers"):
             self._preparebaskets()
 
+        if self.dtype == numpy.dtype(object):
+            selfitemsize = 1
+        else:
+            selfitemsize = self.dtype.itemsize
+
         if isinstance(dtype, numpy.ndarray):
             out = dtype.reshape(reduce(lambda x, y: x*y, dtype.shape, 1))
             dtype = out.dtype
-            expected = sum(self._basketlengths) // self.dtype.itemsize
+
+            if dtype == numpy.dtype(object):
+                expected = self.numentries
+            else:
+                expected = sum(self._basketlengths) // selfitemsize
+
             if out.shape != (expected,):
                 raise ValueError("provided array does not have the right number of elements: {0}".format(expected))
 
@@ -836,14 +893,17 @@ class TBranch(uproot.core.TNamed,
                 dtype = numpy.dtype(dtype)
 
             if dtype == numpy.dtype(object):
-                return self._adddimensions(self._strings(executor, block))
+                out = numpy.empty(self.numentries, dtype=numpy.dtype(object))
+            else:
+                out = numpy.empty(sum(self._basketlengths) // selfitemsize, dtype=dtype)
 
-            out = numpy.empty(sum(self._basketlengths) // self.dtype.itemsize, dtype=dtype)
+        if dtype == numpy.dtype(object):
+            return self._adddimensions(self._strings(out, executor, block))
 
         if executor is None:
             start = 0
             for i in range(len(self._basketwalkers)):
-                end = start + self._basketlengths[i] // self.dtype.itemsize
+                end = start + self._basketlengths[i] // selfitemsize
                 out[start:end] = self._basket(i, parallel=False)
                 start = end
 
@@ -853,7 +913,7 @@ class TBranch(uproot.core.TNamed,
                 return self._adddimensions(out), ()
 
         else:
-            ends = (numpy.cumsum(self._basketlengths) // self.dtype.itemsize).tolist()
+            ends = (numpy.cumsum(self._basketlengths) // selfitemsize).tolist()
             starts = [0] + ends[:-1]
 
             def fill(i):
@@ -873,9 +933,7 @@ class TBranch(uproot.core.TNamed,
             else:
                 return self._adddimensions(out), errors
 
-    def _strings(self, executor, block):
-        out = numpy.empty(sum((self._basketobjlens[i] - self._basketborders[i] - 8) // 4 for i in range(len(self._basketobjlens))), dtype=numpy.dtype(object))
-
+    def _strings(self, out, executor, block):
         if executor is None:
             for i in range(len(self._basketwalkers)):
                 data, offsets = self._basket(i, offsets=True, parallel=False)
