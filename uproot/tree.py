@@ -291,9 +291,6 @@ class TTree(uproot.core.TNamed,
 
               If `True`, yield `(entrystart, entryend, data)` instead of just `data`. Intended as a convenience or cross-check for analysis.
         """
-
-        print entries
-
         if isinstance(entries, int):
             if entries < 1:
                 raise ValueError("number of entries per iteration must be at least 1")
