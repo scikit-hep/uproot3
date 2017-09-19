@@ -28,3 +28,4 @@
 | parallel processing (not deterministic: hard to include in test suite)    | **no!** |
 | exception raising!                                                        | **no!** |
 | informational methods (keys/branches listings)                            | **partial** |
+| partitioning routines                                                     | **no!** |

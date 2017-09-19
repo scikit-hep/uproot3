@@ -56,22 +56,40 @@ def _interpret_compression(compression):
     else:
         return Compression("unknown", compression % 100)
 
-def _decompressfcn(compression, objlen):
+def _decompressfcn(compression, objlen, debug=False):
     algo, level = compression
     if algo == "zlib":
         # skip 9-byte header for ROOT's custom frame:
         # https://github.com/root-project/root/blob/master/core/zip/src/Bits.h#L646
-        return lambda x: zlib_decompress(x[9:])
+        if debug:
+            def out(x):
+                print("decompressing {0} bytes".format(len(x) - 9))
+                return zlib_decompress(x[9:])
+            return out
+        else:
+            return lambda x: zlib_decompress(x[9:])
 
     elif algo == "lzma":
         # skip 9-byte header for LZMA, too:
         # https://github.com/root-project/root/blob/master/core/lzma/src/ZipLZMA.c#L81
-        return lambda x: lzma_decompress(x[9:])
+        if debug:
+            def out(x):
+                print("decompressing {0} bytes".format(len(x) - 9))
+                return lzma_decompress(x[9:])
+            return out
+        else:
+            return lambda x: lzma_decompress(x[9:])
 
     elif algo == "lz4":
         # skip 9-byte header plus 8-byte hash: are there any official ROOT versions without the hash?
         # https://github.com/root-project/root/blob/master/core/lz4/src/ZipLZ4.cxx#L38
-        return lambda x: lz4_decompress(x[9 + 8:], uncompressed_size=objlen)
+        if debug:
+            def out(x):
+                print("decompressing {0} bytes".format(len(x) - 9 - 8))
+                return lz4_decompress(x[9 + 8:], uncompressed_size=objlen)
+            return out
+        else:
+            return lambda x: lz4_decompress(x[9 + 8:], uncompressed_size=objlen)
 
     else:
         raise NotImplementedError("cannot decompress \"{0}\"".format(algo))

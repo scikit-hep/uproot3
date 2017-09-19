@@ -115,6 +115,7 @@ class TTree(uproot.core.TNamed,
         leaves2branches = {}
         def recurse(obj):
             for branch in obj.branches:
+                branch.numentries = self.numentries
                 for leaf in branch.leaves:
                     leaves2branches[leaf.name] = branch.name
                 recurse(branch)
@@ -485,13 +486,13 @@ class TBranch(uproot.core.TNamed,
         * `branch.branchtypes` is a `{name: dtype}` dict of all the directly attached subbranch names.
         * `branch.allbranchtypes` is a `{name: dtype}` dict of all the subbranch names, recursively following subbranches' branches.
         * `branch.leaves` are all the TLeaf objects directly attached to this TBranch.
-        * `branch.numbaskets` is the number of baskets (does not read whole baskets).
-        * `branch.numbytes` is the number of bytes used by data in this branch (does not read whole baskets).
-        * `branch.numitems` is the number of items, such as integers, floating point values, or the number of characters in the strings in this branch (does not read whole baskets).
-        * `branch.numentries` is the number of entries in this branch; should match the number of entries in the tree, though calculated differently (does not read whole baskets).
-        * `branch.basketbytes(i)` is the number of bytes used by data in basket i (does not read whole baskets).
-        * `branch.basketitems(i)` is the number of items, such as integers, floating point values, or the number of characters in the strings in basket i (does not read whole baskets).
-        * `branch.basketentries(i)` is the number of entries in basket i (does not read whole baskets).
+        * `branch.numentries` is the number of entries in this branch (same as in the tree).
+        * `branch.numbaskets` is the number of baskets.
+        * `branch.numbytes` is the number of bytes used by data in this branch.
+        * `branch.numitems` is the number of items, such as integers, floating point values, or the number of characters in the strings in this branch.
+        * `branch.basketbytes(i)` is the number of bytes used by data in basket i.
+        * `branch.basketitems(i)` is the number of items, such as integers, floating point values, or the number of characters in the strings in basket i.
+        * `branch.basketentries(i)` is the number of entries in basket i.
 
     `branch[name]` is a synonym for `branch.branch(name)`.
     """
@@ -514,8 +515,7 @@ class TBranch(uproot.core.TNamed,
         walker.skipbcnt() # reading baskets is expensive and useless
 
         walker.skip(1)  # isArray
-        # self.basketBytes = walker.readarray(">i4", maxBaskets)[:writeBasket]
-        walker.skip(4 * maxBaskets)
+        self._basketBytes = walker.readarray(">i4", maxBaskets)[:writeBasket]
 
         walker.skip(1)  # isArray
         self._basketEntry = walker.readarray(">i8", maxBaskets)[:writeBasket]
@@ -547,9 +547,7 @@ class TBranch(uproot.core.TNamed,
 
     @property
     def numbytes(self):
-        if not hasattr(self, "basketwalkers"):
-            self._preparebaskets()
-        return sum(self._basketlengths)
+        return sum(self.basketbytes(i) for i in range(len(self._basketSeek)))
 
     @property
     def numitems(self):
@@ -558,18 +556,18 @@ class TBranch(uproot.core.TNamed,
         else:
             return self.numbytes // self.dtype.itemsize
 
-    @property
-    def numentries(self):
-        if not hasattr(self, "basketwalkers"):
-            self._preparebaskets()
-        return sum(self._basketentries)
-
     def basketbytes(self, i):
-        if not hasattr(self, "basketwalkers"):
-            self._preparebaskets()
-        if not 0 <= i < len(self._basketlengths):
-            raise IndexError("index {0} out of range for branch with {1} baskets".format(i, len(self._basketlengths)))
-        return self._basketlengths[i]
+        if not 0 <= i < len(self._basketBytes):
+            raise IndexError("index {0} out of range for branch with {1} baskets".format(i, len(self._basketBytes)))
+        trial = self._basketBytes[i] - self._firstkeylen()
+
+        entries = self.basketentries(i)
+        if self._speedbumps:
+            return trial - entries*4 - 8 - entries
+        elif self.dtype == numpy.dtype(object) or trial != entries * reduce(lambda x, y: x*y, self.itemdims, self.dtype.itemsize):
+            return trial - entries*4 - 8
+        else:
+            return trial
 
     def basketitems(self, i):
         if self.dtype == numpy.dtype(object):
@@ -578,11 +576,12 @@ class TBranch(uproot.core.TNamed,
             return self.basketbytes(i) // self.dtype.itemsize
 
     def basketentries(self, i):
-        if not hasattr(self, "basketwalkers"):
-            self._preparebaskets()
-        if not 0 <= i < len(self._basketlengths):
-            raise IndexError("index {0} out of range for branch with {1} baskets".format(i, len(self._basketlengths)))
-        return self._basketentries[i]
+        if not 0 <= i < len(self._basketEntry):
+            raise IndexError("index {0} out of range for branch with {1} baskets".format(i, len(self._basketEntry)))
+        if i + 1 == len(self._basketEntry):
+            return self.numentries - self._basketEntry[i]
+        else:
+            return self._basketEntry[i + 1] - self._basketEntry[i]
 
     @property
     def allbranches(self):
@@ -631,6 +630,15 @@ class TBranch(uproot.core.TNamed,
 
         raise KeyError("not found: {0}".format(repr(name)))
 
+    def _firstkeylen(self):
+        # FIXME: find it in writing somewhere that every basket of the same branch has the same keylen
+        if hasattr(self, "_basketkeylens"):
+            return self._basketkeylens[0]
+        else:
+            basketwalker = self._filewalker.copy(self._basketSeek[0] + 14)
+            basketwalker.startcontext()
+            return basketwalker.readfield("!h")
+
     def _preparebaskets(self):
         self._filewalker.startcontext()
 
@@ -638,7 +646,6 @@ class TBranch(uproot.core.TNamed,
         self._basketkeylens = []
         self._basketborders = []
         self._basketlengths = []
-        self._basketentries = []
         self._basketwalkers = []
         for seek in self._basketSeek:
             basketwalker = self._filewalker.copy(seek)
@@ -660,15 +667,8 @@ class TBranch(uproot.core.TNamed,
             border = last - keylen
 
             self._basketborders.append(border)
-            if objlen != border:
-                self._basketentries.append((objlen - border) // 4 - 2)
-            else:
-                assert self.dtype != numpy.dtype(object)  # strings must always have entry markers
-                entrysize = reduce(lambda x, y: x*y, self.itemdims, self.dtype.itemsize)
-                self._basketentries.append(border // entrysize)
-
             if self._speedbumps:
-                self._basketlengths.append(border - (objlen - border) // 4 - 2)
+                self._basketlengths.append(border - (objlen - border - 8) // 4)
             else:
                 self._basketlengths.append(border)
 
