@@ -19,6 +19,7 @@ import glob
 import json
 import os.path
 from collections import namedtuple
+from collections import OrderedDict
 try:
     from urlparse import urlparse
 except ImportError:
@@ -58,10 +59,6 @@ class Range(object):
     def __repr__(self):
         return "Range({0}, {1}, {2})".format(repr(self.path), self.entrystart, self.entryend)
 
-    @property
-    def tuple(self):
-        return self.path, self.entrystart, self.entryend
-
     def toJson(self):
         return {"path": self.path, "entrystart": self.entrystart, "entryend": self.entryend}
 
@@ -70,8 +67,8 @@ class Range(object):
         return Range(obj["path"], obj["entrystart"], obj["entryend"])
 
 class Partition(object):
-    def __init__(self, i, *ranges):
-        self.i = i
+    def __init__(self, index, *ranges):
+        self.index = index
         self.ranges = ranges
 
     @property
@@ -79,18 +76,14 @@ class Partition(object):
         return sum(x.numentries for x in self.ranges)
 
     def __repr__(self):
-        return "Partition({0}, {1})".format(self.i, ", ".join(map(repr, self.ranges)))
-
-    @property
-    def tuples(self):
-        return (x.tuple for x in self.ranges)
+        return "Partition({0}, {1})".format(self.index, ", ".join(map(repr, self.ranges)))
 
     def toJson(self):
-        return {"partition": self.i, "ranges": [x.toJson() for x in self.ranges]}
+        return {"index": self.index, "ranges": [x.toJson() for x in self.ranges]}
 
     @staticmethod
     def fromJson(obj):
-        return Partition(obj["i"], *[Range.fromJson(x) for x in obj["partition"]])
+        return Partition(obj["index"], *[Range.fromJson(x) for x in obj["ranges"]])
 
 class PartitionSet(object):
     def __init__(self, treepath, branchdtypes, *partitions):
@@ -244,34 +237,40 @@ def iterator(partitionset, memmap=True, executor=None, outputtype=dict):
     if outputtype == namedtuple:
         outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, dtype, cache in partitionset.branchdtypes])
 
-    def output(arrays):
-        if outputtype == dict or outputtype == OrderedDict:
-            return arrays
-        elif issubclass(outputtype, dict):
-            return outputtype(arrays.items())
-        elif outputtype == tuple or outputtype == list:
-            return outputtype(arrays.values())
-        else:
-            return outputtype(*arrays.values())
-
-    for partition in partitionset.partitions:
-        allarrays = {}
-
-        for path, entrystart, entryend in partition.tuples:
-            tree = uproot.open(path, memmap=memmap)
-
-            arrays, = tree.iterator([(entrystart, entryend)], branchdtypes, executor=executor, outputtype=OrderedDict)
+    def output(tree, entries):
+        arraylists = dict((x, []) for x in partitionset.branchdtypes)
+        for arrays in tree.iterator(entries, partitionset.branchdtypes, executor=executor, outputtype=OrderedDict):
             for name, array in arrays.items():
-                if name not in allarrays:
-                    allarrays[name] = []
-                allarrays[name].append(array)
+                arraylists[name].append(array)
 
-        for name, arraylist in allarrays.items():
+        outarrays = {}
+        for name, arraylist in arraylists.items():
             if len(arraylist) == 0:
-                allarrays[name] = numpy.array([], dtype=partitionset.branchdtypes[name])
+                outarrays[name] = numpy.array([], dtype=partitionset.branchdtypes[name])
             elif len(arraylist) == 1:
-                allarrays[name] = allarrays[name][0]
+                outarrays[name] = outarrays[name][0]
             else:
-                allarrays[name] = numpy.concatenate(arraylist)
+                outarrays[name] = numpy.concatenate(arraylist)
 
-        yield output(allarrays)
+        if outputtype == dict or outputtype == OrderedDict:
+            return outarrays
+        elif issubclass(outputtype, dict):
+            return outputtype(outarrays.items())
+        elif outputtype == tuple or outputtype == list:
+            return outputtype(outarrays.values())
+        else:
+            return outputtype(*outarrays.values())
+
+    oldpath = None
+    for partition in partitionset.partitions:
+        for filerange in partition.ranges:
+            if oldpath != filerange.path:
+                if oldpath is not None:
+                    yield output(tree, entries)
+                tree = uproot.open(filerange.path, memmap=memmap)[partitionset.treepath]
+                entries = []
+            entries.append((filerange.entrystart, filerange.entryend))
+            oldpath = filerange.path
+
+    if oldpath is not None:
+        yield output(tree, entries)
