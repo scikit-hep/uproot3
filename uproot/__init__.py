@@ -67,7 +67,7 @@ def xrootd(path):
     import uproot.rootio
     return uproot.rootio.TFile(uproot._walker.xrootdwalker.XRootDWalker(path))
 
-def iterator(entries, path, treepath, branchdtypes=lambda branch: branch.dtype, memmap=True, executor=None, outputtype=dict, reportentries=False):
+def iterator(entries, path, treepath, branchdtypes=lambda branch: getattr(branch, "dtype", None), memmap=True, executor=None, outputtype=dict, reportentries=False):
     """Iterates over a collection of files, a fixed number of entries at a time (even across the gap between files).
 
     Use this function when you have a huge dataset, too large to load into memory, spread across many files. Example use:
