@@ -109,7 +109,7 @@ class XRootDWalker(uproot._walker.walker.Walker):
                 status, data = self.file.read(self.index, 4)
                 if status["error"]:
                     raise IOError(status["message"])
-                length = numpy.frombuffer(data, dtype=numpy.uint32)[0]
+                length = numpy.frombuffer(data, dtype=">u4")[0]
                 self.index += 4
         status, data = self.file.read(self.index, length)
         if status["error"]:
