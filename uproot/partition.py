@@ -203,7 +203,7 @@ class PartitionSet(object):
             return not self.__eq__(other)
 
         def __hash__(self):
-            return hash((PartitionSet.Projection, self.treepath, self.branchdtypes, self.partitions))
+            return hash((PartitionSet.Projection, self.treepath, tuple(sorted(self.branchdtypes.items())), self.partitions))
 
         def __repr__(self):
             return "<PartitionSet.Projection {0} with {1} branches and {2} partitions>".format(repr(self.treepath), len(self.branchdtypes), len(self.partitions))
@@ -241,16 +241,11 @@ class PartitionSet(object):
             partitions = tuple(p for p in self.partitions if p.index == filterpartitions)
 
         elif isinstance(filterpartitions, slice):
-            start = slice.start
-            stop = slice.stop
-            if start is None: start = 0
-            if stop is None: stop = len(self.partitions)
-            try:
-                skip = slice.skip
-            except AttributeError:
-                skip = 1
-
-            partitions = tuple(p for p in self.partitions if start <= p.index < stop and (p.index - start) % skip == 0)
+            start = getattr(filterpartitions, "start", 0)
+            stop = getattr(filterpartitions, "stop", len(self.partitions))
+            step = getattr(filterpartitions, "step", 1)
+            if step is None: step = 1
+            partitions = tuple(p for p in self.partitions if start <= p.index < stop and (p.index - start) % step == 0)
 
         else:
             partitions = tuple(p for p in self.partitions if p.index in filterpartitions)
