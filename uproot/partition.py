@@ -50,6 +50,15 @@ class BasketData(object):
         self.entryend = entryend
         self.numbytes = numbytes
 
+    def __eq__(self, other):
+        return isinstance(other, BasketData) and self.path == other.path and self.branchname == other.branchname and self.dtype == other.dtype and self.itemdims == other.itemdims and self.entrystart == other.entrystart and self.entryend == other.entryend and self.numbytes == other.numbytes
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash((BasketData, self.path, self.branchname, self.dtype, self.itemdims, self.entrystart, self.entryend, self.numbytes))
+
     @property
     def numentries(self):
         return self.entryend - self.entrystart
@@ -68,6 +77,15 @@ class Range(object):
         self.path = path
         self.entrystart = entrystart
         self.entryend = entryend
+
+    def __eq__(self, other):
+        return isinstance(other, Range) and self.path == other.path and self.entrystart == other.entrystart and self.entryend == other.entryend
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash((Range, self.path, self.entrystart, self.entryend))
 
     @property
     def numentries(self):
@@ -94,6 +112,15 @@ class Partition(object):
         self.index = index
         self.ranges = ranges
 
+    def __eq__(self, other):
+        return isinstance(other, Partition) and self.index == other.index and self.ranges == other.ranges
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash((Partition, self.index, self.ranges))
+
     @property
     def numentries(self):
         return sum(x.numentries for x in self.ranges)
@@ -114,6 +141,7 @@ class PartitionSet(object):
         * `treepath` is where to find the TTree in each ROOT file.
         * `branchdtypes` is a *dict* from branch name to Numpy array `dtype`.
         * `branchcounters` is a dict from branch name to counter branch name for those branches that have variable width per entry.
+        * `branchdims` is a dict from branch name to fixed-width dimensions for those branches that have them.
         * `numpartitions` is the number of partitions as a cross-check on `len(partitions)`, as well as a quick way to get this information in JSON form.
         * `numentries` is the number of entries as a cross-check on `sum(x.numentries for x in partitions)`, as well as a quick way to get this information in JSON form.
         * `partitions` is a list of Partition objects.
@@ -125,7 +153,7 @@ class PartitionSet(object):
     To iterate over subsets of partitions or subsets of branches, create a short-lived `PartitionSet.Projection` using the `project` method and pass it to `iterator`.
     """
 
-    def __init__(self, treepath, branchdtypes, branchcounters, numpartitions, numentries, *partitions):
+    def __init__(self, treepath, branchdtypes, branchcounters, branchdims, numpartitions, numentries, *partitions):
         if not isinstance(branchdtypes, dict):
             raise TypeError("branchdtypes must be a dict for PartitionSet constructor")
         assert numpartitions == len(partitions)
@@ -145,9 +173,19 @@ class PartitionSet(object):
         self.treepath = treepath
         self.branchdtypes = branchdtypes
         self.branchcounters = branchcounters
+        self.branchdims = branchdims
         self.numpartitions = numpartitions
         self.numentries = numentries
         self.partitions = partitions
+
+    def __eq__(self, other):
+        return isinstance(other, PartitionSet) and self.treepath == other.treepath and self.branchdtypes == other.branchdtypes and self.branchcounters == other.branchcounters and self.branchdims == other.branchdims and self.numpartitions == other.numpartitions and self.numentries == other.numentries and self.partitions == other.partitions
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash((PartitionSet, self.treepath, tuple(sorted(self.branchdtypes.items())), tuple(sorted(self.branchcounters.items())), tuple(sorted(self.branchdims.items())), self.numpartitions, self.numentries, self.partitions))
 
     def __repr__(self):
         return "<PartitionSet {0} with {1} branches and {2} partitions>".format(repr(self.treepath), len(self.branchdtypes), len(self.partitions))
@@ -157,6 +195,15 @@ class PartitionSet(object):
             self.treepath = treepath
             self.branchdtypes = branchdtypes
             self.partitions = partitions
+
+        def __eq__(self, other):
+            return isinstance(other, PartitionSet.Projection) and self.treepath == other.treepath and self.branchdtypes == other.branchdtypes and self.partitions == other.partitions
+
+        def __ne__(self, other):
+            return not self.__eq__(other)
+
+        def __hash__(self):
+            return hash((PartitionSet.Projection, self.treepath, self.branchdtypes, self.partitions))
 
         def __repr__(self):
             return "<PartitionSet.Projection {0} with {1} branches and {2} partitions>".format(repr(self.treepath), len(self.branchdtypes), len(self.partitions))
@@ -232,6 +279,7 @@ class PartitionSet(object):
         return {"treepath": self.treepath,
                 "branchdtypes": dict((b, str(d)) for b, d in self.branchdtypes.items()),
                 "branchcounters": self.branchcounters,
+                "branchdims": self.branchdims,
                 "numpartitions": self.numpartitions,
                 "numentries": self.numentries,
                 "partitions": [p.toJson() for p in self.partitions]}
@@ -239,11 +287,12 @@ class PartitionSet(object):
     @staticmethod
     def fromJson(obj):
         return PartitionSet(obj["treepath"],
-                            dict((b, numpy.dtype(d)) for b, d in obj["branchdtypes"]),
+                            dict((b, numpy.dtype(d)) for b, d in obj["branchdtypes"].items()),
                             obj["branchcounters"],
+                            dict((b, tuple(d)) for b, d in obj["branchdims"].items()),
                             obj["numpartitions"],
                             obj["numentries"],
-                            [Partition.fromJson(p) for p in obj["partitions"]])
+                            *[Partition.fromJson(p) for p in obj["partitions"]])
 
     def toJsonString(self):
         return json.dumps(self.toJson())
@@ -321,7 +370,8 @@ class PartitionSet(object):
         trees = {}
         trees[0] = uproot.open(paths[0], memmap=memmap)[treepath]
         toget = dict((b.name, d) for b, d in uproot.tree.TTree._normalizeselection(branchdtypes, trees[0].allbranches))
-        counters = dict((countee, counter.branch) for countee, counter in trees[0].counter.items())
+        counters = dict((countee, counter.branch) for countee, counter in trees[0].counter.items() if countee in toget)
+        dims = dict((branch.name, branch.itemdims) for branch in trees[0].allbranches if branch.name in toget and branch.itemdims != ())
         def tree(i):
             if i not in trees:
                 trees[i] = uproot.open(paths[i], memmap=memmap)[treepath]
@@ -335,14 +385,23 @@ class PartitionSet(object):
                     elif newtoget[key] != toget[key]:
                         raise ValueError("branch {0} is a {1} in {2}, but it was a {3} in {4}".format(repr(key), newtoget[key], repr(paths[i]), toget[key], repr(paths[i - 1])))
 
-                newcounters = dict((countee, counter.branch) for countee, counter in trees[i].counter.items())
+                newcounters = dict((countee, counter.branch) for countee, counter in trees[i].counter.items() if countee in toget)
                 for key in set(counters.keys()).union(set(newcounters.keys())):
                     if key not in newcounters:
                         raise ValueError("branch {0} doesn't have a counter in {1}, but it was counted by {2} in {3}".format(repr(key), repr(paths[i]), repr(counters[key]), repr(paths[i - 1])))
                     if key not in counters:
-                        del newcounters[key]
+                        raise ValueError("branch {0} is counted by {1} in {2}, but it wasn't counted {3}".format(repr(key), repr(newcounters[key]), repr(paths[i]), repr(paths[i - 1])))
                     elif newcounters[key] != counters[key]:
                         raise ValueError("branch {0} is counted by {1} in {2}, but it is counted by {3} in {4}".format(repr(key), repr(newcounters[key]), repr(paths[i]), repr(counters[key]), repr(paths[i - 1])))
+
+                newdims = dict((branch.name, branch.itemdims) for branch in trees[i].allbranches if branch.name in toget and branch.itemdims != ())
+                for key in set(dims.keys()).union(set(newdims.keys())):
+                    if key not in newdims:
+                        raise ValueError("branch {0} doesn't have dimensions in {1}, but it had dimensions {2} in {3}".format(repr(key), repr(paths[i]), repr(dims[key]), repr(paths[i - 1])))
+                    if key not in dims:
+                        raise ValueError("branch {0} has dimensions {1} in {2}, but it didn't have dimensions in {3}".format(repr(key), repr(newdims[key]), repr(paths[i]), repr(paths[i - 1])))
+                    elif newdims[key] != dims[key]:
+                        raise ValueError("branch {0} has dimensions {1} in {2}, but it had dimensions {3} in {4}".format(repr(key), repr(newdims[key]), repr(paths[i]), repr(dims[key]), repr(paths[i - 1])))
 
             return trees[i]
 
@@ -423,7 +482,7 @@ class PartitionSet(object):
 
             partitioni += 1
 
-        return PartitionSet(treepath, toget, counters, len(partitions), sum(x.numentries for x in partitions), *partitions)
+        return PartitionSet(treepath, toget, counters, dims, len(partitions), sum(x.numentries for x in partitions), *partitions)
 
 def iterator(partitionset, memmap=True, executor=None, outputtype=dict):
     """Iterates over a collection of files, yielding arrays for each partition in a given `PartitionSet` (even across the gap between files).
