@@ -102,3 +102,15 @@ class TAttMarker(uproot.rootio.Deserialized):
         vers, bcnt = walker.readversion()
         walker.skip("!hhf")  # color, style, width
         self._checkbytecount(walker.index - start, bcnt)
+
+class TList(uproot.rootio.Deserialized):
+    """Represents a TList; implemented only because it's sometimes in TTree member data.
+    """
+    def __init__(self, filewalker, walker):
+        walker.startcontext()
+        start = walker.index
+        vers, bcnt = walker.readversion()
+        walker.skip(int(bcnt + 4 - (walker.index - start)))
+        self._checkbytecount(walker.index - start, bcnt)
+
+uproot.rootio.Deserialized.classes[b"TList"] = TList

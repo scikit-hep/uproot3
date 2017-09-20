@@ -110,7 +110,7 @@ class LocalFileWalker(uproot._walker.walker.Walker):
             length = ord(self.file.read(1))
             self.index += 1
             if length == 255:
-                length = numpy.frombuffer(self.file.read(4), dtype=numpy.uint32)[0]
+                length = numpy.frombuffer(self.file.read(4), dtype=">u4")[0]
                 self.index += 4
         self.index += length
         return self.file.read(length)

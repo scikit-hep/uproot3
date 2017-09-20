@@ -91,8 +91,7 @@ class ArrayWalker(uproot._walker.walker.Walker):
             length = self.data[index]
             index += 1
             if length == 255:
-                # is this a ROOT thing or a Go thing? shouldn't it be big-endian?
-                length = self.data[index : index + 4].view(numpy.uint32)[0]
+                length = self.data[index : index + 4].view(">u4")[0]
                 index += 4
         end = index + length
         self.index = end
