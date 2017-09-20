@@ -88,6 +88,10 @@ def iterator(entries, path, treepath, branchdtypes=lambda branch: getattr(branch
           Local files can be glob patterns (`mydata*.root`).
           After expansion, paths will be traversed in *sorted* order. This is to ensure that entry numbers for the same file set have the same meaning from run to run.
 
+        * `treepath` *(required)*
+
+          A string describing the path through TDirectories (using '/' and ';' conventions) to the TTree of interest. Must be the same in all files.
+
         * `branchdtypes` (same as in `TTree.iterator`)
 
           If a single string, the string names the only branch to load.
