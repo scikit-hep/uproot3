@@ -738,7 +738,7 @@ class TBranch(uproot.core.TNamed,
         else:
             product = reduce(lambda x, y: x*y, self.itemdims, 1)
             if len(array) % product != 0:
-                return array
+                raise IOError("data shape is misaligned ({0} elements can't be reshaped as {1})".format(len(array), self.items))
             else:
                 newlen = len(array) // product
                 return array.reshape((newlen,) + self.itemdims)
@@ -775,17 +775,19 @@ class TBranch(uproot.core.TNamed,
             else:
                 return self._adddimensions(numpy.array([], dtype=dtype))
 
+        entrywidth = reduce(lambda x, y: x*y, self.itemdims, 1)
+
         i, firstdata, firstoff = cache[0]
-        istartoff = entrystart - self._basketEntry[i]
         if firstoff is None:
-            istart = istartoff
+            istart = (entrystart - self._basketEntry[i]) * entrywidth
         else:
+            istartoff = entrystart - self._basketEntry[i]
             istart = firstoff[istartoff]
 
         i, lastdata, lastoff = cache[-1]
         iendoff = entryend - self._basketEntry[i]
         if lastoff is None:
-            iend = min(iendoff, len(lastdata))
+            iend = min((entryend - self._basketEntry[i]) * entrywidth, len(lastdata))
         elif iendoff < len(lastoff):
             iendoff = min(iendoff, len(lastoff))
             iend = lastoff[iendoff]
