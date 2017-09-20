@@ -19,7 +19,6 @@ import glob
 import json
 import os.path
 from collections import namedtuple
-from collections import OrderedDict
 try:
     from urlparse import urlparse
 except ImportError:
@@ -479,7 +478,7 @@ class PartitionSet(object):
 
         return PartitionSet(treepath, toget, counters, dims, len(partitions), sum(x.numentries for x in partitions), *partitions)
 
-def iterator(partitionset, memmap=True, executor=None, outputtype=dict):
+def iterator(partitionset, memmap=True, executor=None):
     """Iterates over a collection of files, yielding arrays for each partition in a given `PartitionSet` (even across the gap between files).
 
     Arguments:
@@ -496,14 +495,7 @@ def iterator(partitionset, memmap=True, executor=None, outputtype=dict):
 
           A `concurrent.futures.Executor` that would be used to parallelize the basket loading/decompression.
           If `None`, the process is serial.
-
-        * `outputtype` (same as in `TTree.iterator`)
-
-          Constructor for the objects to yield in the iterator. Good choices include `dict`, `tuple`, `namedtuple`, `list`.
     """
-    if outputtype == namedtuple:
-        outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, dtype, cache in partitionset.branchdtypes])
-
     treedata = {}
     def complete(nextpartition):
         for filerange in partitionset.partitions[nextpartition].ranges:
@@ -532,14 +524,7 @@ def iterator(partitionset, memmap=True, executor=None, outputtype=dict):
             else:
                 outarrays[name] = numpy.concatenate(arraylist)
 
-        if outputtype == dict or outputtype == OrderedDict:
-            return outarrays
-        elif issubclass(outputtype, dict):
-            return outputtype(outarrays.items())
-        elif outputtype == tuple or outputtype == list:
-            return outputtype(outarrays.values())
-        else:
-            return outputtype(*outarrays.values())
+        return outarrays
         
     oldpath = None
     nextpartition = 0
@@ -547,7 +532,7 @@ def iterator(partitionset, memmap=True, executor=None, outputtype=dict):
         for filerange in partition.ranges:
             if oldpath != filerange.path:
                 if oldpath is not None:
-                    treedata[oldpath] = list(tree.iterator(entries, partitionset.branchdtypes, executor=executor, outputtype=OrderedDict, reportentries=True))
+                    treedata[oldpath] = list(tree.iterator(entries, partitionset.branchdtypes, executor=executor, outputtype=dict, reportentries=True))
                 tree = uproot.open(filerange.path, memmap=memmap)[partitionset.treepath]
                 entries = []
             entries.append((filerange.entrystart, filerange.entryend))
@@ -561,7 +546,7 @@ def iterator(partitionset, memmap=True, executor=None, outputtype=dict):
                 nextpartition += 1
 
     if oldpath is not None:
-        treedata[oldpath] = list(tree.iterator(entries, partitionset.branchdtypes, executor=executor, outputtype=OrderedDict, reportentries=True))
+        treedata[oldpath] = list(tree.iterator(entries, partitionset.branchdtypes, executor=executor, outputtype=dict, reportentries=True))
 
     while nextpartition < len(partitionset.partitions):
         if not complete(nextpartition):

@@ -300,7 +300,7 @@ class TTree(uproot.core.TNamed,
                 ranges = ((x, x + entries) for x in range(0, self.numentries, entries))
         else:
             ranges = entries
-
+        
         toget = []
         for branch, dtype in self._normalizeselection(branchdtypes, self.allbranches):
             toget.append((branch, dtype, []))

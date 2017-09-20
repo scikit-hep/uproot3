@@ -164,7 +164,7 @@ def iterator(entries, path, treepath, branchdtypes=lambda branch: getattr(branch
 
         toget = list(uproot.tree.TTree._normalizeselection(branchdtypes, tree.allbranches))
 
-        newtoget = dict((b.name, d) for b, d in toget)
+        newtoget = OrderedDict((b.name, d) for b, d in toget)
         if oldtoget is not None:
             for key in set(oldtoget.keys()).union(set(newtoget.keys())):
                 if key not in newtoget:
@@ -211,7 +211,7 @@ def iterator(entries, path, treepath, branchdtypes=lambda branch: getattr(branch
             thisentries = entryend - entrystart
 
             if holdover is not None:
-                arrays = dict((name, numpy.concatenate((oldarray, arrays[name]))) for name, oldarray in holdover.items())
+                arrays = OrderedDict((name, numpy.concatenate((oldarray, arrays[name]))) for name, oldarray in holdover.items())
                 thisentries += holdoverentries
                 holdover = None
                 holdoverentries = 0
