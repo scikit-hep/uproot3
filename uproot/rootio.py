@@ -137,6 +137,7 @@ class TFile(object):
             raise IOError("TDirectory header length")
 
         self.dir = TDirectory(walker.path, walker.copy(begin + nbytesname), self.compression)
+        self._filewalker = walker
 
     def __del__(self):
         del self.dir
@@ -152,6 +153,13 @@ class TFile(object):
 
     def __iter__(self):
         return iter(self.dir.keys)
+
+    def __enter__(self, *args, **kwds):
+        return self
+
+    def __exit__(self, *args, **kwds):
+        if not isinstance(self._filewalker, uproot._walker.arraywalker.ArrayWalker):
+            self._filewalker.file.close()
 
     @property
     def contents(self):
