@@ -153,6 +153,12 @@ class TFile(object):
     def __iter__(self):
         return iter(self.dir.keys)
 
+    def __enter__(self, *args, **kwds):
+        return self
+
+    def __exit__(self, *args, **kwds):
+        pass
+
     @property
     def contents(self):
         return self.dir.contents
