@@ -121,7 +121,10 @@ class PartitionSet(object):
     Use the `PartitionSet.fill` method to create a `PartitionSet` from a set of ROOT files and configurable constraints.
 
     Use the `iterator` function (in this module) to iterate over data described by a `PartitionSet`.
+
+    To iterate over subsets of partitions or subsets of branches, create a short-lived `PartitionSet.Projection` using the `project` method and pass it to `iterator`.
     """
+
     def __init__(self, treepath, branchdtypes, branchcounters, numpartitions, numentries, *partitions):
         if not isinstance(branchdtypes, dict):
             raise TypeError("branchdtypes must be a dict for PartitionSet constructor")
@@ -147,7 +150,83 @@ class PartitionSet(object):
         self.partitions = partitions
 
     def __repr__(self):
-        return "<PartitionSet {0}>".format(repr(self.treepath))
+        return "<PartitionSet {0} with {1} branches and {2} partitions>".format(repr(self.treepath), len(self.branchdtypes), len(self.partitions))
+
+    class Projection(object):
+        def __init__(self, treepath, branchdtypes, *partitions):
+            self.treepath = treepath
+            self.branchdtypes = branchdtypes
+            self.partitions = partitions
+
+        def __repr__(self):
+            return "<PartitionSet.Projection {0} with {1} branches and {2} partitions>".format(repr(self.treepath), len(self.branchdtypes), len(self.partitions))
+
+    def project(self, filterpartitions=None, filterbranches=None):
+        """Get a `PartitionSet.Projection` to iterate over a subset of the data (subset of partitions, branches, or both).
+
+        Arguments:
+
+            * `filterpartitions`
+
+              If `None` (default), keep all partitions.
+              If a number, keep that partition index.
+              If an iterable of numbers, keep those partition indexes.
+              If a slice, keep the partition indexes in the slice range.
+              If a single-argument function, pass the `Partition` objects to that function; partitions that return `True` will be kept.
+
+            * `filterbranches`
+
+              If `None` (default), keep all branches.
+              If a string, keep that branch name.
+              If an iterable of strings, keep those branch names.
+              If a single-argument function, pass the branch names to that function; branches that return `True` will be kept.
+              If a two-argument function, pass the branch names and dtypes to that function; branches that return `True` will be kept.
+
+        The `PartitionSet.Projection` returned by this method can be used in place of a `PartitionSet` in this module's `iterator` function.
+        """
+        if filterpartitions is None:
+            partitions = self.partitions
+
+        elif callable(filterpartitions):
+            partitions = tuple(p for p in self.partitions if filterpartitions(p))
+
+        elif isinstance(filterpartitions, int):
+            partitions = tuple(p for p in self.partitions if p.index == filterpartitions)
+
+        elif isinstance(filterpartitions, slice):
+            start = slice.start
+            stop = slice.stop
+            if start is None: start = 0
+            if stop is None: stop = len(self.partitions)
+            try:
+                skip = slice.skip
+            except AttributeError:
+                skip = 1
+
+            partitions = tuple(p for p in self.partitions if start <= p.index < stop and (p.index - start) % skip == 0)
+
+        else:
+            partitions = tuple(p for p in self.partitions if p.index in filterpartitions)
+
+        if filterbranches is None:
+            branchdtypes = self.branchdtypes
+
+        elif callable(filterbranches) and filterbranches.__code__.co_argcount == 1:
+            branchdtypes = dict((b, d) for b, d in self.branchdtypes.items() if filterbranches(b))
+
+        elif callable(filterbranches) and filterbranches.__code__.co_argcount == 2:
+            branchdtypes = dict((b, d) for b, d in self.branchdtypes.items() if filterbranches(b, d))
+
+        elif (sys.version_info[0] <= 2 and isinstance(filterbranches, (unicode, str))) or (sys.version_info[0] > 2 and isinstance(filterbranches, (str, bytes))):
+            if hasattr(filterbranches, "encode"):
+                filterbranches = filterbranches.encode("ascii")
+            branchdtypes = dict((b, d) for b, d in self.branchdtypes.items() if b == filterbranches)
+
+        else:
+            filterbranches = [x.encode("ascii") if hasattr(x, "encode") else x for x in filterbranches]
+            branchdtypes = dict((b, d) for b, d in self.branchdtypes.items() if b in filterbranches)
+
+        return self.Projection(self.treepath, branchdtypes, *partitions)
 
     def toJson(self):
         return {"treepath": self.treepath,
