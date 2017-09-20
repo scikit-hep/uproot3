@@ -226,8 +226,10 @@ class TDirectory(object):
 
         An explicit `cycle` overrides ';'.
         """
+        if hasattr(name, "encode"):
+            name = name.encode("ascii")
         out = self
-        for n in name.split("/"):
+        for n in name.split(b"/"):
             out = out.keys.get(n, cycle)
         return out
 
@@ -288,7 +290,7 @@ class TKeys(object):
 
         An explicit `cycle` overrides ';'.
         """
-        if isinstance(name, str):
+        if hasattr(name, "encode"):
             name = name.encode("ascii")
 
         if cycle is None and b";" in name:

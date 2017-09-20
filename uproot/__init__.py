@@ -43,7 +43,7 @@ def open(path, memmap=True):
     import uproot.rootio
 
     parsed = urlparse(path)
-    if parsed.scheme == "file" or parsed.scheme == "":
+    if parsed.scheme == "file" or parsed.scheme == b"file" or parsed.scheme == "" or parsed.scheme == b"":
         path = parsed.netloc + parsed.path
         if memmap:
             import uproot._walker.arraywalker
@@ -52,7 +52,7 @@ def open(path, memmap=True):
             import uproot._walker.localfilewalker
             return uproot.rootio.TFile(uproot._walker.localfilewalker.LocalFileWalker(path))
 
-    elif parsed.scheme == "root":
+    elif parsed.scheme == "root" or parsed.scheme == b"root":
         return xrootd(path)
 
     else:

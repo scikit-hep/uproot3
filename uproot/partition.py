@@ -41,6 +41,15 @@ class BasketData(object):
         * `numbytes` size of this basket in bytes.
     """
     def __init__(self, path, branchname, dtype, itemdims, entrystart, entryend, numbytes):
+        if hasattr(path, "encode"): path = path.encode("ascii")
+        if hasattr(branchname, "encode"): branchname = branchname.encode("ascii")
+        if not isinstance(dtype, numpy.dtype):
+            dtype = numpy.dtype(dtype)
+        itemdims = tuple(int(x) for x in itemdims)
+        entrystart = int(entrystart)
+        entryend = int(entryend)
+        numbytes = int(numbytes)
+
         self.path = path
         self.branchname = branchname
         self.dtype = dtype
@@ -73,6 +82,9 @@ class Range(object):
         * `entryend` the last entry in this range plus one. (`numentries` is `entryend - entrystart`.)
     """
     def __init__(self, path, entrystart, entryend):
+        if hasattr(path, "encode"): path = path.encode("ascii")
+        entrystart = int(entrystart)
+        entryend = int(entryend)
         self.path = path
         self.entrystart = entrystart
         self.entryend = entryend
@@ -94,7 +106,7 @@ class Range(object):
         return "Range({0}, {1}, {2})".format(repr(self.path), self.entrystart, self.entryend)
 
     def toJson(self):
-        return {"path": self.path, "entrystart": self.entrystart, "entryend": self.entryend}
+        return {"path": self.path.decode("ascii"), "entrystart": self.entrystart, "entryend": self.entryend}
 
     @staticmethod
     def fromJson(obj):
@@ -108,6 +120,9 @@ class Partition(object):
         * `numentries` is the number of entries (calculated from ranges).
     """
     def __init__(self, index, *ranges):
+        assert len(ranges) > 0
+        assert all(isinstance(x, Range) for x in ranges)
+
         self.index = index
         self.ranges = ranges
 
@@ -153,6 +168,9 @@ class PartitionSet(object):
     """
 
     def __init__(self, treepath, branchdtypes, branchcounters, branchdims, numpartitions, numentries, *partitions):
+        assert len(partitions) > 0
+        assert all(isinstance(x, Partition) for x in partitions)
+
         if not isinstance(branchdtypes, dict):
             raise TypeError("branchdtypes must be a dict for PartitionSet constructor")
         assert numpartitions == len(partitions)
@@ -168,6 +186,13 @@ class PartitionSet(object):
                     assert filerange.entrystart == last
                 lastpath = filerange.path
                 last = filerange.entryend
+
+        if hasattr(treepath, "encode"): treepath = treepath.encode("ascii")
+        branchdtypes = dict((b.encode("ascii") if hasattr(b, "encode") else b, d.encode("ascii") if hasattr(d, "encode") else d) for b, d in branchdtypes.items())
+        branchcounters = dict((b.encode("ascii") if hasattr(b, "encode") else b, c.encode("ascii") if hasattr(c, "encode") else c) for b, c in branchcounters.items())
+        branchdims = dict((b.encode("ascii") if hasattr(b, "encode") else b, tuple(int(x) for x in d)) for b, d in branchdims.items() if len(d) > 0)
+        numpartitions = int(numpartitions)
+        numentries = int(numentries)
 
         self.treepath = treepath
         self.branchdtypes = branchdtypes
@@ -270,10 +295,10 @@ class PartitionSet(object):
         return self.Projection(self.treepath, branchdtypes, *partitions)
 
     def toJson(self):
-        return {"treepath": self.treepath,
-                "branchdtypes": dict((b, str(d)) for b, d in self.branchdtypes.items()),
-                "branchcounters": self.branchcounters,
-                "branchdims": self.branchdims,
+        return {"treepath": self.treepath.decode("ascii"),
+                "branchdtypes": dict((b.decode("ascii"), str(d)) for b, d in self.branchdtypes.items()),
+                "branchcounters": dict((b.decode("ascii"), c.decode("ascii")) for b, c in self.branchcounters.items()),
+                "branchdims": dict((b.decode("ascii"), d) for b, d in self.branchdims.items()),
                 "numpartitions": self.numpartitions,
                 "numentries": self.numentries,
                 "partitions": [p.toJson() for p in self.partitions]}
@@ -360,6 +385,8 @@ class PartitionSet(object):
             paths = explode(path)
         else:
             paths = [y for x in path for y in explode(x)]
+
+        paths = [x.encode("ascii") if hasattr(x, "encode") else x for x in paths]
 
         trees = {}
         trees[0] = uproot.open(paths[0], memmap=memmap)[treepath]
@@ -453,19 +480,39 @@ class PartitionSet(object):
                 # create a possible partition
                 ranges = []
                 for basketdatum in basketdata:
-                    if len(ranges) == 0 or ranges[-1]._pathi != basketdatum._pathi:
-                        ranges.append(Range(basketdatum.path, basketdatum.entrystart, basketdatum.entryend))
-                        ranges[-1]._pathi = basketdatum._pathi
-                    else:
-                        ranges[-1].entryend = basketdatum.entryend
+                    if len(ranges) == 0:
+                        # this might be the first basket to go into a range
+                        if len(partitions) == 0:
+                            # this is the first basket/range/partition ever
+                            ranges.append(Range(basketdatum.path, basketdatum.entrystart, basketdatum.entryend))
+                            ranges[-1]._pathi = basketdatum._pathi
 
-                if len(partitions) != 0:
-                    if partitions[-1].ranges[-1]._pathi == ranges[0]._pathi:
-                        ranges[0].entrystart = partitions[-1].ranges[-1].entryend
-                    else:
-                        ranges[0].entrystart = 0
+                        elif partitions[-1].ranges[-1]._pathi == basketdatum._pathi:
+                            # this is a continuation of the same file from a previous partition
+                            if partitions[-1].ranges[-1].entryend < basketdatum.entryend:
+                                # the first basket extends beyond the last entry in the last partition; include only the new stuff
+                                ranges.append(Range(basketdatum.path, partitions[-1].ranges[-1].entryend, basketdatum.entryend))
+                                ranges[-1]._pathi = basketdatum._pathi
+                            else:
+                                # the first basket is contained within the previous partition
+                                pass
 
-                possiblenext.append(Partition(partitioni, *filter(lambda r: r.entrystart != r.entryend, ranges)))
+                        else:
+                            # this is a new file, not seen in previous partitions
+                            ranges.append(Range(basketdatum.path, basketdatum.entrystart, basketdatum.entryend))
+                            ranges[-1]._pathi = basketdatum._pathi
+
+                    else:
+                        # this is not the first basket
+                        if ranges[-1]._pathi == basketdatum._pathi:
+                            # continuation of the same file
+                            ranges[-1].entryend = basketdatum.entryend
+                        else:
+                            # new file
+                            ranges.append(Range(basketdatum.path, basketdatum.entrystart, basketdatum.entryend))
+                            ranges[-1]._pathi = basketdatum._pathi
+
+                possiblenext.append(Partition(partitioni, *ranges))
 
             partitions.append(by(possiblenext))
             if debug:

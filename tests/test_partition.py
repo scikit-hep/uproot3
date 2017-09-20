@@ -94,13 +94,13 @@ class TestPartition(unittest.TestCase):
         firstpass_Ai2 = []
 
         for arrays, partition in zip(uproot.partition.iterator(self.check), self.check.partitions):
-            firstpass_n.append(arrays["n"])
-            firstpass_i8.append(arrays["i8"])
-            firstpass_ai4.append(arrays["ai4"])
-            firstpass_Ai2.append(arrays["Ai2"])
-            self.assertEqual(len(arrays["n"]), partition.numentries)
-            self.assertEqual(len(arrays["i8"]), partition.numentries)
-            self.assertEqual(len(arrays["ai4"]), partition.numentries)
+            firstpass_n.append(arrays[b"n"])
+            firstpass_i8.append(arrays[b"i8"])
+            firstpass_ai4.append(arrays[b"ai4"])
+            firstpass_Ai2.append(arrays[b"Ai2"])
+            self.assertEqual(len(arrays[b"n"]), partition.numentries)
+            self.assertEqual(len(arrays[b"i8"]), partition.numentries)
+            self.assertEqual(len(arrays[b"ai4"]), partition.numentries)
 
         firstpass_n = numpy.concatenate(firstpass_n)
         firstpass_i8 = numpy.concatenate(firstpass_i8)
