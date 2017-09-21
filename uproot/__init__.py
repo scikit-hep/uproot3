@@ -123,7 +123,30 @@ def iterator(entries, path, treepath, branchdtypes=lambda branch: getattr(branch
     import glob
     import os.path
     from collections import namedtuple
-    from collections import OrderedDict
+    try:
+        from collections import OrderedDict
+    except ImportError:
+        class OrderedDict(dict):
+            def __init__(self, pairs):
+                pairs = list(pairs)
+                self.__order = [k for k, v in pairs]
+                super(OrderedDict, self).__init__(pairs)
+            def keys(self):
+                return self.__order
+            def values(self):
+                return [self[k] for k in self.__order]
+            def items(self):
+                return [(k, self[k]) for k in self.__order]
+            def __setitem__(self, name, value):
+                if name not in self.__order:
+                    self.__order.append(name)
+                super(OrderedDict, self).__setitem__(name, value)
+            def __delitem__(self, name):
+                if name in self.__order:
+                    self.__order.remove(name)
+                super(OrderedDict, self).__delitem__(name)
+            def __repr__(self):
+                return "OrderedDict([{0}])".format(", ".join("({0}, {1})".format(repr(k), repr(v)) for k, v in self.items()))
     try:
         from urlparse import urlparse
     except ImportError:
