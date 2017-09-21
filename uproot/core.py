@@ -24,12 +24,12 @@ class TObjArray(uproot.rootio.Deserialized):
     def __init__(self, filewalker, walker):
         walker.startcontext()
         start = walker.index
-        vers, bcnt = walker.readversion()
+        vers, bcnt = self._readversion(walker)
 
         if vers >= 3:
             # TObjArray is a TObject
-            walker.skipversion()
-            walker.skiptobject()
+            self._skipversion(walker)
+            self._skiptobject(walker)
 
         if vers >= 2:
             # TObjArray is a not a TObject
@@ -64,9 +64,9 @@ class TNamed(uproot.rootio.Deserialized):
     def __init__(self, filewalker, walker):
         walker.startcontext()
         start = walker.index
-        vers, bcnt = walker.readversion()
-        walker.skipversion()
-        walker.skiptobject()
+        vers, bcnt = self._readversion(walker)
+        self._skipversion(walker)
+        self._skiptobject(walker)
 
         self.name = walker.readstring()
         self.title = walker.readstring()
@@ -79,7 +79,7 @@ class TAttLine(uproot.rootio.Deserialized):
     def __init__(self, filewalker, walker):
         walker.startcontext()
         start = walker.index
-        vers, bcnt = walker.readversion()
+        vers, bcnt = self._readversion(walker)
         walker.skip("!hhh")  # color, style, width
         self._checkbytecount(walker.index - start, bcnt)
 
@@ -89,7 +89,7 @@ class TAttFill(uproot.rootio.Deserialized):
     def __init__(self, filewalker, walker):
         walker.startcontext()
         start = walker.index
-        vers, bcnt = walker.readversion()
+        vers, bcnt = self._readversion(walker)
         walker.skip("!hh")  # color, style
         self._checkbytecount(walker.index - start, bcnt)
 
@@ -99,18 +99,6 @@ class TAttMarker(uproot.rootio.Deserialized):
     def __init__(self, filewalker, walker):
         walker.startcontext()
         start = walker.index
-        vers, bcnt = walker.readversion()
+        vers, bcnt = self._readversion(walker)
         walker.skip("!hhf")  # color, style, width
         self._checkbytecount(walker.index - start, bcnt)
-
-class TList(uproot.rootio.Deserialized):
-    """Represents a TList; implemented only because it's sometimes in TTree member data.
-    """
-    def __init__(self, filewalker, walker):
-        walker.startcontext()
-        start = walker.index
-        vers, bcnt = walker.readversion()
-        walker.skip(int(bcnt + 4 - (walker.index - start)))
-        self._checkbytecount(walker.index - start, bcnt)
-
-uproot.rootio.Deserialized.classes[b"TList"] = TList

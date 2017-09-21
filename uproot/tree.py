@@ -64,7 +64,7 @@ class TTree(uproot.core.TNamed,
     def __init__(self, filewalker, walker):
         walker.startcontext()
         start = walker.index
-        vers, bcnt = walker.readversion()
+        vers, bcnt = self._readversion(walker)
 
         uproot.core.TNamed.__init__(self, filewalker, walker)
         uproot.core.TAttLine.__init__(self, filewalker, walker)
@@ -500,7 +500,7 @@ class TBranch(uproot.core.TNamed,
     def __init__(self, filewalker, walker):
         walker.startcontext()
         start = walker.index
-        vers, bcnt = walker.readversion()
+        vers, bcnt = self._readversion(walker)
 
         if vers < 11:
             raise NotImplementedError("TBranch version too old")
@@ -513,7 +513,7 @@ class TBranch(uproot.core.TNamed,
 
         self.branches = list(uproot.core.TObjArray(filewalker, walker))
         self.leaves = list(uproot.core.TObjArray(filewalker, walker))
-        walker.skipbcnt() # reading baskets is expensive and useless
+        self._skipbcnt(walker) # reading baskets is expensive and useless
 
         walker.skip(1)  # isArray
         self._basketBytes = walker.readarray(">i4", maxBaskets)[:writeBasket]
@@ -1083,7 +1083,7 @@ class TBranchElement(TBranch):
     def __init__(self, filewalker, walker):
         walker.startcontext()
         start = walker.index
-        vers, bcnt = walker.readversion()
+        vers, bcnt = self._readversion(walker)
 
         if vers < 9:
             raise NotImplementedError("TBranchElement version too old")
@@ -1141,7 +1141,7 @@ class TLeaf(uproot.core.TNamed):
     def __init__(self, filewalker, walker):
         walker.startcontext()
         start = walker.index
-        vers, bcnt = walker.readversion()
+        vers, bcnt = self._readversion(walker)
 
         uproot.core.TNamed.__init__(self, filewalker, walker)
 
@@ -1169,7 +1169,7 @@ class {0}(TLeaf):
     def __init__(self, filewalker, walker):
         walker.startcontext()
         start = walker.index
-        vers, bcnt = walker.readversion()
+        vers, bcnt = self._readversion(walker)
 
         TLeaf.__init__(self, filewalker, walker)
 
@@ -1191,7 +1191,7 @@ class TLeafElement(TLeaf):
     def __init__(self, filewalker, walker):
         walker.startcontext()
         start = walker.index
-        vers, bcnt = walker.readversion()
+        vers, bcnt = self._readversion(walker)
 
         TLeaf.__init__(self, filewalker, walker)
 
