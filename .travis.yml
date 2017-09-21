@@ -20,3 +20,6 @@ install:
 
 script:
   python setup.py test
+
+notifications:
+  slack: scikit-hep:b6cgBXwccPoaCNLn5VKFJFVy
