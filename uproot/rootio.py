@@ -365,7 +365,7 @@ class TKey(object):
             elif self.classname in Deserialized.classes:
                 out = Deserialized.classes[self.classname](self._filewalker, self._walker)
             else:
-                raise NotImplementedError("class not recognized: {0}".format(self.classname))
+                out = Undefined(self._filewalker, self._walker)
         finally:
             self._walker.index = start
 
@@ -420,10 +420,7 @@ class Deserialized(object):
             # new class and object
             cname = walker.readcstring()
 
-            if cname not in Deserialized.classes:
-                raise NotImplementedError("class not recognized: {0}".format(cname))
-
-            fct = Deserialized.classes[cname]
+            fct = Deserialized.classes.get(cname, Undefined)
 
             if vers > 0:
                 walker.refs[start + uproot.const.kMapOffset] = fct
@@ -460,6 +457,32 @@ class Deserialized(object):
 
             return obj                     # return object
 
+    @staticmethod
+    def _readversion(walker):
+        bcnt, vers = walker.readfields("!IH")
+        bcnt = int(numpy.int64(bcnt) & ~uproot.const.kByteCountMask)
+        if bcnt == 0:
+            raise IOError("readversion byte count is zero")
+        return vers, bcnt
+
+    @staticmethod
+    def _skipversion(walker):
+        version = walker.readfield("!h")
+        if numpy.int64(version) & uproot.const.kByteCountVMask:
+            walker.skip("!hh")
+
+    @staticmethod
+    def _skiptobject(walker):
+        id, bits = walker.readfields("!II")
+        bits = numpy.uint32(bits) | uproot.const.kIsOnHeap
+        if bits & uproot.const.kIsReferenced:
+            walker.skip("!H")
+
+    @staticmethod
+    def _skipbcnt(walker):
+        vers, bcnt = Deserialized._readversion(walker)
+        walker.skip(bcnt + 4 - 6)
+
     def _checkbytecount(self, observed, expected):
         if observed != expected + 4:
             raise IOError("{0} byte count".format(self.__class__.__name__))
@@ -469,3 +492,15 @@ class Deserialized(object):
             return "<{0} at 0x{1:012x}>".format(self.__class__.__name__, id(self))
         else:
             return "<{0} {1} at 0x{2:012x}>".format(self.__class__.__name__, repr(self.name), id(self))
+
+class Undefined(Deserialized):
+    """Represents a ROOT class that we have no deserializer for (and therefore skip over).
+    """
+    def __init__(self, filewalker, walker):
+        walker.startcontext()
+        start = walker.index
+        vers, bcnt = self._readversion(walker)
+        walker.skip(int(bcnt + 4 - (walker.index - start)))
+        self._checkbytecount(walker.index - start, bcnt)
+
+Deserialized.classes[None] = Undefined

@@ -29,3 +29,4 @@
 | exception raising!                                                        | **no!** |
 | informational methods (keys/branches listings)                            | **partial** |
 | partitioning routines                                                     | &#x2713; |
+| low-level TBranch.baskets interface                                       | **no!** |

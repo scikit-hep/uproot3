@@ -18,8 +18,6 @@ import struct
 
 import numpy
 
-import uproot.const
-
 class Walker(object):
     def __init__(self, *args, **kwds):
         raise TypeError("Walker is an abstract class")
@@ -36,25 +34,3 @@ class Walker(object):
 
     def startcontext(self):
         pass
-
-    def readversion(self):
-        bcnt, vers = self.readfields("!IH")
-        bcnt = int(numpy.int64(bcnt) & ~uproot.const.kByteCountMask)
-        if bcnt == 0:
-            raise IOError("readversion byte count is zero")
-        return vers, bcnt
-
-    def skipversion(self):
-        version = self.readfield("!h")
-        if numpy.int64(version) & uproot.const.kByteCountVMask:
-            self.skip("!hh")
-
-    def skiptobject(self):
-        id, bits = self.readfields("!II")
-        bits = numpy.uint32(bits) | uproot.const.kIsOnHeap
-        if bits & uproot.const.kIsReferenced:
-            self.skip("!H")
-
-    def skipbcnt(self):
-        vers, bcnt = self.readversion()
-        self.skip(bcnt + 4 - 6)
