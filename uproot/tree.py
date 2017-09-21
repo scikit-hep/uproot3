@@ -856,6 +856,98 @@ class TBranch(uproot.core.TNamed,
         else:
             return self._adddimensions(outdata)
 
+    def baskets(self, callback=None, offsets=False, reportentries=False, executor=None):
+        """Extracts all baskets from the branch as separate Numpy arrays.
+
+        This provides access to the data in the most raw form: zero-copy views. If your ROOT file is uncompressed and you opened it as a memory map (the default), the Numpy arrays returned from this function will be views into the operating system's own page cache.
+        
+        This method does not have a `dtype` argument because data are not copied, so the user has no choice about its contents. (The `callback` or subsequent processing may change its `dtype`.)
+
+        Arguments:
+
+            * `callback`
+
+              If `None`, this method returns an iterator over arrays, one basket at a time.
+              If a callable, this method applies `callback` to each basket array as it becomes available, returning the return values of the `callback` as an iterator.
+
+            * `offsets`
+
+              If `True`, the iterator yields an `offset` array, specifying the starting index of each entry in the basket, or an `offset` array is given as the second argument to the `callback` (after `array`, the first argument).
+
+            * `reportentries`
+
+              If `True`, the iterator yields `entrystart` and `entryend`, specifying the first and last-plus-one entry in the basket, as the last two items in the yielded tuple or the last two arguments to the `callback`.
+
+              Different branches are not guaranteed to begin and end baskets at the same entry boundaries, though they often do align by happenstance, especially for flat ntuples.
+
+            * `executor` (same as in `TTree.array`)
+
+              If `None`, this method reads baskets serially, loading and/or decompressing one basket after the previous has been yielded or the previous `callback` has finished running.
+              If a `concurrent.futures.Executor`, this `executor` is used to do basket loading, decompression, and `callback` execution in parallel. The return result is an iterator over arrays, `callback` results, or exceptions raised as sys.exc_info() 3-tuples, all in basket order.
+        """
+
+        if not hasattr(self, "basketwalkers"):
+            self._preparebaskets()
+
+        entrywidth = reduce(lambda x, y: x*y, self.itemdims, 1)
+
+        if executor is None:
+            for i in range(len(self._basketwalkers)):
+                if offsets:
+                    array, offs = self._basket(i, offsets=offsets, parallel=False)
+
+                    if offs is None:
+                        offs = numpy.linspace(0, (self.basketentries(i) - 1) * entrywidth, self.basketentries(i), dtype=">i4")
+                    else:
+                        offs = offs // self.dtype.itemsize
+
+                    out = (array, offs)
+
+                else:
+                    out = (self._adddimensions(self._basket(i, offsets=offsets, parallel=False)),)
+                
+                if reportentries:
+                    entrystart = self._basketEntry[i]
+                    entryend = self._basketEntry[i + 1] if i + 1 < len(self._basketEntry) else self.numentries
+                    out = out + (entrystart, entryend)
+
+                if callback is None:
+                    yield out
+                else:
+                    yield callback(*out)
+
+        else:
+            def fill(i):
+                try:
+                    if offsets:
+                        array, offs = self._basket(i, offsets=offsets, parallel=False)
+
+                        if offs is None:
+                            offs = numpy.linspace(0, (self.basketentries(i) - 1) * entrywidth, self.basketentries(i), dtype=">i4")
+                        else:
+                            offs = offs // self.dtype.itemsize
+
+                        out = (array, offs)
+
+                    else:
+                        out = (self._adddimensions(self._basket(i, offsets=offsets, parallel=False)),)
+
+                    if reportentries:
+                        entrystart = self._basketEntry[i]
+                        entryend = self._basketEntry[i + 1] if i + 1 < len(self._basketEntry) else self.numentries
+                        out = out + (entrystart, entryend)
+
+                    if callback is None:
+                        return out
+                    else:
+                        return callback(*out)
+
+                except:
+                    return sys.exc_info()
+
+            for result in executor.map(fill, range(len(self._basketwalkers))):
+                yield result
+
     def array(self, dtype=None, executor=None, block=True):
         """Extracts the whole branch into a Numpy array.
 
