@@ -1,0 +1,98 @@
+# Copyright 2017 DIANA-HEP
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+TFile:
+  doc: Entry point for a ROOT file.
+  assert:
+    - magic == "root"
+  members:
+    - magic: {string: 4}
+    - version: int32
+    - begin: int32
+    - if:
+        - case: version < 1000000  # small file
+          then:
+            - end: int32
+            - seekfree: int32
+            - nbytesfree: int32
+            - nfree: int32
+            - nbytesname: int32
+            - units: uint8
+            - compression: int32
+            - seekinfo: int32
+            - nbytesinfo: int32
+        - else:                    # big file
+            - end: int64
+            - seekfree: int64
+            - nbytesfree: int32
+            - nfree: int32
+            - nbytesname: int32
+            - units: uint8
+            - compression: int32
+            - seekinfo: int64
+            - nbytesinfo: int32
+    - uuid: {string: 18}
+    - dir:
+        type: TDirectory
+        at: begin + nbytesname
+
+TDirectory:
+  members:
+    - version: int16
+    - ctime: int32
+    - mtime: int32
+    - nbyteskeys: int32
+    - nbytesname: int32
+    - if:
+        - case: version <= 1000
+          then:
+            - seekdir: int32
+            - seekparent: int32
+            - seekkeys: int32
+        - else:
+            - seekdir: int64
+            - seekparent: int64
+            - seekkeys: int64
+    - keys:
+        type: TKeys
+        at: seekkeys
+
+TKeys:
+  doc: A "pseudoclass" for a header TKey followed by a list of TKeys.
+  members:
+    - header: TKey
+    - nkeys: int32
+    - keys: {array: TKey, size: nkeys}
+
+TKey:
+  assert:
+    - $size == keylen
+  members:
+    - bytes: int32
+    - version: int16
+    - objlen: int32
+    - datetime: int32
+    - keylen: int16
+    - cycle: int16
+    - if:
+        - case: version > 1000
+          then:
+            - seekkey: int64
+            - seekpdir: int64
+        - else:
+            - seekkey: int32
+            - seekpdir: int32
+    - classname: string
+    - name: string
+    - title: string
