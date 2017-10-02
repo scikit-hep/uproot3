@@ -241,22 +241,18 @@ def assignments(members):
     return names, statements, properties
 
 def declare(classname, classspec):
-    out = tostmt("""
-class NAME(object):
-    pass
-""")
-
     assert "members" in classspec
     names, statements, properties = assignments(classspec["members"])
 
-    out.body.extend(tostmts("""
-@staticmethod
-
-
-"""))
-
-
-
+    out = tostmt("""
+class NAME(object):
+    @staticmethod
+    def read(file, start):
+        self = NAME()
+""")
+    out.body.body.extend(statements)
+    out.body.extend(properties)
+    return out
 
 if __name__ == "__main__":
     pass
