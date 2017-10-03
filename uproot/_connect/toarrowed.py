@@ -28,32 +28,71 @@ from arrowed.oam import PointerOAM
 
 import uproot
 
-def defineOAM(tree, rename=lambda x: x.name):
+def branch2name(branch):
+    m = re.match(r"(.*\.)*([a-zA-Z][a-zA-Z0-9]*)", branch.name)
+    if m is not None:
+        return m.group(2)
+    else:
+        return None
+
+def tree2oam(tree, branch2name=branch2name):
     def recurse(branch):
         fields = OrderedDict()
         for subbranch in branch.branches:
-            if len(subbranch.branches) == 0:
-                if getattr(subbranch, "dtype", numpy.dtype(object)) is not numpy.dtype(object):
-                    if subbranch.name in tree.counter:
-                        fields[subbranch.name] = ListCountOAM(tree.counter[subbranch.name].branch, PrimitiveOAM(subbranch.name))
-                    else:
-                        fields[subbranch.name] = PrimitiveOAM(subbranch.name)
+            if branch2name is None:
+                fieldname = subbranch.name
             else:
-                fields[subbranch.name] = recurse(subbranch)
+                fieldname = branch2name(subbranch)
+
+            if fieldname is not None:
+                if len(subbranch.branches) == 0:
+                    if getattr(subbranch, "dtype", numpy.dtype(object)) is not numpy.dtype(object):
+                        if subbranch.name in tree.counter:
+                            fields[fieldname] = ListCountOAM(tree.counter[subbranch.name].branch, PrimitiveOAM(subbranch.name))
+                        else:
+                            fields[fieldname] = PrimitiveOAM(subbranch.name)
+                else:
+                    fields[fieldname] = recurse(subbranch)
 
         if branch is not tree and branch.name in tree.counter:
             return ListCountOAM(tree.counter[subbranch.name].branch, RecordOAM(fields))
         else:
             return RecordOAM(fields)
 
-    return ListCountOAM(None, recurse(tree))
+    def arrayofstructs(t):
+        if isinstance(t, RecordOAM):
+            countarray = None
+            for c in t.contents.values():
+                if not isinstance(c, ListCountOAM):
+                    countarray = None
+                    break
+                if countarray is None:
+                    countarray = c.countarray
+                elif countarray != c.countarray:
+                    countarray = None
+                    break
+
+            if countarray is None:
+                return RecordOAM(OrderedDict((n, arrayofstructs(c)) for n, c in t.contents.items()))
+            else:
+                return ListCountOAM(countarray, RecordOAM(OrderedDict((n, arrayofstructs(c.contents)) for n, c in t.contents.items())))
+
+        elif isinstance(t, ListCountOAM):
+            return ListCountOAM(t.countarray, t.contents)
+
+        else:
+            return t
+
+    return ListCountOAM(None, arrayofstructs(recurse(tree)))
 
 
 
 
 
-tree = uproot.open("~/storage/data/small-evnt-tree-fullsplit.root")["tree"]
+# tree = uproot.open("~/storage/data/small-evnt-tree-fullsplit.root")["tree"]
+
+tree = uproot.open("~/storage/data/TTJets_13TeV_amcatnloFXFX_pythia8_2_77.root")["Events"]
 
 # tree = uproot.open("~/storage/data/nano-TTLHE-2017-09-04-lz4.root")["Events"]
 
-print defineOAM(tree).format()
+print tree2oam(tree).format()
