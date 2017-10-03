@@ -29,16 +29,18 @@ from arrowed.oam import PointerOAM
 import uproot
 
 def branch2name(branch):
-    m = re.match(r"(.*\.)*([a-zA-Z_][a-zA-Z0-9_]*)", branch.name)
+    m = branch2name.regex.match(branch.name)
     if m is not None:
         return m.group(2)
     else:
         return None
 
+branch2name.regex = re.compile(r"(.*\.)*([a-zA-Z_][a-zA-Z0-9_]*)")
+
 def byunderscore(fields):
     grouped = OrderedDict()
     for name, field in fields.items():
-        m = re.match(r"([^_]*)_(.*)", name)
+        m = byunderscore.regex.match(name)
         if m is not None and m.group(1) not in fields:
             if m.group(1) not in grouped:
                 grouped[m.group(1)] = OrderedDict()
@@ -47,7 +49,7 @@ def byunderscore(fields):
     done = set()
     out = OrderedDict()
     for name, field in fields.items():
-        m = re.match(r"([^_]*)_(.*)", name)
+        m = byunderscore.regex.match(name)
         if m is None or m.group(1) not in grouped:
             out[name] = field
         elif m.group(1) not in done:
@@ -55,7 +57,9 @@ def byunderscore(fields):
             done.add(m.group(1))
     return RecordOAM(out)
 
-def tree2oam(tree, branch2name=branch2name):
+byunderscore.regex = re.compile(r"([a-zA-Z][a-zA-Z0-9]*)_([a-zA-Z_][a-zA-Z0-9_]*)")
+
+def tree2oam(tree, branch2name=branch2name, split=None):
     def recurse(branch):
         fields = OrderedDict()
         for subbranch in branch.branches:
@@ -74,17 +78,38 @@ def tree2oam(tree, branch2name=branch2name):
                 else:
                     fields[fieldname] = recurse(subbranch)
 
-        out = byunderscore(fields)
+        if split is None:
+            out = RecordOAM(fields)
+        else:
+            out = split(fields)
 
         if branch is not tree and branch.name in tree.counter:
             return ListCountOAM(tree.counter[subbranch.name].branch, out)
         else:
             return out
 
+    def flatten(rec):
+        for n, c in rec.contents.items():
+            if isinstance(c, RecordOAM):
+                for nc in flatten(c):
+                    yield nc
+            else:
+                yield n, c
+
+    def droplist(t):
+        if isinstance(t, ListCountOAM):
+            return t.contents
+
+        elif isinstance(t, RecordOAM):
+            return RecordOAM(dict((n, droplist(c)) for n, c in t.contents.items()))
+
+        else:
+            return t
+
     def arrayofstructs(t):
         if isinstance(t, RecordOAM):
             countarray = None
-            for c in t.contents.values():
+            for n, c in flatten(t):
                 if not isinstance(c, ListCountOAM):
                     countarray = None
                     break
@@ -97,10 +122,10 @@ def tree2oam(tree, branch2name=branch2name):
             if countarray is None:
                 return RecordOAM(OrderedDict((n, arrayofstructs(c)) for n, c in t.contents.items()))
             else:
-                return ListCountOAM(countarray, RecordOAM(OrderedDict((n, arrayofstructs(c.contents)) for n, c in t.contents.items())))
+                return ListCountOAM(countarray, RecordOAM(OrderedDict((n, arrayofstructs(droplist(c))) for n, c in t.contents.items())))
 
         elif isinstance(t, ListCountOAM):
-            return ListCountOAM(t.countarray, t.contents)
+            return ListCountOAM(t.countarray, arrayofstructs(t.contents))
 
         else:
             return t
@@ -117,4 +142,4 @@ def tree2oam(tree, branch2name=branch2name):
 
 tree = uproot.open("~/storage/data/nano-TTLHE-2017-09-04-lz4.root")["Events"]
 
-print tree2oam(tree).format()
+print tree2oam(tree, split=byunderscore).format()
