@@ -1078,6 +1078,122 @@ class TBranch(uproot.core.TNamed,
             else:
                 return out, errors
 
+    class LazyArray(object):
+        def __init__(self, branch, dtype):
+            if dtype == numpy.dtype(object):
+                raise NotImplementedError
+            self._branch = branch
+            self.dtype = dtype
+
+        @property
+        def shape(self):
+            newlen = self._branch.numitems // reduce(lambda x, y: x*y, self._branch.itemdims, 1)
+            return (newlen,) + self._branch.itemdims
+
+        def __len__(self):
+            return self.shape[0]
+
+        # interpret negative indexes as starting at the end of the dataset
+        def _normalize(self, i, clip, step):
+            lenself = len(self)
+            if i < 0:
+                j = len(self) + i
+                if j < 0:
+                    if clip:
+                        return 0 if step > 0 else lenself
+                    else:
+                        raise IndexError("index out of range: {0} for length {1}".format(i, lenself))
+                else:
+                    return j
+            elif i < lenself:
+                return i
+            elif clip:
+                return lenself if step > 0 else 0
+            else:
+                raise IndexError("index out of range: {0} for length {1}".format(i, lenself))
+
+        def _normalizeslice(self, s):
+            lenself = len(self)
+            if s.step is None:
+                step = 1
+            else:
+                step = s.step
+            if step == 0:
+                raise ValueError("slice step cannot be zero")
+            if s.start is None:
+                if step > 0:
+                    start = 0
+                else:
+                    start = lenself - 1
+            else:
+                start = self._normalize(s.start, True, step)
+            if s.stop is None:
+                if step > 0:
+                    stop = lenself
+                else:
+                    stop = -1
+            else:
+                stop = self._normalize(s.stop, True, step)
+
+            return start, stop, step
+
+        def _ensurefilled(self, basketindex):
+            if self._baskets[basketindex] is None:
+                self._baskets[basketindex] = self._branch._adddimensions(self._branch._basket(basketindex))
+                if self._baskets[basketindex].dtype != self.dtype:
+                    self._baskets[basketindex] = numpy.array(self._baskets[basketindex], dtype=self.dtype)
+
+        def __getitem__(self, index):
+            if not hasattr(self._branch, "basketwalkers"):
+                self._branch._preparebaskets()
+                self._baskets = [None] * len(self._branch._basketwalkers)
+                self._ends = (numpy.cumsum(self._branch._basketlengths) // self._branch.dtype.itemsize).tolist()
+                self._starts = [0] + ends[:-1]
+
+            product = reduce(lambda x, y: x*y, self._branch.itemdims, 1)
+
+            if isinstance(index, slice):
+                start, stop, step = self._normalizeslice(index)
+                if start == stop:
+                    return self._branch._adddimensions(numpy.empty(0, dtype=self._branch.dtype))
+
+                flatstart = start * product
+                flatstop = stop * product
+                firststart = None
+                firstindex = None
+                lastindex = None
+                for basketindex, start in enumerate(self._starts):
+                    if flatstart >= start and firststart is None:
+                        firststart = start
+                    if flatstop >= self._ends[basketindex]:
+                        break
+                    if flatstart >= start:
+                        self._ensurefilled(basketindex)
+                        if firstindex is None:
+                            firstindex = basketindex
+                        lastindex = basketindex
+
+                numpy.concatenate(self._baskets[firstindex:lastindex + 1])[(flatstart - firststart) // product : (flatstop - firststart) // product : step]
+                
+            else:
+                flatindex = self._normalize(index, False, 1) * product
+                for basketindex, start in enumerate(self._starts):
+                    if flatindex >= start:
+                        self._ensurefilled(basketindex)
+                        break
+                return self._baskets[basketindex][(flatindex - start) // product]
+
+    def lazyarray(self, dtype=None):
+        """Creates a proxy for an array that gets data on demand.
+
+        Arguments:
+
+            * `dtype` If not `None`, cast the array into a given `dtype` (such as conversion to little endian).
+        """
+        if dtype is None:
+            dtype = self.dtype
+        return LazyArray(self, dtype)
+
 uproot.rootio.Deserialized.classes[b"TBranch"] = TBranch
 
 class TBranchElement(TBranch):

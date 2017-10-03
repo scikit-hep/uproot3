@@ -59,7 +59,7 @@ def byunderscore(fields):
 
 byunderscore.regex = re.compile(r"([a-zA-Z][a-zA-Z0-9]*)_([a-zA-Z_][a-zA-Z0-9_]*)")
 
-def tree2oam(tree, branch2name=branch2name, split=None):
+def tree2oam(tree, branch2name=branch2name, combine=None):
     def recurse(branch):
         fields = OrderedDict()
         for subbranch in branch.branches:
@@ -78,10 +78,10 @@ def tree2oam(tree, branch2name=branch2name, split=None):
                 else:
                     fields[fieldname] = recurse(subbranch)
 
-        if split is None:
+        if combine is None:
             out = RecordOAM(fields)
         else:
-            out = split(fields)
+            out = combine(fields)
 
         if branch is not tree and branch.name in tree.counter:
             return ListCountOAM(tree.counter[subbranch.name].branch, out)
@@ -133,13 +133,3 @@ def tree2oam(tree, branch2name=branch2name, split=None):
     return ListCountOAM(None, arrayofstructs(recurse(tree)))
 
 
-
-
-
-# tree = uproot.open("~/storage/data/small-evnt-tree-fullsplit.root")["tree"]
-
-# tree = uproot.open("~/storage/data/TTJets_13TeV_amcatnloFXFX_pythia8_2_77.root")["Events"]
-
-tree = uproot.open("~/storage/data/nano-TTLHE-2017-09-04-lz4.root")["Events"]
-
-print tree2oam(tree, split=byunderscore).format()

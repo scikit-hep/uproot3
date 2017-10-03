@@ -316,3 +316,12 @@ class TestTree(unittest.TestCase):
         self.assertEqual(uproot.open("tests/simple.root")["tree"].branchtypes, {b"two": numpy.dtype(">f4"), b"one": numpy.dtype(">i4"), b"three": numpy.dtype("O")})
         self.assertEqual(uproot.open("tests/small-evnt-tree-fullsplit.root")["tree"].allbranchnames, [b"evt", b"Beg", b"I16", b"I32", b"I64", b"U16", b"U32", b"U64", b"F32", b"F64", b"Str", b"P3.Px", b"P3.Py", b"P3.Pz", b"ArrayI16[10]", b"ArrayI32[10]", b"ArrayI64[10]", b"ArrayU16[10]", b"ArrayU32[10]", b"ArrayU64[10]", b"ArrayF32[10]", b"ArrayF64[10]", b"N", b"SliceI16", b"SliceI32", b"SliceI64", b"SliceU16", b"SliceU32", b"SliceU64", b"SliceF32", b"SliceF64", b"End"])
         self.assertEqual(uproot.open("tests/small-evnt-tree-fullsplit.root")["tree"].allbranchtypes, {b"Str": numpy.dtype("O"), b"P3.Px": numpy.dtype(">i4"), b"I64": numpy.dtype(">i8"), b"U64": numpy.dtype(">u8"), b"ArrayF32[10]": numpy.dtype(">f4"), b"SliceI16": numpy.dtype(">i2"), b"ArrayI64[10]": numpy.dtype(">i8"), b"evt": numpy.dtype(">i4"), b"SliceF64": numpy.dtype(">f8"), b"End": numpy.dtype("O"), b"U32": numpy.dtype(">u4"), b"Beg": numpy.dtype("O"), b"I32": numpy.dtype(">i4"), b"N": numpy.dtype(">i4"), b"SliceI32": numpy.dtype(">i4"), b"P3.Py": numpy.dtype(">f8"), b"U16": numpy.dtype(">u2"), b"SliceU32": numpy.dtype(">u4"), b"P3.Pz": numpy.dtype(">i4"), b"ArrayI32[10]": numpy.dtype(">i4"), b"ArrayF64[10]": numpy.dtype(">f8"), b"I16": numpy.dtype(">i2"), b"SliceU64": numpy.dtype(">u8"), b"F64": numpy.dtype(">f8"), b"ArrayI16[10]": numpy.dtype(">i2"), b"ArrayU16[10]": numpy.dtype(">u2"), b"ArrayU32[10]": numpy.dtype(">u4"), b"F32": numpy.dtype(">f4"), b"SliceF32": numpy.dtype(">f4"), b"ArrayU64[10]": numpy.dtype(">u8"), b"SliceU16": numpy.dtype(">u2"), b"SliceI64": numpy.dtype(">i8")})
+
+    def test_tree_lazy(self):
+        print
+        for i, x in enumerate(uproot.open("tests/sample-5.30.00-uncompressed.root")["sample"]["i4"].baskets()):
+            print i, x
+
+        lazy = uproot.open("tests/sample-5.30.00-uncompressed.root")["sample"]["i4"].lazyarray()
+        print lazy._baskets
+
