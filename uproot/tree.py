@@ -1148,7 +1148,7 @@ class TBranch(uproot.core.TNamed,
                 self._branch._preparebaskets()
                 self._baskets = [None] * len(self._branch._basketwalkers)
                 self._ends = (numpy.cumsum(self._branch._basketlengths) // self._branch.dtype.itemsize).tolist()
-                self._starts = [0] + ends[:-1]
+                self._starts = [0] + self._ends[:-1]
 
             product = reduce(lambda x, y: x*y, self._branch.itemdims, 1)
 
@@ -1162,23 +1162,23 @@ class TBranch(uproot.core.TNamed,
                 firststart = None
                 firstindex = None
                 lastindex = None
-                for basketindex, start in enumerate(self._starts):
-                    if flatstart >= start and firststart is None:
-                        firststart = start
-                    if flatstop >= self._ends[basketindex]:
-                        break
-                    if flatstart >= start:
-                        self._ensurefilled(basketindex)
-                        if firstindex is None:
-                            firstindex = basketindex
-                        lastindex = basketindex
 
-                numpy.concatenate(self._baskets[firstindex:lastindex + 1])[(flatstart - firststart) // product : (flatstop - firststart) // product : step]
+                for basketindex, start in enumerate(self._starts):
+                    if start <= flatstart and firststart is None:
+                        firststart = start
+                    if start >= flatstop:
+                        break
+                    self._ensurefilled(basketindex)
+                    if firstindex is None:
+                        firstindex = basketindex
+                    lastindex = basketindex
+
+                return numpy.concatenate(self._baskets[firstindex:lastindex + 1])[(flatstart - firststart) // product : (flatstop - firststart) // product : step]
                 
             else:
                 flatindex = self._normalize(index, False, 1) * product
                 for basketindex, start in enumerate(self._starts):
-                    if flatindex >= start:
+                    if start <= flatindex < self._ends[basketindex]:
                         self._ensurefilled(basketindex)
                         break
                 return self._baskets[basketindex][(flatindex - start) // product]
@@ -1192,7 +1192,7 @@ class TBranch(uproot.core.TNamed,
         """
         if dtype is None:
             dtype = self.dtype
-        return LazyArray(self, dtype)
+        return self.LazyArray(self, dtype)
 
 uproot.rootio.Deserialized.classes[b"TBranch"] = TBranch
 
