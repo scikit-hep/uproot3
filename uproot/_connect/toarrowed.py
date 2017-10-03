@@ -18,6 +18,8 @@ import re
 
 from collections import OrderedDict
 
+import numpy
+
 from arrowed.oam import PrimitiveOAM
 from arrowed.oam import ListCountOAM
 from arrowed.oam import ListOffsetOAM
@@ -27,53 +29,28 @@ from arrowed.oam import PointerOAM
 import uproot
 
 def defineOAM(tree, rename=lambda x: x.name):
-    class ListWithName(list):
-        def __init__(self, name):
-            super(ListWithName, self).__init__()
-            self.name = name
-
     def recurse(branch):
-        bycounter = {}
+        fields = OrderedDict()
         for subbranch in branch.branches:
-            if len(subbranch.leaves) == 1:
-                counter = subbranch.leaves[0].counter
-                if counter is not None:
-                    counter = counter.name
+            if len(subbranch.branches) == 0:
+                if getattr(subbranch, "dtype", numpy.dtype(object)) is not numpy.dtype(object):
+                    if subbranch.name in tree.counter:
+                        fields[subbranch.name] = ListCountOAM(tree.counter[subbranch.name].branch, PrimitiveOAM(subbranch.name))
+                    else:
+                        fields[subbranch.name] = PrimitiveOAM(subbranch.name)
+            else:
+                fields[subbranch.name] = recurse(subbranch)
 
-                if counter not in bycounter:
-                    bycounter[counter] = ListWithName(subbranch.name)
-
-                if len(subbranch.branches) == 0:
-                    bycounter[counter].append(subbranch)
-                else:
-                    bycounter[counter].append(recurse(subbranch))
-
-        return bycounter
-    
-    structure = recurse(tree)
-
-    def recurse(counter, group):
-        fields = {}
-        for obj in group:
-            if isinstance(obj, dict):
-                for subcounter, subgroup in obj.items():
-                    # no more than one level may be counted
-                    assert counter is None or subcounter is None
-                    if counter is None:
-                        counter = subcounter
-                    fields[subgroup.name] = recurse(counter, subgroup)
-
-            elif hasattr(obj, "dtype"):
-                fields[obj.name] = PrimitiveOAM(obj.name)
-
-        if counter is None:
-            return RecordOAM(fields)
+        if branch is not tree and branch.name in tree.counter:
+            return ListCountOAM(tree.counter[subbranch.name].branch, RecordOAM(fields))
         else:
-            print "HERE", fields
+            return RecordOAM(fields)
 
-            return ListCountOAM(counter, RecordOAM(fields))
+    return ListCountOAM(None, recurse(tree))
 
-    return ListCountOAM(None, RecordOAM(dict(recurse(counter, group) for counter, group in structure.items())))
+
+
+
 
 tree = uproot.open("~/storage/data/small-evnt-tree-fullsplit.root")["tree"]
 
