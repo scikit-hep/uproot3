@@ -534,9 +534,14 @@ class TBranch(uproot.core.TNamed,
 
         self._filewalker = filewalker
 
-        self.itemdims = tuple(int(x) for x in re.findall(self._itemdimpattern, self.title))
+        self.itemdims = ()
+        if len(self.leaves) == 1:
+            m = self._titlehasdims.match(self.leaves[0].title)
+            if m is not None:
+                self.itemdims = tuple(int(x) for x in re.findall(self._itemdimpattern, self.leaves[0].title))
 
-    _itemdimpattern = re.compile(b"\[([1-9][0-9]*)\]")
+    _titlehasdims = re.compile(br"^([^\[\]]+)(\[[^\[\]]+\])+")
+    _itemdimpattern = re.compile(br"\[([1-9][0-9]*)\]")
 
     def __del__(self):
         del self.branches
@@ -738,7 +743,7 @@ class TBranch(uproot.core.TNamed,
         else:
             product = reduce(lambda x, y: x*y, self.itemdims, 1)
             if len(array) % product != 0:
-                raise IOError("data shape is misaligned ({0} elements can't be reshaped as {1})".format(len(array), self.items))
+                raise IOError("data shape of {0} is misaligned ({1} elements can't be reshaped as {2})".format(repr(self.name), len(array), self.itemdims))
             else:
                 newlen = len(array) // product
                 return array.reshape((newlen,) + self.itemdims)
