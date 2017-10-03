@@ -29,11 +29,31 @@ from arrowed.oam import PointerOAM
 import uproot
 
 def branch2name(branch):
-    m = re.match(r"(.*\.)*([a-zA-Z][a-zA-Z0-9]*)", branch.name)
+    m = re.match(r"(.*\.)*([a-zA-Z_][a-zA-Z0-9_]*)", branch.name)
     if m is not None:
         return m.group(2)
     else:
         return None
+
+def byunderscore(fields):
+    grouped = OrderedDict()
+    for name, field in fields.items():
+        m = re.match(r"([^_]*)_(.*)", name)
+        if m is not None and m.group(1) not in fields:
+            if m.group(1) not in grouped:
+                grouped[m.group(1)] = OrderedDict()
+            grouped[m.group(1)][m.group(2)] = field
+
+    done = set()
+    out = OrderedDict()
+    for name, field in fields.items():
+        m = re.match(r"([^_]*)_(.*)", name)
+        if m is None or m.group(1) not in grouped:
+            out[name] = field
+        elif m.group(1) not in done:
+            out[m.group(1)] = RecordOAM(grouped[m.group(1)])
+            done.add(m.group(1))
+    return RecordOAM(out)
 
 def tree2oam(tree, branch2name=branch2name):
     def recurse(branch):
@@ -54,10 +74,12 @@ def tree2oam(tree, branch2name=branch2name):
                 else:
                     fields[fieldname] = recurse(subbranch)
 
+        out = byunderscore(fields)
+
         if branch is not tree and branch.name in tree.counter:
-            return ListCountOAM(tree.counter[subbranch.name].branch, RecordOAM(fields))
+            return ListCountOAM(tree.counter[subbranch.name].branch, out)
         else:
-            return RecordOAM(fields)
+            return out
 
     def arrayofstructs(t):
         if isinstance(t, RecordOAM):
@@ -91,8 +113,8 @@ def tree2oam(tree, branch2name=branch2name):
 
 # tree = uproot.open("~/storage/data/small-evnt-tree-fullsplit.root")["tree"]
 
-tree = uproot.open("~/storage/data/TTJets_13TeV_amcatnloFXFX_pythia8_2_77.root")["Events"]
+# tree = uproot.open("~/storage/data/TTJets_13TeV_amcatnloFXFX_pythia8_2_77.root")["Events"]
 
-# tree = uproot.open("~/storage/data/nano-TTLHE-2017-09-04-lz4.root")["Events"]
+tree = uproot.open("~/storage/data/nano-TTLHE-2017-09-04-lz4.root")["Events"]
 
 print tree2oam(tree).format()
