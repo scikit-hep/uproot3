@@ -26,8 +26,14 @@ from arrowed.oam import ListOffsetOAM
 from arrowed.oam import RecordOAM
 from arrowed.oam import PointerOAM
 
+def tostr(obj):
+    if hasattr(obj, "decode"):
+        return obj.decode("ascii")
+    else:
+        return obj
+
 def branch2name(branch):
-    m = branch2name.regex.match(branch.name)
+    m = branch2name.regex.match(tostr(branch.name))
     if m is not None:
         return m.group(2)
     else:
@@ -62,7 +68,7 @@ def oam(tree, branch2name=branch2name, combine=byunderscore):
         fields = OrderedDict()
         for subbranch in branch.branches:
             if branch2name is None:
-                fieldname = subbranch.name
+                fieldname = tostr(subbranch.name)
             else:
                 fieldname = branch2name(subbranch)
 
@@ -76,15 +82,20 @@ def oam(tree, branch2name=branch2name, combine=byunderscore):
                 else:
                     fields[fieldname] = recurse(subbranch)
 
+        if branch2name is None:
+            recordname = tostr(branch.name)
+        else:
+            recordname = branch2name(branch)
+
         if combine is None:
-            out = RecordOAM(fields, name=branch.name)
+            out = RecordOAM(fields, name=recordname)
         elif hasattr(combine, "__code__") and combine.__code__.co_argcount == 2:
-            out = combine(fields, branch.name)
+            out = combine(fields, recordname)
         else:
             out = combine(fields)
 
         if branch is not tree and branch.name in tree.counter:
-            return ListCountOAM(tree.counter[subbranch.name].branch, out)
+            return ListCountOAM(tree.counter[branch.name].branch, out)
         else:
             return out
 
