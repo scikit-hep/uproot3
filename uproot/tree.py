@@ -21,10 +21,10 @@ import sys
 
 import numpy
 
+import uproot.core
+import uproot.rootio
 import uproot._walker.arraywalker
 import uproot._walker.lazyarraywalker
-import uproot.rootio
-import uproot.core
 
 def _delayedraise(cls, err, trc):
     if sys.version_info[0] <= 2:
@@ -447,6 +447,23 @@ class TTree(uproot.core.TNamed,
         else:
             (out,), errors = self.arrays(branchdtypes=branchdtypes, executor=executor, outputtype=tuple, block=block)
             return out, errors
+
+    class Connector(object):
+        class SubConnector(object): pass
+
+        def __init__(self, tree):
+            self.tree = tree
+
+        @property
+        def arrowed(self):
+            import uproot._connect.toarrowed
+            out = self.SubConnector()
+            out.spec = lambda *args, **kwds: uproot._connect.toarrowed.spec(self.tree, *args, **kwds)
+            return out
+
+    @property
+    def to(self):
+        return self.Connector(self)
 
 uproot.rootio.Deserialized.classes[b"TTree"] = TTree
 

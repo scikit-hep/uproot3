@@ -26,8 +26,6 @@ from arrowed.oam import ListOffsetOAM
 from arrowed.oam import RecordOAM
 from arrowed.oam import PointerOAM
 
-import uproot
-
 def branch2name(branch):
     m = branch2name.regex.match(branch.name)
     if m is not None:
@@ -37,7 +35,7 @@ def branch2name(branch):
 
 branch2name.regex = re.compile(r"(.*\.)*([a-zA-Z_][a-zA-Z0-9_]*)")
 
-def byunderscore(fields):
+def byunderscore(fields, recordname):
     grouped = OrderedDict()
     for name, field in fields.items():
         m = byunderscore.regex.match(name)
@@ -53,13 +51,13 @@ def byunderscore(fields):
         if m is None or m.group(1) not in grouped:
             out[name] = field
         elif m.group(1) not in done:
-            out[m.group(1)] = RecordOAM(grouped[m.group(1)])
+            out[m.group(1)] = RecordOAM(grouped[m.group(1)], name=m.group(1))
             done.add(m.group(1))
-    return RecordOAM(out)
+    return RecordOAM(out, name=recordname)
 
 byunderscore.regex = re.compile(r"([a-zA-Z][a-zA-Z0-9]*)_([a-zA-Z_][a-zA-Z0-9_]*)")
 
-def arrowedspec(tree, branch2name=branch2name, combine=None):
+def spec(tree, branch2name=branch2name, combine=byunderscore):
     def recurse(branch):
         fields = OrderedDict()
         for subbranch in branch.branches:
@@ -79,7 +77,9 @@ def arrowedspec(tree, branch2name=branch2name, combine=None):
                     fields[fieldname] = recurse(subbranch)
 
         if combine is None:
-            out = RecordOAM(fields)
+            out = RecordOAM(fields, name=branch.name)
+        elif hasattr(combine, "__code__") and combine.__code__.co_argcount == 2:
+            out = combine(fields, branch.name)
         else:
             out = combine(fields)
 
@@ -96,12 +96,12 @@ def arrowedspec(tree, branch2name=branch2name, combine=None):
             else:
                 yield n, c
 
-    def droplist(t):
+    def droplist(t, name):
         if isinstance(t, ListCountOAM):
             return t.contents
 
         elif isinstance(t, RecordOAM):
-            return RecordOAM(dict((n, droplist(c)) for n, c in t.contents.items()))
+            return RecordOAM(dict((n, droplist(c, n)) for n, c in t.contents.items()), name=name)
 
         else:
             return t
@@ -120,9 +120,9 @@ def arrowedspec(tree, branch2name=branch2name, combine=None):
                     break
 
             if countarray is None:
-                return RecordOAM(OrderedDict((n, arrayofstructs(c)) for n, c in t.contents.items()))
+                return RecordOAM(OrderedDict((n, arrayofstructs(c)) for n, c in t.contents.items()), name=t.name)
             else:
-                return ListCountOAM(countarray, RecordOAM(OrderedDict((n, arrayofstructs(droplist(c))) for n, c in t.contents.items())))
+                return ListCountOAM(countarray, RecordOAM(OrderedDict((n, arrayofstructs(droplist(c, n))) for n, c in t.contents.items()), name=t.name))
 
         elif isinstance(t, ListCountOAM):
             return ListCountOAM(t.countarray, arrayofstructs(t.contents))
@@ -131,7 +131,3 @@ def arrowedspec(tree, branch2name=branch2name, combine=None):
             return t
 
     return ListCountOAM(None, arrayofstructs(recurse(tree)))
-
-def lazyproxy(tree):
-    pass
-
