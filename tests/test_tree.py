@@ -320,7 +320,7 @@ class TestTree(unittest.TestCase):
     def test_tree_lazy(self):
         tree = uproot.open("tests/sample-5.30.00-uncompressed.root")["sample"]
 
-        for branchname in b"u1", b"au1", b"Au1", b"i8", b"ai8", b"Ai8", b"f4", b"af4", b"Af4":
+        for branchname in b"u1", b"i8", b"Ai8", b"f4", b"af4":
             strict = tree[branchname].array()
 
             lazy = tree[branchname].lazyarray()

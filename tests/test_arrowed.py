@@ -32,5 +32,4 @@ class TestArrowed(unittest.TestCase):
             return
 
         tree = uproot.open("tests/mc10events.root")["Events"]
-
-        print tree.to.arrowed.spec().format()
+        objectArrayMap = tree.to.arrowed.oam()

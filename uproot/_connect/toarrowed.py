@@ -57,7 +57,7 @@ def byunderscore(fields, recordname):
 
 byunderscore.regex = re.compile(r"([a-zA-Z][a-zA-Z0-9]*)_([a-zA-Z_][a-zA-Z0-9_]*)")
 
-def spec(tree, branch2name=branch2name, combine=byunderscore):
+def oam(tree, branch2name=branch2name, combine=byunderscore):
     def recurse(branch):
         fields = OrderedDict()
         for subbranch in branch.branches:

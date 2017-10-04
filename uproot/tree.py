@@ -345,6 +345,44 @@ class TTree(uproot.core.TNamed,
             else:
                 yield out
 
+    def lazyarrays(self, branchdtypes=lambda branch: getattr(branch, "dtype", None), outputtype=dict):
+        """Creates a proxy for an array that gets data on demand.
+
+        Arguments:
+
+            * `branchdtypes` (same as in `TTree.iterator`)
+
+              If a single string, the string names the only branch to load.
+              If an iterable of strings, all of these are loaded (in the specified order).
+              If a dict of `{name: dtype}`, load the specified branch names and cast them into a given `dtype` (such as conversion to little endian).
+              If a function from branch names to `dtype` or `None`, load the branches into the given `dtypes` and don't load the branches mapped to `None`.
+
+              If any `dtypes` are actually arrays, rather than `dtype` objects, then those arrays will be filled instead of creating new ones (shape must match).
+
+            * `outputtype` (same as in `TTree.iterator`)
+
+              Constructor for the objects to yield in the iterator. Good choices include `dict`, `tuple`, `namedtuple`, `list`.
+        """
+        toget = []
+        for branch, dtype in self._normalizeselection(branchdtypes, self.allbranches):
+            toget.append((branch, dtype))
+
+        if outputtype == namedtuple:
+            outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, dtype in toget])
+
+        out = []
+        for branch, dtype in toget:
+            outi = branch.lazyarray(dtype)
+            if outputtype == dict:
+                out.append((branch.name, outi))
+            else:
+                out.append(outi)
+
+        if issubclass(outputtype, dict) or outputtype == tuple or outputtype == list:
+            return outputtype(out)
+        else:
+            return outputtype(*out)
+
     def arrays(self, branchdtypes=lambda branch: getattr(branch, "dtype", None), executor=None, outputtype=dict, block=True):
         """Extracts whole branches into Numpy arrays.
 
@@ -408,6 +446,22 @@ class TTree(uproot.core.TNamed,
         else:
             return out, (item for sublist in errorslist for item in sublist)
 
+    def lazyarray(self, branch, dtype=None):
+        """Creates a proxy for an array that gets data on demand.
+
+        Arguments:
+
+            * `branch` *(required)*
+
+               Branch name to extract.
+
+            * `dtype`
+
+               If not `None`, cast the array into a given `dtype` (such as conversion to little endian).
+        """
+        branch = branch.encode("ascii") if hasattr(branch, "encode") else branch
+        return self.branch(branch).lazyarray(dtype)
+
     def array(self, branch, dtype=None, executor=None, block=True):
         """Extracts a whole branch into a Numpy array.
 
@@ -458,7 +512,19 @@ class TTree(uproot.core.TNamed,
         def arrowed(self):
             import uproot._connect.toarrowed
             out = self.SubConnector()
-            out.spec = lambda *args, **kwds: uproot._connect.toarrowed.spec(self.tree, *args, **kwds)
+
+            def oam(*args, **kwds):
+                return uproot._connect.toarrowed.oam(self.tree, *args, **kwds)
+            out.oam = oam
+
+            def proxy(branchdtypes=lambda branch: getattr(branch, "dtype", None), oam=None):
+                if oam is None:
+                    oam = uproot._connect.toarrowed.oam(self.tree)
+                source = self.tree.lazyarrays(branchdtypes=branchdtypes)
+                source[None] = numpy.array([self.tree.numentries], dtype=numpy.int64)
+                return oam.filled(source).proxy(0)
+            out.proxy = proxy
+            
             return out
 
     @property
@@ -532,9 +598,10 @@ class TBranch(uproot.core.TNamed,
         self.leaves = list(uproot.core.TObjArray(filewalker, walker))
         self._skipbcnt(walker) # reading baskets is expensive and useless
 
-        walker.skip(1)  # isArray
-        self._basketBytes = walker.readarray(">i4", maxBaskets)[:writeBasket]
-
+        # walker.skip(1)  # isArray
+        # self._basketBytes = walker.readarray(">i4", maxBaskets)[:writeBasket]
+        walker.skip(1 + 4*maxBaskets)
+        
         walker.skip(1)  # isArray
         self._basketEntry = walker.readarray(">i8", maxBaskets)[:writeBasket]
 
@@ -580,11 +647,14 @@ class TBranch(uproot.core.TNamed,
             return self.numbytes // self.dtype.itemsize
 
     def basketbytes(self, i):
-        if not 0 <= i < len(self._basketBytes):
-            raise IndexError("index {0} out of range for branch with {1} baskets".format(i, len(self._basketBytes)))
-        trial = self._basketBytes[i] - self._firstkeylen()
+        if not hasattr(self, "basketobjlens"):
+            self._minipreparebaskets()
 
+        if not 0 <= i < len(self._basketobjlens):
+            raise IndexError("index {0} out of range for branch with {1} baskets".format(i, len(self._basketobjlens)))
+        trial = self._basketobjlens[i]
         entries = self.basketentries(i)
+
         if self._speedbumps:
             return trial - entries*4 - 8 - entries
         elif self.dtype == numpy.dtype(object) or trial != entries * reduce(lambda x, y: x*y, self.itemdims, self.dtype.itemsize):
@@ -658,14 +728,19 @@ class TBranch(uproot.core.TNamed,
 
         raise KeyError("not found: {0}".format(repr(name)))
 
-    def _firstkeylen(self):
-        # FIXME: find it in writing somewhere that every basket of the same branch has the same keylen
-        if hasattr(self, "_basketkeylens"):
-            return self._basketkeylens[0]
-        else:
-            basketwalker = self._filewalker.copy(self._basketSeek[0] + 14)
+    def _minipreparebaskets(self):
+        self._filewalker.startcontext()
+
+        self._basketobjlens = []
+        self._basketkeylens = []
+        for seek in self._basketSeek:
+            basketwalker = self._filewalker.copy(seek)
             basketwalker.startcontext()
-            return basketwalker.readfield("!h")
+
+            bytes, version, objlen, datetime, keylen, cycle = basketwalker.readfields("!ihiIhh")
+        
+            self._basketobjlens.append(objlen)
+            self._basketkeylens.append(keylen)
 
     def _preparebaskets(self):
         self._filewalker.startcontext()
@@ -1109,7 +1184,7 @@ class TBranch(uproot.core.TNamed,
 
         def __len__(self):
             return self.shape[0]
-
+            
         # interpret negative indexes as starting at the end of the dataset
         def __normalize(self, i, clip, step):
             lenself = len(self)
@@ -1154,18 +1229,28 @@ class TBranch(uproot.core.TNamed,
 
             return start, stop, step
 
+        def __startfill(self):
+            if not hasattr(self._branch, "basketwalkers"):
+                self._branch._preparebaskets()
+                self._baskets = [None] * len(self._branch._basketwalkers)
+                self._ends = (numpy.cumsum(self._branch._basketlengths) // self._branch.dtype.itemsize).tolist()
+                self._starts = [0] + self._ends[:-1]
+
         def __ensurefilled(self, basketindex):
             if self._baskets[basketindex] is None:
                 self._baskets[basketindex] = self._branch._adddimensions(self._branch._basket(basketindex))
                 if self._baskets[basketindex].dtype != self.dtype:
                     self._baskets[basketindex] = numpy.array(self._baskets[basketindex], dtype=self.dtype)
 
+        def cumsum(self, axis=None, dtype=None, out=None):
+            self.__startfill()            
+            for i in range(len(self._baskets)):
+                self.__ensurefilled(i)
+            array = numpy.concatenate(self._baskets)
+            return array.cumsum(axis, dtype, out)
+
         def __getitem__(self, index):
-            if not hasattr(self._branch, "basketwalkers"):
-                self._branch._preparebaskets()
-                self._baskets = [None] * len(self._branch._basketwalkers)
-                self._ends = (numpy.cumsum(self._branch._basketlengths) // self._branch.dtype.itemsize).tolist()
-                self._starts = [0] + self._ends[:-1]
+            self.__startfill()
 
             product = reduce(lambda x, y: x*y, self._branch.itemdims, 1)
 
