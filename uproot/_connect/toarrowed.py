@@ -59,7 +59,7 @@ def byunderscore(fields):
 
 byunderscore.regex = re.compile(r"([a-zA-Z][a-zA-Z0-9]*)_([a-zA-Z_][a-zA-Z0-9_]*)")
 
-def tree2oam(tree, branch2name=branch2name, combine=None):
+def arrowedspec(tree, branch2name=branch2name, combine=None):
     def recurse(branch):
         fields = OrderedDict()
         for subbranch in branch.branches:
@@ -132,4 +132,6 @@ def tree2oam(tree, branch2name=branch2name, combine=None):
 
     return ListCountOAM(None, arrayofstructs(recurse(tree)))
 
+def lazyproxy(tree):
+    pass
 

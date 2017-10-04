@@ -1094,10 +1094,10 @@ class TBranch(uproot.core.TNamed,
             return self.shape[0]
 
         # interpret negative indexes as starting at the end of the dataset
-        def _normalize(self, i, clip, step):
+        def __normalize(self, i, clip, step):
             lenself = len(self)
             if i < 0:
-                j = len(self) + i
+                j = lenself + i
                 if j < 0:
                     if clip:
                         return 0 if step > 0 else lenself
@@ -1112,7 +1112,7 @@ class TBranch(uproot.core.TNamed,
             else:
                 raise IndexError("index out of range: {0} for length {1}".format(i, lenself))
 
-        def _normalizeslice(self, s):
+        def __normalizeslice(self, s):
             lenself = len(self)
             if s.step is None:
                 step = 1
@@ -1126,18 +1126,18 @@ class TBranch(uproot.core.TNamed,
                 else:
                     start = lenself - 1
             else:
-                start = self._normalize(s.start, True, step)
+                start = self.__normalize(s.start, True, step)
             if s.stop is None:
                 if step > 0:
                     stop = lenself
                 else:
                     stop = -1
             else:
-                stop = self._normalize(s.stop, True, step)
+                stop = self.__normalize(s.stop, True, step)
 
             return start, stop, step
 
-        def _ensurefilled(self, basketindex):
+        def __ensurefilled(self, basketindex):
             if self._baskets[basketindex] is None:
                 self._baskets[basketindex] = self._branch._adddimensions(self._branch._basket(basketindex))
                 if self._baskets[basketindex].dtype != self.dtype:
@@ -1153,7 +1153,7 @@ class TBranch(uproot.core.TNamed,
             product = reduce(lambda x, y: x*y, self._branch.itemdims, 1)
 
             if isinstance(index, slice):
-                start, stop, step = self._normalizeslice(index)
+                start, stop, step = self.__normalizeslice(index)
                 if start == stop:
                     return self._branch._adddimensions(numpy.empty(0, dtype=self._branch.dtype))
 
@@ -1168,7 +1168,7 @@ class TBranch(uproot.core.TNamed,
                         firststart = start
                     if start >= flatstop:
                         break
-                    self._ensurefilled(basketindex)
+                    self.__ensurefilled(basketindex)
                     if firstindex is None:
                         firstindex = basketindex
                     lastindex = basketindex
@@ -1176,10 +1176,10 @@ class TBranch(uproot.core.TNamed,
                 return numpy.concatenate(self._baskets[firstindex:lastindex + 1])[(flatstart - firststart) // product : (flatstop - firststart) // product : step]
                 
             else:
-                flatindex = self._normalize(index, False, 1) * product
+                flatindex = self.__normalize(index, False, 1) * product
                 for basketindex, start in enumerate(self._starts):
                     if start <= flatindex < self._ends[basketindex]:
-                        self._ensurefilled(basketindex)
+                        self.__ensurefilled(basketindex)
                         break
                 return self._baskets[basketindex][(flatindex - start) // product]
 
