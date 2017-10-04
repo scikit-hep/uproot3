@@ -515,6 +515,7 @@ class TTree(uproot.core.TNamed,
 
             def schema(*args, **kwds):
                 return uproot._connect.toarrowed.oam(self.tree, *args, **kwds)
+
             out.schema = schema
 
             def proxy(oam=None):
@@ -523,7 +524,38 @@ class TTree(uproot.core.TNamed,
                 source = self.tree.lazyarrays()
                 source[None] = numpy.array([self.tree.numentries], dtype=numpy.int64)
                 return oam.resolved(source, lazy=True).proxy(0)
+
             out.proxy = proxy
+
+            def run(function, *args, numba={"nopython": True}, executor=None, cache=None, oam=None, debug=False):
+                if oam is None:
+                    oam = uproot._connect.toarrowed.oam(self.tree)
+
+                compiled = oam.compile(function, numba=numba, debug=debug)
+                source = {}
+                errorlist = []
+                for branchname in compiled.projection.required():
+                    if cache is not None and branchname in cache:
+                        source[branchname] = cache[branchname]
+
+                    if branchname is None:
+                        source[None] = numpy.array([self.tree.numentries], dtype=numpy.int64)
+                    else:
+                        source[branchname], res = self.tree.branch(branchname).array(executor=executor, block=False)
+                        errorlist.append(res)
+
+                for errors in errorslist:
+                    for cls, err, trc in errors:
+                        if cls is not None:
+                            _delayedraise(cls, err, trc)
+
+                if cache is not None:
+                    cache.update(source)
+
+                resolved = compiled.paramtypes[0].resolved(source)
+                return compiled.run(resolved, args)
+
+            out.run = run
             
             return out
 
