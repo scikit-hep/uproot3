@@ -513,14 +513,20 @@ class TTree(uproot.core.TNamed,
             import uproot._connect.toarrowed
             out = self.SubConnector()
 
-            def oam(*args, **kwds):
+            def schema(*args, **kwds):
                 return uproot._connect.toarrowed.oam(self.tree, *args, **kwds)
-            out.oam = oam
+            out.schema = schema
 
-            def proxy(branchdtypes=lambda branch: getattr(branch, "dtype", None), oam=None):
+            def arraymap(*args, **kwds):
+                source = self.tree.lazyarrays()
+                source[None] = numpy.array([self.tree.numentries], dtype=numpy.int64)
+                return uproot._connect.toarrowed.oam(self.tree, *args, **kwds).filled(source)
+            out.arraymap = arraymap
+
+            def proxy(oam=None):
                 if oam is None:
                     oam = uproot._connect.toarrowed.oam(self.tree)
-                source = self.tree.lazyarrays(branchdtypes=branchdtypes)
+                source = self.tree.lazyarrays()
                 source[None] = numpy.array([self.tree.numentries], dtype=numpy.int64)
                 return oam.filled(source).proxy(0)
             out.proxy = proxy
