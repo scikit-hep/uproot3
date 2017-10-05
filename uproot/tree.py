@@ -527,11 +527,11 @@ class TTree(uproot.core.TNamed,
 
             out.proxy = proxy
 
-            def run(function, *args, numba={"nopython": True}, executor=None, cache=None, oam=None, debug=False):
+            def run(function, env={}, numba={"nopython": True, "nogil": True}, executor=None, cache=None, oam=None, debug=False, *args):
                 if oam is None:
                     oam = uproot._connect.toarrowed.oam(self.tree)
 
-                compiled = oam.compile(function, numba=numba, debug=debug)
+                compiled = oam.compile(function, env=env, numba=numba, debug=debug)
                 source = {}
                 errorlist = []
                 for branchname in compiled.projection.required():
@@ -553,7 +553,7 @@ class TTree(uproot.core.TNamed,
                     cache.update(source)
 
                 resolved = compiled.paramtypes[0].resolved(source)
-                return compiled.run(resolved, args)
+                return compiled(resolved, *args)
 
             out.run = run
             
