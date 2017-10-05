@@ -536,7 +536,7 @@ class TTree(uproot.core.TNamed,
                 compiled = oam.compile(function, env=env, numba=numba, debug=debug)
 
                 # define an accessor that can be applied to every node in the OAM tree
-                errorlist = []
+                errorslist = []
                 def getarray(tree, oam):
                     branchname = oam.name
                     if cache is not None and branchname in cache:
@@ -546,7 +546,7 @@ class TTree(uproot.core.TNamed,
                         array = numpy.array([tree.numentries], dtype=numpy.int64)
                     else:
                         array, res = tree.branch(branchname).array(executor=executor, block=False)
-                        errorlist.append(res)
+                        errorslist.append(res)
 
                     if cache is not None:
                         cache[branchname] = array
@@ -560,7 +560,6 @@ class TTree(uproot.core.TNamed,
                 sym2array = {}
                 for parameter in compiled.parameters.transformed:
                     for symbol, (member, attr) in parameter.sym2obj.items():
-                        print "looking for", member
                         sym2array[symbol] = resolved.findbybase(member).get(attr)
 
                 # if an executor was used, this blocks until all arrays are filled
