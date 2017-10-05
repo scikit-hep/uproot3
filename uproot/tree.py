@@ -528,31 +528,47 @@ class TTree(uproot.core.TNamed,
             out.proxy = proxy
 
             def run(function, env={}, numba={"nopython": True, "nogil": True}, executor=None, cache=None, oam=None, debug=False, *args):
+                # get an Object Array Map (OAM)
                 if oam is None:
                     oam = uproot._connect.toarrowed.oam(self.tree)
 
+                # compile the function, using the OAM as the first and only argument
                 compiled = oam.compile(function, env=env, numba=numba, debug=debug)
-                source = {}
+
+                # define an accessor that can be applied to every node in the OAM tree
                 errorlist = []
-                for branchname in compiled.projection.required():
+                def getarray(tree, oam):
+                    branchname = oam.name
                     if cache is not None and branchname in cache:
-                        source[branchname] = cache[branchname]
+                        return cache[branchname]
 
                     if branchname is None:
-                        source[None] = numpy.array([self.tree.numentries], dtype=numpy.int64)
+                        array = numpy.array([tree.numentries], dtype=numpy.int64)
                     else:
-                        source[branchname], res = self.tree.branch(branchname).array(executor=executor, block=False)
+                        array, res = tree.branch(branchname).array(executor=executor, block=False)
                         errorlist.append(res)
 
+                    if cache is not None:
+                        cache[branchname] = array
+
+                    return array
+
+                # set this lazy accessor on everything
+                resolved = oam.accessedby(getarray).resolved(self.tree, lazy=True)
+
+                # but only load the arrays that are actually associated with symbols in the code
+                sym2array = {}
+                for parameter in compiled.parameters.transformed:
+                    for symbol, (member, attr) in parameter.sym2obj.items():
+                        print "looking for", member
+                        sym2array[symbol] = resolved.findbybase(member).get(attr)
+
+                # if an executor was used, this blocks until all arrays are filled
                 for errors in errorslist:
                     for cls, err, trc in errors:
                         if cls is not None:
                             _delayedraise(cls, err, trc)
 
-                if cache is not None:
-                    cache.update(source)
-
-                resolved = compiled.paramtypes[0].resolved(source)
                 return compiled(resolved, *args)
 
             out.run = run
