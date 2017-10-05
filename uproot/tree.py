@@ -551,6 +551,7 @@ class TTree(uproot.core.TNamed,
                     if cache is not None:
                         cache[branchname] = array
 
+                    print branchname, array
                     return array
 
                 # set this lazy accessor on everything

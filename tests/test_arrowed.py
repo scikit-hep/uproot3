@@ -37,4 +37,4 @@ class TestArrowed(unittest.TestCase):
         
         self.assertEqual(proxy[0].AddAK8CHS[0].sj1._toJson(), {"phi": 0.3957490921020508, "pt": 151.0018768310547, "m": 3.729222536087036, "q": -0.19528420269489288, "eta": -2.625094413757324, "csv": -10.0, "qgid": -1.0})
 
-        tree.to.arrowed.run(lambda events: events[1].Info.runNum, debug=True)
+        tree.to.arrowed.run(lambda events: events[1].Info.evtNum, debug=True)
