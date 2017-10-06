@@ -545,13 +545,13 @@ class TTree(uproot.core.TNamed,
                     if branchname is None:
                         array = numpy.array([tree.numentries], dtype=numpy.int64)
                     else:
-                        array, res = tree.branch(branchname).array(executor=executor, block=False)
+                        branch = tree.branch(branchname)
+                        array, res = branch.array(dtype=branch.dtype.newbyteorder("="), executor=executor, block=False)
                         errorslist.append(res)
 
                     if cache is not None:
                         cache[branchname] = array
 
-                    print branchname, array
                     return array
 
                 # set this lazy accessor on everything
