@@ -63,7 +63,7 @@ def byunderscore(fields, recordname):
 
 byunderscore.regex = re.compile(r"([a-zA-Z][a-zA-Z0-9]*)_([a-zA-Z_][a-zA-Z0-9_]*)")
 
-def oam(tree, branch2name=branch2name, combine=byunderscore):
+def schema(tree, branch2name=branch2name, combine=byunderscore):
     def recurse(branch):
         fields = OrderedDict()
         for subbranch in branch.branches:
@@ -142,3 +142,56 @@ def oam(tree, branch2name=branch2name, combine=byunderscore):
             return t
 
     return ListCountOAM(None, arrayofstructs(recurse(tree)))
+
+_schema = schema
+
+def proxy(tree, schema=None):
+    if schema is None:
+        schema = _schema(tree)
+    source = tree.lazyarrays()
+    source[None] = numpy.array([tree.numentries], dtype=numpy.int64)
+    return schema.resolved(source, lazy=True).proxy(0)
+
+def run(tree, function, env={}, numba={"nopython": True, "nogil": True}, executor=None, cache=None, schema=None, debug=False, *args):
+    # get an Object Array Map (OAM) schema
+    if schema is None:
+        schema = _schema(tree)
+
+    # compile the function, using the OAM as the first and only argument
+    compiled = schema.compile(function, env=env, numba=numba, debug=debug)
+
+    # define an accessor that can be applied to every node in the OAM tree
+    errorslist = []
+    def getarray(tree, schema):
+        branchname = schema.name
+        if cache is not None and branchname in cache:
+            return cache[branchname]
+
+        if branchname is None:
+            array = numpy.array([tree.numentries], dtype=numpy.int64)
+        else:
+            branch = tree.branch(branchname)
+            array, res = branch.array(dtype=branch.dtype.newbyteorder("="), executor=executor, block=False)
+            errorslist.append(res)
+
+        if cache is not None:
+            cache[branchname] = array
+
+        return array
+
+    # set this lazy accessor on everything
+    resolved = schema.accessedby(getarray).resolved(tree, lazy=True)
+
+    # but only load the arrays that are actually associated with symbols in the code
+    sym2array = {}
+    for parameter in compiled.parameters.transformed:
+        for symbol, (member, attr) in parameter.sym2obj.items():
+            sym2array[symbol] = resolved.findbybase(member).get(attr)
+
+    # if an executor was used, this blocks until all arrays are filled
+    for errors in errorslist:
+        for cls, err, trc in errors:
+            if cls is not None:
+                _delayedraise(cls, err, trc)
+
+    return compiled(resolved, *args)

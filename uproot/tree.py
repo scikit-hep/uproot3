@@ -503,81 +503,27 @@ class TTree(uproot.core.TNamed,
             return out, errors
 
     class Connector(object):
-        class SubConnector(object): pass
-
         def __init__(self, tree):
             self.tree = tree
 
-        @property
-        def arrowed(self):
-            import uproot._connect.toarrowed
-            out = self.SubConnector()
-
-            def schema(*args, **kwds):
-                return uproot._connect.toarrowed.oam(self.tree, *args, **kwds)
-
-            out.schema = schema
-
-            def proxy(oam=None):
-                if oam is None:
-                    oam = uproot._connect.toarrowed.oam(self.tree)
-                source = self.tree.lazyarrays()
-                source[None] = numpy.array([self.tree.numentries], dtype=numpy.int64)
-                return oam.resolved(source, lazy=True).proxy(0)
-
-            out.proxy = proxy
-
-            def run(function, env={}, numba={"nopython": True, "nogil": True}, executor=None, cache=None, oam=None, debug=False, *args):
-                # get an Object Array Map (OAM)
-                if oam is None:
-                    oam = uproot._connect.toarrowed.oam(self.tree)
-
-                # compile the function, using the OAM as the first and only argument
-                compiled = oam.compile(function, env=env, numba=numba, debug=debug)
-
-                # define an accessor that can be applied to every node in the OAM tree
-                errorslist = []
-                def getarray(tree, oam):
-                    branchname = oam.name
-                    if cache is not None and branchname in cache:
-                        return cache[branchname]
-
-                    if branchname is None:
-                        array = numpy.array([tree.numentries], dtype=numpy.int64)
-                    else:
-                        branch = tree.branch(branchname)
-                        array, res = branch.array(dtype=branch.dtype.newbyteorder("="), executor=executor, block=False)
-                        errorslist.append(res)
-
-                    if cache is not None:
-                        cache[branchname] = array
-
-                    return array
-
-                # set this lazy accessor on everything
-                resolved = oam.accessedby(getarray).resolved(self.tree, lazy=True)
-
-                # but only load the arrays that are actually associated with symbols in the code
-                sym2array = {}
-                for parameter in compiled.parameters.transformed:
-                    for symbol, (member, attr) in parameter.sym2obj.items():
-                        sym2array[symbol] = resolved.findbybase(member).get(attr)
-
-                # if an executor was used, this blocks until all arrays are filled
-                for errors in errorslist:
-                    for cls, err, trc in errors:
-                        if cls is not None:
-                            _delayedraise(cls, err, trc)
-
-                return compiled(resolved, *args)
-
-            out.run = run
-            
-            return out
-
     @property
-    def to(self):
-        return self.Connector(self)
+    def arrowed(self):
+        import uproot._connect.toarrowed
+        connector = self.Connector(self)
+
+        def schema(*args, **kwds):
+            return uproot._connect.toarrowed.schema(self, *args, **kwds)
+        connector.schema = schema
+
+        def proxy(schema=None):
+            return uproot._connect.toarrowed.proxy(self, schema)
+        connector.proxy = proxy
+
+        def run(*args, **kwds):
+            return uproot._connect.toarrowed.run(self, *args, **kwds)
+        connector.run = run
+
+        return connector
 
 uproot.rootio.Deserialized.classes[b"TTree"] = TTree
 
