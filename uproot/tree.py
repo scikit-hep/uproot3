@@ -1,18 +1,32 @@
 #!/usr/bin/env python
 
-# Copyright 2017 DIANA-HEP
+# Copyright (c) 2017, DIANA-HEP
+# All rights reserved.
 # 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
 # 
-#     http://www.apache.org/licenses/LICENSE-2.0
+# * Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
 # 
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# * Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
+# 
+# * Neither the name of the copyright holder nor the names of its
+#   contributors may be used to endorse or promote products derived from
+#   this software without specific prior written permission.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from collections import namedtuple
 from functools import reduce
@@ -21,10 +35,10 @@ import sys
 
 import numpy
 
+import uproot.core
+import uproot.rootio
 import uproot._walker.arraywalker
 import uproot._walker.lazyarraywalker
-import uproot.rootio
-import uproot.core
 
 def _delayedraise(cls, err, trc):
     if sys.version_info[0] <= 2:
@@ -345,6 +359,44 @@ class TTree(uproot.core.TNamed,
             else:
                 yield out
 
+    def lazyarrays(self, branchdtypes=lambda branch: getattr(branch, "dtype", None), outputtype=dict):
+        """Creates a proxy for an array that gets data on demand.
+
+        Arguments:
+
+            * `branchdtypes` (same as in `TTree.iterator`)
+
+              If a single string, the string names the only branch to load.
+              If an iterable of strings, all of these are loaded (in the specified order).
+              If a dict of `{name: dtype}`, load the specified branch names and cast them into a given `dtype` (such as conversion to little endian).
+              If a function from branch names to `dtype` or `None`, load the branches into the given `dtypes` and don't load the branches mapped to `None`.
+
+              If any `dtypes` are actually arrays, rather than `dtype` objects, then those arrays will be filled instead of creating new ones (shape must match).
+
+            * `outputtype` (same as in `TTree.iterator`)
+
+              Constructor for the objects to yield in the iterator. Good choices include `dict`, `tuple`, `namedtuple`, `list`.
+        """
+        toget = []
+        for branch, dtype in self._normalizeselection(branchdtypes, self.allbranches):
+            toget.append((branch, dtype))
+
+        if outputtype == namedtuple:
+            outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, dtype in toget])
+
+        out = []
+        for branch, dtype in toget:
+            outi = branch.lazyarray(dtype)
+            if outputtype == dict:
+                out.append((branch.name, outi))
+            else:
+                out.append(outi)
+
+        if issubclass(outputtype, dict) or outputtype == tuple or outputtype == list:
+            return outputtype(out)
+        else:
+            return outputtype(*out)
+
     def arrays(self, branchdtypes=lambda branch: getattr(branch, "dtype", None), executor=None, outputtype=dict, block=True):
         """Extracts whole branches into Numpy arrays.
 
@@ -408,6 +460,22 @@ class TTree(uproot.core.TNamed,
         else:
             return out, (item for sublist in errorslist for item in sublist)
 
+    def lazyarray(self, branch, dtype=None):
+        """Creates a proxy for an array that gets data on demand.
+
+        Arguments:
+
+            * `branch` *(required)*
+
+               Branch name to extract.
+
+            * `dtype`
+
+               If not `None`, cast the array into a given `dtype` (such as conversion to little endian).
+        """
+        branch = branch.encode("ascii") if hasattr(branch, "encode") else branch
+        return self.branch(branch).lazyarray(dtype)
+
     def array(self, branch, dtype=None, executor=None, block=True):
         """Extracts a whole branch into a Numpy array.
 
@@ -447,6 +515,29 @@ class TTree(uproot.core.TNamed,
         else:
             (out,), errors = self.arrays(branchdtypes=branchdtypes, executor=executor, outputtype=tuple, block=block)
             return out, errors
+
+    class Connector(object):
+        def __init__(self, tree):
+            self.tree = tree
+
+    @property
+    def arrowed(self):
+        import uproot._connect.toarrowed
+        connector = self.Connector(self)
+
+        def schema(*args, **kwds):
+            return uproot._connect.toarrowed.schema(self, *args, **kwds)
+        connector.schema = schema
+
+        def proxy(schema=None):
+            return uproot._connect.toarrowed.proxy(self, schema)
+        connector.proxy = proxy
+
+        def run(*args, **kwds):
+            return uproot._connect.toarrowed.run(self, *args, **kwds)
+        connector.run = run
+
+        return connector
 
 uproot.rootio.Deserialized.classes[b"TTree"] = TTree
 
@@ -515,9 +606,10 @@ class TBranch(uproot.core.TNamed,
         self.leaves = list(uproot.core.TObjArray(filewalker, walker))
         self._skipbcnt(walker) # reading baskets is expensive and useless
 
-        walker.skip(1)  # isArray
-        self._basketBytes = walker.readarray(">i4", maxBaskets)[:writeBasket]
-
+        # walker.skip(1)  # isArray
+        # self._basketBytes = walker.readarray(">i4", maxBaskets)[:writeBasket]
+        walker.skip(1 + 4*maxBaskets)
+        
         walker.skip(1)  # isArray
         self._basketEntry = walker.readarray(">i8", maxBaskets)[:writeBasket]
 
@@ -563,11 +655,14 @@ class TBranch(uproot.core.TNamed,
             return self.numbytes // self.dtype.itemsize
 
     def basketbytes(self, i):
-        if not 0 <= i < len(self._basketBytes):
-            raise IndexError("index {0} out of range for branch with {1} baskets".format(i, len(self._basketBytes)))
-        trial = self._basketBytes[i] - self._firstkeylen()
+        if not hasattr(self, "basketobjlens"):
+            self._minipreparebaskets()
 
+        if not 0 <= i < len(self._basketobjlens):
+            raise IndexError("index {0} out of range for branch with {1} baskets".format(i, len(self._basketobjlens)))
+        trial = self._basketobjlens[i]
         entries = self.basketentries(i)
+
         if self._speedbumps:
             return trial - entries*4 - 8 - entries
         elif self.dtype == numpy.dtype(object) or trial != entries * reduce(lambda x, y: x*y, self.itemdims, self.dtype.itemsize):
@@ -641,14 +736,19 @@ class TBranch(uproot.core.TNamed,
 
         raise KeyError("not found: {0}".format(repr(name)))
 
-    def _firstkeylen(self):
-        # FIXME: find it in writing somewhere that every basket of the same branch has the same keylen
-        if hasattr(self, "_basketkeylens"):
-            return self._basketkeylens[0]
-        else:
-            basketwalker = self._filewalker.copy(self._basketSeek[0] + 14)
+    def _minipreparebaskets(self):
+        self._filewalker.startcontext()
+
+        self._basketobjlens = []
+        self._basketkeylens = []
+        for seek in self._basketSeek:
+            basketwalker = self._filewalker.copy(seek)
             basketwalker.startcontext()
-            return basketwalker.readfield("!h")
+
+            bytes, version, objlen, datetime, keylen, cycle = basketwalker.readfields("!ihiIhh")
+        
+            self._basketobjlens.append(objlen)
+            self._basketkeylens.append(keylen)
 
     def _preparebaskets(self):
         self._filewalker.startcontext()
@@ -1077,6 +1177,132 @@ class TBranch(uproot.core.TNamed,
                 return out
             else:
                 return out, errors
+
+    class LazyArray(object):
+        def __init__(self, branch, dtype):
+            if dtype == numpy.dtype(object):
+                raise NotImplementedError
+            self._branch = branch
+            self.dtype = dtype
+
+        @property
+        def shape(self):
+            newlen = self._branch.numitems // reduce(lambda x, y: x*y, self._branch.itemdims, 1)
+            return (newlen,) + self._branch.itemdims
+
+        def __len__(self):
+            return self.shape[0]
+            
+        # interpret negative indexes as starting at the end of the dataset
+        def __normalize(self, i, clip, step):
+            lenself = len(self)
+            if i < 0:
+                j = lenself + i
+                if j < 0:
+                    if clip:
+                        return 0 if step > 0 else lenself
+                    else:
+                        raise IndexError("index out of range: {0} for length {1}".format(i, lenself))
+                else:
+                    return j
+            elif i < lenself:
+                return i
+            elif clip:
+                return lenself if step > 0 else 0
+            else:
+                raise IndexError("index out of range: {0} for length {1}".format(i, lenself))
+
+        def __normalizeslice(self, s):
+            lenself = len(self)
+            if s.step is None:
+                step = 1
+            else:
+                step = s.step
+            if step == 0:
+                raise ValueError("slice step cannot be zero")
+            if s.start is None:
+                if step > 0:
+                    start = 0
+                else:
+                    start = lenself - 1
+            else:
+                start = self.__normalize(s.start, True, step)
+            if s.stop is None:
+                if step > 0:
+                    stop = lenself
+                else:
+                    stop = -1
+            else:
+                stop = self.__normalize(s.stop, True, step)
+
+            return start, stop, step
+
+        def __startfill(self):
+            if not hasattr(self._branch, "basketwalkers"):
+                self._branch._preparebaskets()
+                self._baskets = [None] * len(self._branch._basketwalkers)
+                self._ends = (numpy.cumsum(self._branch._basketlengths) // self._branch.dtype.itemsize).tolist()
+                self._starts = [0] + self._ends[:-1]
+
+        def __ensurefilled(self, basketindex):
+            if self._baskets[basketindex] is None:
+                self._baskets[basketindex] = self._branch._adddimensions(self._branch._basket(basketindex))
+                if self._baskets[basketindex].dtype != self.dtype:
+                    self._baskets[basketindex] = numpy.array(self._baskets[basketindex], dtype=self.dtype)
+
+        def cumsum(self, axis=None, dtype=None, out=None):
+            self.__startfill()            
+            for i in range(len(self._baskets)):
+                self.__ensurefilled(i)
+            array = numpy.concatenate(self._baskets)
+            return array.cumsum(axis, dtype, out)
+
+        def __getitem__(self, index):
+            self.__startfill()
+
+            product = reduce(lambda x, y: x*y, self._branch.itemdims, 1)
+
+            if isinstance(index, slice):
+                start, stop, step = self.__normalizeslice(index)
+                if start == stop:
+                    return self._branch._adddimensions(numpy.empty(0, dtype=self._branch.dtype))
+
+                flatstart = start * product
+                flatstop = stop * product
+                firststart = None
+                firstindex = None
+                lastindex = None
+
+                for basketindex, start in enumerate(self._starts):
+                    if start <= flatstart and firststart is None:
+                        firststart = start
+                    if start >= flatstop:
+                        break
+                    self.__ensurefilled(basketindex)
+                    if firstindex is None:
+                        firstindex = basketindex
+                    lastindex = basketindex
+
+                return numpy.concatenate(self._baskets[firstindex:lastindex + 1])[(flatstart - firststart) // product : (flatstop - firststart) // product : step]
+                
+            else:
+                flatindex = self.__normalize(index, False, 1) * product
+                for basketindex, start in enumerate(self._starts):
+                    if start <= flatindex < self._ends[basketindex]:
+                        self.__ensurefilled(basketindex)
+                        break
+                return self._baskets[basketindex][(flatindex - start) // product]
+
+    def lazyarray(self, dtype=None):
+        """Creates a proxy for an array that gets data on demand.
+
+        Arguments:
+
+            * `dtype` If not `None`, cast the array into a given `dtype` (such as conversion to little endian).
+        """
+        if dtype is None:
+            dtype = self.dtype
+        return self.LazyArray(self, dtype)
 
 uproot.rootio.Deserialized.classes[b"TBranch"] = TBranch
 

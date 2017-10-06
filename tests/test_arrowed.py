@@ -28,23 +28,27 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import struct
+from collections import namedtuple
+import unittest
 
 import numpy
 
-class Walker(object):
-    def __init__(self, *args, **kwds):
-        raise TypeError("Walker is an abstract class")
+import uproot
 
-    @staticmethod
-    def size(format):
-        return struct.calcsize(format)
-
-    def _evaluate(self, parallel=False):
+class TestArrowed(unittest.TestCase):
+    def runTest(self):
         pass
+    
+    def test_arrowed(self):
+        try:
+            import arrowed
+        except ImportError:
+            return
 
-    def _unevaluate(self):
-        pass
+        tree = uproot.open("tests/mc10events.root")["Events"]
+        tree.arrowed.schema().format()
+        proxy = tree.arrowed.proxy()
+        
+        self.assertEqual(proxy[0].AddAK8CHS[0].sj1._toJson(), {"phi": 0.3957490921020508, "pt": 151.0018768310547, "m": 3.729222536087036, "q": -0.19528420269489288, "eta": -2.625094413757324, "csv": -10.0, "qgid": -1.0})
 
-    def startcontext(self):
-        pass
+        self.assertAlmostEqual(tree.arrowed.run(lambda events: events[0].Muon[0].pt), 28.0707492828)
