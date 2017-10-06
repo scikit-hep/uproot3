@@ -152,13 +152,13 @@ def proxy(tree, schema=None):
     source[None] = numpy.array([tree.numentries], dtype=numpy.int64)
     return schema.resolved(source, lazy=True).proxy(0)
 
-def run(tree, function, env={}, numba={"nopython": True, "nogil": True}, executor=None, cache=None, schema=None, debug=False, *args):
+def run(tree, function, paramtypes={}, env={}, numba={"nopython": True, "nogil": True}, executor=None, cache=None, schema=None, debug=False, *args):
     # get an object array map schema
     if schema is None:
         schema = _schema(tree)
 
     # compile the function, using the schema as the first and only argument
-    compiled = schema.compile(function, env=env, numba=numba, debug=debug)
+    compiled = schema.compile(function, paramtypes=paramtypes, env=env, numba=numba, debug=debug)
 
     # define an accessor that can be applied to every node in the schema tree
     errorslist = []
