@@ -20,11 +20,11 @@ from collections import OrderedDict
 
 import numpy
 
-from arrowed.oam import PrimitiveOAM
-from arrowed.oam import ListCountOAM
-from arrowed.oam import ListOffsetOAM
-from arrowed.oam import RecordOAM
-from arrowed.oam import PointerOAM
+from arrowed.schema import Primitive
+from arrowed.schema import ListCount
+from arrowed.schema import ListOffset
+from arrowed.schema import Record
+from arrowed.schema import Pointer
 
 def tostr(obj):
     if hasattr(obj, "decode"):
@@ -57,9 +57,9 @@ def byunderscore(fields, recordname):
         if m is None or m.group(1) not in grouped:
             out[name] = field
         elif m.group(1) not in done:
-            out[m.group(1)] = RecordOAM(grouped[m.group(1)], name=m.group(1))
+            out[m.group(1)] = Record(grouped[m.group(1)], name=m.group(1))
             done.add(m.group(1))
-    return RecordOAM(out, name=recordname)
+    return Record(out, name=recordname)
 
 byunderscore.regex = re.compile(r"([a-zA-Z][a-zA-Z0-9]*)_([a-zA-Z_][a-zA-Z0-9_]*)")
 
@@ -76,9 +76,9 @@ def schema(tree, branch2name=branch2name, combine=byunderscore):
                 if len(subbranch.branches) == 0:
                     if getattr(subbranch, "dtype", numpy.dtype(object)) is not numpy.dtype(object):
                         if subbranch.name in tree.counter:
-                            fields[fieldname] = ListCountOAM(tree.counter[subbranch.name].branch, PrimitiveOAM(subbranch.name))
+                            fields[fieldname] = ListCount(tree.counter[subbranch.name].branch, Primitive(subbranch.name))
                         else:
-                            fields[fieldname] = PrimitiveOAM(subbranch.name)
+                            fields[fieldname] = Primitive(subbranch.name)
                 else:
                     fields[fieldname] = recurse(subbranch)
 
@@ -88,40 +88,40 @@ def schema(tree, branch2name=branch2name, combine=byunderscore):
             recordname = branch2name(branch)
 
         if combine is None:
-            out = RecordOAM(fields, name=recordname)
+            out = Record(fields, name=recordname)
         elif hasattr(combine, "__code__") and combine.__code__.co_argcount == 2:
             out = combine(fields, recordname)
         else:
             out = combine(fields)
 
         if branch is not tree and branch.name in tree.counter:
-            return ListCountOAM(tree.counter[branch.name].branch, out)
+            return ListCount(tree.counter[branch.name].branch, out)
         else:
             return out
 
     def flatten(rec):
         for n, c in rec.contents.items():
-            if isinstance(c, RecordOAM):
+            if isinstance(c, Record):
                 for nc in flatten(c):
                     yield nc
             else:
                 yield n, c
 
     def droplist(t, name):
-        if isinstance(t, ListCountOAM):
+        if isinstance(t, ListCount):
             return t.contents
 
-        elif isinstance(t, RecordOAM):
-            return RecordOAM(dict((n, droplist(c, n)) for n, c in t.contents.items()), name=name)
+        elif isinstance(t, Record):
+            return Record(dict((n, droplist(c, n)) for n, c in t.contents.items()), name=name)
 
         else:
             return t
 
     def arrayofstructs(t):
-        if isinstance(t, RecordOAM):
+        if isinstance(t, Record):
             countarray = None
             for n, c in flatten(t):
-                if not isinstance(c, ListCountOAM):
+                if not isinstance(c, ListCount):
                     countarray = None
                     break
                 if countarray is None:
@@ -131,17 +131,17 @@ def schema(tree, branch2name=branch2name, combine=byunderscore):
                     break
 
             if countarray is None:
-                return RecordOAM(OrderedDict((n, arrayofstructs(c)) for n, c in t.contents.items()), name=t.name)
+                return Record(OrderedDict((n, arrayofstructs(c)) for n, c in t.contents.items()), name=t.name)
             else:
-                return ListCountOAM(countarray, RecordOAM(OrderedDict((n, arrayofstructs(droplist(c, n))) for n, c in t.contents.items()), name=t.name))
+                return ListCount(countarray, Record(OrderedDict((n, arrayofstructs(droplist(c, n))) for n, c in t.contents.items()), name=t.name))
 
-        elif isinstance(t, ListCountOAM):
-            return ListCountOAM(t.countarray, arrayofstructs(t.contents))
+        elif isinstance(t, ListCount):
+            return ListCount(t.countarray, arrayofstructs(t.contents))
 
         else:
             return t
 
-    return ListCountOAM(None, arrayofstructs(recurse(tree)))
+    return ListCount(None, arrayofstructs(recurse(tree)))
 
 _schema = schema
 
@@ -153,14 +153,14 @@ def proxy(tree, schema=None):
     return schema.resolved(source, lazy=True).proxy(0)
 
 def run(tree, function, env={}, numba={"nopython": True, "nogil": True}, executor=None, cache=None, schema=None, debug=False, *args):
-    # get an Object Array Map (OAM) schema
+    # get an object array map schema
     if schema is None:
         schema = _schema(tree)
 
-    # compile the function, using the OAM as the first and only argument
+    # compile the function, using the schema as the first and only argument
     compiled = schema.compile(function, env=env, numba=numba, debug=debug)
 
-    # define an accessor that can be applied to every node in the OAM tree
+    # define an accessor that can be applied to every node in the schema tree
     errorslist = []
     def getarray(tree, schema):
         branchname = schema.name
