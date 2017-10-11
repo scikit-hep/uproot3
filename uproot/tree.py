@@ -881,13 +881,18 @@ class TBranch(uproot.core.TNamed,
                 return self._adddimensions(numpy.array([], dtype=dtype))
 
         entrywidth = reduce(lambda x, y: x*y, self.itemdims, 1)
+        strings = (dtype == numpy.dtype(object))
+        if strings:
+            selfitemsize = 1
+        else:
+            selfitemsize = self.dtype.itemsize
 
         i, firstdata, firstoff = cache[0]
         if firstoff is None:
             istart = (entrystart - self._basketEntry[i]) * entrywidth
         else:
             istartoff = entrystart - self._basketEntry[i]
-            istart = firstoff[istartoff]
+            istart = firstoff[istartoff] // selfitemsize
 
         i, lastdata, lastoff = cache[-1]
         iendoff = entryend - self._basketEntry[i]
@@ -895,12 +900,10 @@ class TBranch(uproot.core.TNamed,
             iend = min((entryend - self._basketEntry[i]) * entrywidth, len(lastdata))
         elif iendoff < len(lastoff):
             iendoff = min(iendoff, len(lastoff))
-            iend = lastoff[iendoff]
+            iend = lastoff[iendoff] // selfitemsize
         else:
             iendoff = min(iendoff, len(lastoff))
             iend = len(lastdata)
-
-        strings = (dtype == numpy.dtype(object))
 
         if len(cache) == 1:
             outdata = firstdata[istart:iend]

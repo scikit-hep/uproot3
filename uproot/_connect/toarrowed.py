@@ -163,7 +163,7 @@ def proxy(tree, schema=None):
     if schema is None:
         schema = _schema(tree)
     source = tree.lazyarrays()
-    source[None] = numpy.array([tree.numentries], dtype=numpy.int64)
+    source[None] = numpy.array([tree.numentries], dtype=numpy.int32)
     return schema.resolved(source, lazy=True).proxy(0)
 
 def run(tree, function, paramtypes={}, env={}, numba={"nopython": True, "nogil": True}, executor=None, cache=None, schema=None, debug=False, *args):
@@ -182,7 +182,7 @@ def run(tree, function, paramtypes={}, env={}, numba={"nopython": True, "nogil":
             return cache[branchname]
 
         if branchname is None:
-            array = numpy.array([tree.numentries], dtype=numpy.int64)
+            array = numpy.array([tree.numentries], dtype=numpy.int32)
         else:
             branch = tree.branch(branchname)
             array, res = branch.array(dtype=branch.dtype.newbyteorder("="), executor=executor, block=False)
