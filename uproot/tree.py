@@ -155,7 +155,7 @@ class TTree(uproot.core.TNamed,
         return "<TTree {0} len={1} at 0x{2:012x}>".format(repr(self.name), self.numentries, id(self))
 
     def __len__(self):
-        return len(self.numentries)
+        return self.numentries
 
     def __getitem__(self, name):
         return self.branch(name)
