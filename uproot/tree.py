@@ -34,6 +34,22 @@ import re
 import sys
 
 import numpy
+array_types = (numpy.ndarray,)
+toarray = lambda x: x
+
+try:
+    import pandas.core.series
+except ImportError:
+    pass
+else:
+    array_types = array_types + (pandas.core.series.Series,)
+    oldtoarray = toarray
+    def newtoarray(x):
+        if isinstance(x, pandas.core.series.Series):
+            return x.values
+        else:
+            return oldtoarray(x)
+    toarray = newtoarray
 
 import uproot.core
 import uproot.rootio
@@ -212,7 +228,7 @@ class TTree(uproot.core.TNamed,
             for branch in allbranches:
                 dtype = branchdtypes(branch)
                 if dtype is not None:
-                    if isinstance(dtype, numpy.ndarray):
+                    if isinstance(dtype, array_types):
                         dtype = dtype.reshape(reduce(lambda x, y: x*y, dtype.shape, 1))
                     elif not isinstance(dtype, numpy.dtype):
                         dtype = numpy.dtype(dtype)
@@ -226,7 +242,7 @@ class TTree(uproot.core.TNamed,
                 if name in allbranches:
                     branch = allbranches[name]
                     if hasattr(branch, "dtype"):
-                        if isinstance(dtype, numpy.ndarray):
+                        if isinstance(dtype, array_types):
                             dtype = dtype.reshape(reduce(lambda x, y: x*y, dtype.shape, 1))
                         elif not isinstance(dtype, numpy.dtype):
                             dtype = numpy.dtype(dtype)
@@ -516,14 +532,12 @@ class TTree(uproot.core.TNamed,
             (out,), errors = self.arrays(branchdtypes=branchdtypes, executor=executor, outputtype=tuple, block=block)
             return out, errors
 
-    class Connector(object):
-        def __init__(self, tree):
-            self.tree = tree
+    class _Connector(object): pass
 
     @property
     def arrowed(self):
         import uproot._connect.toarrowed
-        connector = self.Connector(self)
+        connector = self._Connector()
 
         def schema(*args, **kwds):
             return uproot._connect.toarrowed.schema(self, *args, **kwds)
@@ -536,6 +550,48 @@ class TTree(uproot.core.TNamed,
         def run(*args, **kwds):
             return uproot._connect.toarrowed.run(self, *args, **kwds)
         connector.run = run
+
+        return connector
+
+    @property
+    def pandas(self):
+        import pandas
+        connector = self._Connector()
+
+        def df(branchdtypes, executor=None, block=True):
+            toget = []
+            for branch, dtype in self._normalizeselection(branchdtypes, self.allbranches):
+                toget.append((branch, dtype))
+
+            size = None
+            oldname = None
+            data = {}
+            columns = []
+            for b, d in toget:
+                if size is None:
+                    size = b.numitems
+                elif size != b.numitems:
+                    raise ValueError("cannot construct a DataFrame because branch {0} has {1} items but branch {2} has {3} items".format(repr(oldname), size, repr(b.name), b.numitems))
+                oldname = b.name
+                data[b.name] = d.type(0)
+                columns.append(b.name)
+
+            df = pandas.DataFrame(data, columns=columns, index=numpy.arange(size))
+
+            errorslist = []
+            for b, d in toget:
+                arr, err = b.array(df[b.name], executor=executor, block=False)
+                errorslist.append(err)
+
+            if block:
+                for errors in errorslist:
+                    for cls, err, trc in errors:
+                        if cls is not None:
+                            _delayedraise(cls, err, trc)
+                return df
+            else:
+                return df, (item for sublist in errorslist for item in sublist)
+        connector.df = df
 
         return connector
 
@@ -871,7 +927,7 @@ class TBranch(uproot.core.TNamed,
 
     def _getfromcache(self, cache, entrystart, entryend, dtype):
         if len(cache) == 0:
-            if isinstance(dtype, numpy.ndarray):
+            if isinstance(dtype, array_types):
                 out = dtype.reshape(reduce(lambda x, y: x*y, dtype.shape, 1))
                 dtype = out.dtype
                 if out.shape != (0,):
@@ -908,8 +964,8 @@ class TBranch(uproot.core.TNamed,
         if len(cache) == 1:
             outdata = firstdata[istart:iend]
             if not strings:
-                if isinstance(dtype, numpy.ndarray):
-                    out = dtype
+                if isinstance(dtype, array_types):
+                    out = toarray(dtype)
                     dtype = out.dtype
                     expected = len(firstdata)
                     if out.shape != (expected,):
@@ -925,8 +981,8 @@ class TBranch(uproot.core.TNamed,
             middle = cache[1:-1]
             size = (len(firstdata) - istart) + sum(len(mdata) for mi, mdata, moff in middle) + (iend)
 
-            if isinstance(dtype, numpy.ndarray):
-                outdata = dtype
+            if isinstance(dtype, array_types):
+                outdata = toarray(dtype)
                 dtype = outdata.dtype
                 if outdata.shape != (size,):
                     raise ValueError("provided array does not have the right number of elements: {0}".format(size))
@@ -1087,11 +1143,11 @@ class TBranch(uproot.core.TNamed,
         else:
             selfitemsize = self.dtype.itemsize
 
-        if isinstance(dtype, numpy.ndarray):
-            out = dtype.reshape(reduce(lambda x, y: x*y, dtype.shape, 1))
+        if isinstance(dtype, array_types):
+            out = toarray(dtype).reshape(reduce(lambda x, y: x*y, dtype.shape, 1))
             dtype = out.dtype
 
-            if dtype == numpy.dtype(object):
+            if isinstance(out, numpy.ndarray) and dtype == numpy.dtype(object):
                 expected = self.numentries
             else:
                 expected = sum(self._basketlengths) // selfitemsize
