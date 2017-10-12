@@ -40,6 +40,8 @@ from arrowed.schema import ListOffset
 from arrowed.schema import Record
 from arrowed.schema import Pointer
 
+from uproot import iterator
+
 def tostr(obj):
     if hasattr(obj, "decode"):
         return obj.decode("ascii")
@@ -209,3 +211,52 @@ def run(tree, function, args=(), paramtypes={}, env={}, numba={"nopython": True,
                 _delayedraise(cls, err, trc)
 
     return compiled(resolved, *args)
+
+def compile(tree, function, paramtypes={}, env={}, numba={"nopython": True, "nogil": True}, fcncache=None, schema=None, debug=False):
+    if schema is None:
+        schema = _schema(tree)
+    dtypes = dict((b.name, b.dtype) for b in tree.allbranches if getattr(b, "dtype", None) is not None)
+    return ArrowedFunction(schema, dtypes, schema.compile(function, paramtypes=paramtypes, env=env, numba=numba, fcncache=fcncache, debug=debug))
+
+class ArrowedFunction(object):
+    def __init__(self, schema, dtypes, compiled):
+        self._schema = schema
+        self._dtypes = dtypes
+        self._compiled = compiled
+
+    def run(self, entries, path, treepath, args=(), memmap=True, executor=None, datacache=None, reportentries=False):
+        if datacache is not None:
+            raise NotImplementedError
+
+        entriesarray = [entries]
+
+        def getarray(arrays, schema):
+            branchname = schema.name
+            if branchname is None:
+                array = numpy.array(entriesarray, dtype=numpy.int32)
+            else:
+                array = arrays[branchname]
+            return array
+
+        accessor = self._schema.accessedby(getarray)
+
+        branchdtypes = {}
+        for parameter in self._compiled.parameters.transformed:
+            for symbol, (member, attr) in parameter.sym2obj.items():
+                branchname = member.name
+                if branchname is not None:
+                    branchdtypes[branchname] = self._dtypes[branchname].newbyteorder("=")
+
+        for entrystart, entryend, arrays in iterator(entries, path, treepath, branchdtypes, memmap=memmap, executor=executor, reportentries=True):
+            entriesarray = [entryend - entrystart]
+
+            resolved = accessor.resolved(arrays, lazy=True)
+            for parameter in self._compiled.parameters.transformed:
+                for symbol, (member, attr) in parameter.sym2obj.items():
+                    resolved.findbybase(member).get(attr)
+
+            out = self._compiled(resolved, *args)
+            if reportentries:
+                yield entrystart, entryend, out
+            else:
+                yield out

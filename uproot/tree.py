@@ -551,6 +551,10 @@ class TTree(uproot.core.TNamed,
             return uproot._connect.toarrowed.run(self, *args, **kwds)
         connector.run = run
 
+        def compile(*args, **kwds):
+            return uproot._connect.toarrowed.compile(self, *args, **kwds)
+        connector.compile = compile
+
         return connector
 
     @property
