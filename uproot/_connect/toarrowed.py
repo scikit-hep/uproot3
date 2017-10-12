@@ -166,7 +166,7 @@ def proxy(tree, schema=None):
     source[None] = numpy.array([tree.numentries], dtype=numpy.int32)
     return schema.resolved(source, lazy=True).proxy(0)
 
-def run(tree, function, paramtypes={}, env={}, numba={"nopython": True, "nogil": True}, executor=None, cache=None, schema=None, debug=False, *args):
+def run(tree, function, args=(), paramtypes={}, env={}, numba={"nopython": True, "nogil": True}, executor=None, cache=None, schema=None, debug=False):
     # get an object array map schema
     if schema is None:
         schema = _schema(tree)
