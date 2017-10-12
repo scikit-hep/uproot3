@@ -166,20 +166,20 @@ def proxy(tree, schema=None):
     source[None] = numpy.array([tree.numentries], dtype=numpy.int32)
     return schema.resolved(source, lazy=True).proxy(0)
 
-def run(tree, function, args=(), paramtypes={}, env={}, numba={"nopython": True, "nogil": True}, executor=None, cache=None, schema=None, debug=False):
+def run(tree, function, args=(), paramtypes={}, env={}, numba={"nopython": True, "nogil": True}, executor=None, fcncache=None, datacache=None, schema=None, debug=False):
     # get an object array map schema
     if schema is None:
         schema = _schema(tree)
 
     # compile the function, using the schema as the first and only argument
-    compiled = schema.compile(function, paramtypes=paramtypes, env=env, numba=numba, debug=debug)
+    compiled = schema.compile(function, paramtypes=paramtypes, env=env, numba=numba, fcncache=fcncache, debug=debug)
 
     # define an accessor that can be applied to every node in the schema tree
     errorslist = []
     def getarray(tree, schema):
         branchname = schema.name
-        if cache is not None and branchname in cache:
-            return cache[branchname]
+        if datacache is not None and branchname in datacache:
+            return datacache[branchname]
 
         if branchname is None:
             array = numpy.array([tree.numentries], dtype=numpy.int32)
@@ -188,8 +188,8 @@ def run(tree, function, args=(), paramtypes={}, env={}, numba={"nopython": True,
             array, res = branch.array(dtype=branch.dtype.newbyteorder("="), executor=executor, block=False)
             errorslist.append(res)
 
-        if cache is not None:
-            cache[branchname] = array
+        if datacache is not None:
+            datacache[branchname] = array
 
         return array
 
