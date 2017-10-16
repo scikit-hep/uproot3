@@ -30,8 +30,9 @@
 
 import sys
 import numbers
+import threading
 
-class DictCache(dict):
+class MemoryCache(dict):
     __slots__ = ("limitbytes", "numevicted", "_order", "_lookup", "_numbytes")
 
     def __init__(self, limitbytes, items=(), **kwds):
@@ -59,7 +60,7 @@ class DictCache(dict):
         for i, obj in enumerate(reversed(self._order)):
             if key == obj:
                 return len(self._order) - i - 1
-        raise ValueError("{0} is not in DictCache".format(repr(key)))
+        raise ValueError("{0} is not in MemoryCache".format(repr(key)))
 
     def promote(self, key):
         i = self.index(key)
@@ -131,7 +132,7 @@ class DictCache(dict):
 
     def __repr__(self):
         if not hasattr(self, "_order"):
-            return "<uninitialized DictCache>"
+            return "<uninitialized MemoryCache>"
         else:
             return "{" + ", ".join("{0}: {1}".format(repr(key), repr(value)) for key, value in self.items()) + "}"
 
@@ -140,10 +141,10 @@ class DictCache(dict):
 
     @staticmethod
     def fromkeys(limitbytes, keys, value=None):
-        return DictCache(limitbytes, [(key, value) for key in keys])
+        return MemoryCache(limitbytes, [(key, value) for key in keys])
 
     def copy(self):
-        out = DictCache(self.limitbytes, self.items())
+        out = MemoryCache(self.limitbytes, self.items())
         out.numevicted = self.numevicted
         return out
 
@@ -178,7 +179,7 @@ class DictCache(dict):
             if len(self._order) > 0:
                 key = self._order[-1]
             else:
-                raise IndexError("pop from empty DictCache")
+                raise IndexError("pop from empty MemoryCache")
         elif len(args) == 1:
             key, = args
         elif len(args) == 2:
@@ -195,22 +196,22 @@ class DictCache(dict):
         else:
             raise KeyError(repr(key))
     
-    def get(self, k, default=None):
-        if k in self._lookup:
-            return self[k]
+    def get(self, key, default=None):
+        if key in self._lookup:
+            return self[key]
         else:
             return default
 
-    def setdefault(self, k, default=None):
-        if k not in self._lookup:
-            self[k] = default
-        return self[k]
+    def setdefault(self, key, default=None):
+        if key not in self._lookup:
+            self[key] = default
+        return self[key]
 
     def __len__(self):
         return len(self._order)
 
     def __iter__(self):
-        return self.keys()
+        return self.iterkeys()
 
     def viewkeys(self, *args, **kwds):
         raise NotImplementedError("a view could allow you to break the consistency between _order and _lookup")
@@ -222,13 +223,13 @@ class DictCache(dict):
         raise NotImplementedError("a view could allow you to break the consistency between _order and _lookup")
 
     def __eq__(self, other):
-        return isinstance(other, DictCache) and self.limitbytes == other.limitbytes and self.numevicted == other.numevicted and self._order == other._order and self._lookup == other._lookup and self._numbytes == other._numbytes
+        return self.__class__ == other.__class__ and self.limitbytes == other.limitbytes and self.numevicted == other.numevicted and self._order == other._order and self._lookup == other._lookup and self._numbytes == other._numbytes
 
     def __ne__(self, other):
         return not self == other
 
     def __lt__(self, other):
-        if isinstance(other, DictCache):
+        if isinstance(other, MemoryCache):
             if self._order == other._order:
                 selfvalues = list(self.values())
                 othervalues = list(other.values())
@@ -271,3 +272,83 @@ class DictCache(dict):
         self._numbytes = sys.getsizeof(self.limitbytes) + sys.getsizeof(0) + sys.getsizeof(self.numevicted) + sys.getsizeof(self._order) + sys.getsizeof(self._lookup)
         for key in order:
             self[key] = lookup[key]
+
+class ThreadSafeMemoryCache(MemoryCache):
+    __slots__ = ("limitbytes", "numevicted", "_order", "_lookup", "_numbytes", "_lock")
+
+    def __init__(self, limitbytes, items=(), **kwds):
+        self._lock = threading.RLock()
+        with self._lock:
+            super(ThreadSafeMemoryCache, self).__init__(limitbytes, items, **kwds)
+
+    def index(self, key):
+        with self._lock:
+            return super(ThreadSafeMemoryCache, self).index(key)
+
+    def promote(self, key):
+        with self._lock:
+            return super(ThreadSafeMemoryCache, self).promote(key)
+
+    def __getitem__(self, key):
+        with self._lock:
+            return super(ThreadSafeMemoryCache, self).__getitem__(key)
+
+    def __setitem__(self, key, value):
+        with self._lock:
+            return super(ThreadSafeMemoryCache, self).__setitem__(key, value)
+
+    def __delitem__(self, key):
+        with self._lock:
+            return super(ThreadSafeMemoryCache, self).__delitem__(key)
+
+    def keys(self):
+        with self._lock:
+            return list(super(ThreadSafeMemoryCache, self).keys())
+
+    def values(self):
+        with self._lock:
+            return list(super(ThreadSafeMemoryCache, self).values())
+
+    def items(self):
+        with self._lock:
+            return list(super(ThreadSafeMemoryCache, self).items())
+
+    @staticmethod
+    def fromkeys(limitbytes, keys, value=None):
+        return ThreadSafeMemoryCache(limitbytes, [(key, value) for key in keys])
+
+    def copy(self):
+        out = ThreadSafeMemoryCache(self.limitbytes, self.items())
+        out.numevicted = self.numevicted
+        return out
+
+    def update(self, items=(), **kwds):
+        with self._lock:
+            return super(ThreadSafeMemoryCache, self).update(items, **kwds)
+
+    def popitem(self, **args):
+        with self._lock:
+            return super(ThreadSafeMemoryCache, self).popitem(**args)
+
+    def get(self, key, default=None):
+        with self._lock:
+            return super(ThreadSafeMemoryCache, self).get(key, default)
+
+    def setdefault(self, key, default=None):
+        with self._lock:
+            return super(ThreadSafeMemoryCache, self).setdefault(key, default)
+
+    def __eq__(self, other):
+        if not self.__class__ == other.__class__:
+            return False
+        with self._lock:
+            with other._lock:
+                return super(ThreadSafeMemoryCache, self).__eq__(self, other)
+
+    def __lt__(self, other):
+        if isinstance(other, ThreadLocalMemoryCache):
+            with self._lock:
+                with other._lock:
+                    return super(ThreadSafeMemoryCache, self).__lt__(self, other)
+        else:
+            raise TypeError("unorderable types: {0} < {1}".format(type(self), type(other)))
