@@ -36,33 +36,33 @@ import numbers
 import os
 import re
 import shutil
+import struct
 import sys
 
 import numpy
 
 def arrayread(filename):
-    file = numpy.memmap(filename, dtype=numpy.uint8)
-    if numpy.array_equal(file[:8], [147, 78, 85, 77, 80, 89, 1, 0]):
-        # version 1.0
-        headersize = file[8:10].view(numpy.dtype(numpy.uint16))[0]
-        index = 10
-    elif numpy.array_equal(file[:8], [147, 78, 85, 77, 80, 89, 2, 0]):
-        # version 2.0 (improbable)
-        headersize = file[8:12].view(numpy.dtype(numpy.uint32))[0]
-        index = 12
-    else:
-        return None
+    with file as open(filename, "rb"):
+        magic_version = file.read(8)
+        if magic_version == b"\x93NUMPY\x01\x00":
+            # version 1.0
+            headersize, = struct.unpack("<H", file.read(2))
+        elif magic_version == b"\x93NUMPY\x02\x00":
+            # version 2.0 (unlikely)
+            headersize, = struct.unpack("<I", file.read(4))
+        else:
+            return None
 
-    header = ast.literal_eval(file[index : index + headersize].tostring())
-    
-    if header["fortran_order"]:
-        out = numpy.asfortranarray(file[index + headersize :], numpy.dtype(header["descr"]))
-    else:
-        out = file[index + headersize :].view(numpy.dtype(header["descr"]))
+        header = ast.literal_eval(file.read(headersize))
+        out = numpy.fromfile(file, dtype=header["descr"])
 
-    if header["shape"] != out.shape:
-        out = out.reshape(header["shape"])
-    return out
+        if header["fortran_order"]:
+            out = numpy.asfortranarray(out)
+
+        if header["shape"] != out.shape:
+            out = out.reshape(header["shape"])
+
+        return out
 
 def arraywrite(filename, obj):
     numpy.save(open(filename, "wb"), obj)
@@ -72,6 +72,7 @@ class DiskCache(dict):
     STATE_FILE = "state.json"
     DATA_DIR = "data"
     TMP_DIR = "tmp"
+    PID_DIR_PREFIX = "pid-"
 
     __slots__ = ("directory", "config", "read", "write")
 
@@ -101,9 +102,12 @@ class DiskCache(dict):
         out.write = write
         out._name2path = {}
         out._num2name = {}
+        out._depth = 0
+        out._next = 0
+        out._lastevict = None
         out._formatter = "{0:0" + str(int(math.ceil(math.log(self.config["maxperdir"], 10)))) + "d}"
         return out
-
+        
     @staticmethod
     def join(directory, read=arrayread, write=arraywrite):
         if not os.path.exists(directory):
@@ -161,7 +165,7 @@ class DiskCache(dict):
                 raise OSError("directory contents must either be all directories (named /{0}/ because maxperdir is {1}) or all be files; failure at {2}".format(digits.pattern, config["maxperdir"], os.path.join(datadir, path)))
 
         statefile = open(os.path.join(directory, self.STATE_FILE), "rw")
-        fcntl.lockf(statefile, fcntl.LOCK_EX)
+        fcntl.lockf(statefile, fcntl.LOCK_EX)   # block until we get exclusive access to state.json
         try:
             recurse(0, 0, "")
             if state["depth"] is None:
@@ -184,7 +188,7 @@ class DiskCache(dict):
             json.dump(statefile, state)
 
         finally:
-            fcntl.lockf(statefile, fcntl.LOCK_UN)
+            fcntl.lockf(statefile, fcntl.LOCK_UN)  # release state.json
             statefile.close()
 
         out = DiskCache.__new__(DiskCache)
@@ -194,18 +198,106 @@ class DiskCache(dict):
         out.write = write
         out._name2path = name2path
         out._num2name = num2name
-        out._formatter = "{0:0" + str(int(math.ceil(math.log(self.config["maxperdir"], 10)))) + "d}"
+        out._depth = config["depth"]
+        out._next = config["next"]
+        out._lastevict = config["lastevict"]
+        out._formatter = "{0:0" + str(int(math.ceil(math.log(config["maxperdir"], 10)))) + "d}"
         return out
 
     def __getitem__(self, name):
-        raise NotImplementedError
+        statefile = open(os.path.join(self.directory, self.STATE_FILE), "rw")
+        fcntl.lockf(statefile, fcntl.LOCK_EX)   # block until we get exclusive access to state.json
+        try:
+            state = json.load(statefile)
+            self._update(state)
 
+            self._promote(state, name)
+
+            oldpath = self._name2path[name]
+            piddir = os.path.join(directory, DiskCache.PID_DIR_PREFIX + str(os.getpid()))
+            if not os.path.exists(piddir):
+                os.mkdir(piddir)
+            newpath = os.path.join(piddir, repr(len(os.listdir(piddir))))
+            os.link(oldpath, newpath)
+
+            statefile.seek(0)
+            statefile.truncate()
+            json.dump(statefile, state)
+
+        finally:
+            fcntl.lockf(statefile, fcntl.LOCK_UN)  # release state.json
+            statefile.close()
+
+        out = self.read(newpath)
+        def clean():
+            os.remove(newpath)
+            try:
+                os.rmdir(piddir)
+            except OSError:
+                pass
+        return out     # FIXME: go back to memmap and make this a destructor on it
+        
     def __setitem__(self, name, value):
         raise NotImplementedError
 
     def __delitem__(self, name):
         raise NotImplementedError
 
+    def _update(self, state):
+        if self._depth < state["depth"]:
+            prefix = ""
+            while self._depth < state["depth"]:
+                prefix = os.path.join(prefix, self._formatter.format(0))
+                self._depth += 1
+            self._addprefix(prefix)
+
+        if self._lastevict != state["lastevict"]:
+            if self.lastevict is None:
+                self.lastevict = -1
+            self._cleanlookup(self.lastevict, state["lastevict"])
+            self.lastevict = state["lastevict"]
+
+        if self._next != state["next"]:
+            self._updatelookup(self._next, state["next"], "", 0, self._depth)
+
+    def _addprefix(self, prefix):
+        for n, path in self._name2path.items():
+            self._name2path[n] = os.path.join(prefix, path)
+
+    def _cleanlookup(self, oldlastevict, newlastevict):
+        if oldlastevict is None:
+            oldlastevict = -1
+        if newlastevict is None:
+            return
+        for number in range(oldlastevict + 1, newlastevict + 1):
+            if number in self._num2name:
+                name = self._num2name[number]
+                del self._num2name[number]
+                del self._name2path[name]
+
+    def _updatelookup(self, oldnext, newnext, path, origin, depth):
+        items = os.listdir(os.path.join(self.directory, self.DATA_DIR, path))
+        items.sort()
+
+        for fn in items:
+            subpath = os.path.join(path, fn)
+
+            if os.path.isdir(os.path.join(self.directory, self.DATA_DIR, subpath)):
+                # maybe descend to the next level
+                low = origin + (int(fn) * self.config["maxperdir"]**depth)
+                high = low + self.config["maxperdir"]**depth
+                if low <= oldnext and newnext <= high:
+                    self._updatelookup(oldnext, newnext, subpath, low, depth - 1)
+
+            else:
+                # maybe add files to lookup
+                i = fn.index(self.config["delimiter"])
+                number = origin + int(fn[:i])
+                name = fn[i + 1:]
+                if oldnext <= number < newnext:
+                    self._num2name[number] = name
+                    self._name2path[name] = subpath
+        
     def _path2num(self, path):
         num = 0
         while path != "":
@@ -217,29 +309,24 @@ class DiskCache(dict):
             num = num * self.config["maxperdir"] + n
         return num
 
-    def _promote(self, state, names):
-        cleanup = set()
-        for name in names:
-            newnum, newpath = self._numpath(state, name)   # _numpath changes _name2path
-            oldpath = self._name2path[name]                # and therefore must be called first
-            oldnum = self._path2num(oldpath)
+    def _promote(self, state, name):
+        newnum, newpath = self._numpath(state, name)   # _numpath changes _name2path
+        oldpath = self._name2path[name]                # and therefore must be called first
+        oldnum = self._path2num(oldpath)
 
-            os.rename(os.path.join(self.directory, self.DATA_DIR, oldpath), os.path.join(self.directory, self.DATA_DIR, newpath))
+        os.rename(os.path.join(self.directory, self.DATA_DIR, oldpath), os.path.join(self.directory, self.DATA_DIR, newpath))
 
-            self._name2path[name] = newpath
-            del self._num2name[oldnum]
-            self._num2name[newnum] = name
-
-            cleanup.add(oldpath)
+        self._name2path[name] = newpath
+        del self._num2name[oldnum]
+        self._num2name[newnum] = name
 
         # clean up empty directories
-        for oldpath in cleanup:
-            path, fn = os.path.split(oldpath)
-            while path != "":
-                olddir = os.path.join(self.directory, self.DATA_DIR, path)
-                if os.path.exists(olddir) and len(os.listdir(olddir)) == 0:
-                    os.rmdir(olddir)
-                path, fn = os.path.split(path)
+        path, fn = os.path.split(oldpath)
+        while path != "":
+            olddir = os.path.join(self.directory, self.DATA_DIR, path)
+            if os.path.exists(olddir) and len(os.listdir(olddir)) == 0:
+                os.rmdir(olddir)
+            path, fn = os.path.split(path)
 
     def _evict(self, state, path, n):
         if state["numbytes"] <= self.config["limitbytes"]:
@@ -265,8 +352,8 @@ class DiskCache(dict):
                 number = n + int(fn[:i])
 
                 state["lastevict"] = number
-                del self.name2path[fn[i + 1:]]
-                del self.num2name[number]
+                del self._name2path[fn[i + 1:]]
+                del self._num2name[number]
 
                 numbytes = os.path.getsize(subpath)
                 os.remove(subpath)
@@ -275,33 +362,6 @@ class DiskCache(dict):
         # clean up empty directories
         if len(os.listdir(path)) == 0:
             os.rmdir(path)
-
-    def _updatelookup(self, oldnext, newnext, path, n):
-        items = os.listdir(path)
-        items.sort()
-
-        for fn in items:
-            subpath = os.path.join(path, fn)
-
-            if os.path.isdir(subpath):
-                # maybe descend to the next level
-                low = (n + int(fn)) * self.config["maxperdir"]
-                high = low + self.config["maxperdir"]
-                if low <= oldnext and newnext <= high:
-                    
-
-
-                
-    def _cleanlookup(self, oldlastevict, newlastevict):
-        if oldlastevict is None:
-            oldlastevict = -1
-        if newlastevict is None:
-            return
-        for number in range(oldlastevict + 1, newlastevict + 1):
-            if number in self._num2name:
-                name = self._num2name[number]
-                del self._num2name[number]
-                del self._name2path[name]
 
     def _numpath(self, state, name):
         # maybe increase depth
@@ -319,8 +379,7 @@ class DiskCache(dict):
             os.rename(tmp, os.path.join(self.directory, self.DATA_DIR, prefix))
 
             # also update the lookup map
-            for n, path in self._name2path.items():
-                self._name2path[n] = os.path.join(prefix, path)
+            self._addprefix(prefix)
 
         # create directories in path if necessary
         path = ""
