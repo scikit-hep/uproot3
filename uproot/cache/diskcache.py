@@ -353,7 +353,7 @@ class DiskCache(object):
             self.state.numbytes += os.path.getsize(newpath)
             self._set(name, newnum)
 
-            self._evict(os.path.join(self.directory, self.ORDER_DIR), 0)
+            self._evict(os.path.join(self.directory, self.ORDER_DIR), True)
 
         finally:
             self._unlockstate()
@@ -373,7 +373,54 @@ class DiskCache(object):
             self._del(name)
         finally:
             self._unlockstate()
-        
+
+    def keys(self):
+        self._lockstate()
+        try:
+            for num, name in self._walkorder(os.path.join(self.directory, self.ORDER_DIR)):
+                yield name
+        finally:
+            self._unlockstate()
+
+    def items(self):
+        linkpaths = []
+
+        self._lockstate()
+        try:
+            piddir = self._piddir()
+            for num, name in self._walkorder(os.path.join(self.directory, self.ORDER_DIR)):
+                oldpath = self._get(name)
+                linkpath = self._pidfile(piddir)
+                os.link(oldpath, linkpath)
+                linkpaths.append((name, linkpath))
+
+        finally:
+            self._unlockstate()
+
+        def make_cleanup(linkpath):   # Python's function-based variable scope
+            def cleanup():
+                os.remove(linkpath)
+                try:
+                    os.rmdir(piddir)
+                except OSError:
+                    pass
+            return cleanup
+
+        for name, linkpath in linkpaths:
+            yield name, self.read(linkpath, make_cleanup(linkpath))
+
+    def values(self):
+        for name, obj in self.items():
+            yield obj
+
+    @property
+    def numbytes(self):
+        self._lockstate()
+        try:
+            return self.state.numbytes
+        finally:
+            self._unlockstate()
+
     def _lockstate(self):
         assert self._lock is None
         self._lock = open(os.path.join(self.directory, self.STATE_FILE), "r+w")
@@ -538,7 +585,23 @@ class DiskCache(object):
         # return new path
         return os.path.join(path, self._formatter.format(num) + self.config.delimiter + urlquote(name, safe=""))
 
-    def _evict(self, path, n):
+    def _walkorder(self, path):
+        assert self._lock is not None
+        items = os.listdir(path)
+        items.sort()
+
+        for fn in items:
+            subpath = os.path.join(path, fn)
+            if os.path.isdir(subpath):
+                for x in self._walkorder(subpath):
+                    yield x
+            else:
+                i = fn.index(self.config.delimiter)
+                num = int(fn[:i])
+                name = urlunquote(fn[i + 1:])
+                yield num, name
+
+    def _evict(self, path, top):
         assert self._lock is not None
         if self.state.numbytes <= self.config.limitbytes:
             return
@@ -555,7 +618,7 @@ class DiskCache(object):
 
             if os.path.isdir(subpath):
                 # descend to the next level
-                self._evict(subpath, (n + int(fn)) * self.config.maxperdir)
+                self._evict(subpath, False)
 
             else:
                 # delete a file
@@ -565,7 +628,7 @@ class DiskCache(object):
                 os.remove(subpath)
 
         # clean up empty directories
-        if n != 0:
+        if !top:
             try:
                 os.rmdir(path)
             except:
