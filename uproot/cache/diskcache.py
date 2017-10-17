@@ -226,17 +226,18 @@ class DiskCache(object):
 
     def __setitem__(self, name, value):
         # making piddir outside of lock; have to retry in case another thread rmdirs it
-        piddir = self._piddir()   # ensures that piddir exists
-        pidpath = self._pidfile(piddir)  # FIXME
-        # pidpath = None
-        # while pidpath is None or not os.path.exists(pidpath):
-        #     try:
-        #         pidpath = self._pidfile(piddir)
-        #     except:
-        #         if os.path.exists(piddir):
-        #             raise  # fail for any reason other than piddir disappeared
-
-        self.write(pidpath, value)
+        piddir = self._piddir()
+        pidpath = self._pidfile(piddir)
+        while True:
+            try:
+                self.write(pidpath, value)   # try to write to this file
+            except:
+                if os.path.exists(piddir):   # if it fails for any reason other than losing the piddir,
+                    raise                    # pass on that error!
+                else:
+                    piddir = self._piddir()  # otherwise, it's because another process removed the piddir;
+            else:                            # simply reinstate it
+                break   # success! get out of the while loop!
 
         self._lockstate()
         try:
