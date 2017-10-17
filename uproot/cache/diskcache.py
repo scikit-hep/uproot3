@@ -225,14 +225,14 @@ class DiskCache(object):
                     if out.config.delimiter not in fn or not digits.match(fn[:fn.index(out.config.delimiter)]):
                         raise ValueError("cannot join {0} because {1} is not a proper file name with delimiter {2}".format(repr(directory), repr(fn), repr(out.config.delimiter)))
 
-                i = fn.index(out.config.delimiter)
-                number = num + int(fn[:i])
-                name = fn[i + 1:]
+                    i = fn.index(out.config.delimiter)
+                    number = num + int(fn[:i])
+                    name = urlunquote(fn[i + 1:])
 
-                path = out._get(urlunquote(name))
-                if not os.path.exists(path):
-                    raise ValueError("cannot join {0} because {1} (for key {2}) does not exist".format(repr(directory), repr(path), repr(name)))
-                out._unchecked[out._index(name)] = True
+                    path = out._get(name)
+                    if not os.path.exists(path):
+                        raise ValueError("cannot join {0} because {1} (for key {2}) does not exist".format(repr(directory), repr(path), repr(name)))
+                    out._unchecked[out._index(name)] = False
 
             else:
                 raise ValueError("cannot join {0} because directory {1} is neither an all-directory nor an all-file directory".format(repr(directory), repr(path)))
@@ -261,10 +261,11 @@ class DiskCache(object):
             out._lookup = numpy.memmap(lookupfilename, dtype=out.config.numformat, mode="r+", offset=offset, shape=(out.config.lookupsize,), order="C")
 
             if check:
-                out._unchecked = numpy.zeros(out.config.lookupsize, dtype=numpy.bool)
+                out._unchecked = numpy.ones(out.config.lookupsize, dtype=numpy.bool)
                 recurse(0, 0, os.path.join(directory, out.ORDER_DIR))
+
                 if not (out._lookup[out._unchecked] == DiskCache._EMPTY(out.config.numformat)).all():
-                    raise ValueError("cannot join {0} because some hash bins in {1} are not empty".format(repr(directory), repr(DiskCache.LOOKUP_FILE)))
+                    raise ValueError("cannot join {0} because some hash bins in {1} that don't point to any files aren't empty".format(repr(directory), repr(DiskCache.LOOKUP_FILE)))
                 del out._unchecked
 
         finally:
