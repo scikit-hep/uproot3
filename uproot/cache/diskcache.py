@@ -30,6 +30,7 @@
 
 import ast
 import fcntl
+import glob
 import json
 import math
 import numbers
@@ -39,6 +40,12 @@ import re
 import shutil
 import struct
 import sys
+try:
+    from urllib import quote as urlquote
+    from urllib import unquote as urlunquote
+except ImportError:
+    from urllib.parse import quote as urlquote
+    from urllib.parse import unquote as urlunquote
 
 import numpy
 
@@ -113,310 +120,299 @@ def arraywrite(filename, obj):
 class DiskCache(object):
     CONFIG_FILE = "config.json"
     STATE_FILE = "state.json"
-    DATA_DIR = "data"
+    LOOKUP_FILE = "lookup.npy"
+    ORDER_DIR = "order"
+    COLLISIONS_DIR = "collisions"
     TMP_DIR = "tmp"
     PID_DIR_PREFIX = "pid-"
+    NUMFORMAT = numpy.int64
 
-    __slots__ = ("directory", "config", "read", "write")
+    @property
+    def _EMPTY(self):
+        return numpy.iinfo(numpy.dtype(self.NUMFORMAT).type).min
+
+    def _iscollision(self, num):
+        return num < 0
 
     def __init__(self, *args, **kwds):
         raise TypeError("create a DiskCache with DiskCache.create or DiskCache.join")
 
+    class Config(object): pass
+    class State(object): pass
+
     @staticmethod
-    def create(limitbytes, directory, read=arrayread, write=arraywrite, maxperdir=100, delimiter="."):
+    def create(limitbytes, directory, read=arrayread, write=arraywrite, lookupsize=10000, maxperdir=100, delimiter="-"):
         if os.path.exists(directory):
             shutil.rmtree(directory)
 
         if not os.path.exists(os.path.split(directory)[0]):
             raise OSError("cannot create {0} because {1} does not exist".format(repr(directory), repr(os.path.split(directory)[0])))
 
-        config = {"limitbytes": limitbytes, "maxperdir": maxperdir, "delimiter": delimiter}
-        state = {"numbytes": 0, "depth": 0, "next": 0, "lastevict": None}
+        numformat = str(numpy.dtype(self.NUMFORMAT))
 
         os.mkdir(directory)
+        os.mkdir(os.path.join(directory, self.ORDER_DIR))
+        os.mkdir(os.path.join(directory, self.COLLISIONS_DIR))
+        
+        lookupfile = os.path.join(directory, self.LOOKUP_FILE)
+        with lookup as open(lookupfile, "wb"):
+            numpy.lib.format.write_array_header_1_0(lookup, {"descr": numformat, "fortran_order": False, "shape": (lookupsize,)})
+            offset = lookup.tell()
+        lookup = numpy.memmap(lookupfile, dtype=numformat, mode="w+", offset=offset, shape=(lookupsize,), order="C")
+        lookup[:] = self._EMPTY
+
+        config = {"limitbytes": limitbytes, "lookupsize": lookupsize, "numformat": numformat, "maxperdir", maxperdir, "delimiter": delimiter}
+        state = {"numbytes": os.path.getsize(lookupfile), "depth": 0, "next": 0}
+
         json.dump(open(os.path.join(directory, self.CONFIG_FILE), "w"), config)
         json.dump(open(os.path.join(directory, self.STATE_FILE), "w"), state)
-        os.mkdir(os.path.join(directory, DiskCache.DATA_DIR))
 
         out = DiskCache.__new__(DiskCache)
+        out.config = Config()
+        out.config.__dict__.update(config)
+        out.state = State()
+        out.state.__dict__.update(state)
         out.directory = directory
-        out.config = config
         out.read = read
         out.write = write
-        out._name2path = {}
-        out._num2name = {}
-        out._depth = 0
-        out._next = 0
-        out._lastevict = None
-        out._formatter = "{0:0" + str(int(math.ceil(math.log(self.config["maxperdir"], 10)))) + "d}"
-        return out
-        
-    @staticmethod
-    def join(directory, read=arrayread, write=arraywrite):
-        if not os.path.exists(directory):
-            raise OSError("cannot join {0} because it does not exist".format(repr(directory)))
-        if not os.path.isdir(directory):
-            raise OSError("cannot join {0} because it is not a directory".format(repr(directory)))
-
-        datadir = os.path.join(directory, self.DATA_DIR)
-        if not os.path.exists(datadir):
-            raise OSError("cannot join {0} because {1} does not exist".format(repr(directory), repr(datadir)))
-        if not os.path.isdir(datadir):
-            raise OSError("cannot join {0} because {1} is not a directory".format(repr(directory), repr(datadir)))
-        
-        config = json.load(open(os.path.join(directory, self.CONFIG_FILE)))
-        numdigits = int(math.ceil(math.log(config["maxperdir"], 10)))
-        digits = re.compile("^[0-9]{" + str(numdigits) + "}$")
-
-        state = {"numbytes": 0, "depth": None, "next": None, "lastevict": None}
-        name2path = {}
-        num2name = {}
-
-        def recurse(d, n, path):
-            items = os.listdir(os.path.join(datadir, path))
-            items.sort()
-
-            # directories should all have numerical names (with the right number of digits)
-            if all(os.path.isdir(os.path.join(datadir, path, fn)) and digits.match(fn) for fn in items):
-                for fn in items:
-                    recurse(d + 1, (n + int(fn)) * config["maxperdir"], os.path.join(path, fn))
-
-            # a directory of files should all be files; no mixing of files and directories
-            elif all(not os.path.isdir(os.path.join(datadir, path, fn)) for fn in items):
-                for fn in items:
-                    if config["delimiter"] not in fn or not digits.match(fn[:fn.index(config["delimiter"])]):
-                        raise OSError("file name {0} in {1} is malformed; should be '{2}{3}NAME'".format(repr(fn), repr(os.path.join(datadir, path)), "#" * numdigits, config["delimiter"]))
-
-                i = fn.index(config["delimiter"])
-                name = fn[i + 1:]
-                config["numbytes"] += os.path.getsize(os.path.join(datadir, path, fn))
-                number = n + int(fn[:i])
-
-                name2path[name] = os.path.join(path, fn)
-                num2name[number] = name
-
-                if state["depth"] is None:
-                    state["depth"] = d
-                elif state["depth"] != d:
-                    raise OSError("some files are at depth {0}, others at depth {1}".format(state["depth"], d))
-
-                if state["next"] is not None and number <= state["next"]:
-                    raise OSError("cache numbers are not in increasing order")
-                state["next"] = number
-                
-            else:
-                raise OSError("directory contents must either be all directories (named /{0}/ because maxperdir is {1}) or all be files; failure at {2}".format(digits.pattern, config["maxperdir"], os.path.join(datadir, path)))
-
-        statefile = open(os.path.join(directory, self.STATE_FILE), "rw")
-        fcntl.lockf(statefile, fcntl.LOCK_EX)   # block until we get exclusive access to state.json
-        try:
-            recurse(0, 0, "")
-            if state["depth"] is None:
-                assert state["next"] is None
-                state["depth"] = 0
-                state["next"] = 0
-            else:
-                assert state["next"] is not None
-                state["next"] += 1
-
-            oldstate = json.load(statefile)
-            for key, value in oldstate.items():
-                if key not in state:
-                    state[key] = value
-                elif state[key] != value:
-                    raise OSError("state.json differs from expected state in key {0}:\n\n    {1}\n\nvs\n\n    {2}".format(repr(key), oldstate, state))
-
-            statefile.seek(0)
-            statefile.truncate()
-            json.dump(statefile, state)
-
-        finally:
-            fcntl.lockf(statefile, fcntl.LOCK_UN)  # release state.json
-            statefile.close()
-
-        out = DiskCache.__new__(DiskCache)
-        out.directory = directory
-        out.config = config
-        out.read = read
-        out.write = write
-        out._name2path = name2path
-        out._num2name = num2name
-        out._depth = config["depth"]
-        out._next = config["next"]
-        out._lastevict = config["lastevict"]
+        out._lock = None
         out._formatter = "{0:0" + str(int(math.ceil(math.log(config["maxperdir"], 10)))) + "d}"
+        out._lookup = lookup
         return out
-
-    @staticmethod
-    def _tmpfilename(directory):
-        return os.path.join(piddir, "{0}-{1}".format(len(os.listdir(piddir)), "".join(random.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789") for x in range(30))))
 
     def __getitem__(self, name):
-        statefile = open(os.path.join(self.directory, self.STATE_FILE), "rw")
-        fcntl.lockf(statefile, fcntl.LOCK_EX)   # block until we get exclusive access to state.json
+        self._lockstate()
         try:
-            state = json.load(statefile)
-            self._update(state)
+            oldpath = self._get(name)  # might raise KeyError
 
-            if name not in self._name2path:
-                raise KeyError(repr(name))
+            # promote this item
+            newpath = self._newpath(name)
+            os.rename(oldpath, newpath)
 
-            self._promote(state, name)
+            # update _lookup
+            self._del(name)
+            self._set(name, self._path2num(newpath))
 
-            oldpath = self._name2path[name]
-            piddir = os.path.join(directory, DiskCache.PID_DIR_PREFIX + str(os.getpid()))
-            if not os.path.exists(piddir):
-                os.mkdir(piddir)
-            newpath = self._tmpfilename(piddir)
-            os.link(oldpath, newpath)
-
-            statefile.seek(0)
-            statefile.truncate()
-            json.dump(statefile, state)
+            # link it so that we can release this lock
+            piddir = self._piddir()
+            linkpath = self._pidfile(piddir)
+            os.link(newpath, linkpath)
 
         finally:
-            fcntl.lockf(statefile, fcntl.LOCK_UN)  # release state.json
-            statefile.close()
+            self._unlockstate()
 
         def cleanup():
-            os.remove(newpath)
+            os.remove(linkpath)
             try:
                 os.rmdir(piddir)
             except OSError:
                 pass
 
-        return self.read(newpath, cleanup)
-        
+        return self.read(linkpath, cleanup)
+
     def __setitem__(self, name, value):
-        piddir = os.path.join(directory, DiskCache.PID_DIR_PREFIX + str(os.getpid()))
+        # making piddir outside of lock; have to retry in case another thread rmdirs it
+        piddir = self._piddir()   # ensures that piddir exists
+        pidpath = None
+        while pidpath is None or not os.path.exists(pidpath):
+            try:
+                pidpath = self._pidfile(piddir)
+            except:
+                if os.path.exists(piddir):
+                    raise  # fail for any reason other than piddir disappeared
+
+        self.write(pidpath, value)
+
+        self._lockstate()
         try:
-            os.mkdir(piddir)
-        except:
-            if not os.path.exists(piddir):
-                raise
+            try:
+                oldpath = self._get(name)
+            except KeyError:
+                # new key
+                pass
+            else:
+                # old key
+                self.state.numbytes -= os.path.getsize(oldpath)
+                os.remove(oldpath)
+                self._del(name)
 
-        newpath = self._tmpfilename(piddir)
-        self.write(newpath, value)
+            newpath = self._newpath(name)
+            newnum = self._path2num(newpath)
+            os.rename(pidpath, newpath)
+            self.state.numbytes += os.path.getsize(newpath)
+            self._set(name, newnum)
 
-        statefile = open(os.path.join(self.directory, self.STATE_FILE), "rw")
-        fcntl.lockf(statefile, fcntl.LOCK_EX)   # block until we get exclusive access to state.json
-        try:
-            state = json.load(statefile)
-            self._update(state)
-
-            if name in self._name2path:
-                self._promote(state, name)
-                oldpath = self._name2path[name]
-            
-
-
-
-
-
-
-
-            statefile.seek(0)
-            statefile.truncate()
-            json.dump(statefile, state)
+            self._evict(os.path.join(self.directory, self.ORDER_DIR), 0)
 
         finally:
-            fcntl.lockf(statefile, fcntl.LOCK_UN)  # release state.json
-            statefile.close()
+            self._unlockstate()
 
+        try:
+            os.rmdir(piddir)
+        except:
+            pass
 
-
-
-        
     def __delitem__(self, name):
-        raise NotImplementedError
-
-    def _update(self, state):
-        if self._depth < state["depth"]:
-            prefix = ""
-            while self._depth < state["depth"]:
-                prefix = os.path.join(prefix, self._formatter.format(0))
-                self._depth += 1
-            self._addprefix(prefix)
-
-        if self._lastevict != state["lastevict"]:
-            if self.lastevict is None:
-                self.lastevict = -1
-            self._cleanlookup(self.lastevict, state["lastevict"])
-            self.lastevict = state["lastevict"]
-
-        if self._next != state["next"]:
-            self._updatelookup(self._next, state["next"], "", 0, self._depth)
-
-    def _addprefix(self, prefix):
-        for n, path in self._name2path.items():
-            self._name2path[n] = os.path.join(prefix, path)
-
-    def _cleanlookup(self, oldlastevict, newlastevict):
-        if oldlastevict is None:
-            oldlastevict = -1
-        if newlastevict is None:
-            return
-        for number in range(oldlastevict + 1, newlastevict + 1):
-            if number in self._num2name:
-                name = self._num2name[number]
-                del self._num2name[number]
-                del self._name2path[name]
-
-    def _updatelookup(self, oldnext, newnext, path, origin, depth):
-        items = os.listdir(os.path.join(self.directory, self.DATA_DIR, path))
-        items.sort()
-
-        for fn in items:
-            subpath = os.path.join(path, fn)
-
-            if os.path.isdir(os.path.join(self.directory, self.DATA_DIR, subpath)):
-                # maybe descend to the next level
-                low = origin + (int(fn) * self.config["maxperdir"]**depth)
-                high = low + self.config["maxperdir"]**depth
-                if low <= oldnext and newnext <= high:
-                    self._updatelookup(oldnext, newnext, subpath, low, depth - 1)
-
-            else:
-                # maybe add files to lookup
-                i = fn.index(self.config["delimiter"])
-                number = origin + int(fn[:i])
-                name = fn[i + 1:]
-                if oldnext <= number < newnext:
-                    self._num2name[number] = name
-                    self._name2path[name] = subpath
+        self._lockstate()
+        try:
+            oldpath = self._get(name)
+            os.remove(oldpath)
+            self._del(name)
+        finally:
+            self._unlockstate()
         
+    def _lockstate(self):
+        assert self._lock is None
+        self._lock = open(os.path.join(self.directory, self.STATE_FILE), "rw")
+        fcntl.lockf(self._lock, fcntl.LOCK_EX)
+        self.state.__dict__.update(json.load(self._lock))
+
+    def _unlockstate(self):
+        assert self._lock is not None
+        self._lock.seek(0)
+        self._lock.truncate()
+        json.dump(self._lock, self.state.__dict__)
+        fcntl.lockf(self._lock, fcntl.LOCK_UN)
+        self._lock = None
+
+    def _num2path(self, num):
+        assert self._lock is not None
+        assert num < self.config.maxperdir**self.state.depth
+        path = []
+        for n in range(self.state.depth - 1, -1, -1):
+            factor = self.config.maxperdir**n
+            path.append(self._formatter.format(num // factor))
+            num = num % factor
+        return os.path.join(*path)
+
     def _path2num(self, path):
+        assert self._lock is not None
         num = 0
         while path != "":
             path, fn = os.path.split(path)
-            if self.config["delimiter"] in fn:
-                n = int(fn[:fn.index(self.config["delimiter"])])
+            if self.config.delimiter in fn:
+                n = fn[:fn.index(self.config.delimiter)]
             else:
                 n = int(fn)
-            num = num * self.config["maxperdir"] + n
+            num = num * self.config.maxperdir + n
         return num
 
-    def _promote(self, state, name):
-        newnum, newpath = self._numpath(state, name)   # _numpath changes _name2path
-        oldpath = self._name2path[name]                # and therefore must be called first
-        oldnum = self._path2num(oldpath)
+    def _piddir(self):
+        piddir = os.path.join(self.directory, DiskCache.PID_DIR_PREFIX + repr(os.getpid()))
+        try:
+            os.mkdir(piddir)
+        except:
+            if not os.path.exists(piddir) or not os.path.isdir(piddir):
+                raise   # fail for any reason other than attempting to mkdir an existing dir
+        return piddir
 
-        os.rename(os.path.join(self.directory, self.DATA_DIR, oldpath), os.path.join(self.directory, self.DATA_DIR, newpath))
+    def _pidfile(self, piddir):
+        return os.path.join(piddir, "{0}-{1}".format(len(os.listdir(piddir)), "".join(random.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789") for x in range(30))))
 
-        self._name2path[name] = newpath
-        del self._num2name[oldnum]
-        self._num2name[newnum] = name
+    def _get(self, name):
+        assert self._lock is not None
+        index = abs(hash(name)) % self.config.lookupsize
 
-        # clean up empty directories
-        path, fn = os.path.split(oldpath)
-        while path != "":
-            olddir = os.path.join(self.directory, self.DATA_DIR, path)
-            if os.path.exists(olddir) and len(os.listdir(olddir)) == 0:
-                os.rmdir(olddir)
-            path, fn = os.path.split(path)
+        num = self._lookup[index]
+        if num == self._EMPTY:
+            raise KeyError(repr(name))
+        elif self._iscollision(num):
+            # lookupsize should be made large enough that collisions are unlikely
+            num = json.load(open(os.path.join(self.directory, self.COLLISIONS_DIR, repr(num)), "r"))[name]
+        else:
+            pass
 
-    def _evict(self, state, path, n):
-        if state["numbytes"] <= self.config["limitbytes"]:
+        dir, prefix = os.path.split(self._num2path(num))
+        path = os.path.join(dir, prefix + self.config.delimiter + urlquote(name))
+        return path
+
+    def _set(self, name, num):
+        assert self._lock is not None
+        index = abs(hash(name)) % self.config.lookupsize
+        oldvalue = self._lookup[index]
+
+        if oldvalue == self._EMPTY:
+            # should be the usual case
+            self._lookup[index] = num
+
+        elif self._iscollision(oldvalue):
+            # already has a collisions file; just update it
+            collisionsfile = os.path.join(self.directory, self.COLLISIONS_DIR, repr(oldvalue))
+            collisions = json.load(open(collisionsfile, "r"))
+            collisions[name] = num
+            json.dump(open(collisionsfile, "w"), collisions)
+            # don't change self._lookup[index]
+
+        else:
+            # new collision; need to make the collisions file
+            otherpath = glob.glob(self._num2path(oldvalue) + "*")[0]
+            othername = urlunquote(otherpath[otherpath.index(self.config.delimiter) + 1:])
+
+            collisionsfile = os.path.join(self.directory, self.COLLISIONS_DIR, repr(-index))
+            json.dump(open(collisionsfile, "w"), {name: num, othername: oldvalue})
+            self._lookup[index] = -index
+
+    def _del(self, name):
+        assert self._lock is not None
+        index = abs(hash(name)) % self.config.lookupsize
+        oldvalue = self._lookup[index]
+
+        if oldvalue == self._EMPTY:
+            # nothing to delete
+            raise KeyError(repr(name))
+
+        elif self._iscollision(oldvalue):
+            # have to update collisions file
+            collisionsfile = os.path.join(self.directory, self.COLLISIONS_DIR, repr(oldvalue))
+            collisions = json.load(open(collisionsfile, "r"))
+            del collisions[name]  # might result in a KeyError, and that's appropriate
+
+            assert len(collisions) != 0
+            if len(collisions) == 1:
+                # now there's only one left; remove the collisions file and just set the _lookup directly
+                othernum, = collisions.values()
+                self._lookup[index] = othernum
+                os.remove(collisionsfile)
+            else:
+                # there's more than one left; we still need the collisions file
+                json.dump(open(collisionsfile, "w"), collisions)
+
+        else:
+            self._lookup[index] = self._EMPTY
+
+    def _newpath(self, name):
+        assert self._lock is not None
+        # maybe increase depth
+        while self.state.next >= self.config.maxperdir**(self.state.depth + 1):
+            self.state.depth += 1
+
+            # move the subdirectories/files into a new directory
+            tmp = self.path.join(self.directory, self.TMP_DIR)
+            assert not os.path.exists(tmp)
+            os.mkdir(tmp)
+            for fn in os.listdir(os.path.join(self.directory, self.ORDER_DIR)):
+                os.rename(os.path.join(self.directory, self.ORDER_DIR, fn), os.path.join(tmp, fn))
+            os.rename(tmp, os.path.join(self.directory, self.ORDER_DIR, self._formatter.format()))
+
+        # create directories in path if necessary
+        path = os.path.join(self.directory, self.ORDER_DIR)
+        num = self.state.next
+        for d in range(self.depth - 1, -1, -1):
+            factor = self.config.maxperdir**n
+            path = os.path.join(path, self._formatter.format(num // factor))
+            num = num % factor
+            if d != 0 and not os.path.exists(path):
+                os.mkdir(path)
+
+        # update next
+        self.state.next += 1
+
+        # return new path
+        return path + self.config.delimiter + urlquote(name)
+
+    def _evict(self, path, n):
+        assert self._lock is not None
+        if self.state.numbytes <= self.config.limitbytes:
             return
 
         # eliminate in sort order
@@ -424,62 +420,24 @@ class DiskCache(object):
         items.sort()
 
         for fn in items:
-            if state["numbytes"] <= self.config["limitbytes"]:
+            if self.state.numbytes <= self.config.limitbytes:
                 return
 
             subpath = os.path.join(path, fn)
 
             if os.path.isdir(subpath):
                 # descend to the next level
-                self._evict(state, subpath, (n + int(fn)) * self.config["maxperdir"])
+                self._evict(subpath, (n + int(fn)) * self.config.maxperdir)
 
             else:
-                # delete each file
-                i = fn.index(self.config["delimiter"])
-                number = n + int(fn[:i])
-
-                state["lastevict"] = number
-                del self._name2path[fn[i + 1:]]
-                del self._num2name[number]
-
-                numbytes = os.path.getsize(subpath)
+                # delete a file
+                name = urlunquote(fn[fn.index(self.config.delimiter) + 1:])
+                self._del(name)
+                self.state.numbytes -= os.path.getsize(subpath)
                 os.remove(subpath)
-                state["numbytes"] -= numbytes
 
         # clean up empty directories
-        if len(os.listdir(path)) == 0:
+        try:
             os.rmdir(path)
-
-    def _numpath(self, state, name):
-        # maybe increase depth
-        while state["next"] >= self.config["maxperdir"]**(state["depth"] + 1):
-            state["depth"] += 1
-
-            # move the subdirectories/files into a new directory
-            tmp = os.path.join(self.directory, self.TMP_DIR)
-            assert not os.path.exists(tmp)
-            os.mkdir(tmp)
-            for fn in os.listdir(os.path.join(self.directory, self.DATA_DIR)):
-                os.rename(os.path.join(self.directory, self.DATA_DIR, fn), os.path.join(tmp, fn))
-
-            prefix = self._formatter.format(0)
-            os.rename(tmp, os.path.join(self.directory, self.DATA_DIR, prefix))
-
-            # also update the lookup map
-            self._addprefix(prefix)
-
-        # create directories in path if necessary
-        path = ""
-        number = state["next"]
-        for d in range(self.depth, 0, -1):
-            factor = self.config["maxperdir"]**d
-
-            fn = self._formatter.format(number // factor)
-            number = number % factor
-
-            path = os.path.join(path, fn)
-            if not os.path.exists(os.path.join(self.directory, self.DATA_DIR, path)):
-                os.mkdir(os.path.join(self.directory, self.DATA_DIR, path))
-
-        # return new number and path
-        return number, os.path.join(path, self._formatter.format(number) + self.config["delimiter"] + str(name))
+        except:
+            pass
