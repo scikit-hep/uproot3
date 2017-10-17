@@ -147,7 +147,7 @@ class DiskCache(object):
 
         parent = os.path.split(directory)[0]
         if parent != "" and not os.path.exists(parent):
-            raise OSError("cannot create {0} because {1} does not exist".format(repr(directory), repr(parent)))
+            raise ValueError("cannot create {0} because {1} does not exist".format(repr(directory), repr(parent)))
 
         numformat = str(numpy.dtype(numformat))
 
@@ -189,13 +189,13 @@ class DiskCache(object):
     @staticmethod
     def join(directory, read=arrayread, write=arraywrite, check=True):
         if not os.path.exists(directory):
-            raise OSError("cannot join {0} because it does not exist".format(repr(directory)))
+            raise ValueError("cannot join {0} because it does not exist".format(repr(directory)))
 
         out = DiskCache.__new__(DiskCache)
         out.directory = directory
         out.read = read
         out.write = write
-        out._lock = None
+        out._lock = ()
 
         out.config = DiskCache.Config()
         out.config.__dict__.update(json.load(open(os.path.join(directory, DiskCache.CONFIG_FILE), "r")))
@@ -208,10 +208,10 @@ class DiskCache(object):
             items.sort()
 
             if len(items) == 0:
-                raise OSError("cannot join {0} because {1} is an empty directory".format(repr(directory), repr(path)))
+                raise ValueError("cannot join {0} because {1} is an empty directory".format(repr(directory), repr(path)))
 
             elif len(items) > out.config.maxperdir:
-                raise OSError("cannot join {0} because {1} has more than maxperdir ({2}) items".format(repr(directory), repr(path), out.config.maxperdir))
+                raise ValueError("cannot join {0} because {1} has more than maxperdir ({2}) items".format(repr(directory), repr(path), out.config.maxperdir))
 
             elif all(os.path.isdir(os.path.join(path, fn)) and digits.match(fn) for fn in items):
                 for fn in items:
@@ -219,23 +219,23 @@ class DiskCache(object):
 
             elif all(not os.path.isdir(os.path.join(path, fn)) for fn in items):
                 if depth != out.state.depth:
-                    raise OSError("cannot join {0} because depth in {1} ({2}) disagrees with depth in directory tree ({3})".format(repr(directory), repr(DiskCache.CONFIG_FILE), out.config.depth, depth))
+                    raise ValueError("cannot join {0} because depth in {1} ({2}) disagrees with depth in directory tree ({3})".format(repr(directory), repr(DiskCache.CONFIG_FILE), out.config.depth, depth))
 
                 for fn in items:
                     if out.config.delimiter not in fn or not digits.match(fn[:fn.index(out.config.delimiter)]):
-                        raise OSError("cannot join {0} because {1} is not a proper file name with delimiter {2}".format(repr(directory), repr(fn), repr(out.config.delimiter)))
+                        raise ValueError("cannot join {0} because {1} is not a proper file name with delimiter {2}".format(repr(directory), repr(fn), repr(out.config.delimiter)))
 
                 i = fn.index(out.config.delimiter)
                 number = num + int(fn[:i])
                 name = fn[i + 1:]
 
-                path = out._get(name)
+                path = out._get(urlunquote(name))
                 if not os.path.exists(path):
-                    raise OSError("cannot join {0} because {1} (for key {2}) does not exist".format(repr(directory), repr(path), repr(name)))
+                    raise ValueError("cannot join {0} because {1} (for key {2}) does not exist".format(repr(directory), repr(path), repr(name)))
                 out._unchecked[out._index(name)] = True
 
             else:
-                raise OSError("cannot join {0} because directory {1} is neither an all-directory nor an all-file directory".format(repr(directory), repr(path)))
+                raise ValueError("cannot join {0} because directory {1} is neither an all-directory nor an all-file directory".format(repr(directory), repr(path)))
                 
         statefile = open(os.path.join(directory, DiskCache.STATE_FILE), "r+w")
         fcntl.lockf(statefile, fcntl.LOCK_EX)
@@ -244,32 +244,35 @@ class DiskCache(object):
             out.state.__dict__.update(json.loads(statefile.read()))
 
             lookupfilename = os.path.join(directory, DiskCache.LOOKUP_FILE)
-            lookupfile = open(filename, "rb")
-            magic_version = file.read(8)
+            lookupfile = open(lookupfilename, "rb")
+            magic_version = lookupfile.read(8)
             if magic_version == b"\x93NUMPY\x01\x00":
                 # version 1.0
-                headersize, = struct.unpack("<H", file.read(2))
+                headersize, = struct.unpack("<H", lookupfile.read(2))
                 offset = 10 + headersize
             elif magic_version == b"\x93NUMPY\x02\x00":
                 # version 2.0 (unlikely)
-                headersize, = struct.unpack("<I", file.read(4))
+                headersize, = struct.unpack("<I", lookupfile.read(4))
                 offset = 12 + headersize
             else:
-                raise OSError("cannot join {0} because {1} is incorrectly formatted".format(repr(directory), repr(lookupfilename)))
+                raise ValueError("cannot join {0} because {1} is incorrectly formatted".format(repr(directory), repr(lookupfilename)))
             lookupfile.close()
 
             out._lookup = numpy.memmap(lookupfilename, dtype=out.config.numformat, mode="r+", offset=offset, shape=(out.config.lookupsize,), order="C")
-            out._unchecked = numpy.zeros(out.config.lookupsize, dtype=numpy.bool)
 
-            recurse(0, 0, os.path.join(directory, self.ORDER_DIR))
-
-            if not (out._lookup[out._unchecked] == DiskCache._EMPTY(numformat)).all():
-                raise OSError("cannot join {0} because some hash bins in {1} are not empty".format(repr(directory), repr(DiskCache.LOOKUP_FILE)))
-            del out._unchecked
+            if check:
+                out._unchecked = numpy.zeros(out.config.lookupsize, dtype=numpy.bool)
+                recurse(0, 0, os.path.join(directory, out.ORDER_DIR))
+                if not (out._lookup[out._unchecked] == DiskCache._EMPTY(out.config.numformat)).all():
+                    raise ValueError("cannot join {0} because some hash bins in {1} are not empty".format(repr(directory), repr(DiskCache.LOOKUP_FILE)))
+                del out._unchecked
 
         finally:
             fcntl.lockf(statefile, fcntl.LOCK_UN)
             statefile.close()
+            out._lock = None
+
+        return out
 
     def destroy(self):
         if os.path.exists(self.directory):
@@ -431,10 +434,9 @@ class DiskCache(object):
     def _get(self, name):
         assert self._lock is not None
         index = self._index(name)
-
         num = self._lookup[index]
         if num == self._EMPTY(self.config.numformat):
-            raise KeyError(repr(name))
+            raise KeyError(name)
         elif self._iscollision(num):
             # lookupsize should be made large enough that collisions are unlikely
             num = json.load(open(os.path.join(self.directory, self.COLLISIONS_DIR, repr(num)), "r"))[name]
@@ -478,7 +480,7 @@ class DiskCache(object):
 
         if oldvalue == self._EMPTY(self.config.numformat):
             # nothing to delete
-            raise KeyError(repr(name))
+            raise KeyError(name)
 
         elif self._iscollision(oldvalue):
             # have to update collisions file
