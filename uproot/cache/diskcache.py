@@ -33,13 +33,11 @@ import fcntl
 import glob
 import json
 import math
-import numbers
 import os
 import random
 import re
 import shutil
 import struct
-import sys
 try:
     from urllib import quote as urlquote
     from urllib import unquote as urlunquote
