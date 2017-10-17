@@ -34,6 +34,7 @@ import json
 import math
 import numbers
 import os
+import random
 import re
 import shutil
 import struct
@@ -41,8 +42,46 @@ import sys
 
 import numpy
 
-def arrayread(filename):
-    with file as open(filename, "rb"):
+class MemmapWithDel(numpy.core.memmap):
+    def __del__(self):
+        try:
+            self._cleanup()
+        except:
+            pass
+
+def memmapread(filename, cleanup):
+    file = MemmapWithDel(filename, dtype=numpy.uint8)
+    file._cleanup = cleanup
+
+    magic_version = file[:8]
+    if numpy.array_equal(magic_version, memmapread.version1):
+        # version 1.0
+        headersize = file[8:10].view(numpy.uint16)[0]
+        index = 10
+    elif numpy.array_equal(magic_version, memmapread.version2):
+        # version 2.0 (unlikely)
+        headersize = file[8:12].view(numpy.uint32)[0]
+        index = 12
+    else:
+        return None
+
+    header = ast.literal_eval(file[index:index + headersize].tostring())
+    out = file[index + headersize:].view(header["descr"])
+
+    if header["fortran_order"]:
+        out = numpy.asfortranarray(out)
+
+    if header["shape"] != out.shape:
+        out = out.reshape(header["shape"])
+
+    return out
+
+memmapread.version1 = numpy.array([147, 78, 85, 77, 80, 89, 1, 0], dtype=numpy.uint8)
+memmapread.version2 = numpy.array([147, 78, 85, 77, 80, 89, 2, 0], dtype=numpy.uint8)
+
+def arrayread(filename, cleanup):
+    try:
+        file = open(filename, "rb"):
         magic_version = file.read(8)
         if magic_version == b"\x93NUMPY\x01\x00":
             # version 1.0
@@ -64,10 +103,14 @@ def arrayread(filename):
 
         return out
 
+    finally:
+        file.close()
+        cleanup()
+
 def arraywrite(filename, obj):
     numpy.save(open(filename, "wb"), obj)
 
-class DiskCache(dict):
+class DiskCache(object):
     CONFIG_FILE = "config.json"
     STATE_FILE = "state.json"
     DATA_DIR = "data"
@@ -204,6 +247,10 @@ class DiskCache(dict):
         out._formatter = "{0:0" + str(int(math.ceil(math.log(config["maxperdir"], 10)))) + "d}"
         return out
 
+    @staticmethod
+    def _tmpfilename(directory):
+        return os.path.join(piddir, "{0}-{1}".format(len(os.listdir(piddir)), "".join(random.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789") for x in range(30))))
+
     def __getitem__(self, name):
         statefile = open(os.path.join(self.directory, self.STATE_FILE), "rw")
         fcntl.lockf(statefile, fcntl.LOCK_EX)   # block until we get exclusive access to state.json
@@ -211,13 +258,16 @@ class DiskCache(dict):
             state = json.load(statefile)
             self._update(state)
 
+            if name not in self._name2path:
+                raise KeyError(repr(name))
+
             self._promote(state, name)
 
             oldpath = self._name2path[name]
             piddir = os.path.join(directory, DiskCache.PID_DIR_PREFIX + str(os.getpid()))
             if not os.path.exists(piddir):
                 os.mkdir(piddir)
-            newpath = os.path.join(piddir, repr(len(os.listdir(piddir))))
+            newpath = self._tmpfilename(piddir)
             os.link(oldpath, newpath)
 
             statefile.seek(0)
@@ -228,18 +278,55 @@ class DiskCache(dict):
             fcntl.lockf(statefile, fcntl.LOCK_UN)  # release state.json
             statefile.close()
 
-        out = self.read(newpath)
-        def clean():
+        def cleanup():
             os.remove(newpath)
             try:
                 os.rmdir(piddir)
             except OSError:
                 pass
-        return out     # FIXME: go back to memmap and make this a destructor on it
+
+        return self.read(newpath, cleanup)
         
     def __setitem__(self, name, value):
-        raise NotImplementedError
+        piddir = os.path.join(directory, DiskCache.PID_DIR_PREFIX + str(os.getpid()))
+        try:
+            os.mkdir(piddir)
+        except:
+            if not os.path.exists(piddir):
+                raise
 
+        newpath = self._tmpfilename(piddir)
+        self.write(newpath, value)
+
+        statefile = open(os.path.join(self.directory, self.STATE_FILE), "rw")
+        fcntl.lockf(statefile, fcntl.LOCK_EX)   # block until we get exclusive access to state.json
+        try:
+            state = json.load(statefile)
+            self._update(state)
+
+            if name in self._name2path:
+                self._promote(state, name)
+                oldpath = self._name2path[name]
+            
+
+
+
+
+
+
+
+            statefile.seek(0)
+            statefile.truncate()
+            json.dump(statefile, state)
+
+        finally:
+            fcntl.lockf(statefile, fcntl.LOCK_UN)  # release state.json
+            statefile.close()
+
+
+
+
+        
     def __delitem__(self, name):
         raise NotImplementedError
 
