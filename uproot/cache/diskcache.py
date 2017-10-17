@@ -88,7 +88,7 @@ memmapread.version2 = numpy.array([147, 78, 85, 77, 80, 89, 2, 0], dtype=numpy.u
 
 def arrayread(filename, cleanup):
     try:
-        file = open(filename, "rb"):
+        file = open(filename, "rb")
         magic_version = file.read(8)
         if magic_version == b"\x93NUMPY\x01\x00":
             # version 1.0
@@ -127,11 +127,12 @@ class DiskCache(object):
     PID_DIR_PREFIX = "pid-"
     NUMFORMAT = numpy.int64
 
-    @property
-    def _EMPTY(self):
-        return numpy.iinfo(numpy.dtype(self.NUMFORMAT).type).min
+    @staticmethod
+    def _EMPTY():
+        return numpy.iinfo(numpy.dtype(DiskCache.NUMFORMAT).type).min
 
-    def _iscollision(self, num):
+    @staticmethod
+    def _iscollision(num):
         return num < 0
 
     def __init__(self, *args, **kwds):
@@ -145,32 +146,38 @@ class DiskCache(object):
         if os.path.exists(directory):
             shutil.rmtree(directory)
 
-        if not os.path.exists(os.path.split(directory)[0]):
-            raise OSError("cannot create {0} because {1} does not exist".format(repr(directory), repr(os.path.split(directory)[0])))
+        parent = os.path.split(directory)[0]
+        if parent != "" and not os.path.exists(parent):
+            raise OSError("cannot create {0} because {1} does not exist".format(repr(directory), repr(parent)))
 
-        numformat = str(numpy.dtype(self.NUMFORMAT))
+        numformat = str(numpy.dtype(DiskCache.NUMFORMAT))
 
         os.mkdir(directory)
-        os.mkdir(os.path.join(directory, self.ORDER_DIR))
-        os.mkdir(os.path.join(directory, self.COLLISIONS_DIR))
+        os.mkdir(os.path.join(directory, DiskCache.ORDER_DIR))
+        os.mkdir(os.path.join(directory, DiskCache.COLLISIONS_DIR))
         
-        lookupfile = os.path.join(directory, self.LOOKUP_FILE)
-        with lookup as open(lookupfile, "wb"):
+        lookupfile = os.path.join(directory, DiskCache.LOOKUP_FILE)
+        lookup = open(lookupfile, "wb")
+        try:
             numpy.lib.format.write_array_header_1_0(lookup, {"descr": numformat, "fortran_order": False, "shape": (lookupsize,)})
             offset = lookup.tell()
-        lookup = numpy.memmap(lookupfile, dtype=numformat, mode="w+", offset=offset, shape=(lookupsize,), order="C")
-        lookup[:] = self._EMPTY
+            lookup.flush()
+        finally:
+            lookup.close()
+        lookup = numpy.memmap(lookupfile, dtype=numformat, mode="r+", offset=offset, shape=(lookupsize,), order="C")
+        lookup[:] = DiskCache._EMPTY()
+        lookup.flush()
 
-        config = {"limitbytes": limitbytes, "lookupsize": lookupsize, "numformat": numformat, "maxperdir", maxperdir, "delimiter": delimiter}
+        config = {"limitbytes": limitbytes, "lookupsize": lookupsize, "numformat": numformat, "maxperdir": maxperdir, "delimiter": delimiter}
         state = {"numbytes": os.path.getsize(lookupfile), "depth": 0, "next": 0}
 
-        json.dump(open(os.path.join(directory, self.CONFIG_FILE), "w"), config)
-        json.dump(open(os.path.join(directory, self.STATE_FILE), "w"), state)
+        json.dump(config, open(os.path.join(directory, DiskCache.CONFIG_FILE), "w"))
+        json.dump(state, open(os.path.join(directory, DiskCache.STATE_FILE), "w"))
 
         out = DiskCache.__new__(DiskCache)
-        out.config = Config()
+        out.config = DiskCache.Config()
         out.config.__dict__.update(config)
-        out.state = State()
+        out.state = DiskCache.State()
         out.state.__dict__.update(state)
         out.directory = directory
         out.read = read
@@ -213,13 +220,14 @@ class DiskCache(object):
     def __setitem__(self, name, value):
         # making piddir outside of lock; have to retry in case another thread rmdirs it
         piddir = self._piddir()   # ensures that piddir exists
-        pidpath = None
-        while pidpath is None or not os.path.exists(pidpath):
-            try:
-                pidpath = self._pidfile(piddir)
-            except:
-                if os.path.exists(piddir):
-                    raise  # fail for any reason other than piddir disappeared
+        pidpath = self._pidfile(piddir)
+        # pidpath = None
+        # while pidpath is None or not os.path.exists(pidpath):
+        #     try:
+        #         pidpath = self._pidfile(piddir)
+        #     except:
+        #         if os.path.exists(piddir):
+        #             raise  # fail for any reason other than piddir disappeared
 
         self.write(pidpath, value)
 
@@ -263,15 +271,16 @@ class DiskCache(object):
         
     def _lockstate(self):
         assert self._lock is None
-        self._lock = open(os.path.join(self.directory, self.STATE_FILE), "rw")
+        self._lock = open(os.path.join(self.directory, self.STATE_FILE), "r+w")
         fcntl.lockf(self._lock, fcntl.LOCK_EX)
         self.state.__dict__.update(json.load(self._lock))
 
     def _unlockstate(self):
         assert self._lock is not None
+        self._lookup.flush()
         self._lock.seek(0)
         self._lock.truncate()
-        json.dump(self._lock, self.state.__dict__)
+        json.dump(self.state.__dict__, self._lock)
         fcntl.lockf(self._lock, fcntl.LOCK_UN)
         self._lock = None
 
@@ -291,7 +300,7 @@ class DiskCache(object):
         while path != "":
             path, fn = os.path.split(path)
             if self.config.delimiter in fn:
-                n = fn[:fn.index(self.config.delimiter)]
+                n = int(fn[:fn.index(self.config.delimiter)])
             else:
                 n = int(fn)
             num = num * self.config.maxperdir + n
@@ -314,7 +323,7 @@ class DiskCache(object):
         index = abs(hash(name)) % self.config.lookupsize
 
         num = self._lookup[index]
-        if num == self._EMPTY:
+        if num == self._EMPTY():
             raise KeyError(repr(name))
         elif self._iscollision(num):
             # lookupsize should be made large enough that collisions are unlikely
@@ -331,7 +340,7 @@ class DiskCache(object):
         index = abs(hash(name)) % self.config.lookupsize
         oldvalue = self._lookup[index]
 
-        if oldvalue == self._EMPTY:
+        if oldvalue == self._EMPTY():
             # should be the usual case
             self._lookup[index] = num
 
@@ -340,7 +349,7 @@ class DiskCache(object):
             collisionsfile = os.path.join(self.directory, self.COLLISIONS_DIR, repr(oldvalue))
             collisions = json.load(open(collisionsfile, "r"))
             collisions[name] = num
-            json.dump(open(collisionsfile, "w"), collisions)
+            json.dump(collisions, open(collisionsfile, "w"))
             # don't change self._lookup[index]
 
         else:
@@ -349,7 +358,7 @@ class DiskCache(object):
             othername = urlunquote(otherpath[otherpath.index(self.config.delimiter) + 1:])
 
             collisionsfile = os.path.join(self.directory, self.COLLISIONS_DIR, repr(-index))
-            json.dump(open(collisionsfile, "w"), {name: num, othername: oldvalue})
+            json.dump({name: num, othername: oldvalue}, open(collisionsfile, "w"))
             self._lookup[index] = -index
 
     def _del(self, name):
@@ -357,7 +366,7 @@ class DiskCache(object):
         index = abs(hash(name)) % self.config.lookupsize
         oldvalue = self._lookup[index]
 
-        if oldvalue == self._EMPTY:
+        if oldvalue == self._EMPTY():
             # nothing to delete
             raise KeyError(repr(name))
 
@@ -375,10 +384,10 @@ class DiskCache(object):
                 os.remove(collisionsfile)
             else:
                 # there's more than one left; we still need the collisions file
-                json.dump(open(collisionsfile, "w"), collisions)
+                json.dump(collisions, open(collisionsfile, "w"))
 
         else:
-            self._lookup[index] = self._EMPTY
+            self._lookup[index] = self._EMPTY()
 
     def _newpath(self, name):
         assert self._lock is not None
@@ -397,7 +406,7 @@ class DiskCache(object):
         # create directories in path if necessary
         path = os.path.join(self.directory, self.ORDER_DIR)
         num = self.state.next
-        for d in range(self.depth - 1, -1, -1):
+        for d in range(self.state.depth - 1, -1, -1):
             factor = self.config.maxperdir**n
             path = os.path.join(path, self._formatter.format(num // factor))
             num = num % factor
