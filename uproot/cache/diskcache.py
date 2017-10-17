@@ -125,11 +125,10 @@ class DiskCache(object):
     COLLISIONS_DIR = "collisions"
     TMP_DIR = "tmp"
     PID_DIR_PREFIX = "pid-"
-    NUMFORMAT = numpy.int64
 
     @staticmethod
-    def _EMPTY():
-        return numpy.iinfo(numpy.dtype(DiskCache.NUMFORMAT).type).min
+    def _EMPTY(numformat):
+        return numpy.iinfo(numpy.dtype(numformat).type).min
 
     @staticmethod
     def _iscollision(num):
@@ -142,7 +141,7 @@ class DiskCache(object):
     class State(object): pass
 
     @staticmethod
-    def create(limitbytes, directory, read=arrayread, write=arraywrite, lookupsize=10000, maxperdir=100, delimiter="-"):
+    def create(limitbytes, directory, read=arrayread, write=arraywrite, lookupsize=10000, maxperdir=100, delimiter="-", numformat=numpy.int64):
         if os.path.exists(directory):
             shutil.rmtree(directory)
 
@@ -150,7 +149,7 @@ class DiskCache(object):
         if parent != "" and not os.path.exists(parent):
             raise OSError("cannot create {0} because {1} does not exist".format(repr(directory), repr(parent)))
 
-        numformat = str(numpy.dtype(DiskCache.NUMFORMAT))
+        numformat = str(numpy.dtype(numformat))
 
         os.mkdir(directory)
         os.mkdir(os.path.join(directory, DiskCache.ORDER_DIR))
@@ -165,10 +164,10 @@ class DiskCache(object):
         finally:
             lookup.close()
         lookup = numpy.memmap(lookupfile, dtype=numformat, mode="r+", offset=offset, shape=(lookupsize,), order="C")
-        lookup[:] = DiskCache._EMPTY()
+        lookup[:] = DiskCache._EMPTY(numformat)
         lookup.flush()
 
-        config = {"limitbytes": limitbytes, "lookupsize": lookupsize, "numformat": numformat, "maxperdir": maxperdir, "delimiter": delimiter}
+        config = {"limitbytes": limitbytes, "lookupsize": lookupsize, "maxperdir": maxperdir, "delimiter": delimiter, "numformat": numformat}
         state = {"numbytes": os.path.getsize(lookupfile), "depth": 0, "next": 0}
 
         json.dump(config, open(os.path.join(directory, DiskCache.CONFIG_FILE), "w"))
@@ -186,6 +185,21 @@ class DiskCache(object):
         out._formatter = "{0:0" + str(int(math.ceil(math.log(config["maxperdir"], 10)))) + "d}"
         out._lookup = lookup
         return out
+
+    # @staticmethod
+    # def join(directory, read=arrayread, write=arraywrite):
+    #     if not os.path.exists(directory):
+    #         raise OSError("cannot join {0} because it does not exist".format(repr(directory)))
+
+        
+
+
+    def destroy(self):
+        if os.path.exists(self.directory):
+            shutil.rmtree(self.directory)
+
+    def refresh_config(self):
+        self.config.__dict__.update(json.load(os.path.join(self.directory, self.CONFIG_FILE)))
 
     def __getitem__(self, name):
         self._lockstate()
@@ -339,7 +353,7 @@ class DiskCache(object):
         index = abs(hash(name)) % self.config.lookupsize
 
         num = self._lookup[index]
-        if num == self._EMPTY():
+        if num == self._EMPTY(self.config.numformat):
             raise KeyError(repr(name))
         elif self._iscollision(num):
             # lookupsize should be made large enough that collisions are unlikely
@@ -356,7 +370,7 @@ class DiskCache(object):
         index = abs(hash(name)) % self.config.lookupsize
         oldvalue = self._lookup[index]
 
-        if oldvalue == self._EMPTY():
+        if oldvalue == self._EMPTY(self.config.numformat):
             # should be the usual case
             self._lookup[index] = num
 
@@ -382,7 +396,7 @@ class DiskCache(object):
         index = abs(hash(name)) % self.config.lookupsize
         oldvalue = self._lookup[index]
 
-        if oldvalue == self._EMPTY():
+        if oldvalue == self._EMPTY(self.config.numformat):
             # nothing to delete
             raise KeyError(repr(name))
 
@@ -403,7 +417,7 @@ class DiskCache(object):
                 json.dump(collisions, open(collisionsfile, "w"))
 
         else:
-            self._lookup[index] = self._EMPTY()
+            self._lookup[index] = self._EMPTY(self.config.numformat)
 
     def _newpath(self, name):
         assert self._lock is not None
