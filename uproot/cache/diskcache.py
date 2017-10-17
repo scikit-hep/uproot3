@@ -193,8 +193,15 @@ class DiskCache(object):
             oldpath = self._get(name)  # might raise KeyError
 
             # promote this item
+            olddepth = self.state.depth
             newpath = self._newpath(name)
+            newdepth = self.state.depth
+
+            if olddepth != newdepth:
+                oldpath = self._get(name)
+
             os.rename(oldpath, newpath)
+            self._cleandirs(oldpath)
 
             # update _lookup
             self._del(name)
@@ -220,7 +227,7 @@ class DiskCache(object):
     def __setitem__(self, name, value):
         # making piddir outside of lock; have to retry in case another thread rmdirs it
         piddir = self._piddir()   # ensures that piddir exists
-        pidpath = self._pidfile(piddir)
+        pidpath = self._pidfile(piddir)  # FIXME
         # pidpath = None
         # while pidpath is None or not os.path.exists(pidpath):
         #     try:
@@ -242,6 +249,7 @@ class DiskCache(object):
                 # old key
                 self.state.numbytes -= os.path.getsize(oldpath)
                 os.remove(oldpath)
+                self._cleandirs(oldpath)
                 self._del(name)
 
             newpath = self._newpath(name)
@@ -250,7 +258,7 @@ class DiskCache(object):
             self.state.numbytes += os.path.getsize(newpath)
             self._set(name, newnum)
 
-            self._evict(os.path.join(self.directory, self.ORDER_DIR), 0)
+            # self._evict(os.path.join(self.directory, self.ORDER_DIR), 0)
 
         finally:
             self._unlockstate()
@@ -265,6 +273,7 @@ class DiskCache(object):
         try:
             oldpath = self._get(name)
             os.remove(oldpath)
+            self._cleandirs(oldpath)
             self._del(name)
         finally:
             self._unlockstate()
@@ -281,29 +290,33 @@ class DiskCache(object):
         self._lock.seek(0)
         self._lock.truncate()
         json.dump(self.state.__dict__, self._lock)
+        self._lock.flush()
         fcntl.lockf(self._lock, fcntl.LOCK_UN)
+        self._lock.close()
         self._lock = None
 
     def _num2path(self, num):
         assert self._lock is not None
-        assert num < self.config.maxperdir**self.state.depth
-        path = []
-        for n in range(self.state.depth - 1, -1, -1):
+        assert num < self.config.maxperdir**(self.state.depth + 1)
+        path = [self.directory, self.ORDER_DIR]
+        for n in range(self.state.depth, 0, -1):
             factor = self.config.maxperdir**n
             path.append(self._formatter.format(num // factor))
             num = num % factor
+        path.append(self._formatter.format(num))
         return os.path.join(*path)
 
     def _path2num(self, path):
         assert self._lock is not None
+        prefix = os.path.join(self.directory, self.ORDER_DIR)
         num = 0
-        while path != "":
+        for n in range(0, self.state.depth + 1):
             path, fn = os.path.split(path)
             if self.config.delimiter in fn:
-                n = int(fn[:fn.index(self.config.delimiter)])
+                digit = int(fn[:fn.index(self.config.delimiter)])
             else:
-                n = int(fn)
-            num = num * self.config.maxperdir + n
+                digit = int(fn)
+            num += digit * self.config.maxperdir**n
         return num
 
     def _piddir(self):
@@ -391,33 +404,36 @@ class DiskCache(object):
 
     def _newpath(self, name):
         assert self._lock is not None
-        # maybe increase depth
+
+        # increase depth if necessary
         while self.state.next >= self.config.maxperdir**(self.state.depth + 1):
             self.state.depth += 1
 
             # move the subdirectories/files into a new directory
-            tmp = self.path.join(self.directory, self.TMP_DIR)
+            tmp = os.path.join(self.directory, self.TMP_DIR)
             assert not os.path.exists(tmp)
             os.mkdir(tmp)
             for fn in os.listdir(os.path.join(self.directory, self.ORDER_DIR)):
                 os.rename(os.path.join(self.directory, self.ORDER_DIR, fn), os.path.join(tmp, fn))
-            os.rename(tmp, os.path.join(self.directory, self.ORDER_DIR, self._formatter.format()))
+
+            # and rename the new directory as "000"
+            os.rename(tmp, os.path.join(self.directory, self.ORDER_DIR, self._formatter.format(0)))
 
         # create directories in path if necessary
         path = os.path.join(self.directory, self.ORDER_DIR)
         num = self.state.next
-        for d in range(self.state.depth - 1, -1, -1):
+        for n in range(self.state.depth, 0, -1):
             factor = self.config.maxperdir**n
             path = os.path.join(path, self._formatter.format(num // factor))
             num = num % factor
-            if d != 0 and not os.path.exists(path):
+            if n != 0 and not os.path.exists(path):
                 os.mkdir(path)
 
         # update next
         self.state.next += 1
 
         # return new path
-        return path + self.config.delimiter + urlquote(name)
+        return os.path.join(path, self._formatter.format(num) + self.config.delimiter + urlquote(name))
 
     def _evict(self, path, n):
         assert self._lock is not None
@@ -446,7 +462,18 @@ class DiskCache(object):
                 os.remove(subpath)
 
         # clean up empty directories
-        try:
-            os.rmdir(path)
-        except:
-            pass
+        if n != 0:
+            try:
+                os.rmdir(path)
+            except:
+                pass
+
+    def _cleandirs(self, path):
+        assert self._lock is not None
+        prefix = os.path.join(self.directory, self.ORDER_DIR)
+        while path != prefix:
+            path, fn = os.path.split(path)
+            try:
+                os.rmdir(path)
+            except:
+                return
