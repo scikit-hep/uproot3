@@ -180,20 +180,13 @@ class TestDiskCache(unittest.TestCase):
     def test_collisions(self):
         directory = tempfile.mkdtemp()
         try:
-            cache = DiskCache.create(1024**2, directory, lookupsize=1)
+            cache = DiskCache.create(1024**2, directory, lookupsize=10)
 
-            cache["one"] = numpy.array([1.1, 2.2, 3.3, 4.4, 5.5])
-            os.system("tree " + directory)
-            print cache._lookup
-            print open(directory + "/state.json").read()
-            print "one", cache["one"]
+            for i in range(100):
+                cache["x" + repr(i)] = numpy.array([i])
 
-            cache["two"] = numpy.array([1.1, 2.2, 3.3, 4.4, 5.5])
-            os.system("tree " + directory)
-            print open(directory + "/collisions/0").read()
-            print cache._lookup
-            print open(directory + "/state.json").read()
-            print "two", cache["two"]
+            for i in list(range(0, 100, 2)) + list(range(1, 100, 2)):
+                self.assertEqual(cache["x" + repr(i)][0], i)
 
         finally:
             shutil.rmtree(directory)
