@@ -97,7 +97,7 @@ def arrayread(filename, cleanup):
         else:
             return None
 
-        header = ast.literal_eval(file.read(headersize))
+        header = ast.literal_eval(file.read(headersize).decode("ascii"))
         out = numpy.fromfile(file, dtype=header["descr"])
 
         if header["fortran_order"]:
@@ -113,7 +113,8 @@ def arrayread(filename, cleanup):
         cleanup()
 
 def arraywrite(filename, obj):
-    numpy.save(open(filename, "wb"), obj)
+    with open(filename, "wb") as file:
+        numpy.save(file, obj)
 
 class DiskCache(object):
     CONFIG_FILE = "config.json"
@@ -148,26 +149,41 @@ class DiskCache(object):
             os.mkdir(os.path.join(directory, DiskCache.ORDER_DIR))
             os.mkdir(os.path.join(directory, DiskCache.COLLISIONS_DIR))
 
-            lookupfile = os.path.join(directory, DiskCache.LOOKUP_FILE)
-            lookup = open(lookupfile, "wb")
+            lookupfilename = os.path.join(directory, DiskCache.LOOKUP_FILE)
+            lookupfile = open(lookupfilename, "wb")
             try:
-                numpy.lib.format.write_array_header_1_0(lookup, {"descr": numformat, "fortran_order": False, "shape": (lookupsize,)})
-                offset = lookup.tell()
-                lookup.flush()
+                magic = b"\x93NUMPY"
+                lookupfile.write(magic)
+
+                header = repr({"descr": numformat, "fortran_order": False, "shape": (lookupsize,)}).encode("ascii")
+                headersize = int(math.ceil((len(header) + 1 + len(magic) + 4) / 16.0)) * 16 - len(magic) - 4
+                if headersize < 2**16:
+                    # version 1.0
+                    lookupfile.write(struct.pack("<BBH", 1, 0, headersize))
+                else:
+                    # version 2.0 (unlikely)
+                    headersize = int(math.ceil((len(header) + 1 + len(magic) + 6) / 16.0)) * 16 - len(magic) - 6
+                    lookupfile.write(struct.pack("<BBI", 2, 0, headersize))
+
+                header = header + b" " * (headersize - len(header) - 1) + b"\n"
+                lookupfile.write(header)
+                lookupfile.flush()
+                offset = lookupfile.tell()
             finally:
-                lookup.close()
+                lookupfile.close()
 
             out = DiskCache.__new__(DiskCache)
 
-            out._lookup = numpy.memmap(lookupfile, dtype=numformat, mode="r+", offset=offset, shape=(lookupsize,), order="C")
+            out._lookup = numpy.memmap(lookupfilename, dtype=numformat, mode="r+", offset=offset, shape=(lookupsize,), order="C")
             out._EMPTY = numpy.iinfo(numpy.dtype(numformat).type).max
             out._COLLISION = numpy.iinfo(numpy.dtype(numformat).type).max - 1
             out._lookup[:] = out._EMPTY
             out._lookup.flush()
 
             config = {"limitbytes": limitbytes, "lookupsize": lookupsize, "maxperdir": maxperdir, "delimiter": delimiter, "numformat": numformat}
-            state = {"numbytes": os.path.getsize(lookupfile), "depth": 0, "next": 0}
-            json.dump(config, open(os.path.join(directory, DiskCache.CONFIG_FILE), "w"))
+            state = {"numbytes": os.path.getsize(lookupfilename), "depth": 0, "next": 0}
+            with open(os.path.join(directory, DiskCache.CONFIG_FILE), "w") as configfile:
+                json.dump(config, configfile)
             statefile.write(json.dumps(state))
             statefile.flush()
 
@@ -179,11 +195,11 @@ class DiskCache(object):
             out.read = read
             out.write = write
             out._formatter = "{0:0" + str(int(math.ceil(math.log(config["maxperdir"], 10)))) + "d}"
+            out._lock = None
 
         finally:
             fcntl.lockf(statefile, fcntl.LOCK_UN)
             statefile.close()
-            out._lock = None
 
         return out
 
@@ -199,7 +215,8 @@ class DiskCache(object):
         out._lock = ()
 
         out.config = DiskCache.Config()
-        out.config.__dict__.update(json.load(open(os.path.join(directory, DiskCache.CONFIG_FILE), "r")))
+        with open(os.path.join(directory, DiskCache.CONFIG_FILE), "r") as configfile:
+            out.config.__dict__.update(json.load(configfile))
         out._formatter = "{0:0" + str(int(math.ceil(math.log(out.config.maxperdir, 10)))) + "d}"
 
         digits = re.compile("^[0-9]{" + str(int(math.ceil(math.log(out.config.maxperdir, 10)))) + "}$")
@@ -238,26 +255,25 @@ class DiskCache(object):
             else:
                 raise ValueError("cannot join {0} because directory {1} is neither an all-directory nor an all-file directory".format(repr(directory), repr(path)))
                 
-        statefile = open(os.path.join(directory, DiskCache.STATE_FILE), "r+w")
+        statefile = open(os.path.join(directory, DiskCache.STATE_FILE), "r+")
         fcntl.lockf(statefile, fcntl.LOCK_EX)
         try:
             out.state = DiskCache.State()
             out.state.__dict__.update(json.loads(statefile.read()))
 
             lookupfilename = os.path.join(directory, DiskCache.LOOKUP_FILE)
-            lookupfile = open(lookupfilename, "rb")
-            magic_version = lookupfile.read(8)
-            if magic_version == b"\x93NUMPY\x01\x00":
-                # version 1.0
-                headersize, = struct.unpack("<H", lookupfile.read(2))
-                offset = 10 + headersize
-            elif magic_version == b"\x93NUMPY\x02\x00":
-                # version 2.0 (unlikely)
-                headersize, = struct.unpack("<I", lookupfile.read(4))
-                offset = 12 + headersize
-            else:
-                raise ValueError("cannot join {0} because {1} is incorrectly formatted".format(repr(directory), repr(lookupfilename)))
-            lookupfile.close()
+            with open(lookupfilename, "rb") as lookupfile:
+                magic_version = lookupfile.read(8)
+                if magic_version == b"\x93NUMPY\x01\x00":
+                    # version 1.0
+                    headersize, = struct.unpack("<H", lookupfile.read(2))
+                    offset = 10 + headersize
+                elif magic_version == b"\x93NUMPY\x02\x00":
+                    # version 2.0 (unlikely)
+                    headersize, = struct.unpack("<I", lookupfile.read(4))
+                    offset = 12 + headersize
+                else:
+                    raise ValueError("cannot join {0} because {1} is incorrectly formatted".format(repr(directory), repr(lookupfilename)))
 
             out._lookup = numpy.memmap(lookupfilename, dtype=out.config.numformat, mode="r+", offset=offset, shape=(out.config.lookupsize,), order="C")
             out._EMPTY = numpy.iinfo(numpy.dtype(out.config.numformat).type).max
@@ -443,7 +459,7 @@ class DiskCache(object):
 
     def _lockstate(self):
         assert self._lock is None
-        self._lock = open(os.path.join(self.directory, self.STATE_FILE), "r+w")
+        self._lock = open(os.path.join(self.directory, self.STATE_FILE), "r+")
         fcntl.lockf(self._lock, fcntl.LOCK_EX)
         self.state.__dict__.update(json.load(self._lock))
 
@@ -507,7 +523,9 @@ class DiskCache(object):
 
         elif num == self._COLLISION:
             # lookupsize should be made large enough that collisions are unlikely
-            num = json.load(open(os.path.join(self.directory, self.COLLISIONS_DIR, repr(index)), "r"))[name]
+            collisionsfilename = os.path.join(self.directory, self.COLLISIONS_DIR, repr(index))
+            with open(collisionsfilename, "r") as collisionsfile:
+                num = json.load(collisionsfile)[name]
 
         dir, prefix = os.path.split(self._num2path(num))
         path = os.path.join(dir, prefix + self.config.delimiter + urlquote(name, safe=""))
@@ -528,10 +546,12 @@ class DiskCache(object):
 
         elif oldvalue == self._COLLISION:
             # already has a collisions file; just update it
-            collisionsfile = os.path.join(self.directory, self.COLLISIONS_DIR, repr(index))
-            collisions = json.load(open(collisionsfile, "r"))
+            collisionsfilename = os.path.join(self.directory, self.COLLISIONS_DIR, repr(index))
+            with open(collisionsfilename, "r") as collisionsfile:
+                collisions = json.load(collisionsfile)
             collisions[name] = int(num)
-            json.dump(collisions, open(collisionsfile, "w"))
+            with open(collisionsfilename, "w") as collisionsfile:
+                json.dump(collisions, collisionsfile)
             # don't change self._lookup[index]
 
         else:
@@ -539,8 +559,9 @@ class DiskCache(object):
             otherpath = glob.glob(self._num2path(oldvalue) + "*")[0]
             othername = urlunquote(otherpath[otherpath.index(self.config.delimiter) + 1:])
 
-            collisionsfile = os.path.join(self.directory, self.COLLISIONS_DIR, repr(index))
-            json.dump({name: int(num), othername: int(oldvalue)}, open(collisionsfile, "w"))
+            collisionsfilename = os.path.join(self.directory, self.COLLISIONS_DIR, repr(index))
+            with open(collisionsfilename, "w") as collisionsfile:
+                json.dump({name: int(num), othername: int(oldvalue)}, collisionsfile)
             self._lookup[index] = self._COLLISION
 
     def _del(self, name):
@@ -554,8 +575,9 @@ class DiskCache(object):
 
         elif oldvalue == self._COLLISION:
             # have to update collisions file
-            collisionsfile = os.path.join(self.directory, self.COLLISIONS_DIR, repr(index))
-            collisions = json.load(open(collisionsfile, "r"))
+            collisionsfilename = os.path.join(self.directory, self.COLLISIONS_DIR, repr(index))
+            with open(collisionsfilename, "r") as collisionsfile:
+                collisions = json.load(collisionsfile)
             del collisions[name]  # might result in a KeyError, and that's appropriate
 
             assert len(collisions) != 0
@@ -563,10 +585,11 @@ class DiskCache(object):
                 # now there's only one left; remove the collisions file and just set the _lookup directly
                 othernum, = collisions.values()
                 self._lookup[index] = othernum
-                os.remove(collisionsfile)
+                os.remove(collisionsfilename)
             else:
                 # there's more than one left; we still need the collisions file
-                json.dump(collisions, open(collisionsfile, "w"))
+                with open(collisionsfilename, "w") as collisionsfile:
+                    json.dump(collisions, collisionsfile)
 
         else:
             self._lookup[index] = self._EMPTY

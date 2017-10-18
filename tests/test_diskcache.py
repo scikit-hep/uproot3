@@ -112,7 +112,11 @@ class TestDiskCache(unittest.TestCase):
         directory = tempfile.mkdtemp()
         try:
             # same equivalent limitbytes as old implementation
-            cache = DiskCache.create(1024 + 80*26 + 10000*8 + 80, directory, maxperdir=3, read=lambda filename, cleanup: "", write=lambda filename, obj: open(filename, "w").write(""))
+            def dummywrite(filename, obj):
+                with open(filename, "w") as file:
+                    file.write("")
+
+            cache = DiskCache.create(1024 + 80*26 + 10000*8 + 80, directory, maxperdir=3, read=lambda filename, cleanup: "", write=dummywrite)
 
             for i in range(26):
                 cache[chr(i + ord("a"))] = ""
