@@ -33,11 +33,12 @@ import numbers
 import threading
 
 class MemoryCache(dict):
-    __slots__ = ("limitbytes", "numevicted", "_order", "_lookup", "_numbytes")
+    __slots__ = ("limitbytes", "numevicted", "chain", "_order", "_lookup", "_numbytes")
 
-    def __init__(self, limitbytes, items=(), **kwds):
+    def __init__(self, limitbytes, chain=None, items=(), **kwds):
         assert isinstance(limitbytes, numbers.Integral) and limitbytes > 0
         self.limitbytes = limitbytes
+        self.chain = chain
         self.numevicted = 0
         self._order = []
         self._lookup = {}
@@ -71,6 +72,8 @@ class MemoryCache(dict):
         if key in self._lookup:
             self.promote(key)
             return self._lookup[key]
+        elif self.chain is not None:
+            return self.chain[key]
         else:
             raise KeyError(repr(key))
 

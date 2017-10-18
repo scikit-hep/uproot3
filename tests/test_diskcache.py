@@ -36,6 +36,7 @@ import unittest
 import numpy
 
 from uproot.cache.diskcache import DiskCache
+from uproot.cache.diskcache import memmapread
 
 def lstree(base, path=""):
     for item in sorted(os.listdir(os.path.join(base, path))):
@@ -137,7 +138,7 @@ class TestDiskCache(unittest.TestCase):
             # small enough limitbytes that objects get evicted
             #     1 lookup with 10000 8-byte items and an 80-byte header
             #     ~100 8-byte items in 4 arrays with 80-byte headers
-            cache = DiskCache.create(10000*8 + 80 + 100*8 + 80*4, directory, lookupsize=10000)
+            cache = DiskCache.create(10000*8 + 80 + 100*8 + 80*4, directory, maxperdir=3, lookupsize=10000)
 
             cache["a"] = numpy.ones(25, dtype=numpy.float64)
             self.assertEqual(cache.numbytes, 80360)
@@ -159,8 +160,52 @@ class TestDiskCache(unittest.TestCase):
             self.assertEqual(cache.numbytes, 81200)
             self.assertEqual(list(cache.keys()), ["b", "c", "d", "e"])
 
+            cache["f"] = numpy.ones(25, dtype=numpy.float64)
+            self.assertEqual(cache.numbytes, 81200)
+            self.assertEqual(list(cache.keys()), ["c", "d", "e", "f"])
+
+            cache["g"] = numpy.ones(25, dtype=numpy.float64)
+            self.assertEqual(cache.numbytes, 81200)
+            self.assertEqual(list(cache.keys()), ["d", "e", "f", "g"])
+
+            cache["h"] = numpy.ones(25, dtype=numpy.float64)
+            self.assertEqual(cache.numbytes, 81200)
+            self.assertEqual(list(cache.keys()), ["e", "f", "g", "h"])
+
+            cache["i"] = numpy.ones(25, dtype=numpy.float64)
+            self.assertEqual(cache.numbytes, 81200)
+            self.assertEqual(list(cache.keys()), ["f", "g", "h", "i"])
+
+            cache["j"] = numpy.ones(25, dtype=numpy.float64)
+            self.assertEqual(cache.numbytes, 81200)
+            self.assertEqual(list(cache.keys()), ["g", "h", "i", "j"])
+
+            cache["j"] = numpy.ones(25, dtype=numpy.float64)
+            self.assertEqual(cache.numbytes, 81200)
+            self.assertEqual(list(cache.keys()), ["g", "h", "i", "j"])
+
+            cache["j"] = numpy.ones(25, dtype=numpy.float64)
+            self.assertEqual(cache.numbytes, 81200)
+            self.assertEqual(list(cache.keys()), ["g", "h", "i", "j"])
+
+            cache["g"] = numpy.ones(25, dtype=numpy.float64)
+            self.assertEqual(cache.numbytes, 81200)
+            self.assertEqual(list(cache.keys()), ["h", "i", "j", "g"])
+
+            cache["h"] = numpy.ones(25, dtype=numpy.float64)
+            self.assertEqual(cache.numbytes, 81200)
+            self.assertEqual(list(cache.keys()), ["i", "j", "g", "h"])
+
+            cache["i"] = numpy.ones(25, dtype=numpy.float64)
+            self.assertEqual(cache.numbytes, 81200)
+            self.assertEqual(list(cache.keys()), ["j", "g", "h", "i"])
+
+            cache["j"] = numpy.ones(25, dtype=numpy.float64)
+            self.assertEqual(cache.numbytes, 81200)
+            self.assertEqual(list(cache.keys()), ["g", "h", "i", "j"])
+
             # minus one byte: won't be enough for 4 arrays
-            cache = DiskCache.create(10000*8 + 80 + 100*8 + 80*4 - 1, directory, lookupsize=10000)
+            cache = DiskCache.create(10000*8 + 80 + 100*8 + 80*4 - 1, directory, maxperdir=3, lookupsize=10000)
 
             cache["a"] = numpy.ones(25, dtype=numpy.float64)
             self.assertEqual(cache.numbytes, 80360)
@@ -184,13 +229,52 @@ class TestDiskCache(unittest.TestCase):
     def test_collisions(self):
         directory = tempfile.mkdtemp()
         try:
-            cache = DiskCache.create(1024**2, directory, lookupsize=10)
+            cache = DiskCache.create(1024**2, directory, maxperdir=3, lookupsize=10)
 
             for i in range(100):
-                cache["x" + repr(i)] = numpy.array([i])
+                cache["/" + repr(i)] = numpy.array([i])
 
             for i in list(range(0, 100, 2)) + list(range(1, 100, 2)):
-                self.assertEqual(cache["x" + repr(i)][0], i)
+                self.assertEqual(cache["/" + repr(i)][0], i)
+
+            for i in range(100):
+                del cache["/" + repr(i)]
+                if i % 10 == 0:
+                    self.assertEqual(cache["/" + repr(i + 1)][0], i + 1)
 
         finally:
             shutil.rmtree(directory)
+
+    def test_iterators(self):
+        directory = tempfile.mkdtemp()
+        try:
+            cache = DiskCache.create(1024**2, directory, maxperdir=3, lookupsize=10)
+
+            for i in range(100):
+                cache["/" + repr(i)] = numpy.array([i])
+
+            for i, name in enumerate(cache.keys()):
+                self.assertEqual(name, "/" + repr(i))
+
+            for i, value in enumerate(cache.values()):
+                self.assertEqual(value[0], i)
+
+            for i, (name, value) in enumerate(cache.items()):
+                self.assertEqual(name, "/" + repr(i))
+                self.assertEqual(value[0], i)
+
+            cache2 = DiskCache.join(directory, read=memmapread)
+
+            for i, name in enumerate(cache2.keys()):
+                self.assertEqual(name, "/" + repr(i))
+
+            for i, value in enumerate(cache2.values()):
+                self.assertEqual(value[0], i)
+
+            for i, (name, value) in enumerate(cache2.items()):
+                self.assertEqual(name, "/" + repr(i))
+                self.assertEqual(value[0], i)
+
+        finally:
+            shutil.rmtree(directory)
+

@@ -70,7 +70,7 @@ def memmapread(filename, cleanup):
     else:
         return None
 
-    header = ast.literal_eval(file[index:index + headersize].tostring())
+    header = ast.literal_eval(file[index:index + headersize].tostring().decode("ascii"))
     out = file[index + headersize:].view(header["descr"])
 
     if header["fortran_order"]:
@@ -301,10 +301,12 @@ class DiskCache(object):
     def refresh_config(self):
         self.config.__dict__.update(json.load(os.path.join(self.directory, self.CONFIG_FILE)))
 
+    # def promote(self, name):
+
     def __getitem__(self, name):
-        if not isinstance(name, str) and hasattr(name, "encode"):
-            name = name.encode("ascii")
-        if not isinstance(name, str):
+        if not isinstance(name, bytes) and hasattr(name, "encode"):
+            name = name.encode("utf-8")
+        if not isinstance(name, bytes):
             raise TypeError("keys must be strings, not {0}".format(type(name)))
 
         self._lockstate()
@@ -344,9 +346,9 @@ class DiskCache(object):
         return self.read(linkpath, cleanup)
 
     def __setitem__(self, name, value):
-        if not isinstance(name, str) and hasattr(name, "encode"):
-            name = name.encode("ascii")
-        if not isinstance(name, str):
+        if not isinstance(name, bytes) and hasattr(name, "encode"):
+            name = name.encode("utf-8")
+        if not isinstance(name, bytes):
             raise TypeError("keys must be strings, not {0}".format(type(name)))
 
         # making piddir outside of lock; have to retry in case another thread rmdirs it
@@ -395,9 +397,9 @@ class DiskCache(object):
             pass
 
     def __delitem__(self, name):
-        if not isinstance(name, str) and hasattr(name, "encode"):
-            name = name.encode("ascii")
-        if not isinstance(name, str):
+        if not isinstance(name, bytes) and hasattr(name, "encode"):
+            name = name.encode("utf-8")
+        if not isinstance(name, bytes):
             raise TypeError("keys must be strings, not {0}".format(type(name)))
 
         self._lockstate()
@@ -525,7 +527,7 @@ class DiskCache(object):
             # lookupsize should be made large enough that collisions are unlikely
             collisionsfilename = os.path.join(self.directory, self.COLLISIONS_DIR, repr(index))
             with open(collisionsfilename, "r") as collisionsfile:
-                num = json.load(collisionsfile)[name]
+                num = json.load(collisionsfile)[urlquote(name, safe="")]
 
         dir, prefix = os.path.split(self._num2path(num))
         path = os.path.join(dir, prefix + self.config.delimiter + urlquote(name, safe=""))
@@ -549,7 +551,7 @@ class DiskCache(object):
             collisionsfilename = os.path.join(self.directory, self.COLLISIONS_DIR, repr(index))
             with open(collisionsfilename, "r") as collisionsfile:
                 collisions = json.load(collisionsfile)
-            collisions[name] = int(num)
+            collisions[urlquote(name, safe="")] = int(num)
             with open(collisionsfilename, "w") as collisionsfile:
                 json.dump(collisions, collisionsfile)
             # don't change self._lookup[index]
@@ -557,11 +559,11 @@ class DiskCache(object):
         else:
             # new collision; need to make the collisions file
             otherpath = glob.glob(self._num2path(oldvalue) + "*")[0]
-            othername = urlunquote(otherpath[otherpath.index(self.config.delimiter) + 1:])
+            othername = otherpath[otherpath.index(self.config.delimiter) + 1:]
 
             collisionsfilename = os.path.join(self.directory, self.COLLISIONS_DIR, repr(index))
             with open(collisionsfilename, "w") as collisionsfile:
-                json.dump({name: int(num), othername: int(oldvalue)}, collisionsfile)
+                json.dump({urlquote(name, safe=""): int(num), othername: int(oldvalue)}, collisionsfile)
             self._lookup[index] = self._COLLISION
 
     def _del(self, name):
@@ -578,7 +580,8 @@ class DiskCache(object):
             collisionsfilename = os.path.join(self.directory, self.COLLISIONS_DIR, repr(index))
             with open(collisionsfilename, "r") as collisionsfile:
                 collisions = json.load(collisionsfile)
-            del collisions[name]  # might result in a KeyError, and that's appropriate
+
+            del collisions[urlquote(name, safe="")]  # might result in a KeyError, and that's appropriate
 
             assert len(collisions) != 0
             if len(collisions) == 1:
