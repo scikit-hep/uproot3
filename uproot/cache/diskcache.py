@@ -301,7 +301,33 @@ class DiskCache(object):
     def refresh_config(self):
         self.config.__dict__.update(json.load(os.path.join(self.directory, self.CONFIG_FILE)))
 
-    # def promote(self, name):
+    def promote(self, name):
+        if not isinstance(name, bytes) and hasattr(name, "encode"):
+            name = name.encode("utf-8")
+        if not isinstance(name, bytes):
+            raise TypeError("keys must be strings, not {0}".format(type(name)))
+
+        self._lockstate()
+        try:
+            oldpath = self._get(name)  # might raise KeyError
+
+            # promote this item
+            olddepth = self.state.depth
+            newpath = self._newpath(name)
+            newdepth = self.state.depth
+
+            if olddepth != newdepth:
+                oldpath = self._get(name)
+
+            os.rename(oldpath, newpath)
+            self._cleandirs(os.path.split(oldpath)[0])
+
+            # update _lookup
+            self._del(name)
+            self._set(name, self._path2num(newpath))
+
+        finally:
+            self._unlockstate()
 
     def __getitem__(self, name):
         if not isinstance(name, bytes) and hasattr(name, "encode"):

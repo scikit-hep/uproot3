@@ -129,6 +129,16 @@ class TestDiskCache(unittest.TestCase):
                 self.assertEqual(touching[i], list(lstree(os.path.join(directory, cache.ORDER_DIR))))
                 DiskCache.join(directory, check=True)
 
+            cache = DiskCache.create(1024 + 80*26 + 10000*8 + 80, directory, maxperdir=3, read=lambda filename, cleanup: "", write=dummywrite)
+
+            for i in range(26):
+                cache[chr(i + ord("a"))] = ""
+
+            for i, n in enumerate(chr(j + ord("a")) for j in list(range(0, 26, 2)) + list(range(1, 26, 2))):
+                cache.promote(n)
+                self.assertEqual(touching[i], list(lstree(os.path.join(directory, cache.ORDER_DIR))))
+                DiskCache.join(directory, check=True)
+
         finally:
             shutil.rmtree(directory)
 
