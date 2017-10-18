@@ -72,8 +72,19 @@ class MemoryCache(dict):
         if key in self._lookup:
             self.promote(key)
             return self._lookup[key]
+
         elif self.chain is not None:
-            return self.chain[key]
+            # get it from the backup
+            value = self.chain[key]
+            # temporarily disconnect the chain so that we don't put the value back in there (should already be promoted)
+            chain = self.chain
+            self.chain = None
+            # put the key-value pair into *this* cache
+            self[key] = value
+            # restore the chain
+            self.chain = chain
+            return value
+
         else:
             raise KeyError(repr(key))
 
@@ -87,6 +98,9 @@ class MemoryCache(dict):
         else:
             self._order.append(key)
         self._lookup[key] = value
+
+        if self.chain is not None:
+            self.chain[key] = value
 
         container_after = sys.getsizeof(self._order) + sys.getsizeof(self._lookup)
         self._numbytes += container_after - container_before + delta_contents
@@ -111,6 +125,9 @@ class MemoryCache(dict):
 
         del self._order[index(key)]
         del self._lookup[key]
+
+        if self.chain is not None:
+            del self.chain[key]
 
         container_after = sys.getsizeof(self._order) + sys.getsizeof(self._lookup)
         self._numbytes += container_after - container_before + delta_contents
