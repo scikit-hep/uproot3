@@ -132,26 +132,47 @@ class TestDiskCache(unittest.TestCase):
         try:
             # small enough limitbytes that objects get evicted
             #     1 lookup with 10000 8-byte items and an 80-byte header
-            #     ~100 8-byte items in 4 items with 80-byte headers
+            #     ~100 8-byte items in 4 arrays with 80-byte headers
             cache = DiskCache.create(10000*8 + 80 + 100*8 + 80*4, directory, lookupsize=10000)
 
             cache["a"] = numpy.ones(25, dtype=numpy.float64)
-            os.system("tree " + directory)
-            print open(directory + "/state.json").read()
+            self.assertEqual(cache.numbytes, 80360)
+            self.assertEqual(list(cache.keys()), ["a"])
 
             cache["b"] = numpy.ones(25, dtype=numpy.float64)
-            os.system("tree " + directory)
-            print open(directory + "/state.json").read()
+            self.assertEqual(cache.numbytes, 80640)
+            self.assertEqual(list(cache.keys()), ["a", "b"])
 
             cache["c"] = numpy.ones(25, dtype=numpy.float64)
-            os.system("tree " + directory)
-            print open(directory + "/state.json").read()
+            self.assertEqual(cache.numbytes, 80920)
+            self.assertEqual(list(cache.keys()), ["a", "b", "c"])
 
             cache["d"] = numpy.ones(25, dtype=numpy.float64)
-            os.system("tree " + directory)
-            print open(directory + "/state.json").read()
+            self.assertEqual(cache.numbytes, 81200)
+            self.assertEqual(list(cache.keys()), ["a", "b", "c", "d"])
 
+            cache["e"] = numpy.ones(25, dtype=numpy.float64)
+            self.assertEqual(cache.numbytes, 81200)
+            self.assertEqual(list(cache.keys()), ["b", "c", "d", "e"])
 
+            # minus one byte: won't be enough for 4 arrays
+            cache = DiskCache.create(10000*8 + 80 + 100*8 + 80*4 - 1, directory, lookupsize=10000)
+
+            cache["a"] = numpy.ones(25, dtype=numpy.float64)
+            self.assertEqual(cache.numbytes, 80360)
+            self.assertEqual(list(cache.keys()), ["a"])
+
+            cache["b"] = numpy.ones(25, dtype=numpy.float64)
+            self.assertEqual(cache.numbytes, 80640)
+            self.assertEqual(list(cache.keys()), ["a", "b"])
+
+            cache["c"] = numpy.ones(25, dtype=numpy.float64)
+            self.assertEqual(cache.numbytes, 80920)
+            self.assertEqual(list(cache.keys()), ["a", "b", "c"])
+
+            cache["d"] = numpy.ones(25, dtype=numpy.float64)
+            self.assertEqual(cache.numbytes, 80920)
+            self.assertEqual(list(cache.keys()), ["b", "c", "d"])
 
         finally:
             shutil.rmtree(directory)

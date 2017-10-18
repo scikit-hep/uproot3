@@ -628,7 +628,7 @@ class DiskCache(object):
                 os.remove(subpath)
 
         # clean up empty directories
-        if !top:
+        if not top:
             try:
                 os.rmdir(path)
             except:
