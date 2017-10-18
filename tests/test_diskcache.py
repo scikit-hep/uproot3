@@ -176,3 +176,24 @@ class TestDiskCache(unittest.TestCase):
 
         finally:
             shutil.rmtree(directory)
+
+    def test_collisions(self):
+        directory = tempfile.mkdtemp()
+        try:
+            cache = DiskCache.create(1024**2, directory, lookupsize=1)
+
+            cache["one"] = numpy.array([1.1, 2.2, 3.3, 4.4, 5.5])
+            os.system("tree " + directory)
+            print cache._lookup
+            print open(directory + "/state.json").read()
+            print "one", cache["one"]
+
+            cache["two"] = numpy.array([1.1, 2.2, 3.3, 4.4, 5.5])
+            os.system("tree " + directory)
+            print open(directory + "/collisions/0").read()
+            print cache._lookup
+            print open(directory + "/state.json").read()
+            print "two", cache["two"]
+
+        finally:
+            shutil.rmtree(directory)

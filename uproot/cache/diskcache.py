@@ -124,14 +124,6 @@ class DiskCache(object):
     TMP_DIR = "tmp"
     PID_DIR_PREFIX = "pid-"
 
-    @staticmethod
-    def _EMPTY(numformat):
-        return numpy.iinfo(numpy.dtype(numformat).type).min
-
-    @staticmethod
-    def _iscollision(num):
-        return num < 0
-
     def __init__(self, *args, **kwds):
         raise TypeError("create a DiskCache with DiskCache.create or DiskCache.join")
 
@@ -139,7 +131,7 @@ class DiskCache(object):
     class State(object): pass
 
     @staticmethod
-    def create(limitbytes, directory, read=arrayread, write=arraywrite, lookupsize=10000, maxperdir=100, delimiter="-", numformat=numpy.int64):
+    def create(limitbytes, directory, read=arrayread, write=arraywrite, lookupsize=10000, maxperdir=100, delimiter="-", numformat=numpy.uint64):
         if os.path.exists(directory):
             shutil.rmtree(directory)
 
@@ -150,38 +142,47 @@ class DiskCache(object):
         numformat = str(numpy.dtype(numformat))
 
         os.mkdir(directory)
-        os.mkdir(os.path.join(directory, DiskCache.ORDER_DIR))
-        os.mkdir(os.path.join(directory, DiskCache.COLLISIONS_DIR))
-        
-        lookupfile = os.path.join(directory, DiskCache.LOOKUP_FILE)
-        lookup = open(lookupfile, "wb")
+        statefile = open(os.path.join(directory, DiskCache.STATE_FILE), "r+w")
+        fcntl.lockf(statefile, fcntl.LOCK_EX)
         try:
-            numpy.lib.format.write_array_header_1_0(lookup, {"descr": numformat, "fortran_order": False, "shape": (lookupsize,)})
-            offset = lookup.tell()
-            lookup.flush()
+            os.mkdir(os.path.join(directory, DiskCache.ORDER_DIR))
+            os.mkdir(os.path.join(directory, DiskCache.COLLISIONS_DIR))
+
+            lookupfile = os.path.join(directory, DiskCache.LOOKUP_FILE)
+            lookup = open(lookupfile, "wb")
+            try:
+                numpy.lib.format.write_array_header_1_0(lookup, {"descr": numformat, "fortran_order": False, "shape": (lookupsize,)})
+                offset = lookup.tell()
+                lookup.flush()
+            finally:
+                lookup.close()
+
+            config = {"limitbytes": limitbytes, "lookupsize": lookupsize, "maxperdir": maxperdir, "delimiter": delimiter, "numformat": numformat}
+            state = {"numbytes": os.path.getsize(lookupfile), "depth": 0, "next": 0}
+            json.dump(config, open(os.path.join(directory, DiskCache.CONFIG_FILE), "w"))
+            statefile.write(json.dumps(state))
+            statefile.flush()
+
+            out = DiskCache.__new__(DiskCache)
+            out.config = DiskCache.Config()
+            out.config.__dict__.update(config)
+            out.state = DiskCache.State()
+            out.state.__dict__.update(state)
+            out.directory = directory
+            out.read = read
+            out.write = write
+            out._formatter = "{0:0" + str(int(math.ceil(math.log(config["maxperdir"], 10)))) + "d}"
+            out._lookup = numpy.memmap(lookupfile, dtype=numformat, mode="r+", offset=offset, shape=(lookupsize,), order="C")
+            out._lookup[:] = out._EMPTY
+            out._lookup.flush()
+            out._EMPTY = numpy.iinfo(numpy.dtype(numformat).type).max
+            out._COLLISION = numpy.iinfo(numpy.dtype(numformat).type).max - 1
+
         finally:
-            lookup.close()
-        lookup = numpy.memmap(lookupfile, dtype=numformat, mode="r+", offset=offset, shape=(lookupsize,), order="C")
-        lookup[:] = DiskCache._EMPTY(numformat)
-        lookup.flush()
+            fcntl.lockf(statefile, fcntl.LOCK_UN)
+            statefile.close()
+            out._lock = None
 
-        config = {"limitbytes": limitbytes, "lookupsize": lookupsize, "maxperdir": maxperdir, "delimiter": delimiter, "numformat": numformat}
-        state = {"numbytes": os.path.getsize(lookupfile), "depth": 0, "next": 0}
-
-        json.dump(config, open(os.path.join(directory, DiskCache.CONFIG_FILE), "w"))
-        json.dump(state, open(os.path.join(directory, DiskCache.STATE_FILE), "w"))
-
-        out = DiskCache.__new__(DiskCache)
-        out.config = DiskCache.Config()
-        out.config.__dict__.update(config)
-        out.state = DiskCache.State()
-        out.state.__dict__.update(state)
-        out.directory = directory
-        out.read = read
-        out.write = write
-        out._lock = None
-        out._formatter = "{0:0" + str(int(math.ceil(math.log(config["maxperdir"], 10)))) + "d}"
-        out._lookup = lookup
         return out
 
     @staticmethod
@@ -257,12 +258,14 @@ class DiskCache(object):
             lookupfile.close()
 
             out._lookup = numpy.memmap(lookupfilename, dtype=out.config.numformat, mode="r+", offset=offset, shape=(out.config.lookupsize,), order="C")
+            out._EMPTY = numpy.iinfo(numpy.dtype(out.config.numformat).type).max
+            out._COLLISION = numpy.iinfo(numpy.dtype(out.config.numformat).type).max - 1
 
             if check:
                 out._unchecked = numpy.ones(out.config.lookupsize, dtype=numpy.bool)
                 recurse(0, 0, os.path.join(directory, out.ORDER_DIR))
 
-                if not (out._lookup[out._unchecked] == DiskCache._EMPTY(out.config.numformat)).all():
+                if not (out._lookup[out._unchecked] == out._EMPTY).all():
                     raise ValueError("cannot join {0} because some hash bins in {1} that don't point to any files aren't empty".format(repr(directory), repr(DiskCache.LOOKUP_FILE)))
                 del out._unchecked
 
@@ -281,6 +284,11 @@ class DiskCache(object):
         self.config.__dict__.update(json.load(os.path.join(self.directory, self.CONFIG_FILE)))
 
     def __getitem__(self, name):
+        if not isinstance(name, str) and hasattr(name, "encode"):
+            name = name.encode("ascii")
+        if not isinstance(name, str):
+            raise TypeError("keys must be strings, not {0}".format(type(name)))
+
         self._lockstate()
         try:
             oldpath = self._get(name)  # might raise KeyError
@@ -318,6 +326,11 @@ class DiskCache(object):
         return self.read(linkpath, cleanup)
 
     def __setitem__(self, name, value):
+        if not isinstance(name, str) and hasattr(name, "encode"):
+            name = name.encode("ascii")
+        if not isinstance(name, str):
+            raise TypeError("keys must be strings, not {0}".format(type(name)))
+
         # making piddir outside of lock; have to retry in case another thread rmdirs it
         piddir = self._piddir()
         pidpath = self._pidfile(piddir)
@@ -338,9 +351,11 @@ class DiskCache(object):
                 oldpath = self._get(name)
             except KeyError:
                 # new key
+                print "new key", name
                 pass
             else:
                 # old key
+                print "old key", name
                 self.state.numbytes -= os.path.getsize(oldpath)
                 os.remove(oldpath)
                 self._cleandirs(os.path.split(oldpath)[0])
@@ -349,9 +364,14 @@ class DiskCache(object):
             newpath = self._newpath(name)
             newnum = self._path2num(newpath)
 
+            print "newpath", newpath, "newnum", newnum
+
             os.rename(pidpath, newpath)
             self.state.numbytes += os.path.getsize(newpath)
+
+            print "before", self._lookup
             self._set(name, newnum)
+            print "after", self._lookup
 
             self._evict(os.path.join(self.directory, self.ORDER_DIR), True)
 
@@ -364,6 +384,11 @@ class DiskCache(object):
             pass
 
     def __delitem__(self, name):
+        if not isinstance(name, str) and hasattr(name, "encode"):
+            name = name.encode("ascii")
+        if not isinstance(name, str):
+            raise TypeError("keys must be strings, not {0}".format(type(name)))
+
         self._lockstate()
         try:
             oldpath = self._get(name)
@@ -481,16 +506,20 @@ class DiskCache(object):
         assert self._lock is not None
         index = self._index(name)
         num = self._lookup[index]
-        if num == self._EMPTY(self.config.numformat):
+
+        if num == self._EMPTY:
             raise KeyError(name)
-        elif self._iscollision(num):
+
+        elif num == self._COLLISION:
             # lookupsize should be made large enough that collisions are unlikely
             num = json.load(open(os.path.join(self.directory, self.COLLISIONS_DIR, repr(num)), "r"))[name]
-        else:
-            pass
 
         dir, prefix = os.path.split(self._num2path(num))
         path = os.path.join(dir, prefix + self.config.delimiter + urlquote(name, safe=""))
+
+        if not os.path.exists(path):
+            raise KeyError(name)
+
         return path
 
     def _set(self, name, num):
@@ -498,13 +527,13 @@ class DiskCache(object):
         index = self._index(name)
         oldvalue = self._lookup[index]
 
-        if oldvalue == self._EMPTY(self.config.numformat):
+        if oldvalue == self._EMPTY:
             # should be the usual case
             self._lookup[index] = num
 
-        elif self._iscollision(oldvalue):
+        elif self._COLLISION:
             # already has a collisions file; just update it
-            collisionsfile = os.path.join(self.directory, self.COLLISIONS_DIR, repr(oldvalue))
+            collisionsfile = os.path.join(self.directory, self.COLLISIONS_DIR, repr(index))
             collisions = json.load(open(collisionsfile, "r"))
             collisions[name] = num
             json.dump(collisions, open(collisionsfile, "w"))
@@ -515,22 +544,22 @@ class DiskCache(object):
             otherpath = glob.glob(self._num2path(oldvalue) + "*")[0]
             othername = urlunquote(otherpath[otherpath.index(self.config.delimiter) + 1:])
 
-            collisionsfile = os.path.join(self.directory, self.COLLISIONS_DIR, repr(-index))
+            collisionsfile = os.path.join(self.directory, self.COLLISIONS_DIR, repr(index))
             json.dump({name: num, othername: oldvalue}, open(collisionsfile, "w"))
-            self._lookup[index] = -index
+            self._lookup[index] = self._COLLISION
 
     def _del(self, name):
         assert self._lock is not None
         index = self._index(name)
         oldvalue = self._lookup[index]
 
-        if oldvalue == self._EMPTY(self.config.numformat):
+        if oldvalue == self._EMPTY:
             # nothing to delete
             raise KeyError(name)
 
-        elif self._iscollision(oldvalue):
+        elif self._COLLISION:
             # have to update collisions file
-            collisionsfile = os.path.join(self.directory, self.COLLISIONS_DIR, repr(oldvalue))
+            collisionsfile = os.path.join(self.directory, self.COLLISIONS_DIR, repr(index))
             collisions = json.load(open(collisionsfile, "r"))
             del collisions[name]  # might result in a KeyError, and that's appropriate
 
@@ -545,7 +574,7 @@ class DiskCache(object):
                 json.dump(collisions, open(collisionsfile, "w"))
 
         else:
-            self._lookup[index] = self._EMPTY(self.config.numformat)
+            self._lookup[index] = self._EMPTY
 
     def _newpath(self, name):
         assert self._lock is not None
