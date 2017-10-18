@@ -301,6 +301,22 @@ class DiskCache(object):
     def refresh_config(self):
         self.config.__dict__.update(json.load(os.path.join(self.directory, self.CONFIG_FILE)))
 
+    def __contains__(self, name):
+        if not isinstance(name, bytes) and hasattr(name, "encode"):
+            name = name.encode("utf-8")
+        if not isinstance(name, bytes):
+            raise TypeError("keys must be strings, not {0}".format(type(name)))
+
+        self._lockstate()
+        try:
+            for num, n in self._walkorder(os.path.join(self.directory, self.ORDER_DIR), reverse=True):
+                if name == n:
+                    return True
+            return False
+
+        finally:
+            self._unlockstate()
+
     def promote(self, name):
         if not isinstance(name, bytes) and hasattr(name, "encode"):
             name = name.encode("utf-8")
@@ -442,7 +458,7 @@ class DiskCache(object):
         self._lockstate()
         try:
             for num, name in self._walkorder(os.path.join(self.directory, self.ORDER_DIR)):
-                yield name
+                yield name.decode("utf-8")
         finally:
             self._unlockstate()
 
@@ -471,7 +487,7 @@ class DiskCache(object):
             return cleanup
 
         for name, linkpath in linkpaths:
-            yield name, self.read(linkpath, make_cleanup(linkpath))
+            yield name.decode("utf-8"), self.read(linkpath, make_cleanup(linkpath))
 
     def values(self):
         for name, obj in self.items():
@@ -661,21 +677,22 @@ class DiskCache(object):
         # return new path
         return os.path.join(path, self._formatter.format(num) + self.config.delimiter + urlquote(name, safe=""))
 
-    def _walkorder(self, path):
+    def _walkorder(self, path, sort=True, reverse=False):
         assert self._lock is not None
         items = os.listdir(path)
-        items.sort()
+        if sort:
+            items.sort(reverse=reverse)
 
         for fn in items:
             subpath = os.path.join(path, fn)
             if os.path.isdir(subpath):
-                for x in self._walkorder(subpath):
+                for x in self._walkorder(subpath, sort=sort, reverse=reverse):
                     yield x
             else:
                 i = fn.index(self.config.delimiter)
                 num = int(fn[:i])
                 name = urlunquote(fn[i + 1:])
-                yield num, name
+                yield num, name.encode("utf-8")
 
     def _evict(self, path, top):
         assert self._lock is not None
