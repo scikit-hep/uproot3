@@ -562,7 +562,8 @@ class TTree(uproot.core.TNamed,
         import pandas
         connector = self._Connector()
 
-        def df(branchdtypes, executor=None, block=True):
+        def df(branchdtypes=None, executor=None, block=True):
+            branchdtypes = branchdtypes or self.branchnames
             toget = []
             for branch, dtype in self._normalizeselection(branchdtypes, self.allbranches):
                 toget.append((branch, dtype))
