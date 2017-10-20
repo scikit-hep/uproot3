@@ -54,31 +54,31 @@ class Compression(object):
 
     def decompress(self, source, cursor, compressedbytes, uncompressedbytes=None):
         if self.algo == 1:
-            from zlib import decompress
-            return decompress(cursor.bytes(source, compressedbytes))
+            from zlib import decompress as zlib_decompress
+            return zlib_decompress(cursor.bytes(source, compressedbytes))
 
         elif self.algo == 2:
             try:
-                from lzma import decompress
+                from lzma import decompress as lzma_decompress
             except ImportError:
                 try:
-                    from backports.lzma import decompress
+                    from backports.lzma import decompress as lzma_decompress
                 except ImportError:
                     raise ImportError("\n\nInstall lzma package with:\n\n    pip install backports.lzma --user\nor\n    conda install -c conda-forge backports.lzma\n\n(or just use Python >= 3.3).")
-            return decompress(cursor.bytes(source, compressedbytes))
+            return lzma_decompress(cursor.bytes(source, compressedbytes))
 
         elif self.algo == 3:
             raise NotImplementedError("ROOT's \"old\" algorithm (fCompress 300) is not supported")
 
         elif self.algo == 4:
             try:
-                from lz4.block import decompress
+                from lz4.block import decompress as lz4_decompress
             except ImportError:
                 raise ImportError("\n\nInstall lz4 package with:\n\n    pip install lz4 --user\nor\n    conda install -c anaconda lz4")
 
             if uncompressedbytes is None:
                 raise ValueError("lz4 needs to know the uncompressed number of bytes")
-            return decompress(cursor.bytes(source, compressedbytes), uncompressed_size=uncompressedbytes)
+            return lz4_decompress(cursor.bytes(source, compressedbytes), uncompressed_size=uncompressedbytes)
 
         else:
             raise ValueError("unrecognized compression algorithm: {0}".format(self.algo))
@@ -108,7 +108,8 @@ class CompressedSource(object):
                 skip = 9 + 8  # https://github.com/root-project/root/blob/master/core/lz4/src/ZipLZ4.cxx#L38
             else:
                 skip = 0
-            self._uncompressed = numpy.frombuffer(self.compression.decompress(self._compressed, self._cursor.skipped(skip), self._compressedbytes, self._uncompressedbytes), dtype=numpy.uint8)
+
+            self._uncompressed = numpy.frombuffer(self.compression.decompress(self._compressed, self._cursor.skipped(skip), self._compressedbytes - skip, self._uncompressedbytes), dtype=numpy.uint8)
 
         return self._uncompressed[start:stop]
 

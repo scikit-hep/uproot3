@@ -66,7 +66,8 @@ class File(object):
             self.TFile = self._Private(*Cursor(0).fields(source, self._format_big))
         self.compression = Compression(self.TFile.fCompress)
 
-        self.dir = Directory(source, Cursor(self.TFile.fBEGIN), self.compression)
+        cursor = Cursor(self.TFile.fBEGIN)
+        self.dir = Directory(Key(source, cursor, self.compression), source, cursor, self.compression)
 
         source.dismiss()
 
@@ -176,7 +177,7 @@ class Key(object):
         Objects are not read or decompressed until this function is explicitly called.
         """
         if self.classname == b"TDirectory":
-            return Directory(self.source, self.cursor.copied(), self.compression)
+            return Directory(self, self.source, self.cursor.copied(), self.compression)
         else:
             return Undefined(self.source, self.cursor.copied())
 
@@ -201,8 +202,8 @@ class Directory(object):
     _format2_big   = struct.Struct("!qqq")
     _format3       = struct.Struct("!i")
 
-    def __init__(self, source, cursor, compression):
-        self.key = Key(source, cursor, compression)
+    def __init__(self, key, source, cursor, compression):
+        self.key = key
 
         vars1 = cursor.fields(source, self._format1)
         if vars1[0] <= 1000:
@@ -277,3 +278,34 @@ class Directory(object):
                     if cycle is None or key.cycle == cycle:
                         return key.get()
             raise KeyError("not found: {0}".format(repr(name)))
+
+class Object(object):
+    def __init__(self, source, cursor):
+        pass
+
+    def __repr__(self):
+        if hasattr(self, "name"):
+            return "<{0} {1} at 0x{2:012x}>".format(self.__class__.__name__, repr(self.name), id(self))
+        else:
+            return "<{0} at 0x{1:012x}>".format(self.__class__.__name__, id(self))
+
+    _format_cntvers = struct.Struct("!IH")
+    @staticmethod
+    def _cntvers(source, cursor):
+        cnt, vers = cursor.fields(source, Object._format_cntvers)
+        cnt = int(numpy.int64(cnt) & ~uproot.const.kByteCountMask)
+        return cnt, vers
+
+    @staticmethod
+    def _checkcnt(observed, expected):
+        if observed != expected + 4:
+            raise ValueError("{0} with {1} bytes; expected {2}".format(self.__class__.__name__, observed, expected))
+
+class Undefined(Object):
+    """Represents a ROOT class that we have no deserializer for (and therefore skip over).
+    """
+    def __init__(self, source, cursor):
+        start = cursor.index
+        cnt, vers = self._cntvers(source, cursor)
+        cursor.index += cnt - 2
+        self._checkcnt(cursor.index - start, cnt)
