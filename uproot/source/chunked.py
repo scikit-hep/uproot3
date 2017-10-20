@@ -51,7 +51,7 @@ class ChunkedSource(object):
     def dismiss(self):
         pass
 
-    def data(self, start, stop):
+    def data(self, start, stop, dtype=numpy.dtype(numpy.uint8)):
         assert start >= 0
         assert stop >= 0
         assert stop > start
@@ -62,7 +62,10 @@ class ChunkedSource(object):
         else:
             chunkstop = stop // self._chunkbytes + 1
 
-        out = numpy.empty(stop - start, dtype=numpy.uint8)
+        if not isinstance(dtype, numpy.dtype):
+            dtype = numpy.dtype(dtype)
+
+        out = numpy.empty((stop - start) // dtype.itemsize, dtype=dtype)
 
         for chunkindex in range(chunkstart, chunkstop):
             try:
@@ -86,6 +89,9 @@ class ChunkedSource(object):
             if cstop - cstart > len(chunk):
                 raise IndexError("indexes {0}:{1} are beyond the end of data source {2}".format(gstart + len(chunk), stop, repr(self._path)))
 
-            out[gstart - start : gstop - start] = chunk[cstart : cstop]
+            if dtype == numpy.dtype(numpy.uint8):
+                out[gstart - start : gstop - start] = chunk[cstart:cstop]
+            else:
+                out.view(numpy.uint8)[gstart - start : gstop - start] = chunk[cstart:cstop]
 
         return out

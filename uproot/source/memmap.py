@@ -43,7 +43,7 @@ class MemmapSource(object):
     def dismiss(self):
         pass
 
-    def data(self, start, stop):
+    def data(self, start, stop, dtype=numpy.dtype(numpy.uint8)):
         assert start >= 0
         assert stop >= 0
         assert stop > start
@@ -51,4 +51,10 @@ class MemmapSource(object):
         if stop > len(self._source):
             raise IndexError("indexes {0}:{1} are beyond the end of data source {2}".format(len(self._source), stop, repr(self._path)))
 
-        return self._source[start:stop]
+        if not isinstance(dtype, numpy.dtype):
+            dtype = numpy.dtype(dtype)
+
+        if dtype == numpy.dtype(numpy.uint8):
+            return self._source[start:stop]
+        else:
+            return self._source[start:stop].view(dtype)

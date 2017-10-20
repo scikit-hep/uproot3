@@ -36,7 +36,7 @@ from uproot.source.chunked import ChunkedSource
 
 class ChunkedFile(ChunkedSource):
     def __init__(self, path, *args, **kwds):
-        super(ChunkFile, self).__init__(os.path.expanduser(path), *args, **kwds)
+        super(ChunkedFile, self).__init__(os.path.expanduser(path), *args, **kwds)
 
     def _open(self):
         if self._source is None:

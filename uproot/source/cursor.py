@@ -39,15 +39,43 @@ class Cursor(object):
         else:
             self.refs = refs
 
-    def skip(self, format):
-        if isinstance(format, int):
-            self.index += format
-        elif isinstance(format, struct.Struct):
-            self.index += format.size
-        else:
-            self.index += struct.calcsize(format)
+    def fields(self, source, format):
+        start = self.index
+        stop = self.index = start + format.size
+        return format.unpack(source.data(start, stop))
 
-    def readfields(self, source, format):
+    def field(self, source, format):
+        return self.readfields(source, format)[0]
 
+    def bytes(self, source, length):
+        start = self.index
+        stop = self.index = start + length
+        return source.data(start, stop)
 
+    def array(self, source, length, dtype):
+        if not isinstance(dtype, numpy.dtype):
+            dtype = numpy.dtype(dtype)
+        start = self.index
+        stop = self.index = start + length*dtype.itemsize
+        return source.data(start, stop, dtype)
 
+    def string(self, source):
+        start = self.index
+        stop = self.index = start + 1
+        length = source.data(start, stop)[0]
+        if length == 255:
+            start = self.index
+            stop = self.index = start + 4
+            length = source.data(start, stop, numpy.dtype(">u4"))[0]
+        start = self.index
+        stop = self.index = start + length
+        return source.data(start, stop).tostring()
+
+    def cstring(self, source):
+        char = None
+        chars = []
+        while char != 0:
+            char = source.data(self.index, self.index + 1)
+            chars.append(char)
+            self.index += 1
+        return "".join(chars)
