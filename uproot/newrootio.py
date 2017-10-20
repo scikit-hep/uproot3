@@ -60,9 +60,9 @@ def _nametitle(source, cursor):
     StreamedObject._endcheck(start, cursor, cnt)
     return name, title
 
-class Collection(object):
+class _ObjArray(object):
     def __init__(self, source, cursor, classes):
-        print "Collection"
+        print "_ObjArray"
 
         # TList, but can't use StreamedObject yet!
         start, cnt, vers = StreamedObject._startcheck(source, cursor)
@@ -83,8 +83,9 @@ class Collection(object):
         # only TObjArray!
         low, last = cursor.fields(source, struct.Struct("!ii"))
 
-        z = StreamedObject._read(source, cursor, classes)
-        print "z", z
+        for i in range(size):
+            z = StreamedObject._read(source, cursor, classes)
+            print "z", z.__class__.__name__, z.__dict__
 
         
 class File(object):
@@ -145,8 +146,8 @@ class File(object):
         name = cursor.string(source)
         size = cursor.field(source, struct.Struct("!i"))
         print "size", size
-
-        x = StreamedObject._read(source, cursor, {b"TStreamerInfo": StreamerInfo, b"TObjArray": Collection, b"TStreamerBase": StreamerElement})
+        
+        x = StreamedObject._read(source, cursor, {b"TStreamerInfo": StreamerInfo, b"TObjArray": _ObjArray, b"TStreamerBase": StreamerElement})
         print "x", x
 
 
@@ -237,15 +238,12 @@ class Key(object):
         self.classes = classes
         self.compression = compression
 
-        #  object size != compressed size means it's compressed
-        if self.TKey.fObjlen != self.TKey.fNbytes - self.TKey.fKeylen:
+        if compression.level > 0:
             self.source = CompressedSource(compression, source, Cursor(self.TKey.fSeekKey + self.TKey.fKeylen), self.TKey.fNbytes - self.TKey.fKeylen, self.TKey.fObjlen)
             self.cursor = Cursor(0, origin=-self.TKey.fKeylen)
-
-        # otherwise, it's uncompressed
         else:
             self.source = source
-            self.cursor = Cursor(self.TKey.fSeekKey + self.TKey.fKeylen)
+            self.cursor = Cursor(self.TKey.fSeekKey + self.TKey.fKeylen, origin=self.TKey.fSeekKey)
 
     @property
     def classname(self):
@@ -472,6 +470,8 @@ class StreamedObject(object):
 
             print "1 ->", vers, start, tag
 
+        print "start", start
+
         if numpy.int64(tag) & uproot.const.kClassMask == 0:
             print "ONE", tag
 
@@ -501,8 +501,12 @@ class StreamedObject(object):
             fct = classes.get(cname, Undefined)
 
             if vers > 0:
+                print "inserting at", start + uproot.const.kMapOffset, fct
+
                 cursor.refs[start + uproot.const.kMapOffset] = fct
             else:
+                print "inserting at", len(cursor.refs) + 1
+
                 cursor.refs[len(cursor.refs) + 1] = fct
 
             obj = fct(source, cursor, classes)
@@ -520,6 +524,8 @@ class StreamedObject(object):
 
             # reference class, new object
             ref = int(numpy.int64(tag) & ~uproot.const.kClassMask)
+
+            print "ref", ref, "cursor.refs", cursor.refs
 
             if ref not in cursor.refs:
                 raise IOError("invalid class-tag reference")
