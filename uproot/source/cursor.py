@@ -96,7 +96,8 @@ class Cursor(object):
         chars = []
         while char != 0:
             char = source.data(self.index, self.index + 1)
-            chars.append(char)
+            if char != 0:
+                chars.append(chr(char[0]))
             self.index += 1
         return "".join(chars)
 
