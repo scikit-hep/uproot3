@@ -39,6 +39,25 @@ class Cursor(object):
         else:
             self.refs = refs
 
+    def copied(self, index=None, origin=None, refs=None):
+        if index is None:
+            index = self.index
+        if origin is None:
+            origin = self.origin
+        if refs is None:
+            refs = self.refs
+        return Cursor(index, origin, refs)
+
+    def skipped(self, numbytes, origin=None, refs=None):
+        if origin is None:
+            origin = self.origin
+        if refs is None:
+            refs = self.refs
+        return Cursor(self.index + numbytes, origin, refs)
+
+    def skip(self, numbytes):
+        self.index += numbytes
+
     def fields(self, source, format):
         start = self.index
         stop = self.index = start + format.size
