@@ -52,6 +52,9 @@ class Compression(object):
         else:
             raise ValueError("unrecognized compression algorithm: {0}".format(self.algo))
 
+    def __repr__(self):
+        return "<Compression {0} {1}>".format(repr(self.algoname), self.level)
+
     def decompress(self, source, cursor, compressedbytes, uncompressedbytes=None):
         if self.algo == 1:
             from zlib import decompress as zlib_decompress

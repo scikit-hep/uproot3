@@ -64,16 +64,20 @@ class File(object):
             raise ValueError("not a ROOT file (does not start with 'root')")
         if self.TFile.fVersion >= 1000000:
             self.TFile = self._Private(*Cursor(0).fields(source, self._format_big))
-        self.compression = Compression(self.TFile.fCompress)
 
         cursor = Cursor(self.TFile.fBEGIN)
-        self.dir = Directory(Key(source, cursor, self.compression), source, cursor, self.compression)
+        compression = Compression(self.TFile.fCompress)
+        self.dir = Directory(Key(source, cursor, compression), source, cursor, compression)
 
         source.dismiss()
 
     @property
     def name(self):
         return self.dir.name
+
+    @property
+    def compression(self):
+        return self.dir.compression
 
     def __repr__(self):
         return "<File {0} at 0x{1:012x}>".format(repr(self.name), id(self))
@@ -122,28 +126,28 @@ class Key(object):
     """
 
     _Private = namedtuple("TKey", ["fNbytes", "fVersion", "fObjlen", "fDatime", "fKeylen", "fCycle", "fSeekKey", "fSeekPdir", "fClassName", "fName", "fTitle"])
-    _format1       = struct.Struct("!ihiIhh")
-    _format2_small = struct.Struct("!ii")
-    _format2_big   = struct.Struct("!qq")
+    _format_small = struct.Struct("!ihiIhhii")
+    _format_big   = struct.Struct("!ihiIhhqq")
 
     def __init__(self, source, cursor, compression):
-        vars1 = cursor.fields(source, self._format1)
-        if vars1[1] <= 1000:
-            vars2 = cursor.fields(source, self._format2_small)
-        else:
-            vars2 = cursor.fields(source, self._format2_big)
+        vars1 = cursor.fields(source, self._format_small)
+        if vars1[1] > 1000:
+            vars1 = cursor.fields(source, self._format_big)
 
-        vars3 = cursor.string(source)
-        vars4 = cursor.string(source)
-        if vars2[1] == 0:
-            cursor.index += 1            # top TDirectory fName and fTitle
-        vars5 = cursor.string(source)
-        if vars2[1] == 0:
-            cursor.index += 1            # are prefixed *and* null-terminated, both!
+        classname = cursor.string(source)
 
+        name = cursor.string(source)
+        if vars1[7] == 0:
+            assert source.data(cursor.index, cursor.index + 1)[0] == 0
+            cursor.index += 1            # Top TDirectory fName and fTitle...
+
+        title = cursor.string(source)
+        if vars1[7] == 0:
+            assert source.data(cursor.index, cursor.index + 1)[0] == 0
+            cursor.index += 1            # ...are prefixed *and* null-terminated! Both!
+
+        self.TKey = self._Private(*(vars1 + (classname, name, title)))
         self.compression = compression
-
-        self.TKey = self._Private(*(vars1 + vars2 + (vars3, vars4, vars5)))
 
         if self.TKey.fObjlen != self.TKey.fNbytes - self.TKey.fKeylen:
             self.source = CompressedSource(compression, source, Cursor(self.TKey.fSeekKey + self.TKey.fKeylen), self.TKey.fNbytes - self.TKey.fKeylen, self.TKey.fObjlen)
@@ -213,8 +217,6 @@ class Directory(object):
 
         self.TDirectory = self._Private(*(vars1 + vars2))
 
-        self.compression = compression
-
         cursor.index = self.TDirectory.fSeekKeys
         self.header = Key(source, cursor, compression)
 
@@ -224,6 +226,10 @@ class Directory(object):
     @property
     def name(self):
         return self.key.name
+
+    @property
+    def compression(self):
+        return self.header.compression
 
     def __repr__(self):
         return "<Directory {0} at 0x{1:012x}>".format(repr(self.name), id(self))
@@ -279,7 +285,10 @@ class Directory(object):
                         return key.get()
             raise KeyError("not found: {0}".format(repr(name)))
 
-class Object(object):
+class StreamedObject(object):
+    """Base class for all objects extracted from a ROOT file using streamers.
+    """
+
     def __init__(self, source, cursor):
         pass
 
@@ -292,7 +301,7 @@ class Object(object):
     _format_cntvers = struct.Struct("!IH")
     @staticmethod
     def _cntvers(source, cursor):
-        cnt, vers = cursor.fields(source, Object._format_cntvers)
+        cnt, vers = cursor.fields(source, StreamedObject._format_cntvers)
         cnt = int(numpy.int64(cnt) & ~uproot.const.kByteCountMask)
         return cnt, vers
 
@@ -301,7 +310,7 @@ class Object(object):
         if observed != expected + 4:
             raise ValueError("{0} with {1} bytes; expected {2}".format(self.__class__.__name__, observed, expected))
 
-class Undefined(Object):
+class Undefined(StreamedObject):
     """Represents a ROOT class that we have no deserializer for (and therefore skip over).
     """
     def __init__(self, source, cursor):
