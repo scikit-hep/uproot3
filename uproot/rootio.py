@@ -128,6 +128,7 @@ class TFile(object):
             raise IOError("not a ROOT file (wrong magic bytes)")
 
         version, begin = walker.readfields("!ii")
+        self.version = version
 
         if version < 1000000:  # small file
             end, seekfree, nbytesfree, nfree, nbytesname, units, compression, seekinfo, nbytesinfo = walker.readfields("!iiiiiBiii")
@@ -342,6 +343,8 @@ class TKey(object):
             seekkey, seekpdir = walker.readfields("!qq")
         else:
             seekkey, seekpdir = walker.readfields("!ii")
+
+        print repr(walker.data[walker.index:walker.index+100].tostring())
 
         self.classname = walker.readstring()
         self.name = walker.readstring()

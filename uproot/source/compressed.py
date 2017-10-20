@@ -95,7 +95,9 @@ class CompressedSource(object):
     def data(self, start, stop, dtype=numpy.dtype(numpy.uint8)):
         assert start >= 0
         assert stop >= 0
-        assert stop > start
+        assert stop >= start
+        if start == stop:
+            return numpy.empty(0, dtype=dtype)
 
         if self._uncompressed is None:
             if self.compression.algo == 1:

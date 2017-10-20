@@ -40,7 +40,7 @@ class ChunkedFile(ChunkedSource):
 
     def _open(self):
         if self._source is None:
-            self._source = open(self._path, "rb")
+            self._source = open(self.path, "rb")
 
     def _read(self, chunkindex):
         self._source.seek(chunkindex * self._chunkbytes)

@@ -43,7 +43,7 @@ class ChunkedXRootD(ChunkedSource):
 
         if self._source is None:
             self._source = pyxrootd.client.File()
-            status, dummy = self._source.open(self._path)
+            status, dummy = self._source.open(self.path)
             if status.get("error", None) is not None:
                 raise OSError(status["message"])
 

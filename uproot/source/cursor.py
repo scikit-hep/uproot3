@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import struct
+import string
 
 class Cursor(object):
     def __init__(self, index, origin=0, refs=None):
@@ -64,7 +65,7 @@ class Cursor(object):
         return format.unpack(source.data(start, stop))
 
     def field(self, source, format):
-        return self.readfields(source, format)[0]
+        return self.fields(source, format)[0]
 
     def bytes(self, source, length):
         start = self.index
@@ -98,3 +99,17 @@ class Cursor(object):
             chars.append(char)
             self.index += 1
         return "".join(chars)
+
+    def hexdump(self, source, size=160, offset=0, format="%02x"):
+        pos = self.index + offset
+        out = []
+        for linepos in range(pos, pos + size, 16):
+            data = source.data(linepos, min(linepos + 16, pos + size))
+            line = [format % x for x in data]
+            text = [chr(x) if chr(x) in string.printable[:-5] else "." for x in data]
+            if len(line) < 16:
+                diff = 16 - len(line)
+                line.extend(["  "] * diff)
+                text.extend([" "] * diff)
+            out.append("{0:08o}  {1}  {2}  |{3}|".format(linepos, " ".join(line[:8]), " ".join(line[8:]), "".join(text)))
+        return "\n".join(out)

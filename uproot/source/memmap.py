@@ -34,8 +34,8 @@ import numpy
 
 class MemmapSource(object):
     def __init__(self, path):
-        self._path = os.path.expanduser(path)
-        self._source = numpy.memmap(self._path, dtype=numpy.uint8, mode="r")
+        self.path = os.path.expanduser(path)
+        self._source = numpy.memmap(self.path, dtype=numpy.uint8, mode="r")
 
     def __del__(self):
         del self._source
@@ -44,15 +44,17 @@ class MemmapSource(object):
         pass
 
     def data(self, start, stop, dtype=numpy.dtype(numpy.uint8)):
-        assert start >= 0
-        assert stop >= 0
-        assert stop > start
-
-        if stop > len(self._source):
-            raise IndexError("indexes {0}:{1} are beyond the end of data source {2}".format(len(self._source), stop, repr(self._path)))
-
         if not isinstance(dtype, numpy.dtype):
             dtype = numpy.dtype(dtype)
+
+        assert start >= 0
+        assert stop >= 0
+        assert stop >= start
+        if start == stop:
+            return numpy.empty(0, dtype=dtype)
+
+        if stop > len(self._source):
+            raise IndexError("indexes {0}:{1} are beyond the end of data source {2}".format(len(self._source), stop, repr(self.path)))
 
         if dtype == numpy.dtype(numpy.uint8):
             return self._source[start:stop]

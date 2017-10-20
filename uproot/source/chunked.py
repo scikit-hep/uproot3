@@ -34,7 +34,7 @@ from uproot.cache.memorycache import MemoryCache
 
 class ChunkedSource(object):
     def __init__(self, path, chunkbytes=8*1024, limitbytes=1024**2):
-        self._path = path
+        self.path = path
         self._chunkbytes = chunkbytes
         if limitbytes is None:
             self._cache = {}
@@ -52,18 +52,20 @@ class ChunkedSource(object):
         pass
 
     def data(self, start, stop, dtype=numpy.dtype(numpy.uint8)):
+        if not isinstance(dtype, numpy.dtype):
+            dtype = numpy.dtype(dtype)
+
         assert start >= 0
         assert stop >= 0
-        assert stop > start
+        assert stop >= start
+        if start == stop:
+            return numpy.empty(0, dtype=dtype)
 
         chunkstart = start // self._chunkbytes
         if stop % self._chunkbytes == 0:
             chunkstop = stop // self._chunkbytes
         else:
             chunkstop = stop // self._chunkbytes + 1
-
-        if not isinstance(dtype, numpy.dtype):
-            dtype = numpy.dtype(dtype)
 
         out = numpy.empty((stop - start) // dtype.itemsize, dtype=dtype)
 
@@ -87,7 +89,7 @@ class ChunkedSource(object):
                 gstop -= gstop - stop
 
             if cstop - cstart > len(chunk):
-                raise IndexError("indexes {0}:{1} are beyond the end of data source {2}".format(gstart + len(chunk), stop, repr(self._path)))
+                raise IndexError("indexes {0}:{1} are beyond the end of data source {2}".format(gstart + len(chunk), stop, repr(self.path)))
 
             if dtype == numpy.dtype(numpy.uint8):
                 out[gstart - start : gstop - start] = chunk[cstart:cstop]
