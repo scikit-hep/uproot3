@@ -238,9 +238,12 @@ class Key(object):
         self.classes = classes
         self.compression = compression
 
-        if compression.level > 0:
+        #  object size != compressed size means it's compressed
+        if self.TKey.fObjlen != self.TKey.fNbytes - self.TKey.fKeylen:
             self.source = CompressedSource(compression, source, Cursor(self.TKey.fSeekKey + self.TKey.fKeylen), self.TKey.fNbytes - self.TKey.fKeylen, self.TKey.fObjlen)
             self.cursor = Cursor(0, origin=-self.TKey.fKeylen)
+
+        # otherwise, it's uncompressed
         else:
             self.source = source
             self.cursor = Cursor(self.TKey.fSeekKey + self.TKey.fKeylen, origin=self.TKey.fSeekKey)
@@ -455,6 +458,10 @@ class StreamedObject(object):
 
         print "beg", beg
 
+        # for TStreamerBase, coming into this function 4 bytes behind!!!
+
+        print "numpy.int64({}) & {} == 0 or numpy.int64({}) == {}".format(numpy.int64(bcnt), uproot.const.kByteCountMask, numpy.int64(bcnt), uproot.const.kNewClassTag)
+
         if numpy.int64(bcnt) & uproot.const.kByteCountMask == 0 or numpy.int64(bcnt) == uproot.const.kNewClassTag:
             vers = 0
             start = 0
@@ -470,7 +477,7 @@ class StreamedObject(object):
 
             print "1 ->", vers, start, tag
 
-        print "start", start
+        print "start", start, "origin", cursor.origin, "tag", tag
 
         if numpy.int64(tag) & uproot.const.kClassMask == 0:
             print "ONE", tag
@@ -501,11 +508,11 @@ class StreamedObject(object):
             fct = classes.get(cname, Undefined)
 
             if vers > 0:
-                print "inserting at", start + uproot.const.kMapOffset, fct
+                print "inserting at", start + uproot.const.kMapOffset, cname, fct, "vers", vers, "start", start
 
                 cursor.refs[start + uproot.const.kMapOffset] = fct
             else:
-                print "inserting at", len(cursor.refs) + 1
+                print "inserting at", len(cursor.refs) + 1, cname, fct, "vers", vers, "start", start
 
                 cursor.refs[len(cursor.refs) + 1] = fct
 
@@ -529,8 +536,6 @@ class StreamedObject(object):
 
             if ref not in cursor.refs:
                 raise IOError("invalid class-tag reference")
-
-            print "ref", ref, "cursor.refs", cursor.refs
 
             fct = cursor.refs[ref]              # reference class
 
