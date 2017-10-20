@@ -80,6 +80,9 @@ class Collection(object):
 
         print cursor.hexdump(source)
 
+        # only TObjArray!
+        low, last = cursor.fields(source, struct.Struct("!ii"))
+
         z = StreamedObject._read(source, cursor, classes)
         print "z", z
 
@@ -143,7 +146,7 @@ class File(object):
         size = cursor.field(source, struct.Struct("!i"))
         print "size", size
 
-        x = StreamedObject._read(source, cursor, {b"TStreamerInfo": StreamerInfo, b"TObjArray": Collection})
+        x = StreamedObject._read(source, cursor, {b"TStreamerInfo": StreamerInfo, b"TObjArray": Collection, b"TStreamerBase": StreamerElement})
         print "x", x
 
 
@@ -377,8 +380,8 @@ class StreamerInfo(object):
     def __init__(self, source, cursor, classes):
         print "HERE"
 
-        start1, cnt1, vers1 = StreamedObject._startcheck(source, cursor)
-        print "start1, cnt1, vers1", start1, cnt1, vers1
+        start, cnt, vers = StreamedObject._startcheck(source, cursor)
+        print "start, cnt, vers", start, cnt, vers
 
         name, title = _nametitle(source, cursor)
 
@@ -391,9 +394,35 @@ class StreamerInfo(object):
         y = StreamedObject._read(source, cursor, classes)
         print "y", y
 
-
-
+class StreamerElement(object):
+    def __init__(self, source, cursor, classes):    
+        start1, cnt1, vers1 = StreamedObject._startcheck(source, cursor)
+        start2, cnt2, vers2 = StreamedObject._startcheck(source, cursor)
         
+        self.name, self.title = _nametitle(source, cursor)
+
+        self.etype, self.esize, self.arrlen, self.arrdim = cursor.fields(source, struct.Struct("!iiii"))
+
+        if vers2 == 1:
+            n = cursor.field(source, struct.Struct("!i"))
+            self.maxidx = cursor.array(source, n, ">i4")
+        else:
+            self.maxidx = cursor.array(source, 5, ">i4")
+
+        self.ename = cursor.string(source)
+
+        # CHECK:
+	# if tse.etype == 11 && (tse.ename == "Bool_t" || tse.ename == "bool") {
+	# 	tse.etype = 18
+	# }
+
+        StreamedObject._endcheck(start2, cursor, cnt2)
+
+        if vers1 > 2:
+            self.vbase = cursor.field(source, struct.Struct("!i"))
+
+        StreamedObject._endcheck(start1, cursor, cnt1)
+
 class StreamedObject(object):
     """Base class for all objects extracted from a ROOT file using streamers.
     """
@@ -419,22 +448,29 @@ class StreamedObject(object):
     def _endcheck(start, cursor, cnt):
         observed = cursor.index - start
         if observed != cnt + 4:
-            raise ValueError("{0} with {1} bytes; expected {2}".format(self.__class__.__name__, observed, cnt))
+            raise ValueError("object has {0} bytes; expected {1}".format(observed, cnt + 4))
 
     @staticmethod
     def _read(source, cursor, classes):
         beg = cursor.index - cursor.origin
         bcnt = cursor.field(source, struct.Struct("!I"))
 
+        print "beg", beg
+
         if numpy.int64(bcnt) & uproot.const.kByteCountMask == 0 or numpy.int64(bcnt) == uproot.const.kNewClassTag:
             vers = 0
             start = 0
             tag = bcnt
             bcnt = 0
+
+            print "0 ->", tag, bcnt
+
         else:
             vers = 1
             start = cursor.index - cursor.origin
             tag = cursor.field(source, struct.Struct("!I"))
+
+            print "1 ->", vers, start, tag
 
         if numpy.int64(tag) & uproot.const.kClassMask == 0:
             print "ONE", tag

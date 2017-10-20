@@ -96,6 +96,9 @@ class CompressedSource(object):
         self._uncompressedbytes = uncompressedbytes
 
     def data(self, start, stop, dtype=numpy.dtype(numpy.uint8)):
+        if not isinstance(dtype, numpy.dtype):
+            dtype = numpy.dtype(dtype)
+
         assert start >= 0
         assert stop >= 0
         assert stop >= start
@@ -113,8 +116,11 @@ class CompressedSource(object):
                 skip = 0
 
             self._uncompressed = numpy.frombuffer(self.compression.decompress(self._compressed, self._cursor.skipped(skip), self._compressedbytes - skip, self._uncompressedbytes), dtype=numpy.uint8)
-
-        return self._uncompressed[start:stop]
+            
+        if dtype == numpy.dtype(numpy.uint8):
+            return self._uncompressed[start:stop]
+        else:
+            return self._uncompressed[start:stop].view(dtype)
 
     def dismiss(self):
         self._uncompressed = None

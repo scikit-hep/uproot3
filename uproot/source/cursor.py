@@ -31,6 +31,8 @@
 import struct
 import string
 
+import numpy
+
 class Cursor(object):
     def __init__(self, index, origin=0, refs=None):
         self.index = index
