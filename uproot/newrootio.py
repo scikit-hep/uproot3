@@ -38,6 +38,52 @@ from uproot.source.compressed import Compression
 from uproot.source.compressed import CompressedSource
 from uproot.source.cursor import Cursor
 
+def _skiptobj(source, cursor):
+    version = cursor.field(source, _skiptobj._format1)
+    if numpy.int64(version) & uproot.const.kByteCountVMask:
+        cursor.skip(4)
+
+    fUniqueID, fBits = cursor.fields(source, _skiptobj._format2)
+    fBits = numpy.uint32(fBits) | uproot.const.kIsOnHeap
+    if fBits & uproot.const.kIsReferenced:
+        cursor.skip(2)
+
+_skiptobj._format1 = struct.Struct("!h")
+_skiptobj._format2 = struct.Struct("!II")
+
+def _nametitle(source, cursor):
+    start, cnt, vers = StreamedObject._startcheck(source, cursor)
+    _skiptobj(source, cursor)
+
+    name = cursor.string(source)
+    title = cursor.string(source)
+    StreamedObject._endcheck(start, cursor, cnt)
+    return name, title
+
+class Collection(object):
+    def __init__(self, source, cursor, classes):
+        print "Collection"
+
+        # TList, but can't use StreamedObject yet!
+        start, cnt, vers = StreamedObject._startcheck(source, cursor)
+
+        print "start, cnt, vers", start, cnt, vers
+
+        _skiptobj(source, cursor)
+
+        print cursor.hexdump(source)
+
+        name = cursor.string(source)
+        print "name", repr(name)
+        size = cursor.field(source, struct.Struct("!i"))
+        print "size", size
+
+        print cursor.hexdump(source)
+
+        z = StreamedObject._read(source, cursor, classes)
+        print "z", z
+
+        
 class File(object):
     """Represents a ROOT file; use to extract objects.
 
@@ -89,16 +135,7 @@ class File(object):
 
         print "start, cnt, vers", start, cnt, vers
 
-        # skipversion
-        version = cursor.field(source, struct.Struct("!h"))
-        if numpy.int64(version) & uproot.const.kByteCountVMask:
-            cursor.skip(4)
-
-        # TList is a TObject
-        fUniqueID, fBits = cursor.fields(source, struct.Struct("!II"))
-        fBits = numpy.uint32(fBits) | uproot.const.kIsOnHeap
-        if fBits & uproot.const.kIsReferenced:
-            cursor.skip(2)
+        _skiptobj(source, cursor)
 
         print cursor.hexdump(source)
 
@@ -106,7 +143,7 @@ class File(object):
         size = cursor.field(source, struct.Struct("!i"))
         print "size", size
 
-        x = StreamedObject._read(source, cursor, {b"TStreamerInfo": StreamerInfo})
+        x = StreamedObject._read(source, cursor, {b"TStreamerInfo": StreamerInfo, b"TObjArray": Collection})
         print "x", x
 
 
@@ -340,9 +377,23 @@ class StreamerInfo(object):
     def __init__(self, source, cursor, classes):
         print "HERE"
 
+        start1, cnt1, vers1 = StreamedObject._startcheck(source, cursor)
+        print "start1, cnt1, vers1", start1, cnt1, vers1
+
+        name, title = _nametitle(source, cursor)
+
+        print "name", repr(name), "title", repr(title)
+
+        checksum, classvers = cursor.fields(source, struct.Struct("!Ii"))
+
+        print "checksum", checksum, "classvers", classvers
+
+        y = StreamedObject._read(source, cursor, classes)
+        print "y", y
 
 
 
+        
 class StreamedObject(object):
     """Base class for all objects extracted from a ROOT file using streamers.
     """
