@@ -37,9 +37,6 @@ class MemmapSource(object):
         self.path = os.path.expanduser(path)
         self._source = numpy.memmap(self.path, dtype=numpy.uint8, mode="r")
 
-    def __del__(self):
-        del self._source
-
     def dismiss(self):
         pass
 
