@@ -377,8 +377,7 @@ def _readanyref(source, cursor, classes):
         # new class and object
         cname = cursor.cstring(source)
 
-        fct = classes[cname]
-        # fct = classes.get(cname, Undefined)   # FIXME: not until we're done here
+        fct = classes.get(cname, Undefined)
 
         if vers > 0:
             cursor.refs[start + uproot.const.kMapOffset] = fct
@@ -422,139 +421,189 @@ def _readstreamers(source, cursor, classes, compression):
     source = key.source
     cursor = key.cursor
 
-    classes = {b"TStreamerInfo": StreamerInfo,
-               b"TStreamerElement": StreamerElement,
-               b"TStreamerBase": StreamerBase,
-               b"TStreamerBasicType": StreamerBasicType,
-               b"TStreamerBasicPointer": StreamerBasicPointer,
-               b"TStreamerLoop": StreamerLoop,
-               b"TStreamerObject": StreamerObject,
-               b"TStreamerObjectPointer": StreamerObjectPointer,
-               b"TStreamerObjectAny": StreamerObjectAny,
-               b"TStreamerObjectAnyPointer": StreamerObjectAnyPointer,
-               b"TStreamerString": StreamerString,
-               b"TStreamerSTL": StreamerSTL,
-               b"TStreamerSTLString": StreamerSTLString,
-               b"TStreamerArtificial": StreamerArtificial,
-               b"TObjArray": _objarray}
+    streamerclasses = {b"TStreamerInfo":             TStreamerInfo,
+                       b"TStreamerElement":          TStreamerElement,
+                       b"TStreamerBase":             TStreamerBase,
+                       b"TStreamerBasicType":        TStreamerBasicType,
+                       b"TStreamerBasicPointer":     TStreamerBasicPointer,
+                       b"TStreamerLoop":             TStreamerLoop,
+                       b"TStreamerObject":           TStreamerObject,
+                       b"TStreamerObjectPointer":    TStreamerObjectPointer,
+                       b"TStreamerObjectAny":        TStreamerObjectAny,
+                       b"TStreamerObjectAnyPointer": TStreamerObjectAnyPointer,
+                       b"TStreamerString":           TStreamerString,
+                       b"TStreamerSTL":              TStreamerSTL,
+                       b"TStreamerSTLString":        TStreamerSTLString,
+                       b"TStreamerArtificial":       TStreamerArtificial,
+                       b"TObjArray":                 _objarray}
 
     start, cnt, vers = _startcheck(source, cursor)
 
     _skiptobj(source, cursor)
     name = cursor.string(source)
     size = cursor.field(source, struct.Struct("!i"))
+    _format_n = struct.Struct("!B")
 
     infos = []
     for i in range(size):
-        infos.append(_readanyref(source, cursor, classes))
-        n = cursor.field(source, struct.Struct("!B"))
+        infos.append(_readanyref(source, cursor, streamerclasses))
+        assert isinstance(infos[-1], TStreamerInfo)
+        # options not used, but they must be read in
+        n = cursor.field(source, _format_n)
         cursor.bytes(source, n)
 
     _endcheck(start, cursor, cnt)
+
+    _defineclasses(infos, classes)
     return infos
 
-class StreamerInfo(object):
+class TStreamerInfo(object):
+    _format = struct.Struct("!Ii")
+
     def __init__(self, source, cursor, classes):
         start, cnt, vers = _startcheck(source, cursor)
-        self.name, self.title = _nametitle(source, cursor)
-        self.checksum, self.classvers = cursor.fields(source, struct.Struct("!Ii"))
+        self.name, title = _nametitle(source, cursor)
+        self.checksum, self.version = cursor.fields(source, self._format)
         self.elements = _readanyref(source, cursor, classes)
         assert isinstance(self.elements, list)
         _endcheck(start, cursor, cnt)
 
-class StreamerElement(object):
+    def format(self):
+        return "StreamerInfo for class: {0}, version={1}, checksum=0x{2:08x}\n{3}{4}".format(self.name, self.version, self.checksum, "\n".join("  " + x.format() for x in self.elements), "\n" if len(self.elements) > 0 else "")
+
+class TStreamerElement(object):
+    _format1 = struct.Struct("!iiii")
+    _format2 = struct.Struct("!i")
+    _format3 = struct.Struct("!ddd")
+
     def __init__(self, source, cursor, classes):    
         start, cnt, vers = _startcheck(source, cursor)
-        self.name, self.title = _nametitle(source, cursor)
-        self.etype, self.esize, self.arrlen, self.arrdim = cursor.fields(source, struct.Struct("!iiii"))
+
+        self.fOffset = 0
+        # https://github.com/root-project/root/blob/master/core/meta/src/TStreamerElement.cxx#L505
+        self.fName, self.fTitle = _nametitle(source, cursor)
+        self.fType, self.fSize, self.fArrayLength, self.fArrayDim = cursor.fields(source, self._format1)
+
         if vers == 1:
-            n = cursor.field(source, struct.Struct("!i"))
-            self.maxidx = cursor.array(source, n, ">i4")
+            n = cursor.field(source, self._format2)
+            self.fMaxIndex = cursor.array(source, n, ">i4")
         else:
-            self.maxidx = cursor.array(source, 5, ">i4")
-        self.ename = cursor.string(source)
+            self.fMaxIndex = cursor.array(source, 5, ">i4")
+
+        self.fTypeName = cursor.string(source)
+
+        if self.fType == 11 and (self.fTypeName == "Bool_t" or self.fTypeName == "bool"):
+            self.fType = 18
+
+        if vers <= 2:
+            # FIXME
+            # self.fSize = self.fArrayLength * gROOT->GetType(GetTypeName())->Size()
+            pass
+
+        self.fXmin, self.fXmax, self.fFactor = 0.0, 0.0, 0.0
+        if vers == 3:
+            self.fXmin, self.fXmax, self.fFactor = cursor.fields(source, self._format3)
+        if vers > 3:
+            # FIXME
+            # if (TestBit(kHasRange)) GetRange(GetTitle(),fXmin,fXmax,fFactor)
+            pass
+
         _endcheck(start, cursor, cnt)
 
-class StreamerBase(object):
+    def format(self):
+        return "{0:15s} {1:15s} offset={2:3d} type={3:2d} {4}".format(self.fName, self.fTypeName, self.fOffset, self.fType, self.fTitle)
+
+class TStreamerArtificial(TStreamerElement):
     def __init__(self, source, cursor, classes):
         start, cnt, vers = _startcheck(source, cursor)
-        self.element = StreamerElement(source, cursor, classes)
+        super(TStreamerArtificial, self).__init__(source, cursor, classes)
+        _endcheck(start, cursor, cnt)
+
+class TStreamerBase(TStreamerElement):
+    _format = struct.Struct("!i")
+
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        super(TStreamerBase, self).__init__(source, cursor, classes)
         if vers > 2:
-            self.vbase = cursor.field(source, struct.Struct("!i"))
+            self.vbase = cursor.field(source, self._format)
         _endcheck(start, cursor, cnt)
 
-class StreamerBasicType(object):
-    def __init__(self, source, cursor, classes):
-        start, cnt, vers = _startcheck(source, cursor)
-        self.element = StreamerElement(source, cursor, classes)
-        _endcheck(start, cursor, cnt)
+class TStreamerBasicPointer(TStreamerElement):
+    _format = struct.Struct("!i")
 
-class StreamerBasicPointer(object):
     def __init__(self, source, cursor, classes):
         start, cnt, vers = _startcheck(source, cursor)
-        self.element = StreamerElement(source, cursor, classes)
-        self.cvers = cursor.field(source, struct.Struct("!i"))
+        super(TStreamerBasicPointer, self).__init__(source, cursor, classes)
+        self.cvers = cursor.field(source, self._format)
         self.cname = cursor.string(source)
         self.ccls = cursor.string(source)
         _endcheck(start, cursor, cnt)
 
-class StreamerLoop(object):
+class TStreamerBasicType(TStreamerElement):
     def __init__(self, source, cursor, classes):
         start, cnt, vers = _startcheck(source, cursor)
-        self.element = StreamerElement(source, cursor, classes)
-        self.cvers = cursor.field(source, struct.Struct("!i"))
+        super(TStreamerBasicType, self).__init__(source, cursor, classes)
+        _endcheck(start, cursor, cnt)
+
+class TStreamerLoop(TStreamerElement):
+    _format = struct.Struct("!i")
+
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        super(TStreamerLoop, self).__init__(source, cursor, classes)
+        self.cvers = cursor.field(source, self._format)
         self.cname = cursor.string(source)
         self.ccls = cursor.string(source)
         _endcheck(start, cursor, cnt)
 
-class StreamerObject(object):
+class TStreamerObject(TStreamerElement):
     def __init__(self, source, cursor, classes):
         start, cnt, vers = _startcheck(source, cursor)
-        self.element = StreamerElement(source, cursor, classes)
+        super(TStreamerObject, self).__init__(source, cursor, classes)
         _endcheck(start, cursor, cnt)
 
-class StreamerObjectPointer(object):
+class TStreamerObjectAny(TStreamerElement):
     def __init__(self, source, cursor, classes):
         start, cnt, vers = _startcheck(source, cursor)
-        self.element = StreamerElement(source, cursor, classes)
+        super(TStreamerObjectAny, self).__init__(source, cursor, classes)
         _endcheck(start, cursor, cnt)
 
-class StreamerObjectAny(object):
+class TStreamerObjectAnyPointer(TStreamerElement):
     def __init__(self, source, cursor, classes):
         start, cnt, vers = _startcheck(source, cursor)
-        self.element = StreamerElement(source, cursor, classes)
+        super(TStreamerObjectAnyPointer, self).__init__(source, cursor, classes)
         _endcheck(start, cursor, cnt)
 
-class StreamerObjectAnyPointer(object):
+class TStreamerObjectPointer(TStreamerElement):
     def __init__(self, source, cursor, classes):
         start, cnt, vers = _startcheck(source, cursor)
-        self.element = StreamerElement(source, cursor, classes)
+        super(TStreamerObjectPointer, self).__init__(source, cursor, classes)
         _endcheck(start, cursor, cnt)
 
-class StreamerString(object):
+class TStreamerSTL(TStreamerElement):
+    _format = struct.Struct("!ii")
+
     def __init__(self, source, cursor, classes):
         start, cnt, vers = _startcheck(source, cursor)
-        self.element = StreamerElement(source, cursor, classes)
+        super(TStreamerSTL, self).__init__(source, cursor, classes)
+        self.vtype, self.ctype = cursor.fields(source, self._format)
         _endcheck(start, cursor, cnt)
 
-class StreamerSTL(object):
+class TStreamerSTLString(TStreamerSTL):
     def __init__(self, source, cursor, classes):
         start, cnt, vers = _startcheck(source, cursor)
-        self.element = StreamerElement(source, cursor, classes)
-        self.vtype, self.ctype = cursor.fields(source, struct.Struct("!ii"))
+        super(TStreamerSTLString, self).__init__(source, cursor, classes)
         _endcheck(start, cursor, cnt)
 
-class StreamerSTLString(object):
+class TStreamerString(TStreamerElement):
     def __init__(self, source, cursor, classes):
         start, cnt, vers = _startcheck(source, cursor)
-        self.stl = StreamerSTL(source, cursor, classes)
+        super(TStreamerString, self).__init__(source, cursor, classes)
         _endcheck(start, cursor, cnt)
 
-class StreamerArtificial(object):
-    def __init__(self, source, cursor, classes):
-        start, cnt, vers = _startcheck(source, cursor)
-        self.element = StreamerElement(source, cursor, classes)
-        _endcheck(start, cursor, cnt)
+def _defineclasses(infos, classes):
+    pass
     
 ################################################################ objects generated from streamers (or not)
 
