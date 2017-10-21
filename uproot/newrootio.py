@@ -309,13 +309,13 @@ def _startcheck(source, cursor):
     start = cursor.index
     cnt, vers = cursor.fields(source, _startcheck._format_cntvers)
     cnt = int(numpy.int64(cnt) & ~uproot.const.kByteCountMask)
-    return start, cnt, vers
+    return start, cnt + 4, vers
 _startcheck._format_cntvers = struct.Struct("!IH")
 
 def _endcheck(start, cursor, cnt):
     observed = cursor.index - start
-    if observed != cnt + 4:
-        raise ValueError("object has {0} bytes; expected {1}".format(observed, cnt + 4))
+    if observed != cnt:
+        raise ValueError("object has {0} bytes; expected {1}".format(observed, cnt))
 
 def _skiptobj(source, cursor):
     version = cursor.field(source, _skiptobj._format1)
@@ -335,15 +335,6 @@ def _nametitle(source, cursor):
     title = cursor.string(source)
     _endcheck(start, cursor, cnt)
     return name, title
-
-def _objarray(source, cursor, classes):
-    start, cnt, vers = _startcheck(source, cursor)
-    _skiptobj(source, cursor)
-    name = cursor.string(source)
-    size, low = cursor.fields(source, struct.Struct("!ii"))
-    out = [_readanyref(source, cursor, classes) for i in range(size)]
-    _endcheck(start, cursor, cnt)
-    return out
 
 ################################################################ reading any type of object, possibly cross-linked
 
@@ -439,7 +430,7 @@ def _readstreamers(source, cursor, classes, compression):
                        b"TStreamerSTL":              TStreamerSTL,
                        b"TStreamerSTLString":        TStreamerSTLString,
                        b"TStreamerArtificial":       TStreamerArtificial,
-                       b"TObjArray":                 _objarray}
+                       b"TObjArray":                 TObjArray}
 
     start, cnt, vers = _startcheck(source, cursor)
 
@@ -667,13 +658,36 @@ class TObject(StreamedObject):
     def __init__(self, source, cursor, classes):
         _skiptobj(source, cursor)
 
-class TArray(StreamedObject):
-    "Base class for TArrays (which aren't streamed in the file)."
+def TString(source, cursor, classes):
+    "Read a TString in as a Python string."
+    return cursor.string(source)
+
+class TObjArray(list):
+    "Read a TObjArray in as a Python list."
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        _skiptobj(source, cursor)
+        name = cursor.string(source)
+        size, low = cursor.fields(source, struct.Struct("!ii"))
+        self.extend([_readanyref(source, cursor, classes) for i in range(size)])
+        _endcheck(start, cursor, cnt)
+
+class TList(list):
+    "Read a TList in as a Python list."
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        _skiptobj(source, cursor)
+        name = cursor.string(source)
+        size = cursor.field(source, struct.Struct("!i"))
+        self.extend([_readanyref(source, cursor, classes) for i in range(size)])
+        _endcheck(start, cursor, cnt)
+
+class TArray(list):
+    "TArrays aren't described by streamers, but they're pretty simple. We make make them a subclass of Python's list."
     _format = struct.Struct("!i")
     def __init__(self, source, cursor, classes):
-        # length = cursor.field(source, self._format)
-        # self.data = cursor.array(source, length, self._dtype)
-        print self.__class__.__name__
+        length = cursor.field(source, self._format)
+        self.extend(cursor.array(source, length, self._dtype))
 
 class TArrayC(TArray):
     "TArray of 8-bit integers."
@@ -740,7 +754,63 @@ class TAttMarker(StreamedObject):
         print "TAttMarker", self.fMarkerColor, self.fMarkerStyle, self.fMarkerSize
         _endcheck(start, cursor, cnt)
 
+class TAttAxis(StreamedObject):
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        self.fNdivisions, self.fAxisColor, self.fLabelColor, self.fLabelFont, self.fLabelOffset, self.fLabelSize, self.fTickLength, self.fTitleOffset, self.fTitleSize, self.fTitleColor, self.fTitleFont = cursor.fields(source, struct.Struct("!ihhhfffffhh"))
+        print "TAttAxis", self.fNdivisions, self.fAxisColor, self.fLabelColor, self.fLabelFont, self.fLabelOffset, self.fLabelSize, self.fTickLength, self.fTitleOffset, self.fTitleSize, self.fTitleColor, self.fTitleFont
+        _endcheck(start, cursor, cnt)
+
+class TCollection(TObject):
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        print "TCollection", cnt, vers
+        TObject.__init__(self, source, cursor, classes)
+        self.fName = TString(source, cursor, classes)
+        self.fSize = cursor.field(source, struct.Struct("!i"))
+        _endcheck(start, cursor, cnt)
+
+class TSeqCollection(TCollection):
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        print "TSeqCollection", cnt, vers
+        TCollection.__init__(self, source, cursor, classes)
+        _endcheck(start, cursor, cnt)
+
+class THashList(TList):
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        print "THashList", cnt, vers
+        TList.__init__(self, source, cursor, classes)
+        _endcheck(start, cursor, cnt)
+
+class TAxis(TNamed, TAttAxis):
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        TNamed.__init__(self, source, cursor, classes)
+        TAttAxis.__init__(self, source, cursor, classes)
+        self.fNbins, self.fXmin, self.fXmax = cursor.fields(source, struct.Struct("!idd"))
+        self.fXbins = TArrayD(source, cursor, classes)
+        self.fFirst, self.fLast, self.fBits2, self.fTimeDisplay = cursor.fields(source, struct.Struct("!iiH?"))
+        self.fTimeFormat = TString(source, cursor, classes)
+        _fLabels = cursor.field(source, struct.Struct("!i"))
+        if _fLabels != 0:
+            raise NotImplementedError
+        else:
+            self.fLabels = None
+        _fModLabs = cursor.field(source, struct.Struct("!i"))
+        if _fModLabs != 0:
+            raise NotImplementedError
+        else:
+            self.fModLabs = None
+        print "TAxis", self.fNbins, self.fXmin, self.fXmax, self.fXbins, self.fFirst, self.fLast, self.fBits2, self.fTimeDisplay, repr(self.fTimeFormat), self.fLabels, self.fModLabs
+        _endcheck(start, cursor, cnt)
+
 class TH1(TNamed, TAttLine, TAttFill, TAttMarker):
+    _format1 = struct.Struct("!i")
+    _format2 = struct.Struct("!hhdddddddd")
+    _format3 = struct.Struct("!i")
+
     def __init__(self, source, cursor, classes):
         start, cnt, vers = _startcheck(source, cursor)
         print "TH1", cnt, vers
@@ -748,7 +818,21 @@ class TH1(TNamed, TAttLine, TAttFill, TAttMarker):
         TAttLine.__init__(self, source, cursor, classes)
         TAttFill.__init__(self, source, cursor, classes)
         TAttMarker.__init__(self, source, cursor, classes)
+        self.fNcells = cursor.field(source, self._format1)
+        self.fXaxis = TAxis(source, cursor, classes)
+        self.fYaxis = TAxis(source, cursor, classes)
+        self.fZaxis = TAxis(source, cursor, classes)
+        self.fBarOffset, self.fBarWidth, self.fEntries, self.fTsumw, self.fTsumw2, self.fTsumwx, self.fTsumwx2, self.fMaximum, self.fMinimum, self.fNormFactor = cursor.fields(source, struct.Struct("!hhdddddddd"))
+        self.fContour = TArrayD(source, cursor, classes)
+        self.fSumw2 = TArrayD(source, cursor, classes)
+        self.fOption = TString(source, cursor, classes)
+        self.fFunctions = TList(source, cursor, classes)
+
+        print "TH1", self.fNcells, self.fXaxis, self.fYaxis, self.fZaxis, self.fBarOffset, self.fBarWidth, self.fEntries, self.fTsumw, self.fTsumw2, self.fTsumwx, self.fTsumwx2, self.fMaximum, self.fMinimum, self.fNormFactor, self.fContour, self.fSumw2, repr(self.fOption), self.fFunctions
+
         print cursor.hexdump(source)
+
+        raise Exception
 
 class TH1F(TH1, TArrayF):
     def __init__(self, source, cursor, classes):
