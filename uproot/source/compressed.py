@@ -30,24 +30,26 @@
 
 import numpy
 
+import uproot.const
+
 class Compression(object):
     def __init__(self, fCompress):
-        self.algo = max(fCompress // 100, 1)
+        self.algo = max(fCompress // 100, uproot.const.kZLIB)
         self.level = fCompress % 100
-        if not 1 <= self.algo <= 4:
+        if not uproot.const.kZLIB <= self.algo < uproot.const.kUndefinedCompressionAlgorithm:
             raise ValueError("unrecognized compression algorithm: {0} (from fCompress {1})".format(self.algo, fCompress))
         if not 0 <= self.level <= 9:
             raise ValueError("unrecognized compression level: {0} (from fCompress {1})".format(self.level, fCompress))
 
     @property
     def algoname(self):
-        if self.algo == 1:
+        if self.algo == uproot.const.kZLIB:
             return "zlib"
-        elif self.algo == 2:
+        elif self.algo == uproot.const.kLZMA:
             return "lzma"
-        elif self.algo == 3:
+        elif self.algo == uproot.const.kOldCompressionAlgo:
             return "old"
-        elif self.algo == 4:
+        elif self.algo == uproot.const.kLZ4:
             return "lz4"
         else:
             raise ValueError("unrecognized compression algorithm: {0}".format(self.algo))
@@ -56,11 +58,11 @@ class Compression(object):
         return "<Compression {0} {1}>".format(repr(self.algoname), self.level)
 
     def decompress(self, source, cursor, compressedbytes, uncompressedbytes=None):
-        if self.algo == 1:
+        if self.algo == uproot.const.kZLIB:
             from zlib import decompress as zlib_decompress
             return zlib_decompress(cursor.bytes(source, compressedbytes))
 
-        elif self.algo == 2:
+        elif self.algo == uproot.const.kLZMA:
             try:
                 from lzma import decompress as lzma_decompress
             except ImportError:
@@ -70,10 +72,10 @@ class Compression(object):
                     raise ImportError("\n\nInstall lzma package with:\n\n    pip install backports.lzma --user\nor\n    conda install -c conda-forge backports.lzma\n\n(or just use Python >= 3.3).")
             return lzma_decompress(cursor.bytes(source, compressedbytes))
 
-        elif self.algo == 3:
+        elif self.algo == uproot.const.kOldCompressionAlgo:
             raise NotImplementedError("ROOT's \"old\" algorithm (fCompress 300) is not supported")
 
-        elif self.algo == 4:
+        elif self.algo == uproot.const.kLZ4:
             try:
                 from lz4.block import decompress as lz4_decompress
             except ImportError:
@@ -106,11 +108,11 @@ class CompressedSource(object):
             return numpy.empty(0, dtype=dtype)
 
         if self._uncompressed is None:
-            if self.compression.algo == 1:
+            if self.compression.algo == uproot.const.kZLIB:
                 skip = 9      # https://github.com/root-project/root/blob/master/core/zip/src/Bits.h#L646
-            elif self.compression.algo == 2:
+            elif self.compression.algo == uproot.const.kLZMA:
                 skip = 9      # https://github.com/root-project/root/blob/master/core/lzma/src/ZipLZMA.c#L81
-            elif self.compression.algo == 4:
+            elif self.compression.algo == uproot.const.kLZ4:
                 skip = 9 + 8  # https://github.com/root-project/root/blob/master/core/lz4/src/ZipLZ4.cxx#L38
             else:
                 skip = 0

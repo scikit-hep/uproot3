@@ -462,14 +462,14 @@ class TStreamerInfo(object):
 
     def __init__(self, source, cursor, classes):
         start, cnt, vers = _startcheck(source, cursor)
-        self.name, title = _nametitle(source, cursor)
-        self.checksum, self.version = cursor.fields(source, self._format)
-        self.elements = _readanyref(source, cursor, classes)
-        assert isinstance(self.elements, list)
+        self.fName, _ = _nametitle(source, cursor)
+        self.fCheckSum, self.fClassVersion = cursor.fields(source, self._format)
+        self.fElements = _readanyref(source, cursor, classes)
+        assert isinstance(self.fElements, list)
         _endcheck(start, cursor, cnt)
 
     def format(self):
-        return "StreamerInfo for class: {0}, version={1}, checksum=0x{2:08x}\n{3}{4}".format(self.name, self.version, self.checksum, "\n".join("  " + x.format() for x in self.elements), "\n" if len(self.elements) > 0 else "")
+        return "StreamerInfo for class: {0}, version={1}, checksum=0x{2:08x}\n{3}{4}".format(self.fName, self.fClassVersion, self.fCheckSum, "\n".join("  " + x.format() for x in self.fElements), "\n" if len(self.fElements) > 0 else "")
 
 class TStreamerElement(object):
     _format1 = struct.Struct("!iiii")
@@ -526,7 +526,7 @@ class TStreamerBase(TStreamerElement):
         start, cnt, vers = _startcheck(source, cursor)
         super(TStreamerBase, self).__init__(source, cursor, classes)
         if vers > 2:
-            self.vbase = cursor.field(source, self._format)
+            self.fBaseVersion = cursor.field(source, self._format)
         _endcheck(start, cursor, cnt)
 
 class TStreamerBasicPointer(TStreamerElement):
@@ -535,15 +535,40 @@ class TStreamerBasicPointer(TStreamerElement):
     def __init__(self, source, cursor, classes):
         start, cnt, vers = _startcheck(source, cursor)
         super(TStreamerBasicPointer, self).__init__(source, cursor, classes)
-        self.cvers = cursor.field(source, self._format)
-        self.cname = cursor.string(source)
-        self.ccls = cursor.string(source)
+        self.fCountVersion = cursor.field(source, self._format)
+        self.fCountName = cursor.string(source)
+        self.fCountClass = cursor.string(source)
         _endcheck(start, cursor, cnt)
 
 class TStreamerBasicType(TStreamerElement):
     def __init__(self, source, cursor, classes):
         start, cnt, vers = _startcheck(source, cursor)
         super(TStreamerBasicType, self).__init__(source, cursor, classes)
+
+        if uproot.const.kOffsetL < self.fType < uproot.const.kOffsetP:
+            self.fType -= uproot.const.kOffsetL
+
+        basic = True
+        if self.fType in (uproot.const.kBool, uproot.const.kUChar, uproot.const.kChar):
+            self.fSize = 1
+        elif self.fType in (uproot.const.kUShort, uproot.const.kShort):
+            self.fSize = 2
+        elif self.fType in (uproot.const.kBits, uproot.const.kUInt, uproot.const.kInt, uproot.const.kCounter):
+            self.fSize = 4
+        elif self.fType in (uproot.const.kULong, uproot.const.kULong64, uproot.const.kLong, uproot.const.kLong64):
+            self.fSize = 8
+        elif self.fType in (uproot.const.kFloat, uproot.const.kFloat16):
+            self.fSize = 4
+        elif self.fType in (uproot.const.kDouble, uproot.const.kDouble32):
+            self.fSize = 8
+        elif self.fType == uproot.const.kCharStar:
+            self.fSize = 8
+        else:
+            basic = False
+
+        if basic and self.fArrayLength > 0:
+            self.fSize *= self.fArrayLength
+
         _endcheck(start, cursor, cnt)
 
 class TStreamerLoop(TStreamerElement):
@@ -552,9 +577,9 @@ class TStreamerLoop(TStreamerElement):
     def __init__(self, source, cursor, classes):
         start, cnt, vers = _startcheck(source, cursor)
         super(TStreamerLoop, self).__init__(source, cursor, classes)
-        self.cvers = cursor.field(source, self._format)
-        self.cname = cursor.string(source)
-        self.ccls = cursor.string(source)
+        self.fCountVersion = cursor.field(source, self._format)
+        self.fCountName = cursor.string(source)
+        self.fCountClass = cursor.string(source)
         _endcheck(start, cursor, cnt)
 
 class TStreamerObject(TStreamerElement):
@@ -587,7 +612,19 @@ class TStreamerSTL(TStreamerElement):
     def __init__(self, source, cursor, classes):
         start, cnt, vers = _startcheck(source, cursor)
         super(TStreamerSTL, self).__init__(source, cursor, classes)
-        self.vtype, self.ctype = cursor.fields(source, self._format)
+
+        if vers > 2:
+            # https://github.com/root-project/root/blob/master/core/meta/src/TStreamerElement.cxx#L1936
+            raise NotImplementedError
+        else:
+            self.fSTLtype, self.fCtype = cursor.fields(source, self._format)
+
+        if self.fSTLtype == uproot.const.kSTLmultimap or self.fSTLtype == uproot.const.kSTLset:
+            if self.fTypeName.startswith("std::set") or self.fTypeName.startswith("set"):
+                self.fSTLtype = uproot.const.kSTLset
+            elif self.fTypeName.startswith("std::multimap") or self.fTypeName.startswith("multimap"):
+                self.fSTLtype = uproot.const.kSTLmultimap
+
         _endcheck(start, cursor, cnt)
 
 class TStreamerSTLString(TStreamerSTL):
