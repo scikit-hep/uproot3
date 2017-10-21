@@ -56,8 +56,6 @@ class Compression(object):
         return "<Compression {0} {1}>".format(repr(self.algoname), self.level)
 
     def decompress(self, source, cursor, compressedbytes, uncompressedbytes=None):
-        print "actually decompressing", compressedbytes, uncompressedbytes
-
         if self.algo == 1:
             from zlib import decompress as zlib_decompress
             return zlib_decompress(cursor.bytes(source, compressedbytes))

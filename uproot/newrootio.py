@@ -38,56 +38,8 @@ from uproot.source.compressed import Compression
 from uproot.source.compressed import CompressedSource
 from uproot.source.cursor import Cursor
 
-def _skiptobj(source, cursor):
-    version = cursor.field(source, _skiptobj._format1)
-    if numpy.int64(version) & uproot.const.kByteCountVMask:
-        cursor.skip(4)
+################################################################ File
 
-    fUniqueID, fBits = cursor.fields(source, _skiptobj._format2)
-    fBits = numpy.uint32(fBits) | uproot.const.kIsOnHeap
-    if fBits & uproot.const.kIsReferenced:
-        cursor.skip(2)
-
-_skiptobj._format1 = struct.Struct("!h")
-_skiptobj._format2 = struct.Struct("!II")
-
-def _nametitle(source, cursor):
-    start, cnt, vers = StreamedObject._startcheck(source, cursor)
-    _skiptobj(source, cursor)
-
-    name = cursor.string(source)
-    title = cursor.string(source)
-    StreamedObject._endcheck(start, cursor, cnt)
-    return name, title
-
-class _ObjArray(object):
-    def __init__(self, source, cursor, classes):
-        print "_ObjArray"
-
-        # TList, but can't use StreamedObject yet!
-        start, cnt, vers = StreamedObject._startcheck(source, cursor)
-
-        print "start, cnt, vers", start, cnt, vers
-
-        _skiptobj(source, cursor)
-
-        print cursor.hexdump(source)
-
-        name = cursor.string(source)
-        print "name", repr(name)
-        size = cursor.field(source, struct.Struct("!i"))
-        print "size", size
-
-        print cursor.hexdump(source)
-
-        # only TObjArray!
-        low = cursor.fields(source, struct.Struct("!i"))
-
-        for i in range(size):
-            z = StreamedObject._read(source, cursor, classes)
-            print "z", z.__class__.__name__, z.__dict__
-
-        
 class File(object):
     """Represents a ROOT file; use to extract objects.
 
@@ -97,6 +49,7 @@ class File(object):
         * `file.compression` (with `algo`, `level` and `algoname` attributes) describes the compression.
         * `file.dir` is the top directory.
         * `file.name` is the name of the file (as written inside the file).
+        * `file.streamers` is the streamer information, which describes how to unmarshal classes in this file.
         * `file.TFile` are the ROOT C++ private fields. See `https://root.cern/doc/master/classTFile.html`.
 
     `file[name]` is a synonym for `file.get(name)`.
@@ -120,42 +73,7 @@ class File(object):
         compression = Compression(self.TFile.fCompress)
 
         self.dir = Directory(Key(source, cursor, classes, compression), source, cursor, classes, compression)
-
-
-
-        print "TFile", self.TFile
-        cursor = Cursor(self.TFile.fSeekInfo)
-
-        key = Key(source, cursor, classes, compression)
-        print "key", key.TKey
-
-        source = key.source
-        cursor = key.cursor
-
-        print cursor.hexdump(source)
-
-        # TList, but can't use StreamedObject yet!
-        start, cnt, vers = StreamedObject._startcheck(source, cursor)
-
-        print "start, cnt, vers", start, cnt, vers
-
-        _skiptobj(source, cursor)
-
-        print cursor.hexdump(source)
-
-        name = cursor.string(source)
-        size = cursor.field(source, struct.Struct("!i"))
-        print "size", size
-        
-        x = StreamedObject._read(source, cursor, {b"TStreamerInfo": StreamerInfo, b"TObjArray": _ObjArray, b"TStreamerBase": StreamerElement})
-        print "x", x
-
-
-
-        # StreamedObject._endcheck(start, cursor, cnt)
-
-
-
+        self.streamers = _readstreamers(source, Cursor(self.TFile.fSeekInfo), classes, compression)
 
         source.dismiss()
 
@@ -201,6 +119,8 @@ class File(object):
         An explicit `cycle` overrides ';'.
         """
         return self.dir.get(name, cycle)
+
+################################################################ Key
 
 class Key(object):
     """Represents a key; for seeking to an object in a ROOT file.
@@ -276,6 +196,8 @@ class Key(object):
             return Directory(self, self.source, self.cursor.copied(), self.classes, self.compression)
         else:
             return Undefined(self.source, self.cursor.copied(), self.classes)
+
+################################################################ Directory
 
 class Directory(object):
     """Represents a ROOT directory; use to extract objects.
@@ -377,52 +299,264 @@ class Directory(object):
                         return key.get()
             raise KeyError("not found: {0}".format(repr(name)))
 
+################################################################ helper functions for common tasks
+
+def _startcheck(source, cursor):
+    start = cursor.index
+    cnt, vers = cursor.fields(source, _startcheck._format_cntvers)
+    cnt = int(numpy.int64(cnt) & ~uproot.const.kByteCountMask)
+    return start, cnt, vers
+_startcheck._format_cntvers = struct.Struct("!IH")
+
+def _endcheck(start, cursor, cnt):
+    observed = cursor.index - start
+    if observed != cnt + 4:
+        raise ValueError("object has {0} bytes; expected {1}".format(observed, cnt + 4))
+
+def _skiptobj(source, cursor):
+    version = cursor.field(source, _skiptobj._format1)
+    if numpy.int64(version) & uproot.const.kByteCountVMask:
+        cursor.skip(4)
+    fUniqueID, fBits = cursor.fields(source, _skiptobj._format2)
+    fBits = numpy.uint32(fBits) | uproot.const.kIsOnHeap
+    if fBits & uproot.const.kIsReferenced:
+        cursor.skip(2)
+_skiptobj._format1 = struct.Struct("!h")
+_skiptobj._format2 = struct.Struct("!II")
+
+def _nametitle(source, cursor):
+    start, cnt, vers = _startcheck(source, cursor)
+    _skiptobj(source, cursor)
+    name = cursor.string(source)
+    title = cursor.string(source)
+    _endcheck(start, cursor, cnt)
+    return name, title
+
+def _objarray(source, cursor, classes):
+    start, cnt, vers = _startcheck(source, cursor)
+    _skiptobj(source, cursor)
+    name = cursor.string(source)
+    size, low = cursor.fields(source, struct.Struct("!ii"))
+    out = [_readanyref(source, cursor, classes) for i in range(size)]
+    _endcheck(start, cursor, cnt)
+    return out
+
+################################################################ reading any type of object, possibly cross-linked
+
+def _readanyref(source, cursor, classes):
+    beg = cursor.index - cursor.origin
+    bcnt = cursor.field(source, struct.Struct("!I"))
+
+    if numpy.int64(bcnt) & uproot.const.kByteCountMask == 0 or numpy.int64(bcnt) == uproot.const.kNewClassTag:
+        vers = 0
+        start = 0
+        tag = bcnt
+        bcnt = 0
+    else:
+        vers = 1
+        start = cursor.index - cursor.origin
+        tag = cursor.field(source, struct.Struct("!I"))
+
+    if numpy.int64(tag) & uproot.const.kClassMask == 0:
+        # reference object
+        if tag == 0:
+            return None                     # return null
+
+        elif tag == 1:
+            raise NotImplementedError("tag == 1 means self; not implemented yet")
+
+        elif tag not in cursor.refs:
+            # jump past this object
+            cursor.index = cursor.origin + beg + bcnt + 4
+            return None                     # return null
+
+        else:
+            return cursor.refs[tag]         # return object
+
+    elif tag == uproot.const.kNewClassTag:
+        # new class and object
+        cname = cursor.cstring(source)
+
+        fct = classes[cname]
+        # fct = classes.get(cname, Undefined)   # FIXME: not until we're done here
+
+        if vers > 0:
+            cursor.refs[start + uproot.const.kMapOffset] = fct
+        else:
+            cursor.refs[len(cursor.refs) + 1] = fct
+
+        obj = fct(source, cursor, classes)
+
+        if vers > 0:
+            cursor.refs[beg + uproot.const.kMapOffset] = obj
+        else:
+            cursor.refs[len(cursor.refs) + 1] = obj
+
+        return obj                          # return object
+
+    else:
+        # reference class, new object
+        ref = int(numpy.int64(tag) & ~uproot.const.kClassMask)
+
+        if ref not in cursor.refs:
+            raise IOError("invalid class-tag reference")
+
+        fct = cursor.refs[ref]              # reference class
+
+        if fct not in classes.values():
+            raise IOError("invalid class-tag reference (not a factory)")
+
+        obj = fct(source, cursor, classes)  # new object
+
+        if vers > 0:
+            cursor.refs[beg + uproot.const.kMapOffset] = obj
+        else:
+            cursor.refs[len(cursor.refs) + 1] = obj
+
+        return obj                          # return object
+
+################################################################ streamer info system
+
+def _readstreamers(source, cursor, classes, compression):
+    key = Key(source, cursor, classes, compression)
+    source = key.source
+    cursor = key.cursor
+
+    classes = {b"TStreamerInfo": StreamerInfo,
+               b"TStreamerElement": StreamerElement,
+               b"TStreamerBase": StreamerBase,
+               b"TStreamerBasicType": StreamerBasicType,
+               b"TStreamerBasicPointer": StreamerBasicPointer,
+               b"TStreamerLoop": StreamerLoop,
+               b"TStreamerObject": StreamerObject,
+               b"TStreamerObjectPointer": StreamerObjectPointer,
+               b"TStreamerObjectAny": StreamerObjectAny,
+               b"TStreamerObjectAnyPointer": StreamerObjectAnyPointer,
+               b"TStreamerString": StreamerString,
+               b"TStreamerSTL": StreamerSTL,
+               b"TStreamerSTLString": StreamerSTLString,
+               b"TStreamerArtificial": StreamerArtificial,
+               b"TObjArray": _objarray}
+
+    start, cnt, vers = _startcheck(source, cursor)
+
+    _skiptobj(source, cursor)
+    name = cursor.string(source)
+    size = cursor.field(source, struct.Struct("!i"))
+
+    infos = []
+    for i in range(size):
+        infos.append(_readanyref(source, cursor, classes))
+        n = cursor.field(source, struct.Struct("!B"))
+        cursor.bytes(source, n)
+
+    _endcheck(start, cursor, cnt)
+    return infos
+
 class StreamerInfo(object):
     def __init__(self, source, cursor, classes):
-        print "HERE"
-
-        start, cnt, vers = StreamedObject._startcheck(source, cursor)
-        print "start, cnt, vers", start, cnt, vers
-
-        name, title = _nametitle(source, cursor)
-
-        print "name", repr(name), "title", repr(title)
-
-        checksum, classvers = cursor.fields(source, struct.Struct("!Ii"))
-
-        print "checksum", checksum, "classvers", classvers
-
-        y = StreamedObject._read(source, cursor, classes)
-        print "y", y
+        start, cnt, vers = _startcheck(source, cursor)
+        self.name, self.title = _nametitle(source, cursor)
+        self.checksum, self.classvers = cursor.fields(source, struct.Struct("!Ii"))
+        self.elements = _readanyref(source, cursor, classes)
+        assert isinstance(self.elements, list)
+        _endcheck(start, cursor, cnt)
 
 class StreamerElement(object):
     def __init__(self, source, cursor, classes):    
-        start1, cnt1, vers1 = StreamedObject._startcheck(source, cursor)
-        start2, cnt2, vers2 = StreamedObject._startcheck(source, cursor)
-        
+        start, cnt, vers = _startcheck(source, cursor)
         self.name, self.title = _nametitle(source, cursor)
-
         self.etype, self.esize, self.arrlen, self.arrdim = cursor.fields(source, struct.Struct("!iiii"))
-
-        if vers2 == 1:
+        if vers == 1:
             n = cursor.field(source, struct.Struct("!i"))
             self.maxidx = cursor.array(source, n, ">i4")
         else:
             self.maxidx = cursor.array(source, 5, ">i4")
-
         self.ename = cursor.string(source)
+        _endcheck(start, cursor, cnt)
 
-        # CHECK:
-	# if tse.etype == 11 && (tse.ename == "Bool_t" || tse.ename == "bool") {
-	# 	tse.etype = 18
-	# }
-
-        StreamedObject._endcheck(start2, cursor, cnt2)
-
-        if vers1 > 2:
+class StreamerBase(object):
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        self.element = StreamerElement(source, cursor, classes)
+        if vers > 2:
             self.vbase = cursor.field(source, struct.Struct("!i"))
+        _endcheck(start, cursor, cnt)
 
-        StreamedObject._endcheck(start1, cursor, cnt1)
+class StreamerBasicType(object):
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        self.element = StreamerElement(source, cursor, classes)
+        _endcheck(start, cursor, cnt)
+
+class StreamerBasicPointer(object):
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        self.element = StreamerElement(source, cursor, classes)
+        self.cvers = cursor.field(source, struct.Struct("!i"))
+        self.cname = cursor.string(source)
+        self.ccls = cursor.string(source)
+        _endcheck(start, cursor, cnt)
+
+class StreamerLoop(object):
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        self.element = StreamerElement(source, cursor, classes)
+        self.cvers = cursor.field(source, struct.Struct("!i"))
+        self.cname = cursor.string(source)
+        self.ccls = cursor.string(source)
+        _endcheck(start, cursor, cnt)
+
+class StreamerObject(object):
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        self.element = StreamerElement(source, cursor, classes)
+        _endcheck(start, cursor, cnt)
+
+class StreamerObjectPointer(object):
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        self.element = StreamerElement(source, cursor, classes)
+        _endcheck(start, cursor, cnt)
+
+class StreamerObjectAny(object):
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        self.element = StreamerElement(source, cursor, classes)
+        _endcheck(start, cursor, cnt)
+
+class StreamerObjectAnyPointer(object):
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        self.element = StreamerElement(source, cursor, classes)
+        _endcheck(start, cursor, cnt)
+
+class StreamerString(object):
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        self.element = StreamerElement(source, cursor, classes)
+        _endcheck(start, cursor, cnt)
+
+class StreamerSTL(object):
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        self.element = StreamerElement(source, cursor, classes)
+        self.vtype, self.ctype = cursor.fields(source, struct.Struct("!ii"))
+        _endcheck(start, cursor, cnt)
+
+class StreamerSTLString(object):
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        self.stl = StreamerSTL(source, cursor, classes)
+        _endcheck(start, cursor, cnt)
+
+class StreamerArtificial(object):
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        self.element = StreamerElement(source, cursor, classes)
+        _endcheck(start, cursor, cnt)
+    
+################################################################ objects generated from streamers (or not)
 
 class StreamedObject(object):
     """Base class for all objects extracted from a ROOT file using streamers.
@@ -437,126 +571,10 @@ class StreamedObject(object):
         else:
             return "<{0} at 0x{1:012x}>".format(self.__class__.__name__, id(self))
 
-    _format_cntvers = struct.Struct("!IH")
-    @staticmethod
-    def _startcheck(source, cursor):
-        start = cursor.index
-        cnt, vers = cursor.fields(source, StreamedObject._format_cntvers)
-        cnt = int(numpy.int64(cnt) & ~uproot.const.kByteCountMask)
-        return start, cnt, vers
-
-    @staticmethod
-    def _endcheck(start, cursor, cnt):
-        observed = cursor.index - start
-        if observed != cnt + 4:
-            raise ValueError("object has {0} bytes; expected {1}".format(observed, cnt + 4))
-
-    @staticmethod
-    def _read(source, cursor, classes):
-        beg = cursor.index - cursor.origin
-        bcnt = cursor.field(source, struct.Struct("!I"))
-
-        print "beg", beg
-
-        # for TStreamerBase, coming into this function 4 bytes behind!!!
-
-        print "numpy.int64({}) & {} == 0 or numpy.int64({}) == {}".format(numpy.int64(bcnt), uproot.const.kByteCountMask, numpy.int64(bcnt), uproot.const.kNewClassTag)
-
-        if numpy.int64(bcnt) & uproot.const.kByteCountMask == 0 or numpy.int64(bcnt) == uproot.const.kNewClassTag:
-            vers = 0
-            start = 0
-            tag = bcnt
-            bcnt = 0
-
-            print "0 ->", tag, bcnt
-
-        else:
-            vers = 1
-            start = cursor.index - cursor.origin
-            tag = cursor.field(source, struct.Struct("!I"))
-
-            print "1 ->", vers, start, tag
-
-        print "start", start, "origin", cursor.origin, "tag", tag
-
-        if numpy.int64(tag) & uproot.const.kClassMask == 0:
-            print "ONE", tag
-
-            # reference object
-            if tag == 0:
-                return None                     # return null
-
-            elif tag == 1:
-                raise NotImplementedError("tag == 1 means self; not implemented yet")
-
-            elif tag not in cursor.refs:
-                # jump past this object
-                cursor.index = cursor.origin + beg + bcnt + 4
-                return None                     # return null
-
-            else:
-                return cursor.refs[tag]         # return object
-            
-        elif tag == uproot.const.kNewClassTag:
-            print "TWO"
-
-            # new class and object
-            cname = cursor.cstring(source)
-
-            print "cname", repr(cname)
-
-            fct = classes.get(cname, Undefined)
-
-            if vers > 0:
-                print "inserting at", start + uproot.const.kMapOffset, cname, fct, "vers", vers, "start", start
-
-                cursor.refs[start + uproot.const.kMapOffset] = fct
-            else:
-                print "inserting at", len(cursor.refs) + 1, cname, fct, "vers", vers, "start", start
-
-                cursor.refs[len(cursor.refs) + 1] = fct
-
-            obj = fct(source, cursor, classes)
-
-            if vers > 0:
-                cursor.refs[beg + uproot.const.kMapOffset] = obj
-            else:
-                cursor.refs[len(cursor.refs) + 1] = obj
-
-            print "obj", obj
-            return obj                          # return object
-
-        else:
-            print "THREE"
-
-            # reference class, new object
-            ref = int(numpy.int64(tag) & ~uproot.const.kClassMask)
-
-            print "ref", ref, "cursor.refs", cursor.refs
-
-            if ref not in cursor.refs:
-                raise IOError("invalid class-tag reference")
-
-            fct = cursor.refs[ref]              # reference class
-
-            if fct not in classes.values():
-                raise IOError("invalid class-tag reference (not a factory)")
-
-            obj = fct(source, cursor, classes)  # new object
-
-            if vers > 0:
-                cursor.refs[beg + uproot.const.kMapOffset] = obj
-            else:
-                cursor.refs[len(cursor.refs) + 1] = obj
-
-            print "obj", obj
-
-            return obj                          # return object
-
 class Undefined(StreamedObject):
     """Represents a ROOT class that we have no deserializer for (and therefore skip over).
     """
     def __init__(self, source, cursor, classes):
-        start, cnt, vers = self._startcheck(source, cursor)
+        start, cnt, vers = _startcheck(source, cursor)
         cursor.skip(cnt - 2)
-        self._endcheck(start, cursor, cnt)
+        _endcheck(start, cursor, cnt)
