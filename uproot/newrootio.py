@@ -194,6 +194,10 @@ class Key(object):
         """
         if self.classname == b"TDirectory":
             return Directory(self, self.source, self.cursor.copied(), self.classes, self.compression)
+
+        elif self.classname in self.classes:
+            return self.classes[self.classname](self.source, self.cursor.copied(), self.classes)
+
         else:
             return Undefined(self.source, self.cursor.copied(), self.classes)
 
@@ -562,7 +566,7 @@ class TStreamerBasicType(TStreamerElement):
         elif self.fType in (uproot.const.kDouble, uproot.const.kDouble32):
             self.fSize = 8
         elif self.fType == uproot.const.kCharStar:
-            self.fSize = 8
+            self.fSize = numpy.dtype(numpy.intp).itemsize
         else:
             basic = False
 
@@ -640,8 +644,9 @@ class TStreamerString(TStreamerElement):
         _endcheck(start, cursor, cnt)
 
 def _defineclasses(infos, classes):
-    pass
-    
+    # HERE
+    classes[b"TH1F"] = TH1F
+
 ################################################################ objects generated from streamers (or not)
 
 class StreamedObject(object):
@@ -657,10 +662,98 @@ class StreamedObject(object):
         else:
             return "<{0} at 0x{1:012x}>".format(self.__class__.__name__, id(self))
 
+class TObject(StreamedObject):
+    "Base class for ROOT objects (ignore the streamer; use this instead)."
+    def __init__(self, source, cursor, classes):
+        _skiptobj(source, cursor)
+
+class TArray(StreamedObject):
+    "Base class for TArrays (which aren't streamed in the file)."
+    _format = struct.Struct("!i")
+    def __init__(self, source, cursor, classes):
+        # length = cursor.field(source, self._format)
+        # self.data = cursor.array(source, length, self._dtype)
+        print self.__class__.__name__
+
+class TArrayC(TArray):
+    "TArray of 8-bit integers."
+    _dtype = numpy.dtype(">i1")
+
+class TArrayS(TArray):
+    "TArray of 16-bit integers."
+    _dtype = numpy.dtype(">i2")
+
+class TArrayI(TArray):
+    "TArray of 32-bit integers."
+    _dtype = numpy.dtype(">i4")
+
+class TArrayL(TArray):
+    "TArray of 32-bit or 64-bit longs."
+    _dtype = numpy.dtype(numpy.int_).newbyteorder(">")
+
+class TArrayL64(TArray):
+    "TArray of 64-bit integers."
+    _dtype = numpy.dtype(">i8")
+
+class TArrayF(TArray):
+    "TArray of 32-bit floats."
+    _dtype = numpy.dtype(">f4")
+
+class TArrayD(TArray):
+    "TArray of 64-bit floats."
+    _dtype = numpy.dtype(">f8")
+
 class Undefined(StreamedObject):
-    """Represents a ROOT class that we have no deserializer for (and therefore skip over).
-    """
+    "Represents a ROOT class that we have no deserializer for (and therefore skip over)."
     def __init__(self, source, cursor, classes):
         start, cnt, vers = _startcheck(source, cursor)
         cursor.skip(cnt - 2)
         _endcheck(start, cursor, cnt)
+
+class TNamed(TObject):
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        TObject.__init__(self, source, cursor, classes)
+        self.fName = cursor.string(source)
+        self.fTitle = cursor.string(source)
+        print "TNamed", cnt, vers, repr(self.fName), repr(self.fTitle)
+        _endcheck(start, cursor, cnt)
+
+class TAttLine(StreamedObject):
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        self.fLineColor, self.fLineStyle, self.fLineWidth = cursor.fields(source, struct.Struct("!hhh"))
+        print "TAttLine", self.fLineColor, self.fLineStyle, self.fLineWidth
+        _endcheck(start, cursor, cnt)
+
+class TAttFill(StreamedObject):
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        self.fFillColor, self.fFillStyle = cursor.fields(source, struct.Struct("!hh"))
+        print "TAttFill", self.fFillColor, self.fFillStyle
+        _endcheck(start, cursor, cnt)
+
+class TAttMarker(StreamedObject):
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        self.fMarkerColor, self.fMarkerStyle, self.fMarkerSize = cursor.fields(source, struct.Struct("!hhf"))
+        print "TAttMarker", self.fMarkerColor, self.fMarkerStyle, self.fMarkerSize
+        _endcheck(start, cursor, cnt)
+
+class TH1(TNamed, TAttLine, TAttFill, TAttMarker):
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        print "TH1", cnt, vers
+        TNamed.__init__(self, source, cursor, classes)
+        TAttLine.__init__(self, source, cursor, classes)
+        TAttFill.__init__(self, source, cursor, classes)
+        TAttMarker.__init__(self, source, cursor, classes)
+        print cursor.hexdump(source)
+
+class TH1F(TH1, TArrayF):
+    def __init__(self, source, cursor, classes):
+        start, cnt, vers = _startcheck(source, cursor)
+        print "TH1F", cnt, vers
+        TH1.__init__(self, source, cursor, classes)
+        TArrayF.__init__(self, source, cursor, classes)
+        # _endcheck(start, cursor, cnt)
