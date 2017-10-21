@@ -81,7 +81,7 @@ class _ObjArray(object):
         print cursor.hexdump(source)
 
         # only TObjArray!
-        low, last = cursor.fields(source, struct.Struct("!ii"))
+        low = cursor.fields(source, struct.Struct("!i"))
 
         for i in range(size):
             z = StreamedObject._read(source, cursor, classes)
@@ -539,7 +539,7 @@ class StreamedObject(object):
 
             fct = cursor.refs[ref]              # reference class
 
-            if fct not in Deserialized.classes.values():
+            if fct not in classes.values():
                 raise IOError("invalid class-tag reference (not a factory)")
 
             obj = fct(source, cursor, classes)  # new object
