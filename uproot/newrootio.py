@@ -810,6 +810,8 @@ class TH1(TNamed, TAttLine, TAttFill, TAttMarker):
     _format1 = struct.Struct("!i")
     _format2 = struct.Struct("!hhdddddddd")
     _format3 = struct.Struct("!i")
+    _format4 = struct.Struct("!iB")
+    _format5 = struct.Struct("!i")
 
     def __init__(self, source, cursor, classes):
         start, cnt, vers = _startcheck(source, cursor)
@@ -827,12 +829,10 @@ class TH1(TNamed, TAttLine, TAttFill, TAttMarker):
         self.fSumw2 = TArrayD(source, cursor, classes)
         self.fOption = TString(source, cursor, classes)
         self.fFunctions = TList(source, cursor, classes)
-
-        print "TH1", self.fNcells, self.fXaxis, self.fYaxis, self.fZaxis, self.fBarOffset, self.fBarWidth, self.fEntries, self.fTsumw, self.fTsumw2, self.fTsumwx, self.fTsumwx2, self.fMaximum, self.fMinimum, self.fNormFactor, self.fContour, self.fSumw2, repr(self.fOption), self.fFunctions
-
-        print cursor.hexdump(source)
-
-        raise Exception
+        self.fBufferSize, _fBuffer = cursor.fields(source, self._format4)
+        self.fBuffer = cursor.array(source, self.fBufferSize, ">f8")
+        self.fBinStatErrOpt = cursor.field(source, self._format5)
+        _endcheck(start, cursor, cnt)
 
 class TH1F(TH1, TArrayF):
     def __init__(self, source, cursor, classes):
@@ -840,4 +840,7 @@ class TH1F(TH1, TArrayF):
         print "TH1F", cnt, vers
         TH1.__init__(self, source, cursor, classes)
         TArrayF.__init__(self, source, cursor, classes)
-        # _endcheck(start, cursor, cnt)
+
+        print "TH1F", self.fNcells, self.fXaxis.__dict__, self.fYaxis.__dict__, self.fZaxis.__dict__, self.fBarOffset, self.fBarWidth, self.fEntries, self.fTsumw, self.fTsumw2, self.fTsumwx, self.fTsumwx2, self.fMaximum, self.fMinimum, self.fNormFactor, self.fContour, self.fSumw2, repr(self.fOption), self.fFunctions, self.fBufferSize, self.fBuffer, self.fBinStatErrOpt, list(self)
+
+        _endcheck(start, cursor, cnt)
