@@ -167,6 +167,14 @@ class ROOTDirectory(object):
         return "{0};{1}".format(key.fName.decode("ascii"), key.fCycle).encode("ascii")
 
     def keys(self, recursive=False, filtername=lambda name: True, filterclass=lambda classname: True):
+        """Iterates over key names (bytes objects) in this directory.
+
+            * `recursive` if `True`, descend into subdirectories; if `False` (the default), do not.
+            * `filtername` must be callable; results are returned only if `filtername(key name)` returns `True`.
+            * `filterclass` must be callable; results are returned only if `filterclass(class name)` returns `True`.
+
+        When iterating recursively, eliminating a directory does not eliminate its contents.
+        """
         for key in self._keys:
             if filtername(key.fName) and filterclass(key.fClassName):
                 yield self._withcycle(key)
@@ -176,6 +184,14 @@ class ROOTDirectory(object):
                     yield "{0}/{1}".format(self._withcycle(key).decode("ascii"), name.decode("ascii")).encode("ascii")
 
     def values(self, recursive=False, filtername=lambda name: True, filterclass=lambda classname: True):
+        """Iterates over the contents (ROOT objects) in this directory.
+
+            * `recursive` if `True`, descend into subdirectories; if `False` (the default), do not.
+            * `filtername` must be callable; results are returned only if `filtername(key name)` returns `True`.
+            * `filterclass` must be callable; results are returned only if `filterclass(class name)` returns `True`.
+
+        When iterating recursively, eliminating a directory does not eliminate its contents.
+        """
         for key in self._keys:
             if filtername(key.fName) and filterclass(key.fClassName):
                 yield key.get()
@@ -185,6 +201,14 @@ class ROOTDirectory(object):
                     yield value
 
     def items(self, recursive=False, filtername=lambda name: True, filterclass=lambda classname: True):
+        """Iterates over key-value pairs in this directory.
+
+            * `recursive` if `True`, descend into subdirectories; if `False` (the default), do not.
+            * `filtername` must be callable; results are returned only if `filtername(key name)` returns `True`.
+            * `filterclass` must be callable; results are returned only if `filterclass(class name)` returns `True`.
+
+        When iterating recursively, eliminating a directory does not eliminate its contents.
+        """
         for key in self._keys:
             if filtername(key.fName) and filterclass(key.fClassName):
                 yield self._withcycle(key), key.get()
@@ -194,6 +218,14 @@ class ROOTDirectory(object):
                     yield "{0}/{1}".format(self._withcycle(key).decode("ascii"), name.decode("ascii")).encode("ascii"), value
 
     def classes(self, recursive=False, filtername=lambda name: True, filterclass=lambda classname: True):
+        """Iterates over key-classname pairs (both bytes objects) in this directory.
+
+            * `recursive` if `True`, descend into subdirectories; if `False` (the default), do not.
+            * `filtername` must be callable; results are returned only if `filtername(key name)` returns `True`.
+            * `filterclass` must be callable; results are returned only if `filterclass(class name)` returns `True`.
+
+        When iterating recursively, eliminating a directory does not eliminate its contents.
+        """
         for key in self._keys:
             if filtername(key.fName) and filterclass(key.fClassName):
                 yield self._withcycle(key), key.fClassName
@@ -203,15 +235,43 @@ class ROOTDirectory(object):
                     yield "{0}/{1}".format(self._withcycle(key).decode("ascii"), name.decode("ascii")).encode("ascii"), classname
 
     def allkeys(self, filtername=lambda name: True, filterclass=lambda classname: True):
+        """Recursively iterates over key names (bytes objects) in this directory.
+
+            * `filtername` must be callable; results are returned only if `filtername(key name)` returns `True`.
+            * `filterclass` must be callable; results are returned only if `filterclass(class name)` returns `True`.
+
+        When iterating recursively, eliminating a directory does not eliminate its contents.
+        """
         return self.keys(True, filtername, filterclass)
 
     def allvalues(self, filtername=lambda name: True, filterclass=lambda classname: True):
+        """Recursively iterates over the contents (ROOT objects) in this directory.
+
+            * `filtername` must be callable; results are returned only if `filtername(key name)` returns `True`.
+            * `filterclass` must be callable; results are returned only if `filterclass(class name)` returns `True`.
+
+        When iterating recursively, eliminating a directory does not eliminate its contents.
+        """
         return self.values(True, filtername, filterclass)
 
     def allitems(self, filtername=lambda name: True, filterclass=lambda classname: True):
+        """Recursively iterates over key-value pairs in this directory.
+
+            * `filtername` must be callable; results are returned only if `filtername(key name)` returns `True`.
+            * `filterclass` must be callable; results are returned only if `filterclass(class name)` returns `True`.
+
+        When iterating recursively, eliminating a directory does not eliminate its contents.
+        """
         return self.items(True, filtername, filterclass)
 
     def allclasses(self, filtername=lambda name: True, filterclass=lambda classname: True):
+        """Recursively iterates over key-classname pairs (both bytes objects) in this directory.
+
+            * `filtername` must be callable; results are returned only if `filtername(key name)` returns `True`.
+            * `filterclass` must be callable; results are returned only if `filterclass(class name)` returns `True`.
+
+        When iterating recursively, eliminating a directory does not eliminate its contents.
+        """
         return self.classes(True, filtername, filterclass)
 
     def get(self, name, cycle=None):
@@ -219,7 +279,7 @@ class ROOTDirectory(object):
 
         Synonym for `dir[name]`.
 
-        An explicit `cycle` overrides ';'.
+        An explicit `cycle` overrides any number after ';'.
         """
         if hasattr(name, "encode"):
             name = name.encode("ascii")
