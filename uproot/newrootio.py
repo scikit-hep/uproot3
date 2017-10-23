@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import struct
+import re
 from collections import namedtuple
 
 import numpy
@@ -68,8 +69,8 @@ class ROOTDirectory(object):
     """
 
     class _FileContext(object):
-        def __init__(self, streaminfo, classes, compression):
-            self.streaminfo, self.classes, self.compression = streaminfo, classes, compression
+        def __init__(self, streamerinfos, classes, compression):
+            self.streamerinfos, self.classes, self.compression = streamerinfos, classes, compression
 
     @staticmethod
     def read(source, *args):
@@ -103,10 +104,10 @@ class ROOTDirectory(object):
 
             streamercontext = ROOTDirectory._FileContext(None, streamerclasses, Compression(fCompress))
             streamerkey = TKey.read(source, Cursor(fSeekInfo), streamercontext)
-            streaminfo = _readstreamers(streamerkey._source, streamerkey._cursor, streamercontext)
-            classes = _defineclasses(streaminfo)
+            streamerinfos = _readstreamers(streamerkey._source, streamerkey._cursor, streamercontext)
+            classes = _defineclasses(streamerinfos)
 
-            context = ROOTDirectory._FileContext(streaminfo, classes, Compression(fCompress))
+            context = ROOTDirectory._FileContext(streamerinfos, classes, Compression(fCompress))
 
             keycursor = Cursor(fBEGIN)
             mykey = TKey.read(source, keycursor, context)
@@ -419,18 +420,159 @@ def _readstreamers(source, cursor, context):
     size = cursor.field(source, struct.Struct("!i"))
     _format_n = struct.Struct("!B")
 
-    infos = []
+    streamerinfos = []
     for i in range(size):
-        infos.append(_readanyref(source, cursor, context))
-        assert isinstance(infos[-1], TStreamerInfo)
+        streamerinfos.append(_readanyref(source, cursor, context))
+        assert isinstance(streamerinfos[-1], TStreamerInfo)
         # options not used, but they must be read in
         n = cursor.field(source, _format_n)
         cursor.bytes(source, n)
 
     _endcheck(start, cursor, cnt)
+    return streamerinfos
 
-def _defineclasses(infos):
-    return {b"TH1F": TH1F}
+def _defineclasses(streamerinfos):
+    classes = {}
+
+    for streamerinfo in streamerinfos:
+        code = ["def _readinto(self, source, cursor, context):"]
+        code.append("    start, cnt, vers = _startcheck(source, cursor)")
+        formats = {}
+        dtypes = {}
+        basicnames = []
+        basicletters = ""
+        for elementi, element in enumerate(streamerinfo.fElements):
+            if isinstance(element, TStreamerArtificial):
+                raise NotImplementedError
+
+            elif isinstance(element, TStreamerBase):
+                code.append("    {0}._readinto(self, source, cursor, context)".format(element.fName))
+
+            elif isinstance(element, TStreamerBasicPointer):
+                name = element.fName.decode("ascii")
+                formatnum = len(formats) + 1
+                formats["_format{0}".format(formatnum)] = struct.Struct("!B")
+                code.append("    _{0} = cursor.field(source, self._format{1})".format(name, formatnum))
+
+                m = re.search("\[([^\]]*)\]", element.fTitle.decode("ascii"))
+                if m is None:
+                    raise ValueError("TStreamerBasicPointer fTitle should have a counter name between brackets: {0}".format(repr(element.fTitle)))
+                counter = m.group(1)
+
+                assert uproot.const.kOffsetP < element.fType < uproot.const.kOffsetP + 20
+                fType = element.fType - uproot.const.kOffsetP
+
+                dtypename = "_dtype{0}".format(len(dtypes) + 1)
+                if fType == uproot.const.kBool:
+                    dtypes[dtypename] = numpy.dtype(numpy.bool_)
+                elif fType == uproot.const.kChar:
+                    dtypes[dtypename] = numpy.dtype("i1")
+                elif fType == uproot.const.kUChar:
+                    dtypes[dtypename] = numpy.dtype("u1")
+                elif fType == uproot.const.kShort:
+                    dtypes[dtypename] = numpy.dtype(">i2")
+                elif fType == uproot.const.kUShort:
+                    dtypes[dtypename] = numpy.dtype(">u2")
+                elif fType == uproot.const.kInt:
+                    dtypes[dtypename] = numpy.dtype(">i4")
+                elif fType in (uproot.const.kBits, uproot.const.kUInt, uproot.const.kCounter):
+                    dtypes[dtypename] = numpy.dtype(">u4")
+                elif fType == uproot.const.kLong:
+                    dtypes[dtypename] = numpy.dtype(numpy.long).newbyteorder(">")
+                elif fType == uproot.const.kULong:
+                    dtypes[dtypename] = numpy.dtype(numpy.ulong).newbyteorder(">")
+                elif fType == uproot.const.kLong64:
+                    dtypes[dtypename] = numpy.dtype(">i8")
+                elif fType == uproot.const.kULong64:
+                    dtypes[dtypename] = numpy.dtype(">u8")
+                elif fType in (uproot.const.kFloat, uproot.const.kFloat16):
+                    dtypes[dtypename] = numpy.dtype(">f4")
+                elif fType in (uproot.const.kDouble, uproot.const.kDouble32):
+                    dtypes[dtypename] = numpy.dtype(">f8")
+                else:
+                    raise NotImplementedError(fType)
+                code.append("    self.{0} = cursor.array(source, self.{1}, self.{2})".format(name, counter, dtypename))
+
+            elif isinstance(element, TStreamerBasicType):
+                if element.fArrayLength == 0:
+                    basicnames.append("self." + element.fName.decode("ascii"))
+                    if element.fType == uproot.const.kBool:
+                        basicletters += "?"
+                    elif element.fType == uproot.const.kChar:
+                        basicletters += "b"
+                    elif element.fType == uproot.const.kUChar:
+                        basicletters += "B"
+                    elif element.fType == uproot.const.kShort:
+                        basicletters += "h"
+                    elif element.fType == uproot.const.kUShort:
+                        basicletters += "H"
+                    elif element.fType == uproot.const.kInt:
+                        basicletters += "i"
+                    elif element.fType in (uproot.const.kBits, uproot.const.kUInt, uproot.const.kCounter):
+                        basicletters += "I"
+                    elif element.fType == uproot.const.kLong:
+                        basicletters += "l"
+                    elif element.fType == uproot.const.kULong:
+                        basicletters += "L"
+                    elif element.fType == uproot.const.kLong64:
+                        basicletters += "q"
+                    elif element.fType == uproot.const.kULong64:
+                        basicletters += "Q"
+                    elif element.fType in (uproot.const.kFloat, uproot.const.kFloat16):
+                        basicletters += "f"
+                    elif element.fType in (uproot.const.kDouble, uproot.const.kDouble32):
+                        basicletters += "d"
+                    else:
+                        raise NotImplementedError(element.fType)
+
+                    if elementi + 1 == len(streamerinfo.fElements) or not isinstance(streamerinfo.fElements[elementi + 1], TStreamerBasicType) or streamerinfo.fElements[elementi + 1].fArrayLength != 0:
+                        formatnum = len(formats) + 1
+                        formats["_format{0}".format(formatnum)] = struct.Struct("!" + basicletters)
+                        if len(basicnames) == 1:
+                            code.append("    {0} = cursor.field(source, self._format{1})".format(basicnames[0], formatnum))
+                        else:
+                            code.append("    {0} = cursor.fields(source, self._format{1})".format(", ".join(basicnames), formatnum))
+
+                        basicnames = []
+                        basicletters = ""
+
+                else:
+                    raise NotImplementedError(element.fArrayLength)
+
+            elif isinstance(element, TStreamerLoop):
+                raise NotImplementedError
+
+            elif isinstance(element, TStreamerObjectAnyPointer):
+                raise NotImplementedError
+
+            elif isinstance(element, TStreamerObjectPointer):
+                code.append("    {0} = {1}.read(source, cursor, context)".format(element.fName, element.fTypeName.rstrip("*")))
+
+            elif isinstance(element, TStreamerSTL):
+                raise NotImplementedError
+
+            elif isinstance(element, TStreamerSTLString):
+                raise NotImplementedError
+
+            elif isinstance(element, (TStreamerObject, TStreamerObjectAny, TStreamerString)):
+                code.append("    {0} = {1}.read(source, cursor, context)".format(element.fName, element.fTypeName))
+
+            else:
+                raise AssertionError
+
+        code.append("    _endcheck(start, cursor, cnt)")
+        print "\n".join(code)
+
+        env = {}
+        eval(compile("\n".join(code), "<generated from TStreamerInfo at 0x{0:012x}>".format(id(streamerinfo)), "exec"), env)
+        classes[streamerinfo.fName] = type(streamerinfo.fName, (ROOTStreamedObject,), {"_readinto": env["_readinto"]})
+        classes[streamerinfo.fName]._sourcecode = code
+
+        if streamerinfo.fName == b"TH1":
+            break
+
+    print classes
+    return classes
 
 ################################################################ built-in ROOT objects for bootstrapping up to streamed classes
 
@@ -795,7 +937,6 @@ class TNamed(TObject):
         TObject._readinto(self, source, cursor, context)
         self.fName = cursor.string(source)
         self.fTitle = cursor.string(source)
-        print "TNamed", cnt, vers, repr(self.fName), repr(self.fTitle)
         _endcheck(start, cursor, cnt)
 
 class TAttLine(ROOTStreamedObject):
@@ -803,7 +944,6 @@ class TAttLine(ROOTStreamedObject):
     def _readinto(self, source, cursor, context):
         start, cnt, vers = _startcheck(source, cursor)
         self.fLineColor, self.fLineStyle, self.fLineWidth = cursor.fields(source, struct.Struct("!hhh"))
-        print "TAttLine", self.fLineColor, self.fLineStyle, self.fLineWidth
         _endcheck(start, cursor, cnt)
 
 class TAttFill(ROOTStreamedObject):
@@ -811,7 +951,6 @@ class TAttFill(ROOTStreamedObject):
     def _readinto(self, source, cursor, context):
         start, cnt, vers = _startcheck(source, cursor)
         self.fFillColor, self.fFillStyle = cursor.fields(source, struct.Struct("!hh"))
-        print "TAttFill", self.fFillColor, self.fFillStyle
         _endcheck(start, cursor, cnt)
 
 class TAttMarker(ROOTStreamedObject):
@@ -819,7 +958,6 @@ class TAttMarker(ROOTStreamedObject):
     def _readinto(self, source, cursor, context):
         start, cnt, vers = _startcheck(source, cursor)
         self.fMarkerColor, self.fMarkerStyle, self.fMarkerSize = cursor.fields(source, struct.Struct("!hhf"))
-        print "TAttMarker", self.fMarkerColor, self.fMarkerStyle, self.fMarkerSize
         _endcheck(start, cursor, cnt)
 
 class TAttAxis(ROOTStreamedObject):
@@ -827,14 +965,12 @@ class TAttAxis(ROOTStreamedObject):
     def _readinto(self, source, cursor, context):
         start, cnt, vers = _startcheck(source, cursor)
         self.fNdivisions, self.fAxisColor, self.fLabelColor, self.fLabelFont, self.fLabelOffset, self.fLabelSize, self.fTickLength, self.fTitleOffset, self.fTitleSize, self.fTitleColor, self.fTitleFont = cursor.fields(source, struct.Struct("!ihhhfffffhh"))
-        print "TAttAxis", self.fNdivisions, self.fAxisColor, self.fLabelColor, self.fLabelFont, self.fLabelOffset, self.fLabelSize, self.fTickLength, self.fTitleOffset, self.fTitleSize, self.fTitleColor, self.fTitleFont
         _endcheck(start, cursor, cnt)
 
 class TCollection(TObject):
     @staticmethod
     def _readinto(self, source, cursor, context):
         start, cnt, vers = _startcheck(source, cursor)
-        print "TCollection", cnt, vers
         TObject._readinto(self, source, cursor, context)
         self.fName = TString.read(source, cursor, context)
         self.fSize = cursor.field(source, struct.Struct("!i"))
@@ -844,7 +980,6 @@ class TSeqCollection(TCollection):
     @staticmethod
     def _readinto(self, source, cursor, context):
         start, cnt, vers = _startcheck(source, cursor)
-        print "TSeqCollection", cnt, vers
         TCollection._readinto(self, source, cursor, context)
         _endcheck(start, cursor, cnt)
 
@@ -852,7 +987,6 @@ class THashList(TList):
     @staticmethod
     def _readinto(self, source, cursor, context):
         start, cnt, vers = _startcheck(source, cursor)
-        print "THashList", cnt, vers
         TList._readinto(self, source, cursor, context)
         _endcheck(start, cursor, cnt)
 
@@ -868,14 +1002,12 @@ class TAxis(TNamed, TAttAxis):
         self.fTimeFormat = TString.read(source, cursor, context)
         self.fLabels = _readanyref(source, cursor, context)
         self.fModLabs = _readanyref(source, cursor, context)
-        print "TAxis", self.fNbins, self.fXmin, self.fXmax, self.fXbins, self.fFirst, self.fLast, self.fBits2, self.fTimeDisplay, repr(self.fTimeFormat), self.fLabels, self.fModLabs
         _endcheck(start, cursor, cnt)
 
 class TH1(TNamed, TAttLine, TAttFill, TAttMarker):
     @staticmethod
     def _readinto(self, source, cursor, context):
         start, cnt, vers = _startcheck(source, cursor)
-        print "TH1", cnt, vers
         TNamed._readinto(self, source, cursor, context)
         TAttLine._readinto(self, source, cursor, context)
         TAttFill._readinto(self, source, cursor, context)
@@ -904,8 +1036,6 @@ class TH1F(TH1, TArrayF):
     @staticmethod
     def _readinto(self, source, cursor, context):
         start, cnt, vers = _startcheck(source, cursor)
-        print "TH1F", cnt, vers
         TH1._readinto(self, source, cursor, context)
         TArrayF._readinto(self, source, cursor, context)
-        print "TH1F", self.fNcells, self.fXaxis.__dict__, self.fYaxis.__dict__, self.fZaxis.__dict__, self.fBarOffset, self.fBarWidth, self.fEntries, self.fTsumw, self.fTsumw2, self.fTsumwx, self.fTsumwx2, self.fMaximum, self.fMinimum, self.fNormFactor, self.fContour, self.fSumw2, repr(self.fOption), self.fFunctions, self.fBufferSize, self.fBuffer, self.fBinStatErrOpt, list(self)
         _endcheck(start, cursor, cnt)
