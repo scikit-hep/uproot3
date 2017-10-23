@@ -793,16 +793,8 @@ class TAxis(TNamed, TAttAxis):
         self.fXbins = TArrayD(source, cursor, classes)
         self.fFirst, self.fLast, self.fBits2, self.fTimeDisplay = cursor.fields(source, struct.Struct("!iiH?"))
         self.fTimeFormat = TString(source, cursor, classes)
-        _fLabels = cursor.field(source, struct.Struct("!i"))
-        if _fLabels != 0:
-            raise NotImplementedError
-        else:
-            self.fLabels = None
-        _fModLabs = cursor.field(source, struct.Struct("!i"))
-        if _fModLabs != 0:
-            raise NotImplementedError
-        else:
-            self.fModLabs = None
+        self.fLabels = _readanyref(source, cursor, classes)
+        self.fModLabs = _readanyref(source, cursor, classes)
         print "TAxis", self.fNbins, self.fXmin, self.fXmax, self.fXbins, self.fFirst, self.fLast, self.fBits2, self.fTimeDisplay, repr(self.fTimeFormat), self.fLabels, self.fModLabs
         _endcheck(start, cursor, cnt)
 
