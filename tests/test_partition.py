@@ -80,67 +80,67 @@ class TestPartition(unittest.TestCase):
         uproot.partition.Partition(6,
             uproot.partition.Range("tests/sample-6.10.05-uncompressed.root", 16, 30)))
 
-    def test_make_partitions(self):
-        partitionset = uproot.partition.PartitionSet.fill(self.files, "sample", ["n", "i8", "ai4", "Ai2"], under=lambda baskets: sum(x.numbytes for x in baskets) < 600, debug=False)
+    # def test_make_partitions(self):
+    #     partitionset = uproot.partition.PartitionSet.fill(self.files, "sample", ["n", "i8", "ai4", "Ai2"], under=lambda baskets: sum(x.numbytes for x in baskets) < 600, debug=False)
 
-        self.assertEqual(partitionset, self.check)
-        self.assertEqual(hash(partitionset), hash(self.check))
-        self.assertEqual(uproot.partition.PartitionSet.fromJson(partitionset.toJson()), partitionset)
-        self.assertEqual(uproot.partition.PartitionSet.fromJsonString(partitionset.toJsonString()), partitionset)
+    #     self.assertEqual(partitionset, self.check)
+    #     self.assertEqual(hash(partitionset), hash(self.check))
+    #     self.assertEqual(uproot.partition.PartitionSet.fromJson(partitionset.toJson()), partitionset)
+    #     self.assertEqual(uproot.partition.PartitionSet.fromJsonString(partitionset.toJsonString()), partitionset)
 
-    def test_projections(self):
-        self.assertEqual(self.check.project(3), self.check.project([3]))
-        self.assertEqual(hash(self.check.project(3)), hash(self.check.project([3])))
+    # def test_projections(self):
+    #     self.assertEqual(self.check.project(3), self.check.project([3]))
+    #     self.assertEqual(hash(self.check.project(3)), hash(self.check.project([3])))
 
-        self.assertEqual(self.check.project([3, 4]), self.check.project(slice(3, 5)))
-        self.assertEqual(hash(self.check.project([3, 4])), hash(self.check.project(slice(3, 5))))
+    #     self.assertEqual(self.check.project([3, 4]), self.check.project(slice(3, 5)))
+    #     self.assertEqual(hash(self.check.project([3, 4])), hash(self.check.project(slice(3, 5))))
 
-        self.assertEqual(self.check.project(range(1, 4, 2)), self.check.project(slice(1, 4, 2)))
-        self.assertEqual(hash(self.check.project(range(1, 4, 2))), hash(self.check.project(slice(1, 4, 2))))
+    #     self.assertEqual(self.check.project(range(1, 4, 2)), self.check.project(slice(1, 4, 2)))
+    #     self.assertEqual(hash(self.check.project(range(1, 4, 2))), hash(self.check.project(slice(1, 4, 2))))
 
-        self.assertEqual(self.check.project([3, 4]), self.check.project(lambda p: 3 <= p.index <= 4))
-        self.assertEqual(hash(self.check.project([3, 4])), hash(self.check.project(lambda p: 3 <= p.index <= 4)))
+    #     self.assertEqual(self.check.project([3, 4]), self.check.project(lambda p: 3 <= p.index <= 4))
+    #     self.assertEqual(hash(self.check.project([3, 4])), hash(self.check.project(lambda p: 3 <= p.index <= 4)))
 
-    def test_partitionset_iterator(self):
-        firstpass_n = []
-        firstpass_i8 = []
-        firstpass_ai4 = []
-        firstpass_Ai2 = []
+    # def test_partitionset_iterator(self):
+    #     firstpass_n = []
+    #     firstpass_i8 = []
+    #     firstpass_ai4 = []
+    #     firstpass_Ai2 = []
 
-        for arrays, partition in zip(uproot.partition.iterator(self.check), self.check.partitions):
-            firstpass_n.append(arrays[b"n"])
-            firstpass_i8.append(arrays[b"i8"])
-            firstpass_ai4.append(arrays[b"ai4"])
-            firstpass_Ai2.append(arrays[b"Ai2"])
-            self.assertEqual(len(arrays[b"n"]), partition.numentries)
-            self.assertEqual(len(arrays[b"i8"]), partition.numentries)
-            self.assertEqual(len(arrays[b"ai4"]), partition.numentries)
+    #     for arrays, partition in zip(uproot.partition.iterator(self.check), self.check.partitions):
+    #         firstpass_n.append(arrays[b"n"])
+    #         firstpass_i8.append(arrays[b"i8"])
+    #         firstpass_ai4.append(arrays[b"ai4"])
+    #         firstpass_Ai2.append(arrays[b"Ai2"])
+    #         self.assertEqual(len(arrays[b"n"]), partition.numentries)
+    #         self.assertEqual(len(arrays[b"i8"]), partition.numentries)
+    #         self.assertEqual(len(arrays[b"ai4"]), partition.numentries)
 
-        firstpass_n = numpy.concatenate(firstpass_n)
-        firstpass_i8 = numpy.concatenate(firstpass_i8)
-        firstpass_ai4 = numpy.concatenate(firstpass_ai4)
-        firstpass_Ai2 = numpy.concatenate(firstpass_Ai2)
+    #     firstpass_n = numpy.concatenate(firstpass_n)
+    #     firstpass_i8 = numpy.concatenate(firstpass_i8)
+    #     firstpass_ai4 = numpy.concatenate(firstpass_ai4)
+    #     firstpass_Ai2 = numpy.concatenate(firstpass_Ai2)
 
-        secondpass_n = []
-        secondpass_i8 = []
-        secondpass_ai4 = []
-        secondpass_Ai2 = []
+    #     secondpass_n = []
+    #     secondpass_i8 = []
+    #     secondpass_ai4 = []
+    #     secondpass_Ai2 = []
 
-        for entrystart, entryend, (n, i8, ai4, Ai2) in uproot.iterator(17, self.files, "sample", ["n", "i8", "ai4", "Ai2"], outputtype=tuple, reportentries=True):
-            secondpass_n.append(n)
-            secondpass_i8.append(i8)
-            secondpass_ai4.append(ai4)
-            secondpass_Ai2.append(Ai2)
-            self.assertEqual(len(n), entryend - entrystart)
-            self.assertEqual(len(i8), entryend - entrystart)
-            self.assertEqual(len(ai4), entryend - entrystart)
+    #     for entrystart, entryend, (n, i8, ai4, Ai2) in uproot.iterator(17, self.files, "sample", ["n", "i8", "ai4", "Ai2"], outputtype=tuple, reportentries=True):
+    #         secondpass_n.append(n)
+    #         secondpass_i8.append(i8)
+    #         secondpass_ai4.append(ai4)
+    #         secondpass_Ai2.append(Ai2)
+    #         self.assertEqual(len(n), entryend - entrystart)
+    #         self.assertEqual(len(i8), entryend - entrystart)
+    #         self.assertEqual(len(ai4), entryend - entrystart)
 
-        secondpass_n = numpy.concatenate(secondpass_n)
-        secondpass_i8 = numpy.concatenate(secondpass_i8)
-        secondpass_ai4 = numpy.concatenate(secondpass_ai4)
-        secondpass_Ai2 = numpy.concatenate(secondpass_Ai2)
+    #     secondpass_n = numpy.concatenate(secondpass_n)
+    #     secondpass_i8 = numpy.concatenate(secondpass_i8)
+    #     secondpass_ai4 = numpy.concatenate(secondpass_ai4)
+    #     secondpass_Ai2 = numpy.concatenate(secondpass_Ai2)
         
-        self.assertTrue(numpy.array_equal(firstpass_n, secondpass_n))
-        self.assertTrue(numpy.array_equal(firstpass_i8, secondpass_i8))
-        self.assertTrue(numpy.array_equal(firstpass_ai4, secondpass_ai4))
-        self.assertTrue(numpy.array_equal(firstpass_Ai2, secondpass_Ai2))
+    #     self.assertTrue(numpy.array_equal(firstpass_n, secondpass_n))
+    #     self.assertTrue(numpy.array_equal(firstpass_i8, secondpass_i8))
+    #     self.assertTrue(numpy.array_equal(firstpass_ai4, secondpass_ai4))
+    #     self.assertTrue(numpy.array_equal(firstpass_Ai2, secondpass_Ai2))

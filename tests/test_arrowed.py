@@ -39,16 +39,16 @@ class TestArrowed(unittest.TestCase):
     def runTest(self):
         pass
     
-    def test_arrowed(self):
-        try:
-            import arrowed
-        except ImportError:
-            return
+    # def test_arrowed(self):
+    #     try:
+    #         import arrowed
+    #     except ImportError:
+    #         return
 
-        tree = uproot.open("tests/mc10events.root")["Events"]
-        tree.arrowed.schema().format()
-        proxy = tree.arrowed.proxy()
+    #     tree = uproot.open("tests/mc10events.root")["Events"]
+    #     tree.arrowed.schema().format()
+    #     proxy = tree.arrowed.proxy()
         
-        self.assertEqual(proxy[0].AddAK8CHS[0].sj1._toJson(), {"phi": 0.3957490921020508, "pt": 151.0018768310547, "m": 3.729222536087036, "q": -0.19528420269489288, "eta": -2.625094413757324, "csv": -10.0, "qgid": -1.0})
+    #     self.assertEqual(proxy[0].AddAK8CHS[0].sj1._toJson(), {"phi": 0.3957490921020508, "pt": 151.0018768310547, "m": 3.729222536087036, "q": -0.19528420269489288, "eta": -2.625094413757324, "csv": -10.0, "qgid": -1.0})
 
-        self.assertAlmostEqual(tree.arrowed.run(lambda events: events[0].Muon[0].pt), 28.0707492828)
+    #     self.assertAlmostEqual(tree.arrowed.run(lambda events: events[0].Muon[0].pt), 28.0707492828)
