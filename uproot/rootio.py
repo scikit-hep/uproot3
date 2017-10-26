@@ -692,87 +692,52 @@ class TKey(ROOTObject):
             return Undefined(self._source, self._cursor.copied(), self._context)
 
 class TTree(ROOTObject):
-    # although this could come from streamers, we'd like to avoid reading some items (baskets)
+    # although this could come from streamers, we'd like to avoid reading some items
     # and control when the source gets disposed of
+
+    _format_v16 = struct.Struct("!qqqqdiiiqqqqq")
+    _format_v17 = struct.Struct("!qqqqdiiiiqqqqq")
+    _format_v18 = struct.Struct("!qqqqqdiiiiqqqqqq")
+    _format_v19 = struct.Struct("!qqqqqdiiiiiqqqqqq")
+
     @staticmethod
     def _readinto(self, source, cursor, context):
         start, cnt, vers = _startcheck(source, cursor)
 
-        #  *  fName:                   TString
-        #  *  fTitle:                  TString
-        
-        # (*) fLineColor:              Color_t
-        # (*) fLineStyle:              Style_t
-        # (*) fLineWidth:              Width_t
+        self._fName, self._fTitle = _nametitle(source, cursor)
+        Undefined.read(source, cursor, context)  # TAttLine (fLineColor, fLineStyle, fLineWidth)
+        Undefined.read(source, cursor, context)  # TAttFill (fFillColor, fFillStyle)
+        Undefined.read(source, cursor, context)  # TAttMarker (fMarkerColor, fMarkerSize, fMarkerStyle)
 
-        # (*) fFillColor:              Color_t
-        # (*) fFillStyle:              Style_t
+        if vers < 16:
+            raise NotImplementedError("TTree too old")
+        elif vers == 16:
+            self._fEntries, fTotBytes, fZipBytes, fSavedBytes, fWeight, fTimerInterval, fScanField, fUpdate, fMaxEntries, fMaxEntryLoop, fMaxVirtualSize, fAutoSave, fEstimate = cursor.fields(source, TTree._format_v16)
+        elif vers == 17:
+            self._fEntries, fTotBytes, fZipBytes, fSavedBytes, fWeight, fTimerInterval, fScanField, fUpdate, fDefaultEntryOffsetLen, fMaxEntries, fMaxEntryLoop, fMaxVirtualSize, fAutoSave, fEstimate = cursor.fields(source, TTree._format_v17)
+        elif vers == 18:
+            self._fEntries, fTotBytes, fZipBytes, fSavedBytes, fFlushedBytes, fWeight, fTimerInterval, fScanField, fUpdate, fDefaultEntryOffsetLen, fMaxEntries, fMaxEntryLoop, fMaxVirtualSize, fAutoSave, fAutoFlush, fEstimate = cursor.fields(source, TTree._format_v18)
+        elif vers >= 19:
+            self._fEntries, fTotBytes, fZipBytes, fSavedBytes, fFlushedBytes, fWeight, fTimerInterval, fScanField, fUpdate, fDefaultEntryOffsetLen, self._fNClusterRange, fMaxEntries, fMaxEntryLoop, fMaxVirtualSize, fAutoSave, fAutoFlush, fEstimate = cursor.fields(source, TTree._format_v19)
+            cursor.index += 1
+            self._fClusterRangeEnd = cursor.array(source, n, ">i8")
+            cursor.index += 1
+            self._fClusterSize = cursor.array(source, n, ">i8")
 
-        # (*) fMarkerColor:            Color_t
-        # (*) fMarkerSize:             Size_t
-        # (*) fMarkerStyle:            Style_t
-
-        #  *  fEntries:                Long64_t
-        # (*) fTotBytes:               Long64_t
-        # (*) fZipBytes:               Long64_t
-        # (*) fSavedBytes:             Long64_t
-        # (*) fFlushedBytes:           Long64_t
-        # (*) fWeight:                 Double_t
-        # (*) fTimerInterval:          Int_t
-        # (*) fScanField:              Int_t
-        # (*) fUpdate:                 Int_t
-        # (*) fDefaultEntryOffsetLen:  Int_t
-        #  *  fNClusterRange:          Int_t
-        # (*) fMaxEntries:             Long64_t
-        # (*) fMaxEntryLoop:           Long64_t
-        # (*) fMaxVirtualSize:         Long64_t
-        # (*) fAutoSave:               Long64_t
-        # (*) fAutoFlush:              Long64_t
-        # (*) fEstimate:               Long64_t
-        #  *  fClusterRangeEnd:        Long64_t*
-        #  *  fClusterSize:            Long64_t*
-        #  *  fBranches:               TObjArray
-        #  *  fLeaves:                 TObjArray
-        #  *  fAliases:                TList
-        # (*) fIndexValues:            TArrayD
-        # (*) fIndex:                  TArrayI
-        # (*) fTreeIndex:              TVirtualIndex*
-        # (*) fFriends:                TList*
-        #  *  fUserInfo:               TList*
-        # (*) fBranchRef:              TBranchRef*
+        self._fBranches = TObjArray.read(source, cursor, context)
+        self._fLeaves = TObjArray.read(source, cursor, context)
+        self._fAliases = _readanyref(source, cursor, context)
+        _readanyref(source, cursor, context, wantundefined=True)   # fIndexValues
+        _readanyref(source, cursor, context, wantundefined=True)   # fIndex
+        _readanyref(source, cursor, context, wantundefined=True)   # fTreeIndex
+        _readanyref(source, cursor, context, wantundefined=True)   # fFriends
+        self._fUserInfo = _readanyref(source, cursor, context)
+        _readanyref(source, cursor, context, wantundefined=True)   # fBranchRef
 
         #  ?  fIOFeatures:             TIOFeatures
 
-        #     fCacheDoAutoInit:        Bool_t
-        #     fCacheDoClusterPrefetch: Bool_t
-        #     fCacheSize:              Long64_t
-        #     fCacheUserSet:           Bool_t
-        #     fChainOffset:            Bool_t
-        #     fClones:                 TList
-        #     fDebug:                  Int_t
-        #     fDebugMax:               Long64_t
-        #     fDebugMin:               Long64_t
-        #     fDirectory:              TDirectory*
-        #     fEntryList:              TEntryList*
-        #     fEventList:              TEventList
-        #     fFileNumber:             Int_t
-        #     fFriendLockStatus:       UInt_t
-        #     fIMTEnabled:             Bool_t
-        #     fMakeClass:              Int_t
-        #     fMaxClusterRange:        Int_t
-        #     fNEntriesSinceSorting:   UInt_t
-        #     fNfill:                  Int_t
-        #     fNotify:                 TObject*
-        #     fPacketSize:             Int_t
-        #     fPerfStats:              TBirtualPerfStats*
-        #     fPlayer:                 TVirtualTreePlayer*
-        #     fReadEntry:              Long64_t
-        #     fSeqBranches:            std::vector<TBranch*>
-        #     fSortedBranches:         std::vector<std::pair<Long64_t, TBranch*>>
-        #     fTotalBuffers:           std::atomic<Long64_t>
-        #     fTransientBuffer:        TBuffer
 
-
+        # HERE
 
 
         
