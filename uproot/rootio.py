@@ -341,7 +341,7 @@ def _nametitle(source, cursor):
     _endcheck(start, cursor, cnt)
     return name, title
 
-def _readanyref(source, cursor, context):
+def _readanyref(source, cursor, context, wantundefined=False):
     beg = cursor.index - cursor.origin
     bcnt = cursor.field(source, struct.Struct("!I"))
 
@@ -358,7 +358,7 @@ def _readanyref(source, cursor, context):
     if numpy.int64(tag) & uproot.const.kClassMask == 0:
         # reference object
         if tag == 0:
-            return None                             # return null
+            return None                                    # return null
 
         elif tag == 1:
             raise NotImplementedError("tag == 1 means self; not implemented yet")
@@ -366,10 +366,10 @@ def _readanyref(source, cursor, context):
         elif tag not in cursor.refs:
             # jump past this object
             cursor.index = cursor.origin + beg + bcnt + 4
-            return None                             # return null
+            return None                                    # return null
 
         else:
-            return cursor.refs[tag]                 # return object
+            return cursor.refs[tag]                        # return object
 
     elif tag == uproot.const.kNewClassTag:
         # new class and object
@@ -382,14 +382,17 @@ def _readanyref(source, cursor, context):
         else:
             cursor.refs[len(cursor.refs) + 1] = fct
 
-        obj = fct.read(source, cursor, context)
+        if wantundefined:
+            obj = Undefined.read(source, cursor, context)  # placeholder new object
+        else:
+            obj = fct.read(source, cursor, context)        # new object
 
         if vers > 0:
             cursor.refs[beg + uproot.const.kMapOffset] = obj
         else:
             cursor.refs[len(cursor.refs) + 1] = obj
 
-        return obj                                  # return object
+        return obj                                         # return object
 
     else:
         # reference class, new object
@@ -398,19 +401,22 @@ def _readanyref(source, cursor, context):
         if ref not in cursor.refs:
             raise IOError("invalid class-tag reference")
 
-        fct = cursor.refs[ref]                      # reference class
+        fct = cursor.refs[ref]                             # reference class
 
         if fct not in context.classes.values():
             raise IOError("invalid class-tag reference (not a factory)")
 
-        obj = fct.read(source, cursor, context)      # new object
+        if wantundefined:
+            obj = Undefined.read(source, cursor, context)  # placeholder new object
+        else:
+            obj = fct.read(source, cursor, context)        # new object
 
         if vers > 0:
             cursor.refs[beg + uproot.const.kMapOffset] = obj
         else:
             cursor.refs[len(cursor.refs) + 1] = obj
 
-        return obj                                  # return object
+        return obj                                         # return object
 
 def _readstreamers(source, cursor, context):
     start, cnt, vers = _startcheck(source, cursor)
@@ -685,6 +691,91 @@ class TKey(ROOTObject):
         else:
             return Undefined(self._source, self._cursor.copied(), self._context)
 
+class TTree(ROOTObject):
+    # although this could come from streamers, we'd like to avoid reading some items (baskets)
+    # and control when the source gets disposed of
+    @staticmethod
+    def _readinto(self, source, cursor, context):
+        start, cnt, vers = _startcheck(source, cursor)
+
+        #  *  fName:                   TString
+        #  *  fTitle:                  TString
+        
+        # (*) fLineColor:              Color_t
+        # (*) fLineStyle:              Style_t
+        # (*) fLineWidth:              Width_t
+
+        # (*) fFillColor:              Color_t
+        # (*) fFillStyle:              Style_t
+
+        # (*) fMarkerColor:            Color_t
+        # (*) fMarkerSize:             Size_t
+        # (*) fMarkerStyle:            Style_t
+
+        #  *  fEntries:                Long64_t
+        # (*) fTotBytes:               Long64_t
+        # (*) fZipBytes:               Long64_t
+        # (*) fSavedBytes:             Long64_t
+        # (*) fFlushedBytes:           Long64_t
+        # (*) fWeight:                 Double_t
+        # (*) fTimerInterval:          Int_t
+        # (*) fScanField:              Int_t
+        # (*) fUpdate:                 Int_t
+        # (*) fDefaultEntryOffsetLen:  Int_t
+        #  *  fNClusterRange:          Int_t
+        # (*) fMaxEntries:             Long64_t
+        # (*) fMaxEntryLoop:           Long64_t
+        # (*) fMaxVirtualSize:         Long64_t
+        # (*) fAutoSave:               Long64_t
+        # (*) fAutoFlush:              Long64_t
+        # (*) fEstimate:               Long64_t
+        #  *  fClusterRangeEnd:        Long64_t*
+        #  *  fClusterSize:            Long64_t*
+        #  *  fBranches:               TObjArray
+        #  *  fLeaves:                 TObjArray
+        #  *  fAliases:                TList
+        # (*) fIndexValues:            TArrayD
+        # (*) fIndex:                  TArrayI
+        # (*) fTreeIndex:              TVirtualIndex*
+        # (*) fFriends:                TList*
+        #  *  fUserInfo:               TList*
+        # (*) fBranchRef:              TBranchRef*
+
+        #  ?  fIOFeatures:             TIOFeatures
+
+        #     fCacheDoAutoInit:        Bool_t
+        #     fCacheDoClusterPrefetch: Bool_t
+        #     fCacheSize:              Long64_t
+        #     fCacheUserSet:           Bool_t
+        #     fChainOffset:            Bool_t
+        #     fClones:                 TList
+        #     fDebug:                  Int_t
+        #     fDebugMax:               Long64_t
+        #     fDebugMin:               Long64_t
+        #     fDirectory:              TDirectory*
+        #     fEntryList:              TEntryList*
+        #     fEventList:              TEventList
+        #     fFileNumber:             Int_t
+        #     fFriendLockStatus:       UInt_t
+        #     fIMTEnabled:             Bool_t
+        #     fMakeClass:              Int_t
+        #     fMaxClusterRange:        Int_t
+        #     fNEntriesSinceSorting:   UInt_t
+        #     fNfill:                  Int_t
+        #     fNotify:                 TObject*
+        #     fPacketSize:             Int_t
+        #     fPerfStats:              TBirtualPerfStats*
+        #     fPlayer:                 TVirtualTreePlayer*
+        #     fReadEntry:              Long64_t
+        #     fSeqBranches:            std::vector<TBranch*>
+        #     fSortedBranches:         std::vector<std::pair<Long64_t, TBranch*>>
+        #     fTotalBuffers:           std::atomic<Long64_t>
+        #     fTransientBuffer:        TBuffer
+
+
+
+
+        
 class TStreamerInfo(ROOTObject):
     @staticmethod
     def _readinto(self, source, cursor, context):
