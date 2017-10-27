@@ -137,13 +137,13 @@ class ROOTDirectory(object):
             source.dismiss()
             return out
 
-    _format1       = struct.Struct("!4si")
-    _format2_small = struct.Struct("!iiiiiiBiii18s")
-    _format2_big   = struct.Struct("!iqqiiiBiqi18s")
-    _format3       = struct.Struct("!hIIii")
-    _format4_small = struct.Struct("!iii")
-    _format4_big   = struct.Struct("!qqq")
-    _format5       = struct.Struct("!i")
+    _format1       = struct.Struct(">4si")
+    _format2_small = struct.Struct(">iiiiiiBiii18s")
+    _format2_big   = struct.Struct(">iqqiiiBiqi18s")
+    _format3       = struct.Struct(">hIIii")
+    _format4_small = struct.Struct(">iii")
+    _format4_big   = struct.Struct(">qqq")
+    _format5       = struct.Struct(">i")
 
     def __init__(self, name, context, keys):
         self.name, self._context, self._keys = name, context, keys
@@ -317,7 +317,7 @@ def _startcheck(source, cursor):
     cnt, vers = cursor.fields(source, _startcheck._format_cntvers)
     cnt = int(numpy.int64(cnt) & ~uproot.const.kByteCountMask)
     return start, cnt + 4, vers
-_startcheck._format_cntvers = struct.Struct("!IH")
+_startcheck._format_cntvers = struct.Struct(">IH")
 
 def _endcheck(start, cursor, cnt):
     observed = cursor.index - start
@@ -332,8 +332,8 @@ def _skiptobj(source, cursor):
     fBits = numpy.uint32(fBits) | uproot.const.kIsOnHeap
     if fBits & uproot.const.kIsReferenced:
         cursor.skip(2)
-_skiptobj._format1 = struct.Struct("!h")
-_skiptobj._format2 = struct.Struct("!II")
+_skiptobj._format1 = struct.Struct(">h")
+_skiptobj._format2 = struct.Struct(">II")
 
 def _nametitle(source, cursor):
     start, cnt, vers = _startcheck(source, cursor)
@@ -348,7 +348,7 @@ def _readobjany(source, cursor, context, wantundefined=False):
     # https://github.com/root-project/root/blob/c4aa801d24d0b1eeb6c1623fd18160ef2397ee54/io/io/src/TBufferFile.cxx#L2404
 
     beg = cursor.index - cursor.origin
-    bcnt = cursor.field(source, struct.Struct("!I"))
+    bcnt = cursor.field(source, struct.Struct(">I"))
 
     if numpy.int64(bcnt) & uproot.const.kByteCountMask == 0 or numpy.int64(bcnt) == uproot.const.kNewClassTag:
         vers = 0
@@ -358,7 +358,7 @@ def _readobjany(source, cursor, context, wantundefined=False):
     else:
         vers = 1
         start = cursor.index - cursor.origin
-        tag = cursor.field(source, struct.Struct("!I"))
+        tag = cursor.field(source, struct.Struct(">I"))
 
     if numpy.int64(tag) & uproot.const.kClassMask == 0:
         # reference object
@@ -426,17 +426,11 @@ def _readobjany(source, cursor, context, wantundefined=False):
         return obj                                         # return object
 
 def _readstreamers(source, cursor, context):
-    start, cnt, vers = _startcheck(source, cursor)
-
-    _skiptobj(source, cursor)
-    name = cursor.string(source)
-    size = cursor.field(source, struct.Struct("!i"))
-    _format_n = struct.Struct("!B")
+    tlist = TList.read(source, cursor, context)
 
     streamerinfos = []
     streamerrules = []
-    for i in range(size):
-        obj = _readobjany(source, cursor, context)
+    for obj in tlist:
         if isinstance(obj, TStreamerInfo):
             dependencies = set()
             for element in obj.fElements:
@@ -451,11 +445,6 @@ def _readstreamers(source, cursor, context):
 
         else:
             raise ValueError("expected TStreamerInfo or TList of TObjString in streamer info array")
-
-        n = cursor.field(source, _format_n)  # ignore option
-        cursor.bytes(source, n)              # 
-
-    _endcheck(start, cursor, cnt)
 
     # https://stackoverflow.com/a/11564769/1623645
     def topological_sort(items):
@@ -521,8 +510,8 @@ def _defineclasses(streamerinfos):
                     else:
                         name = element.fName.decode("ascii")
                     formatnum = len(formats) + 1
-                    formats["_format{0}".format(formatnum)] = "struct.Struct('!B')"
-                    code.append("        _{0} = cursor.field(source, {1}._format{2})".format(name, classname, formatnum))
+                    formats["_format{0}".format(formatnum)] = "struct.Struct('>B')"
+                    code.append("        self._{0} = cursor.field(source, {1}._format{2})".format(name, classname, formatnum))
 
                     m = re.search("\[([^\]]*)\]", element.fTitle.decode("ascii"))
                     if m is None:
@@ -597,7 +586,7 @@ def _defineclasses(streamerinfos):
 
                         if elementi + 1 == len(streamerinfo.fElements) or not isinstance(streamerinfo.fElements[elementi + 1], TStreamerBasicType) or streamerinfo.fElements[elementi + 1].fArrayLength != 0:
                             formatnum = len(formats) + 1
-                            formats["_format{0}".format(formatnum)] = "struct.Struct('!{0}')".format(basicletters)
+                            formats["_format{0}".format(formatnum)] = "struct.Struct('>{0}')".format(basicletters)
 
                             if len(basicnames) == 1:
                                 code.append("        {0} = cursor.field(source, {1}._format{2})".format(basicnames[0], classname, formatnum))
@@ -618,9 +607,9 @@ def _defineclasses(streamerinfos):
 
                 elif isinstance(element, TStreamerObjectPointer):
                     if element.fType == uproot.const.kObjectp:
-                        code.append("        {0} = {1}.read(source, cursor, context)".format(element.fName, element.fTypeName.rstrip("*")))
+                        code.append("        self.{0} = {1}.read(source, cursor, context)".format(element.fName, element.fTypeName.rstrip("*")))
                     elif element.fType == uproot.const.kObjectP:
-                        code.append("        {0} = _readobjany(source, cursor, context)".format(element.fName))
+                        code.append("        self.{0} = _readobjany(source, cursor, context)".format(element.fName))
                     else:
                         raise NotImplementedError
 
@@ -632,7 +621,7 @@ def _defineclasses(streamerinfos):
                     raise NotImplementedError
 
                 elif isinstance(element, (TStreamerObject, TStreamerObjectAny, TStreamerString)):
-                    code.append("        {0} = {1}.read(source, cursor, context)".format(element.fName, element.fTypeName))
+                    code.append("        self.{0} = {1}.read(source, cursor, context)".format(element.fName, element.fTypeName))
 
                 else:
                     raise AssertionError
@@ -723,9 +712,9 @@ class TKey(ROOTObject):
         self._context = context
         return self
 
-    _format1       = struct.Struct("!ihiIhh")
-    _format2_small = struct.Struct("!ii")
-    _format2_big   = struct.Struct("!qq")
+    _format1       = struct.Struct(">ihiIhh")
+    _format2_small = struct.Struct(">ii")
+    _format2_big   = struct.Struct(">qq")
 
     def get(self):
         """Extract the object this key points to.
@@ -752,7 +741,7 @@ class TStreamerInfo(ROOTObject):
         _endcheck(start, cursor, cnt)
         return self
 
-    _format = struct.Struct("!Ii")
+    _format = struct.Struct(">Ii")
 
     def format(self):
         return "StreamerInfo for class: {0}, version={1}, checksum=0x{2:08x}\n{3}{4}".format(self.fName, self.fClassVersion, self.fCheckSum, "\n".join("  " + x.format() for x in self.fElements), "\n" if len(self.fElements) > 0 else "")
@@ -794,9 +783,9 @@ class TStreamerElement(ROOTObject):
         _endcheck(start, cursor, cnt)
         return self
 
-    _format1 = struct.Struct("!iiii")
-    _format2 = struct.Struct("!i")
-    _format3 = struct.Struct("!ddd")
+    _format1 = struct.Struct(">iiii")
+    _format2 = struct.Struct(">i")
+    _format3 = struct.Struct(">ddd")
 
     def format(self):
         return "{0:15s} {1:15s} offset={2:3d} type={3:2d} {4}".format(self.fName, self.fTypeName, self.fOffset, self.fType, self.fTitle)
@@ -819,7 +808,7 @@ class TStreamerBase(TStreamerElement):
         _endcheck(start, cursor, cnt)
         return self
 
-    _format = struct.Struct("!i")
+    _format = struct.Struct(">i")
 
 class TStreamerBasicPointer(TStreamerElement):
     @staticmethod
@@ -832,7 +821,7 @@ class TStreamerBasicPointer(TStreamerElement):
         _endcheck(start, cursor, cnt)
         return self
 
-    _format = struct.Struct("!i")
+    _format = struct.Struct(">i")
 
 class TStreamerBasicType(TStreamerElement):
     @staticmethod
@@ -878,7 +867,7 @@ class TStreamerLoop(TStreamerElement):
         _endcheck(start, cursor, cnt)
         return self
 
-    _format = struct.Struct("!i")
+    _format = struct.Struct(">i")
 
 class TStreamerObject(TStreamerElement):
     @staticmethod
@@ -929,7 +918,7 @@ class TStreamerSTL(TStreamerElement):
         _endcheck(start, cursor, cnt)
         return self
 
-    _format = struct.Struct("!ii")
+    _format = struct.Struct(">ii")
 
 class TStreamerSTLString(TStreamerSTL):
     @staticmethod
@@ -978,7 +967,7 @@ class TObjArray(list, ROOTStreamedObject):
         start, cnt, vers = _startcheck(source, cursor)
         _skiptobj(source, cursor)
         name = cursor.string(source)
-        size, low = cursor.fields(source, struct.Struct("!ii"))
+        size, low = cursor.fields(source, struct.Struct(">ii"))
         self.extend([_readobjany(source, cursor, context) for i in range(size)])
         _endcheck(start, cursor, cnt)
         return self
@@ -998,14 +987,14 @@ class TList(list, ROOTStreamedObject):
         start, cnt, vers = _startcheck(source, cursor)
         _skiptobj(source, cursor)
         name = cursor.string(source)
-        size = cursor.field(source, struct.Struct("!i"))
+        size = cursor.field(source, struct.Struct(">i"))
         for i in range(size):
             self.append(_readobjany(source, cursor, context))
             n = cursor.field(source, TList._format_n)  # ignore option
             cursor.bytes(source, n)                    # 
         _endcheck(start, cursor, cnt)
         return self
-    _format_n = struct.Struct("B")
+    _format_n = struct.Struct(">B")
 
 class TArray(list, ROOTStreamedObject):
     @staticmethod
@@ -1013,7 +1002,7 @@ class TArray(list, ROOTStreamedObject):
         length = cursor.field(source, TArray._format)
         self.extend(cursor.array(source, length, self._dtype))
         return self
-    _format = struct.Struct("!i")
+    _format = struct.Struct(">i")
 
 class TArrayC(TArray):
     _dtype = numpy.dtype(">i1")
