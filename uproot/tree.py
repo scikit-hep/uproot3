@@ -36,6 +36,10 @@ class TTreeMethods(object):
 
 uproot.rootio.methods[b"TTree"] = TTreeMethods
 
+class TBranchMethods(object): pass
+
+uproot.rootio.methods[b"TBranch"] = TBranchMethods
+
 
 
 

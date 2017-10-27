@@ -100,7 +100,7 @@ class ROOTDirectory(object):
                                b"TStreamerObjectAnyPointer": TStreamerObjectAnyPointer,
                                b"TStreamerString":           TStreamerString,
                                b"TStreamerSTL":              TStreamerSTL,
-                               b"TStreamerSTLString":        TStreamerSTLString,
+                               b"TStreamerSTLstring":        TStreamerSTLstring,
                                b"TStreamerArtificial":       TStreamerArtificial,
                                b"TList":                     TList,
                                b"TObjArray":                 TObjArray,
@@ -115,7 +115,8 @@ class ROOTDirectory(object):
 
             keycursor = Cursor(fBEGIN)
             mykey = TKey.read(source, keycursor, context)
-            return ROOTDirectory.read(source, keycursor, context, mykey)
+
+            return ROOTDirectory.read(source, Cursor(fBEGIN + fNbytesName), context, mykey)
 
         else:
             cursor, context, mykey = args
@@ -470,6 +471,9 @@ def _readstreamers(source, cursor, context):
 
     return list(topological_sort(streamerinfos)), streamerrules
 
+def _safename(name):
+    return re.sub("[^a-zA-Z0-9]+", lambda bad: "_" + "".join("%02x" % ord(x) for x in bad.group(0)) + "_", name)
+
 def _defineclasses(streamerinfos):
     classes = {b"TObject":                   TObject,
                b"TNamed":                    TNamed,
@@ -505,7 +509,7 @@ def _defineclasses(streamerinfos):
                     raise NotImplementedError
 
                 elif isinstance(element, TStreamerBase):
-                    code.append("        {0}._readinto(self, source, cursor, context)".format(element.fName))
+                    code.append("        {0}._readinto(self, source, cursor, context)".format(_safename(element.fName)))
                     bases.append(element.fName)
 
                 elif isinstance(element, TStreamerBasicPointer):
@@ -516,7 +520,7 @@ def _defineclasses(streamerinfos):
                     # formatnum = len(formats) + 1
                     # formats["_format{0}".format(formatnum)] = "struct.Struct('>B')"
                     # code.append("        cursor.field(source, {0}._format{1})".format(classname, formatnum))
-                    code.append("        cursor.index += 1".format(classname))
+                    code.append("        cursor.skip(1)")
 
                     m = re.search("\[([^\]]*)\]", element.fTitle.decode("ascii"))
                     if m is None:
@@ -555,11 +559,11 @@ def _defineclasses(streamerinfos):
                         dtypes[dtypename] = "numpy.dtype('>f8')"
                     else:
                         raise NotImplementedError(fType)
-                    code.append("        self.{0} = cursor.array(source, self.{1}, self.{2})".format(name, counter, dtypename))
+                    code.append("        self.{0} = cursor.array(source, self.{1}, self.{2})".format(_safename(name), _safename(counter), dtypename))
 
                 elif isinstance(element, TStreamerBasicType):
                     if element.fArrayLength == 0:
-                        basicnames.append("self." + element.fName.decode("ascii"))
+                        basicnames.append("self." + _safename(element.fName))
                         if element.fType == uproot.const.kBool:
                             basicletters += "?"
                         elif element.fType == uproot.const.kChar:
@@ -594,9 +598,9 @@ def _defineclasses(streamerinfos):
                             formats["_format{0}".format(formatnum)] = "struct.Struct('>{0}')".format(basicletters)
 
                             if len(basicnames) == 1:
-                                code.append("        {0} = cursor.field(source, {1}._format{2})".format(basicnames[0], classname, formatnum))
+                                code.append("        {0} = cursor.field(source, {1}._format{2})".format(basicnames[0], _safename(classname), formatnum))
                             else:
-                                code.append("        {0} = cursor.fields(source, {1}._format{2})".format(", ".join(basicnames), classname, formatnum))
+                                code.append("        {0} = cursor.fields(source, {1}._format{2})".format(", ".join(basicnames), _safename(classname), formatnum))
 
                             basicnames = []
                             basicletters = ""
@@ -615,12 +619,12 @@ def _defineclasses(streamerinfos):
                         if streamerinfo.fName in skip and element.fName in skip[streamerinfo.fName]:
                             code.append("        Undefined.read(source, cursor, context)")
                         else:
-                            code.append("        self.{0} = {1}.read(source, cursor, context)".format(element.fName, element.fTypeName.rstrip("*")))
+                            code.append("        self.{0} = {1}.read(source, cursor, context)".format(_safename(element.fName), element.fTypeName.rstrip("*")))
                     elif element.fType == uproot.const.kObjectP:
                         if streamerinfo.fName in skip and element.fName in skip[streamerinfo.fName]:
                             code.append("        _readobjany(source, cursor, context, wantundefined=True)")
                         else:
-                            code.append("        self.{0} = _readobjany(source, cursor, context)".format(element.fName))
+                            code.append("        self.{0} = _readobjany(source, cursor, context)".format(_safename(element.fName)))
                     else:
                         raise NotImplementedError
 
@@ -628,14 +632,14 @@ def _defineclasses(streamerinfos):
                     # raise NotImplementedError
                     pass   # FIXME
 
-                elif isinstance(element, TStreamerSTLString):
+                elif isinstance(element, TStreamerSTLstring):
                     raise NotImplementedError
 
                 elif isinstance(element, (TStreamerObject, TStreamerObjectAny, TStreamerString)):
                     if streamerinfo.fName in skip and element.fName in skip[streamerinfo.fName]:
                         code.append("        Undefined.read(source, cursor, context)")
                     else:
-                        code.append("        self.{0} = {1}.read(source, cursor, context)".format(element.fName, element.fTypeName))
+                        code.append("        self.{0} = {1}.read(source, cursor, context)".format(_safename(element.fName), element.fTypeName))
 
                 else:
                     raise AssertionError
@@ -653,8 +657,8 @@ def _defineclasses(streamerinfos):
             for n, v in sorted(dtypes.items()):
                 code.append("    {0} = {1}".format(n, v))
 
-            code.insert(0, "class {0}({1}):".format(classname, ", ".join(bases)))
-            classes[classname] = _makeclass(classname, id(streamerinfo), "\n".join(code), classes)
+            code.insert(0, "class {0}({1}):".format(_safename(classname), ", ".join(bases)))
+            classes[_safename(classname)] = _makeclass(classname, id(streamerinfo), "\n".join(code), classes)
 
     return classes
 
@@ -665,8 +669,9 @@ def _makeclass(classname, id, codestr, classes):
     for methodclass in methods.values():
         env[methodclass.__name__] = methodclass
     exec(compile(codestr, "<generated from TStreamerInfo {0} at 0x{1:012x}>".format(repr(classname), id), "exec"), env)
-    env[classname]._codestr = codestr
-    return env[classname]
+    out = env[_safename(classname)]
+    out._codestr = codestr
+    return out
 
 ################################################################ built-in ROOT objects for bootstrapping up to streamed classes
 
@@ -701,6 +706,8 @@ class TKey(ROOTObject):
 
     @staticmethod
     def _readinto(self, source, cursor, context):
+        start = cursor.index
+
         self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle = cursor.fields(source, self._format1)
         if self.fVersion <= 1000:
             self.fSeekKey, self.fSeekPdir = cursor.fields(source, self._format2_small)
@@ -709,13 +716,7 @@ class TKey(ROOTObject):
 
         self.fClassName = cursor.string(source)
         self.fName = cursor.string(source)
-        if self.fSeekPdir == 0:
-            assert source.data(cursor.index, cursor.index + 1)[0] == 0
-            cursor.skip(1)     # Top TDirectory fName and fTitle...
         self.fTitle = cursor.string(source)
-        if self.fSeekPdir == 0:
-            assert source.data(cursor.index, cursor.index + 1)[0] == 0
-            cursor.skip(1)     # ...are prefixed *and* null-terminated! Both!
 
         # object size != compressed size means it's compressed
         if self.fObjlen != self.fNbytes - self.fKeylen:
@@ -938,11 +939,11 @@ class TStreamerSTL(TStreamerElement):
 
     _format = struct.Struct(">ii")
 
-class TStreamerSTLString(TStreamerSTL):
+class TStreamerSTLstring(TStreamerSTL):
     @staticmethod
     def _readinto(self, source, cursor, context):
         start, cnt, vers = _startcheck(source, cursor)
-        super(TStreamerSTLString, self)._readinto(self, source, cursor, context)
+        super(TStreamerSTLstring, self)._readinto(self, source, cursor, context)
         _endcheck(start, cursor, cnt)
         return self
 
