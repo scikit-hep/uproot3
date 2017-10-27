@@ -47,6 +47,10 @@ class ChunkedXRootD(ChunkedSource):
             if status.get("error", None) is not None:
                 raise OSError(status["message"])
 
+    # # is the XRootD client thread-safe? let's assume it is
+    # def threadlocal(self):
+    #     return self
+
     def _read(self, chunkindex):
         status, data = self._source.read(chunkindex * self._chunkbytes, self._chunkbytes)
         if status.get("error", None) is not None:

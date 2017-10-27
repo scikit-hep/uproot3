@@ -680,14 +680,14 @@ class ROOTObject(object):
     def read(cls, source, cursor, context):
         out = cls.__new__(cls)
         out = cls._readinto(out, source, cursor, context)
-        out._init(source, cursor, context)
+        out._postprocess(source, cursor, context)
         return out
 
     @staticmethod
     def _readinto(self, source, cursor, context):
         raise NotImplementedError
 
-    def _init(self, source, cursor, context):
+    def _postprocess(self, source, cursor, context):
         pass
 
     def __repr__(self):
@@ -735,19 +735,22 @@ class TKey(ROOTObject):
     _format2_small = struct.Struct(">ii")
     _format2_big   = struct.Struct(">qq")
 
-    def get(self):
+    def get(self, dismiss=True):
         """Extract the object this key points to.
 
         Objects are not read or decompressed until this function is explicitly called.
         """
+
         if self.fClassName == b"TDirectory":
-            return ROOTDirectory.read(self._source, self._cursor, self._context, self)
-
+            out = ROOTDirectory.read(self._source, self._cursor, self._context, self)
         elif self.fClassName in self._context.classes:
-            return self._context.classes[self.fClassName].read(self._source, self._cursor.copied(), self._context)
-
+            out = self._context.classes[self.fClassName].read(self._source, self._cursor.copied(), self._context)
         else:
-            return Undefined(self._source, self._cursor.copied(), self._context)
+            out = Undefined(self._source, self._cursor.copied(), self._context)
+
+        if dismiss:
+            self._source.dismiss()
+        return out
 
 class TStreamerInfo(ROOTObject):
     @staticmethod

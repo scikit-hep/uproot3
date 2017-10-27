@@ -33,10 +33,22 @@ import os.path
 import numpy
 
 from uproot.source.chunked import ChunkedSource
+from uproot.cache.memorycache import ThreadSafeMemoryCache
 
 class ChunkedFile(ChunkedSource):
     def __init__(self, path, *args, **kwds):
         super(ChunkedFile, self).__init__(os.path.expanduser(path), *args, **kwds)
+
+    def threadlocal(self):
+        out = ChunkedFile.__new__(self.__class__)
+        out.path = self.path
+        out._chunkbytes = self._chunkbytes
+        if isinstance(self._cache, ThreadSafeMemoryCache):
+            out._cache = self._cache
+        else:
+            out._cache = {}
+        out._source = None
+        return out
 
     def _open(self):
         if self._source is None:
@@ -45,7 +57,7 @@ class ChunkedFile(ChunkedSource):
     def _read(self, chunkindex):
         self._source.seek(chunkindex * self._chunkbytes)
         return numpy.frombuffer(self._source.read(self._chunkbytes), dtype=numpy.uint8)
-
+    
     def dismiss(self):
         if self._source is not None:
             self._source.close()

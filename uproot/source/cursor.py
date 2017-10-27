@@ -103,6 +103,14 @@ class Cursor(object):
             self.index += 1
         return "".join(chars)
 
+    def skipstring(self, source):
+        length = source.data(self.index, self.index + 1)[0]
+        self.index += 1
+        if length == 255:
+            length = source.data(self.index, self.index + 4, numpy.dtype(">u4"))[0]
+            self.index += 4
+        self.index += length
+
     def hexdump(self, source, size=160, offset=0, format="%02x"):
         pos = self.index + offset
         out = []

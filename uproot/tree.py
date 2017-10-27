@@ -28,16 +28,126 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import uproot.rootio
+import re
+import struct
 
-class TTreeMethods(object):
-    def _init(self, source, cursor, context):
-        source.dismiss()
+import numpy
+
+import uproot.rootio
+from uproot.source.compressed import Compression
+from uproot.source.compressed import CompressedSource
+from uproot.source.cursor import Cursor
+
+class TTreeMethods(object): pass
 
 uproot.rootio.methods[b"TTree"] = TTreeMethods
 
-class TBranchMethods(object): pass
+def _leaf2dtype(leaf):
+    classname = leaf.__class__.__name__
 
+    if classname == "TLeafO":
+        return numpy.dtype(numpy.bool)
+
+    elif classname == "TLeafB":
+        if leaf.fIsUnsigned:
+            return numpy.dtype(numpy.uint8).newbyteorder(">")
+        else:
+            return numpy.dtype(numpy.int8).newbyteorder(">")
+
+    elif classname == "TLeafS":
+        if leaf.fIsUnsigned:
+            return numpy.dtype(numpy.uint16).newbyteorder(">")
+        else:
+            return numpy.dtype(numpy.int16).newbyteorder(">")
+
+    elif classname == "TLeafI":
+        if leaf.fIsUnsigned:
+            return numpy.dtype(numpy.uint32).newbyteorder(">")
+        else:
+            return numpy.dtype(numpy.int32).newbyteorder(">")
+
+    elif classname == "TLeafL":
+        if leaf.fIsUnsigned:
+            return numpy.dtype(numpy.uint64).newbyteorder(">")
+        else:
+            return numpy.dtype(numpy.int64).newbyteorder(">")
+
+    elif classname == "TLeafF":
+        return numpy.dtype(numpy.float32).newbyteorder(">")
+
+    elif classname == "TLeafD":
+        return numpy.dtype(numpy.float64).newbyteorder(">")
+
+    elif classname == "TLeafC":
+        return uproot.rootio.TString
+
+    else:
+        raise NotImplementedError
+
+class TBranchMethods(object):
+    def _postprocess(self, source, cursor, context):
+        self.fBasketBytes = self.fBasketBytes[:self.fWriteBasket]
+        self.fBasketEntry = self.fBasketEntry[:self.fWriteBasket]
+        self.fBasketSeek = self.fBasketSeek[:self.fWriteBasket]
+
+        self.dtype = [(leaf.fName, _leaf2dtype(leaf)) for leaf in self.fLeaves]
+
+        self._source = source
+
+    _titlehasdims = re.compile(br"^([^\[\]]+)(\[[^\[\]]+\])+")
+    _itemdimpattern = re.compile(br"\[([1-9][0-9]*)\]")
+
+    class _BasketKey(object):
+        def __init__(self, source, cursor, compression, complete):
+            start = cursor.index
+            self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir = cursor.fields(source, TBranchMethods._BasketKey._format_small)
+
+            if self.fVersion > 1000:
+                cursor.index = start
+                self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir = cursor.fields(source, TBranchMethods._BasketKey._format_big)
+
+            if complete:
+                cursor.skipstring(source)
+                cursor.skipstring(source)
+                cursor.skipstring(source)
+
+                self.fVersion, self.fBufferSize, self.fNevBufSize, self.fNevBuf, self.fLast = cursor.fields(source, TBranchMethods._BasketKey._format_complete)
+
+                border = self.fLast - self.fKeylen
+
+                if self.fObjlen != self.fNbytes - self.fKeylen:
+                    self.source = CompressedSource(compression, source, Cursor(self.fSeekKey + self.fKeylen), self.fNbytes - self.fKeylen, self.fObjlen)
+                    self.cursor = Cursor(0)
+                else:
+                    self.source = source
+                    self.cursor = Cursor(self.fSeekKey + self.fKeylen)
+
+        _format_small = struct.Struct(">ihiIhhii")
+        _format_big = struct.Struct(">ihiIhhqq")
+        _format_complete = struct.Struct(">Hiiii")
+
+    def _basketkey(self, source, i, complete):
+        return self._BasketKey(source, Cursor(self.fBasketSeek[i]), Compression(self.fCompress), complete)
+
+    def _basket(self, i, offsets=False, parallel=False):
+        if parallel:
+            keysource = self._source.threadlocal()
+        else:
+            keysource = self._source
+
+        key = self._basketkey(keysource, i, True)
+
+        if callable(self.dtype):
+            return self.dtype(key.cursor.bytes(key.source, key.border))
+        
+        elif len(self.dtype) == 1:
+            dtype = self.dtype[0][1]
+            return key.cursor.array(key.source, key.border // dtype.itemsize, dtype)
+
+        else:
+            return key.cursor.array(key.source, key.border // self.dtype.itemsize, self.dtype)
+
+        
 uproot.rootio.methods[b"TBranch"] = TBranchMethods
 
 

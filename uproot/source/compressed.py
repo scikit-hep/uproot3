@@ -97,6 +97,9 @@ class CompressedSource(object):
         self._compressedbytes = compressedbytes
         self._uncompressedbytes = uncompressedbytes
 
+    def threadlocal(self):
+        return self
+
     def data(self, start, stop, dtype=numpy.dtype(numpy.uint8)):
         if not isinstance(dtype, numpy.dtype):
             dtype = numpy.dtype(dtype)
