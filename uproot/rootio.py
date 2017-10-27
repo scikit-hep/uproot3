@@ -483,6 +483,8 @@ def _defineclasses(streamerinfos):
                b"TArrayF":                   TArrayF,
                b"TArrayD":                   TArrayD}
 
+    skip    = {b"TBranch":                   [b"fBaskets"]}
+
     for streamerinfo in streamerinfos:
         if isinstance(streamerinfo, TStreamerInfo) and streamerinfo.fName not in classes:
             if isinstance(streamerinfo.fName, str):
@@ -509,9 +511,10 @@ def _defineclasses(streamerinfos):
                         name = element.fName
                     else:
                         name = element.fName.decode("ascii")
-                    formatnum = len(formats) + 1
-                    formats["_format{0}".format(formatnum)] = "struct.Struct('>B')"
-                    code.append("        self._{0} = cursor.field(source, {1}._format{2})".format(name, classname, formatnum))
+                    # formatnum = len(formats) + 1
+                    # formats["_format{0}".format(formatnum)] = "struct.Struct('>B')"
+                    # code.append("        cursor.field(source, {0}._format{1})".format(classname, formatnum))
+                    code.append("        cursor.index += 1".format(classname))
 
                     m = re.search("\[([^\]]*)\]", element.fTitle.decode("ascii"))
                     if m is None:
@@ -607,9 +610,15 @@ def _defineclasses(streamerinfos):
 
                 elif isinstance(element, TStreamerObjectPointer):
                     if element.fType == uproot.const.kObjectp:
-                        code.append("        self.{0} = {1}.read(source, cursor, context)".format(element.fName, element.fTypeName.rstrip("*")))
+                        if streamerinfo.fName in skip and element.fName in skip[streamerinfo.fName]:
+                            code.append("        Undefined.read(source, cursor, context)")
+                        else:
+                            code.append("        self.{0} = {1}.read(source, cursor, context)".format(element.fName, element.fTypeName.rstrip("*")))
                     elif element.fType == uproot.const.kObjectP:
-                        code.append("        self.{0} = _readobjany(source, cursor, context)".format(element.fName))
+                        if streamerinfo.fName in skip and element.fName in skip[streamerinfo.fName]:
+                            code.append("        _readobjany(source, cursor, context, wantundefined=True)")
+                        else:
+                            code.append("        self.{0} = _readobjany(source, cursor, context)".format(element.fName))
                     else:
                         raise NotImplementedError
 
@@ -621,7 +630,10 @@ def _defineclasses(streamerinfos):
                     raise NotImplementedError
 
                 elif isinstance(element, (TStreamerObject, TStreamerObjectAny, TStreamerString)):
-                    code.append("        self.{0} = {1}.read(source, cursor, context)".format(element.fName, element.fTypeName))
+                    if streamerinfo.fName in skip and element.fName in skip[streamerinfo.fName]:
+                        code.append("        Undefined.read(source, cursor, context)")
+                    else:
+                        code.append("        self.{0} = {1}.read(source, cursor, context)".format(element.fName, element.fTypeName))
 
                 else:
                     raise AssertionError
@@ -632,9 +644,9 @@ def _defineclasses(streamerinfos):
             if len(bases) == 0:
                 bases.append("ROOTStreamedObject")
 
-            for n, v in formats.items():
+            for n, v in sorted(formats.items()):
                 code.append("    {0} = {1}".format(n, v))
-            for n, v in dtypes.items():
+            for n, v in sorted(dtypes.items()):
                 code.append("    {0} = {1}".format(n, v))
 
             code.insert(0, "class {0}({1}):".format(classname, ", ".join(bases)))
@@ -1029,7 +1041,7 @@ class Undefined(ROOTStreamedObject):
     @staticmethod
     def _readinto(self, source, cursor, context):
         start, cnt, vers = _startcheck(source, cursor)
-        cursor.skip(cnt - 2)
+        cursor.skip(cnt - 6)
         _endcheck(start, cursor, cnt)
         return self
 
