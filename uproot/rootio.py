@@ -39,6 +39,8 @@ from uproot.source.compressed import Compression
 from uproot.source.compressed import CompressedSource
 from uproot.source.cursor import Cursor
 
+methods = {}
+
 ################################################################ ROOTDirectory
 
 class ROOTDirectory(object):
@@ -643,6 +645,8 @@ def _defineclasses(streamerinfos):
 
             if len(bases) == 0:
                 bases.append("ROOTStreamedObject")
+            if streamerinfo.fName in methods:
+                bases.insert(0, methods[streamerinfo.fName].__name__)
 
             for n, v in sorted(formats.items()):
                 code.append("    {0} = {1}".format(n, v))
@@ -658,6 +662,8 @@ def _makeclass(classname, id, codestr, classes):
     env = {}
     env.update(globals())
     env.update(classes)
+    for methodclass in methods.values():
+        env[methodclass.__name__] = methodclass
     exec(compile(codestr, "<generated from TStreamerInfo {0} at 0x{1:012x}>".format(repr(classname), id), "exec"), env)
     env[classname]._codestr = codestr
     return env[classname]

@@ -28,6 +28,17 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import uproot.rootio
+
+class TTreeMethods(object):
+    def _init(self, source, cursor, context):
+        source.dismiss()
+
+uproot.rootio.methods[b"TTree"] = TTreeMethods
+
+
+
+
 # from collections import namedtuple
 # from functools import reduce
 # import re
