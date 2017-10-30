@@ -28,8 +28,9 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import struct
 import re
+import struct
+import sys
 from collections import namedtuple
 
 import numpy
@@ -38,6 +39,10 @@ import uproot.const
 from uproot.source.compressed import Compression
 from uproot.source.compressed import CompressedSource
 from uproot.source.cursor import Cursor
+
+################################################################ register mixins for user-facing ROOT classes
+
+# import uproot.ttree before loading a file to add methods to TTree and TBranch
 
 methods = {}
 
@@ -71,8 +76,8 @@ class ROOTDirectory(object):
     """
 
     class _FileContext(object):
-        def __init__(self, streamerinfos, classes, compression):
-            self.streamerinfos, self.classes, self.compression = streamerinfos, classes, compression
+        def __init__(self, streamerinfos, classes, compression, uuid):
+            self.streamerinfos, self.classes, self.compression, self.uuid = streamerinfos, classes, compression, uuid
 
     @staticmethod
     def read(source, *args):
@@ -106,12 +111,12 @@ class ROOTDirectory(object):
                                b"TObjArray":                 TObjArray,
                                b"TObjString":                TObjString}
 
-            streamercontext = ROOTDirectory._FileContext(None, streamerclasses, Compression(fCompress))
+            streamercontext = ROOTDirectory._FileContext(None, streamerclasses, Compression(fCompress), fUUID)
             streamerkey = TKey.read(source, Cursor(fSeekInfo), streamercontext)
             streamerinfos, streamerrules = _readstreamers(streamerkey._source, streamerkey._cursor, streamercontext)
             classes = _defineclasses(streamerinfos)
 
-            context = ROOTDirectory._FileContext(streamerinfos, classes, Compression(fCompress))
+            context = ROOTDirectory._FileContext(streamerinfos, classes, Compression(fCompress), fUUID)
 
             keycursor = Cursor(fBEGIN)
             mykey = TKey.read(source, keycursor, context)
@@ -135,6 +140,8 @@ class ROOTDirectory(object):
             keys = [TKey.read(source, subcursor, context) for i in range(nkeys)]
 
             out = ROOTDirectory(mykey.fName, context, keys)
+            out.fVersion, out.fDatimeC, out.fDatimeM, out.fNbytesKeys, out.fNbytesName, out.fSeekDir, out.fSeekParent, out.fSeekKeys = fVersion, fDatimeC, fDatimeM, fNbytesKeys, fNbytesName, fSeekDir, fSeekParent, fSeekKeys
+            out._headerkey = headerkey
 
             # source may now close the file (and reopen it when we read again)
             source.dismiss()
@@ -286,8 +293,7 @@ class ROOTDirectory(object):
 
         An explicit `cycle` overrides any number after ';'.
         """
-        if hasattr(name, "encode"):
-            name = name.encode("ascii")
+        name = _bytesid(name)
 
         if b"/" in name:
             out = self
@@ -314,6 +320,18 @@ class ROOTDirectory(object):
         pass
 
 ################################################################ helper functions for common tasks
+
+def _bytesid(x):
+    if sys.version_info[0] > 2:
+        if isinstance(x, str):
+            return x.encode("ascii", "backslashreplace")
+        else:
+            return x
+    else:
+        if isinstance(x, unicode):
+            return x.encode("ascii", "backslashreplace")
+        else:
+            return x
 
 def _startcheck(source, cursor):
     start = cursor.index
