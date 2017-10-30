@@ -30,6 +30,7 @@
 
 import re
 import struct
+import numbers
 from functools import reduce
 
 import numpy
@@ -39,6 +40,77 @@ from uproot.rootio import _bytesid
 from uproot.source.compressed import CompressedSource
 from uproot.source.compressed import Compression
 from uproot.source.cursor import Cursor
+
+################################################################ helper functions for common tasks
+
+def _delayedraise(excinfo):
+    if excinfo is not None:
+        cls, err, trc = excinfo
+        if sys.version_info[0] <= 2:
+            exec("raise cls, err, trc")
+        else:
+            raise err.with_traceback(trc)
+
+def interpret(branch, dims=(), classes={}):
+    class NotNumeric(Exception): pass
+
+    def leafto(leaf):
+        classname = leaf.__class__.__name__
+        if classname == b"TLeafO":
+            return numpy.dtype(numpy.bool)
+        elif classname == b"TLeafB":
+            if leaf.fIsUnsigned:
+                return numpy.dtype(numpy.uint8).newbyteorder(">")
+            else:
+                return numpy.dtype(numpy.int8).newbyteorder(">")
+        elif classname == b"TLeafS":
+            if leaf.fIsUnsigned:
+                return numpy.dtype(numpy.uint16).newbyteorder(">")
+            else:
+                return numpy.dtype(numpy.int16).newbyteorder(">")
+        elif classname == b"TLeafI":
+            if leaf.fIsUnsigned:
+                return numpy.dtype(numpy.uint32).newbyteorder(">")
+            else:
+                return numpy.dtype(numpy.int32).newbyteorder(">")
+        elif classname == b"TLeafL":
+            if leaf.fIsUnsigned:
+                return numpy.dtype(numpy.uint64).newbyteorder(">")
+            else:
+                return numpy.dtype(numpy.int64).newbyteorder(">")
+        elif classname == b"TLeafF":
+            return numpy.dtype(numpy.float32).newbyteorder(">")
+        elif classname == b"TLeafD":
+            return numpy.dtype(numpy.float64).newbyteorder(">")
+        else:
+            raise NotNumeric
+
+    if dims == ():
+        dimensionalize = lambda x: x
+    else:
+        dimensionalize = lambda x: (x, dims)
+
+    try:
+        if len(branch.fLeaves) == 1:
+            return dimensionalize(leafto(branch.fLeaves[0]))
+        else:
+            return dimensionalize(numpy.dtype([(leaf.fName, leafto(leaf)) for leaf in branch.fLeaves]))
+
+    except NotNumeric:
+        if len(branch.fLeaves) == 1:
+            classname = branch.fLeaves[0].__class__.__name__
+
+            if classname == "TLeafC":
+                return uproot.rootio.TString.to
+
+            elif classname in classes:
+                return classes[classname].to
+
+            else:
+                raise KeyError("{0} not found in classes".format(repr(classname)))
+
+        else:
+            raise ValueError("multiple leaves but some are not numeric: {0}".format(", ".join(repr(x) for x in branch.fLeaves)))
 
 ################################################################ methods for TTree
 
@@ -86,13 +158,13 @@ class TTreeMethods(object):
                 pass
         raise KeyError("not found: {0}".format(repr(name)))
 
-    def array(self, branch, to=None, entrystart=None, entrystop=None, executor=None, blocking=True, callback=None):
+    def array(self, branch, to=None, entrystart=None, entrystop=None, executor=None, blocking=True):
         raise NotImplementedError
 
     def lazyarray(self, branch, to=None, entrystart=None, entrystop=None):
         raise NotImplementedError
 
-    def arrays(self, branchto=lambda branch: branch.to, outputtype=dict, entrystart=None, entrystop=None, executor=None, blocking=True, callback=None):
+    def arrays(self, branchto=lambda branch: branch.to, outputtype=dict, entrystart=None, entrystop=None, executor=None, blocking=True):
         raise NotImplementedError
 
     def lazyarrays(self, branchto=lambda branch: branch.to, outputtype=dict, entrystart=None, entrystop=None):
@@ -100,6 +172,43 @@ class TTreeMethods(object):
 
     def iterate(self, entrystep, branchto=lambda branch: branch.to, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, executor=None):
         raise NotImplementedError
+
+    def _normalize_branchto(self, branchto, allbranches):
+        if callable(branchto):
+            for branch in allbranches:
+                to = branchto(branch)
+                if to is not None:
+                    yield branch, to
+
+        elif isinstance(branchto, dict):
+            lookup = dict((x.fName, x) for x in allbranches)
+            for name, to in branchto.items():
+                name = _bytesid(name)
+                if name in lookup:
+                    yield lookup[name], to
+
+        elif isinstance(branchto, string_types):
+            name = _bytesid(branchto)
+            branch = [x for x in allbranches if x.name == name]
+            if len(branch) == 1:
+                yield branch[0], branch[0].to
+            else:
+                raise KeyError("not found: {0}".format(repr(name)))
+
+        else:
+            try:
+                names = iter(branchto)
+            except:
+                raise TypeError("branchto argument not understood")
+            else:
+                lookup = dict((x.name, x) for x in allbranches)
+                for name in names:
+                    name = _bytesid(name)
+                    if name in lookup:
+                        branch = lookup[name]
+                        yield branch, branch.to
+                    else:
+                        raise KeyError("not found: {0}".format(repr(name)))
 
     def __len__(self):
         return self.numentries
@@ -141,19 +250,13 @@ class TBranchMethods(object):
         self.fBasketSeek = self.fBasketSeek[:self.fWriteBasket]
         self._source = source
 
-        self.to = interpret(self, classes=context.classes)
-        self.dims = ()
+        dims = ()
         if len(self.fLeaves) == 1:
             m = self._titlehasdims.match(self.fLeaves[0].fTitle)
             if m is not None:
-                self.dims = tuple(int(x) for x in re.findall(self._itemdimpattern, self.fLeaves[0].fTitle))
+                dims = tuple(int(x) for x in re.findall(self._itemdimpattern, self.fLeaves[0].fTitle))
 
-        if isinstance(self.to, numpy.dtype):
-            def predict_numitems(numbytes, numentries):
-                return numbytes // self.to.itemsize
-            self.predict_numitems = predict_numitems
-        else:
-            self.predict_numitems = None
+        self.to = interpret(self, dims, classes=context.classes)
 
     _titlehasdims = re.compile(br"^([^\[\]]+)(\[[^\[\]]+\])+")
     _itemdimpattern = re.compile(br"\[([1-9][0-9]*)\]")
@@ -207,10 +310,31 @@ class TBranchMethods(object):
         keys = [self._basketkey(keysource, i, False) for i in range(self.numbaskets)]
         return sum(key.fObjlen for key in keys) / sum(key.fNbytes - key.fKeylen for key in keys)
 
-    def numitems(self, flattened=False, predict_numitems=None):
-        if predict_numitems is None:
-            predict_numitems = self.predict_numitems
-        return sum(self.basket_numitems(i, flattened=flattened, predict_numitems=predict_numitems) for i in range(self.numbaskets))
+    def _normalize_todims(self, to):
+        if to is None:
+            to = self.to
+        if isinstance(to, tuple) and len(to) == 2 and isinstance(to[0], numpy.dtype) and isinstance(to[1], tuple) and all(isinstance(x, numbers.Integral) for x in to[1]):
+            to, dims = to
+        elif isinstance(to, numpy.ndarray):
+            dims = to.shape[1:]
+        else:
+            dims = ()
+        return to, dims
+
+    def _normalize_numitems(self, to, numitems):
+        if numitems is None:
+            to, dims = self._normalize_todims(to)
+            if isinstance(to, numpy.dtype):
+                numitems = lambda numbytes, numentries: (numbytes // to.itemsize) // reduce(lambda x, y: x*y, dims, 1)
+            elif hasattr(to, "numitems"):
+                numitems = to.numitems
+            else:
+                raise TypeError("cannot predict numitems if 'to' is not a numpy.dtype")
+        return numitems
+
+    def numitems(self, flattened=False, to=None, numitems=None):
+        numitems = self._normalize_numitems(to, numitems)
+        return sum(self.basket_numitems(i, flattened=flattened, to=None, numitems=numitems) for i in range(self.numbaskets))
 
     @property
     def compression(self):
@@ -242,14 +366,10 @@ class TBranchMethods(object):
         key = self._basketkey(keysource, i, False)
         return key.fNbytes - key.fKeylen
 
-    def basket_numitems(self, flattened=False, predict_numitems=None):
-        if predict_numitems is None:
-            predict_numitems = self.predict_numitems
-        if predict_numitems is None:
-            raise TypeError("cannot predict numitems if branch.to is {0}".format(repr(self.to)))
-
+    def basket_numitems(self, flattened=False, to=None, numitems=None):
+        numitems = self._normalize_numitems(to, numitems)
         key = self._basketkey(keysource, i, True)
-        numflat = predict_numitems(key.border, self.basket_numentries(i))
+        numflat = numitems(key.border, self.basket_numentries(i))
         if flattened:
             return numflat
         else:
@@ -271,8 +391,8 @@ class TBranchMethods(object):
         if not 0 <= i < self.numbaskets:
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
-        if to is None:
-            to = self.to
+        to, dims = self._normalize_todims(to)
+        product = reduce(lambda x, y: x*y, dims, 1)
 
         if entrystart is None:
             entrystart = 0
@@ -290,18 +410,27 @@ class TBranchMethods(object):
         key = self._basketkey(keysource, i, True)
 
         if isinstance(to, numpy.dtype):
-            return key.cursor.array(key.source, key.border // to.itemsize, to)[local_entrystart:local_entrystop]
+            shape = ((local_entrystop - local_entrystart) // product,) + dims
+            local_entrystart *= product
+            local_entrystop *= product
+            return key.cursor.array(key.source, key.border // to.itemsize, to)[local_entrystart:local_entrystop].reshape(shape)
             
         elif isinstance(to, numpy.ndarray):
+            shape = ((local_entrystop - local_entrystart) // product,) + dims
+            local_entrystart *= product
+            local_entrystop *= product
+
             if len(to.shape) == 1:
                 flat = to
             else:
                 flat = to.reshape(reduce(lambda x, y: x*y, to.shape, 1))
-            numitems = key.border // flat.dtype.itemsize - dropstart - dropstop
-            if numitems <= len(flat):
-                return key.cursor.array(key.source, numitems, to)[local_entrystart:local_entrystop]
+
+            numvalues = local_entrystop - local_entrystart
+            if numvalues <= len(flat):
+                flat[:numvalues] = key.cursor.bytes(key.source, key.border).view(flat.dtype)[local_entrystart:local_entrystop]
+                return flat.reshape(shape)
             else:
-                raise ValueError("array provided to branch {0}, basket {1} has room for {2} items but provided array has {3} items".format(repr(self.name), i, numitems, len(flat)))
+                raise ValueError("array provided to branch {0}, basket {1} needs to fill {2} values in an array with {3} slots".format(repr(self.name), i, numvalues, len(flat)))
 
         elif callable(to):
             data = key.cursor.bytes(key.source, key.border)
@@ -315,7 +444,7 @@ class TBranchMethods(object):
         else:
             raise TypeError("unrecognized interpretation: {0} ({1})".format(repr(to), type(to)))
 
-    def baskets(self, to=None, entrystart=None, entrystop=None, executor=None, blocking=True, callback=None):
+    def baskets(self, to=None, entrystart=None, entrystop=None, executor=None, blocking=True):
         if isinstance(to, numpy.ndarray):
             raise TypeError("the 'baskets' method fills all baskets, so a single array 'to' would be clobbered before returning")
 
@@ -345,11 +474,7 @@ class TBranchMethods(object):
 
         def fill(i):
             try:
-                result = self.basket(i + basketstart, to=to, entrystart=entrystart, entrystop=entrystop, parallel=executor is not None)
-                if callback is None:
-                    out[i] = result
-                else:
-                    out[i] = callback(result)
+                out[i] = self.basket(i + basketstart, to=to, entrystart=entrystart, entrystop=entrystop, parallel=executor is not None)
             except:
                 return sys.exc_info()
             else:
@@ -384,8 +509,25 @@ class TBranchMethods(object):
                 else:
                     yield self.basket(i, to=to, entrystart=entrystart, entrystop=entrystop)
 
-    def array(self, to=None, entrystart=None, entrystop=None, executor=None, blocking=True, callback=None):
-        raise NotImplementedError
+    # def array(self, to=None, numitems=None, entrystart=None, entrystop=None, executor=None, blocking=True):
+    #     if executor is None or blocking:
+    #         baskets, excinfos = self.baskets(to=to, entrystart=entrystart, entrystop=entrystop, executor=executor, blocking=False)
+
+    #         if isinstance(to, numpy.ndarray):
+    #             out = to
+    #         elif isinstance(to, numpy.dtype):
+
+
+
+
+    #             out = numpy.empty((sum( for x in ),) + self.dims, dtype=to)
+
+
+
+    #     else:
+    #         numitems = self._normalize_predict(to, numitems)
+
+
 
     def lazyarray(self, to=None, entrystart=None, entrystop=None):
         if to is None:
@@ -527,109 +669,6 @@ class TBranchMethods(object):
         raise TypeError("'TBranch' object is not iterable")
 
 uproot.rootio.methods[b"TBranch"] = TBranchMethods
-
-################################################################ helper functions for common tasks
-
-def interpret(branch, classes={}):
-    class NotNumeric(Exception): pass
-
-    def leafto(leaf):
-        classname = leaf.__class__.__name__
-        if classname == b"TLeafO":
-            return numpy.dtype(numpy.bool)
-        elif classname == b"TLeafB":
-            if leaf.fIsUnsigned:
-                return numpy.dtype(numpy.uint8).newbyteorder(">")
-            else:
-                return numpy.dtype(numpy.int8).newbyteorder(">")
-        elif classname == b"TLeafS":
-            if leaf.fIsUnsigned:
-                return numpy.dtype(numpy.uint16).newbyteorder(">")
-            else:
-                return numpy.dtype(numpy.int16).newbyteorder(">")
-        elif classname == b"TLeafI":
-            if leaf.fIsUnsigned:
-                return numpy.dtype(numpy.uint32).newbyteorder(">")
-            else:
-                return numpy.dtype(numpy.int32).newbyteorder(">")
-        elif classname == b"TLeafL":
-            if leaf.fIsUnsigned:
-                return numpy.dtype(numpy.uint64).newbyteorder(">")
-            else:
-                return numpy.dtype(numpy.int64).newbyteorder(">")
-        elif classname == b"TLeafF":
-            return numpy.dtype(numpy.float32).newbyteorder(">")
-        elif classname == b"TLeafD":
-            return numpy.dtype(numpy.float64).newbyteorder(">")
-        else:
-            raise NotNumeric
-
-    try:
-        if len(branch.fLeaves) == 1:
-            return leafto(branch.fLeaves[0])
-        else:
-            return numpy.dtype([(leaf.fName, leafto(leaf)) for leaf in branch.fLeaves])
-
-    except NotNumeric:
-        if len(branch.fLeaves) == 1:
-            classname = branch.fLeaves[0].__class__.__name__
-
-            if classname == "TLeafC":
-                return uproot.rootio.TString.to
-
-            elif classname in classes:
-                return classes[classname].to
-
-            else:
-                raise KeyError("{0} not found in classes".format(repr(classname)))
-
-        else:
-            raise ValueError("multiple leaves but some are not numeric: {0}".format(", ".join(repr(x) for x in branch.fLeaves)))
-
-def _normalize_branchto(branchto, allbranches):
-    if callable(branchto):
-        for branch in allbranches:
-            to = branchto(branch)
-            if to is not None:
-                yield branch, to
-
-    elif isinstance(branchto, dict):
-        lookup = dict((x.fName, x) for x in allbranches)
-        for name, to in branchto.items():
-            name = _bytesid(name)
-            if name in lookup:
-                yield lookup[name], to
-
-    elif isinstance(branchto, string_types):
-        name = _bytesid(branchto)
-        branch = [x for x in allbranches if x.name == name]
-        if len(branch) == 1:
-            yield branch[0], branch[0].to
-        else:
-            raise KeyError("not found: {0}".format(repr(name)))
-
-    else:
-        try:
-            names = iter(branchto)
-        except:
-            raise TypeError("branchto argument not understood")
-        else:
-            lookup = dict((x.name, x) for x in allbranches)
-            for name in names:
-                name = _bytesid(name)
-                if name in lookup:
-                    branch = lookup[name]
-                    yield branch, branch.to
-                else:
-                    raise KeyError("not found: {0}".format(repr(name)))
-
-def _delayedraise(excinfo):
-    if excinfo is not None:
-        cls, err, trc = excinfo
-        if sys.version_info[0] <= 2:
-            exec("raise cls, err, trc")
-        else:
-            raise err.with_traceback(trc)
 
 
 
