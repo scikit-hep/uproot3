@@ -992,11 +992,12 @@ class TString(str, ROOTStreamedObject):
         return TString(cursor.string(source))
 
     @staticmethod
-    def to(data, offsets):
-        out = numpy.empty(offsets.shape, dtype=numpy.object)
+    def to(data, offsets, entrystart, entrystop):
+        out = numpy.empty(entrystop - entrystart, dtype=numpy.object)
         for i, offset in enumerate(offsets):
-            size = data[offset]
-            out[i] = data[offset + 1 : offset + 1 + size].tostring()
+            if entrystart <= i < entrystop:
+                size = data[offset]
+                out[i - entrystart] = data[offset + 1 : offset + 1 + size].tostring()
         return out
 
 class TNamed(TObject):
