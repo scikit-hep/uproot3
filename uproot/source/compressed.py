@@ -97,6 +97,9 @@ class CompressedSource(object):
         self._compressedbytes = compressedbytes
         self._uncompressedbytes = uncompressedbytes
 
+    def parent(self):
+        return self._compressed
+
     def threadlocal(self):
         return self
 

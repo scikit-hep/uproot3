@@ -42,6 +42,9 @@ class ChunkedSource(object):
             self._cache = ThreadSafeMemoryCache(limitbytes)
         self._source = None
 
+    def parent(self):
+        return self
+
     def threadlocal(self):
         return self
 

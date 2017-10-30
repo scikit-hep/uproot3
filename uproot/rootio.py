@@ -973,6 +973,14 @@ class TString(str, ROOTStreamedObject):
     def _readinto(self, source, cursor, context):
         return TString(cursor.string(source))
 
+    @staticmethod
+    def to(data, offsets):
+        out = numpy.empty(offsets.shape, dtype=numpy.object)
+        for i, offset in enumerate(offsets):
+            size = data[offset]
+            out[i] = data[offset + 1 : offset + 1 + size].tostring()
+        return out
+
 class TNamed(TObject):
     @staticmethod
     def _readinto(self, source, cursor, context):

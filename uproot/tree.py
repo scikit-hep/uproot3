@@ -42,7 +42,7 @@ class TTreeMethods(object): pass
 
 uproot.rootio.methods[b"TTree"] = TTreeMethods
 
-def _leaf2dtype(leaf):
+def _leafto(leaf):
     classname = leaf.__class__.__name__
 
     if classname == "TLeafO":
@@ -79,7 +79,7 @@ def _leaf2dtype(leaf):
         return numpy.dtype(numpy.float64).newbyteorder(">")
 
     elif classname == "TLeafC":
-        return uproot.rootio.TString
+        return uproot.rootio.TString.to
 
     else:
         raise NotImplementedError
@@ -90,7 +90,10 @@ class TBranchMethods(object):
         self.fBasketEntry = self.fBasketEntry[:self.fWriteBasket]
         self.fBasketSeek = self.fBasketSeek[:self.fWriteBasket]
 
-        self.dtype = [(leaf.fName, _leaf2dtype(leaf)) for leaf in self.fLeaves]
+        if len(self.fLeaves) == 1:
+            self.to = _leafto(self.fLeaves[0])
+        else:
+            self.to = [(leaf.fName, _leafto(leaf)) for leaf in self.fLeaves]
 
         self._source = source
 
@@ -113,7 +116,7 @@ class TBranchMethods(object):
 
                 self.fVersion, self.fBufferSize, self.fNevBufSize, self.fNevBuf, self.fLast = cursor.fields(source, TBranchMethods._BasketKey._format_complete)
 
-                border = self.fLast - self.fKeylen
+                self.border = self.fLast - self.fKeylen
 
                 if self.fObjlen != self.fNbytes - self.fKeylen:
                     self.source = CompressedSource(compression, source, Cursor(self.fSeekKey + self.fKeylen), self.fNbytes - self.fKeylen, self.fObjlen)
@@ -127,9 +130,9 @@ class TBranchMethods(object):
         _format_complete = struct.Struct(">Hiiii")
 
     def _basketkey(self, source, i, complete):
-        return self._BasketKey(source, Cursor(self.fBasketSeek[i]), Compression(self.fCompress), complete)
+        return self._BasketKey(source.parent(), Cursor(self.fBasketSeek[i]), Compression(self.fCompress), complete)
 
-    def _basket(self, i, offsets=False, parallel=False):
+    def _basket(self, i, parallel=False):
         if parallel:
             keysource = self._source.threadlocal()
         else:
@@ -137,16 +140,23 @@ class TBranchMethods(object):
 
         key = self._basketkey(keysource, i, True)
 
-        if callable(self.dtype):
-            return self.dtype(key.cursor.bytes(key.source, key.border))
-        
-        elif len(self.dtype) == 1:
-            dtype = self.dtype[0][1]
-            return key.cursor.array(key.source, key.border // dtype.itemsize, dtype)
+        if callable(self.to):
+            data = key.cursor.bytes(key.source, key.border)
+            if key.cursor.index >= key.fObjlen:
+                offsets = None
+            else:
+                key.cursor.skip(4)
+                offsets = key.cursor.array(key.source, (key.fObjlen - key.border - 8) // 4, numpy.dtype(">i4")) - key.fKeylen
+            try:
+                return self.to(data, offsets)
+            except TypeError:
+                return self.to(data)
+
+        elif isinstance(self.to, numpy.dtype):
+            return key.cursor.array(key.source, key.border // self.to.itemsize, self.to)
 
         else:
-            return key.cursor.array(key.source, key.border // self.dtype.itemsize, self.dtype)
-
+            raise TypeError("unrecognized interpretation: {0} ({1})".format(repr(self.to), type(self.to)))
         
 uproot.rootio.methods[b"TBranch"] = TBranchMethods
 

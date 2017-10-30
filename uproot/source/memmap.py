@@ -37,6 +37,9 @@ class MemmapSource(object):
         self.path = os.path.expanduser(path)
         self._source = numpy.memmap(self.path, dtype=numpy.uint8, mode="r")
 
+    def parent(self):
+        return self
+
     def threadlocal(self):
         return self
 
