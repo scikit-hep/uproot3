@@ -265,9 +265,30 @@ class TBranchMethods(object):
                 pass
         raise KeyError("not found: {0}".format(repr(name)))
 
-    def basket(self, i, to=None, parallel=False):
+    def basket(self, i, to=None, entrystart=None, entrystop=None, parallel=False):
         if not 0 <= i < self.numbaskets:
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
+
+        if to is None:
+            to = self.to
+
+        if entrystart is None:
+            entrystart = 0
+        if entrystop is None:
+            entrystop = self.numentries
+
+        def chop(array):
+            if entrystop < self.basket_entrystop(i):
+                array = array[:self.basket_entrystop(i) - entrystop]
+            if self.basket_entrystart(i) < entrystart:
+                array = array[entrystart - self.basket_entrystart(i):]
+            return array
+
+        chopped = 0
+        if entrystop < self.basket_entrystop(i):
+            chopped += self.basket_entrystop(i) - entrystop
+        if self.basket_entrystart(i) < entrystart:
+            chopped += entrystart - self.basket_entrystart(i)
 
         if parallel:
             keysource = self._source.threadlocal()
@@ -276,21 +297,18 @@ class TBranchMethods(object):
 
         key = self._basketkey(keysource, i, True)
 
-        if to is None:
-            to = self.to
-
         if isinstance(to, numpy.dtype):
-            return key.cursor.array(key.source, key.border // to.itemsize, to)
-
+            return chop(key.cursor.array(key.source, key.border // to.itemsize, to))
+            
         elif isinstance(to, numpy.ndarray):
             if len(to.shape) == 1:
                 flat = to
             else:
                 flat = to.reshape(reduce(lambda x, y: x*y, to.shape, 1))
-            numitems = key.border // flat.dtype.itemsize
+            numitems = key.border // flat.dtype.itemsize - chopped
             if numitems <= len(flat):
-                flat[:numitems] = key.cursor.array(key.source, numitems, to)
-                return flat[:numitems]
+                flat[:numitems] = chop(key.cursor.array(key.source, numitems, to))
+                return to[:len(to) - chopped]
             else:
                 raise ValueError("array provided to branch {0}, basket {1} has room for {2} items but provided array has {3} items".format(repr(self.name), i, numitems, len(flat)))
 
@@ -309,9 +327,17 @@ class TBranchMethods(object):
         else:
             raise TypeError("unrecognized interpretation: {0} ({1})".format(repr(to), type(to)))
 
-    def baskets(self, to=None, executor=None, blocking=True, callback=None):
-        raise NotImplementedError
+    def baskets(self, to=None, entrystart=None, entrystop=None, executor=None, blocking=True, callback=None):
+        if isinstance(to, numpy.ndarray):
+            raise TypeError("the 'baskets' method fills all baskets, so a single array 'to' would be clobbered before returning")
 
+        def fill(i):
+            result = self.basket(i, to, entrystart, entrystop)
+
+
+
+
+            
     def iterate_baskets(self, to=None, reportentries=False):
         if reportentries:
             for i in range(self.numbaskets):
