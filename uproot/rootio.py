@@ -31,7 +31,7 @@
 import re
 import struct
 import sys
-from collections import namedtuple
+from functools import reduce
 
 import numpy
 
@@ -978,7 +978,21 @@ class TStreamerString(TStreamerElement):
 
 ################################################################ streamed classes (with some overrides)
 
-class ROOTStreamedObject(ROOTObject): pass
+class ROOTStreamedObject(ROOTObject):
+    todtype = numpy.dtype(numpy.object)
+    todims = ()
+
+    @staticmethod
+    def numitems(numbytes, numentries, flattened):
+        return numentries
+
+    @staticmethod
+    def toflat(array):
+        return array.reshape(reduce(lambda x, y: x*y, array.shape, 1))
+
+    @staticmethod
+    def fromflat(array):
+        return array
 
 class TObject(ROOTStreamedObject):
     @staticmethod
@@ -991,14 +1005,15 @@ class TString(str, ROOTStreamedObject):
     def _readinto(self, source, cursor, context):
         return TString(cursor.string(source))
 
-    @staticmethod
-    def to(data, offsets, entrystart, entrystop):
-        out = numpy.empty(entrystop - entrystart, dtype=numpy.object)
-        for i, offset in enumerate(offsets):
-            if entrystart <= i < entrystop:
-                size = data[offset]
-                out[i - entrystart] = data[offset + 1 : offset + 1 + size].tostring()
-        return out
+    # FIXME
+    # @staticmethod
+    # def to(data, offsets, entrystart, entrystop):
+    #     out = numpy.empty(entrystop - entrystart, dtype=numpy.object)
+    #     for i, offset in enumerate(offsets):
+    #         if entrystart <= i < entrystop:
+    #             size = data[offset]
+    #             out[i - entrystart] = data[offset + 1 : offset + 1 + size].tostring()
+    #     return out
 
 class TNamed(TObject):
     @staticmethod

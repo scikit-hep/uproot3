@@ -41,8 +41,6 @@ from uproot.source.compressed import CompressedSource
 from uproot.source.compressed import Compression
 from uproot.source.cursor import Cursor
 
-################################################################ helper functions for common tasks
-
 def _delayedraise(excinfo):
     if excinfo is not None:
         cls, err, trc = excinfo
@@ -51,66 +49,138 @@ def _delayedraise(excinfo):
         else:
             raise err.with_traceback(trc)
 
-def interpret(branch, dims=(), classes={}):
-    class NotNumeric(Exception): pass
+################################################################ interpretation tools
 
-    def leafto(leaf):
+class asnumpy(object):
+    def __init__(self, fromdtype, todtype=None, fromdims=(), todims=None):
+        if isinstance(fromdtype, numpy.dtype):
+            self.fromdtype = fromdtype
+        else:
+            self.fromdtype = numpy.dtype(fromdtype).newbyteorder(">")
+
+        if todtype is None:
+            self.todtype = self.fromdtype.newbyteorder("=")
+        elif isinstance(todtype, numpy.dtype):
+            self.todtype = todtype
+        else:
+            self.todtype = numpy.dtype(todtype)
+
+        self.fromdims = fromdims
+
+        if todims is None:
+            self.todims = self.fromdims
+        else:
+            self.todims = todims
+
+    def __repr__(self):
+        args = []
+        if self.fromdtype.byteorder == ">":
+            args.append(repr(str(self.fromdtype)))
+        else:
+            args.append(repr(self.fromdtype))
+        if self.todtype.newbyteorder(">") != self.fromdtype.newbyteorder(">"):
+            if self.todtype.byteorder == "=":
+                args.append(repr(str(self.todtype)))
+            else:
+                args.append(repr(self.todtype))
+        if self.fromdims != ():
+            args.append(repr(self.fromdims))
+        if self.todims != self.fromdims:
+            args.append(repr(self.todims))
+        return "asnumpy(" + ", ".join(args) + ")"
+
+    def numitems(self, numbytes, numentries, flattened):
+        out = numbytes // self.fromdtype.itemsize
+        if flattened:
+            return out
+        else:
+            return out // reduce(lambda x, y: x*y, self.todims, 1)
+
+    def frombytes(self, data, offsets, entrystart, entrystop):
+        array = data.view(self.fromdtype)
+        if self.fromdims != ():
+            product = reduce(lambda x, y: x*y, self.fromdims, 1)
+            assert len(array) % product == 0, "{0} % {1} == {2}".format(len(array), product, len(array) % product)
+            numitems = len(array) // product
+            array = array.reshape((numitems,) + self.fromdims)
+        return array[entrystart:entrystop]
+
+    def toflat(self, array):
+        return array.reshape(reduce(lambda x, y: x*y, array.shape, 1))
+
+    def fromflat(self, array):
+        product = reduce(lambda x, y: x*y, self.todims, 1)
+        assert len(array) % product == 0, "{0} % {1} == {2}".format(len(array), product, len(array) % product)
+        return array.reshape((len(array) // product,) + self.todims)
+
+def interpret(branch, classes={}):
+    class NotNumpy(Exception): pass
+
+    def leaf2dtype(leaf):
         classname = leaf.__class__.__name__
         if classname == b"TLeafO":
             return numpy.dtype(numpy.bool)
         elif classname == b"TLeafB":
             if leaf.fIsUnsigned:
-                return numpy.dtype(numpy.uint8).newbyteorder(">")
+                return numpy.dtype(numpy.uint8)
             else:
-                return numpy.dtype(numpy.int8).newbyteorder(">")
+                return numpy.dtype(numpy.int8)
         elif classname == b"TLeafS":
             if leaf.fIsUnsigned:
-                return numpy.dtype(numpy.uint16).newbyteorder(">")
+                return numpy.dtype(numpy.uint16)
             else:
-                return numpy.dtype(numpy.int16).newbyteorder(">")
+                return numpy.dtype(numpy.int16)
         elif classname == b"TLeafI":
             if leaf.fIsUnsigned:
-                return numpy.dtype(numpy.uint32).newbyteorder(">")
+                return numpy.dtype(numpy.uint32)
             else:
-                return numpy.dtype(numpy.int32).newbyteorder(">")
+                return numpy.dtype(numpy.int32)
         elif classname == b"TLeafL":
             if leaf.fIsUnsigned:
-                return numpy.dtype(numpy.uint64).newbyteorder(">")
+                return numpy.dtype(numpy.uint64)
             else:
-                return numpy.dtype(numpy.int64).newbyteorder(">")
+                return numpy.dtype(numpy.int64)
         elif classname == b"TLeafF":
-            return numpy.dtype(numpy.float32).newbyteorder(">")
+            return numpy.dtype(numpy.float32)
         elif classname == b"TLeafD":
-            return numpy.dtype(numpy.float64).newbyteorder(">")
+            return numpy.dtype(numpy.float64)
         else:
-            raise NotNumeric
+            raise NotNumpy
 
-    if dims == ():
-        dimensionalize = lambda x: x
+    dims = ()
+    if len(branch.fLeaves) == 1:
+        m = interpret._titlehasdims.match(branch.fLeaves[0].fTitle)
+        if m is not None:
+            dims = tuple(int(x) for x in re.findall(interpret._itemdimpattern, branch.fLeaves[0].fTitle))
     else:
-        dimensionalize = lambda x: (x, dims)
+        for leaf in branch.fLeaves:
+            if interpret._titlehasdims.match(leaf.fTitle):
+                return None
 
     try:
         if len(branch.fLeaves) == 1:
-            return dimensionalize(leafto(branch.fLeaves[0]))
+            dtype = leaf2dtype(branch.fLeaves[0])
+            return asnumpy(dtype.newbyteorder(">"), dtype.newbyteorder("="), dims, dims)
         else:
-            return dimensionalize(numpy.dtype([(leaf.fName, leafto(leaf)) for leaf in branch.fLeaves]))
+            fromdtype = numpy.dtype([(leaf.fName, leaf2dtype(leaf).newbyteorder(">")) for leaf in branch.fLeaves])
+            todtype = numpy.dtype([(leaf.fName, leaf2dtype(leaf).newbyteorder("=")) for leaf in branch.fLeaves])
+            return asnumpy(fromdtype, todtype, dims, dims)
 
-    except NotNumeric:
+    except NotNumpy:
         if len(branch.fLeaves) == 1:
-            classname = branch.fLeaves[0].__class__.__name__
+            if branch.fLeaves[0].__class__.__name__ == "TLeafC":
+                return uproot.rootio.TString
 
-            if classname == "TLeafC":
-                return uproot.rootio.TString.to
+            elif branch.fLeaves[0].__class__.__name__ == "TLeafElement":
+                classname = None
+                if classname in classes:
+                    if hasattr(classes[classname], "numitems") and hasattr(classes[classname], "frombytes"):
+                        return classes[classname]
 
-            elif classname in classes:
-                return classes[classname].to
+        return None
 
-            else:
-                raise KeyError("{0} not found in classes".format(repr(classname)))
-
-        else:
-            raise ValueError("multiple leaves but some are not numeric: {0}".format(", ".join(repr(x) for x in branch.fLeaves)))
+interpret._titlehasdims = re.compile(br"^([^\[\]]+)(\[[^\[\]]+\])+")
+interpret._itemdimpattern = re.compile(br"\[([1-9][0-9]*)\]")
 
 ################################################################ methods for TTree
 
@@ -158,55 +228,62 @@ class TTreeMethods(object):
                 pass
         raise KeyError("not found: {0}".format(repr(name)))
 
-    def array(self, branch, to=None, entrystart=None, entrystop=None, executor=None, blocking=True):
+    def array(self, branch, streamer=None, entrystart=None, entrystop=None, executor=None, blocking=True):
         raise NotImplementedError
 
-    def lazyarray(self, branch, to=None, entrystart=None, entrystop=None):
+    def lazyarray(self, branch, streamer=None, entrystart=None, entrystop=None):
         raise NotImplementedError
 
-    def arrays(self, branchto=lambda branch: branch.to, outputtype=dict, entrystart=None, entrystop=None, executor=None, blocking=True):
+    def arrays(self, branches=None, outputtype=dict, entrystart=None, entrystop=None, executor=None, blocking=True):
         raise NotImplementedError
 
-    def lazyarrays(self, branchto=lambda branch: branch.to, outputtype=dict, entrystart=None, entrystop=None):
+    def lazyarrays(self, branches=None, outputtype=dict, entrystart=None, entrystop=None):
         raise NotImplementedError
 
-    def iterate(self, entrystep, branchto=lambda branch: branch.to, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, executor=None):
+    def iterate(self, entrystep, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, executor=None):
         raise NotImplementedError
 
-    def _normalize_branchto(self, branchto, allbranches):
-        if callable(branchto):
+    def _normalize_branches(self, arg, allbranches):
+        if arg is None:
             for branch in allbranches:
-                to = branchto(branch)
-                if to is not None:
-                    yield branch, to
+                if branch.streamer is not None:
+                    yield branch, branch.streamer
 
-        elif isinstance(branchto, dict):
+        elif callable(arg):
+            for branch in allbranches:
+                streamer = arg(branch)
+                if streamer is True:
+                    yield branch, branch.streamer
+                elif streamer is not False and streamer is not None:
+                    yield branch, streamer
+
+        elif isinstance(arg, dict):
             lookup = dict((x.fName, x) for x in allbranches)
-            for name, to in branchto.items():
+            for name, streamer in arg.items():
                 name = _bytesid(name)
                 if name in lookup:
-                    yield lookup[name], to
+                    yield lookup[name], streamer
 
-        elif isinstance(branchto, string_types):
-            name = _bytesid(branchto)
+        elif isinstance(arg, string_types):
+            name = _bytesid(arg)
             branch = [x for x in allbranches if x.name == name]
             if len(branch) == 1:
-                yield branch[0], branch[0].to
+                yield branch[0], branch[0].streamer
             else:
                 raise KeyError("not found: {0}".format(repr(name)))
 
         else:
             try:
-                names = iter(branchto)
+                names = iter(arg)
             except:
-                raise TypeError("branchto argument not understood")
+                raise TypeError("branches argument not understood")
             else:
                 lookup = dict((x.name, x) for x in allbranches)
                 for name in names:
                     name = _bytesid(name)
                     if name in lookup:
                         branch = lookup[name]
-                        yield branch, branch.to
+                        yield branch, branch.streamer
                     else:
                         raise KeyError("not found: {0}".format(repr(name)))
 
@@ -249,17 +326,7 @@ class TBranchMethods(object):
         self.fBasketEntry = self.fBasketEntry[:self.fWriteBasket]
         self.fBasketSeek = self.fBasketSeek[:self.fWriteBasket]
         self._source = source
-
-        dims = ()
-        if len(self.fLeaves) == 1:
-            m = self._titlehasdims.match(self.fLeaves[0].fTitle)
-            if m is not None:
-                dims = tuple(int(x) for x in re.findall(self._itemdimpattern, self.fLeaves[0].fTitle))
-
-        self.to = interpret(self, dims, classes=context.classes)
-
-    _titlehasdims = re.compile(br"^([^\[\]]+)(\[[^\[\]]+\])+")
-    _itemdimpattern = re.compile(br"\[([1-9][0-9]*)\]")
+        self.streamer = interpret(self, classes=context.classes)
 
     @property
     def name(self):
@@ -310,31 +377,16 @@ class TBranchMethods(object):
         keys = [self._basketkey(keysource, i, False) for i in range(self.numbaskets)]
         return sum(key.fObjlen for key in keys) / sum(key.fNbytes - key.fKeylen for key in keys)
 
-    def _normalize_todims(self, to):
-        if to is None:
-            to = self.to
-        if isinstance(to, tuple) and len(to) == 2 and isinstance(to[0], numpy.dtype) and isinstance(to[1], tuple) and all(isinstance(x, numbers.Integral) for x in to[1]):
-            to, dims = to
-        elif isinstance(to, numpy.ndarray):
-            dims = to.shape[1:]
-        else:
-            dims = ()
-        return to, dims
+    def _normalize_streamer(self, streamer):
+        if streamer is None:
+            streamer = self.streamer
+        if streamer is None:
+            raise ValueError("no streamer associated with branch {0}".format(repr(self.name)))
+        return streamer
 
-    def _normalize_numitems(self, to, numitems):
-        if numitems is None:
-            to, dims = self._normalize_todims(to)
-            if isinstance(to, numpy.dtype):
-                numitems = lambda numbytes, numentries: (numbytes // to.itemsize) // reduce(lambda x, y: x*y, dims, 1)
-            elif hasattr(to, "numitems"):
-                numitems = to.numitems
-            else:
-                raise TypeError("cannot predict numitems if 'to' is not a numpy.dtype")
-        return numitems
-
-    def numitems(self, flattened=False, to=None, numitems=None):
-        numitems = self._normalize_numitems(to, numitems)
-        return sum(self.basket_numitems(i, flattened=flattened, to=None, numitems=numitems) for i in range(self.numbaskets))
+    def numitems(self, flattened=False, streamer=None):
+        streamer = self._normalize_streamer(streamer)
+        return sum(self.basket_numitems(i, flattened=flattened, streamer=streamer) for i in range(self.numbaskets))
 
     @property
     def compression(self):
@@ -366,14 +418,10 @@ class TBranchMethods(object):
         key = self._basketkey(keysource, i, False)
         return key.fNbytes - key.fKeylen
 
-    def basket_numitems(self, flattened=False, to=None, numitems=None):
-        numitems = self._normalize_numitems(to, numitems)
+    def basket_numitems(self, flattened=False, streamer=None):
+        streamer = self._normalize_streamer(streamer)
         key = self._basketkey(keysource, i, True)
-        numflat = numitems(key.border, self.basket_numentries(i))
-        if flattened:
-            return numflat
-        else:
-            return numflat // reduce(lambda x, y: x*y, self.dims, 1)
+        return numitems(key.border, self.basket_numentries(i), flattened)
             
     @property
     def branch(self, name):
@@ -387,18 +435,16 @@ class TBranchMethods(object):
                 pass
         raise KeyError("not found: {0}".format(repr(name)))
 
-    def basket(self, i, to=None, entrystart=None, entrystop=None, parallel=False):
+    def basket(self, i, streamer=None, entrystart=None, entrystop=None, parallel=False):
         if not 0 <= i < self.numbaskets:
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
-        to, dims = self._normalize_todims(to)
-        product = reduce(lambda x, y: x*y, dims, 1)
+        streamer = self._normalize_streamer(streamer)
 
         if entrystart is None:
             entrystart = 0
         if entrystop is None:
             entrystop = self.numentries
-
         local_entrystart = max(0, entrystart - self.basket_entrystart(i))
         local_entrystop  = min(entrystop - self.basket_entrystart(i), self.basket_entrystop(i) - self.basket_entrystart(i))
 
@@ -406,43 +452,20 @@ class TBranchMethods(object):
             keysource = self._source.threadlocal()
         else:
             keysource = self._source
-
         key = self._basketkey(keysource, i, True)
 
-        if isinstance(to, numpy.dtype):
-            shape = ((local_entrystop - local_entrystart) // product,) + dims
-            local_entrystart *= product
-            local_entrystop *= product
-            return key.cursor.array(key.source, key.border // to.itemsize, to)[local_entrystart:local_entrystop].reshape(shape)
-            
-        elif isinstance(to, numpy.ndarray):
-            shape = ((local_entrystop - local_entrystart) // product,) + dims
-            local_entrystart *= product
-            local_entrystop *= product
-
-            if len(to.shape) == 1:
-                flat = to
-            else:
-                flat = to.reshape(reduce(lambda x, y: x*y, to.shape, 1))
-
-            numvalues = local_entrystop - local_entrystart
-            if numvalues <= len(flat):
-                flat[:numvalues] = key.cursor.bytes(key.source, key.border).view(flat.dtype)[local_entrystart:local_entrystop]
-                return flat.reshape(shape)
-            else:
-                raise ValueError("array provided to branch {0}, basket {1} needs to fill {2} values in an array with {3} slots".format(repr(self.name), i, numvalues, len(flat)))
-
-        elif callable(to):
-            data = key.cursor.bytes(key.source, key.border)
-            if key.cursor.index >= key.fObjlen:
-                offsets = None
-            else:
-                key.cursor.skip(4)
-                offsets = key.cursor.array(key.source, (key.fObjlen - key.border - 8) // 4, numpy.dtype(">i4")) - key.fKeylen
-            return to(data, offsets, local_entrystart, local_entrystop)
-
+        data = key.cursor.bytes(key.source, key.border)
+        if key.cursor.index >= key.fObjlen:
+            offsets = None
         else:
-            raise TypeError("unrecognized interpretation: {0} ({1})".format(repr(to), type(to)))
+            key.cursor.skip(4)
+            offsets = key.cursor.array(key.source, (key.fObjlen - key.border - 8) // 4, numpy.dtype(">i4")) - key.fKeylen
+        out = streamer.frombytes(data, offsets, local_entrystart, local_entrystop)
+
+        if streamer.fromdtype != streamer.todtype or streamer.fromdims != streamer.todims:
+            return streamer.fromflat(numpy.array(streamer.toflat(out), dtype=streamer.todtype))
+        else:
+            return out
 
     def baskets(self, to=None, entrystart=None, entrystop=None, executor=None, blocking=True):
         if isinstance(to, numpy.ndarray):
