@@ -985,11 +985,25 @@ class ROOTStreamedObject(ROOTObject):
     def numitems(numbytes, numentries, flattened):
         return numentries
 
-    @staticmethod
-    def fill(fromarray, toarray, itemstart, itemstop):
-        toarray[itemstart:itemstop] = fromarray
+    # TODO: each ROOTStreamedObject must define
+    # 
+    # @staticmethod
+    # def frombytes(bytesdata, offsets, entrystart, entrystop): ...
 
-    # TODO: each ROOTStreamedObject must define frombytes
+    @staticmethod
+    def destarray(numitems, sourcearray):
+        if sourcearray is not None and numitems <= len(sourcearray):
+            return sourcearray[:numitems]
+        else:
+            return numpy.empty((numitems,), dtype=ROOTStreamedObject.todtype)
+
+    @staticmethod
+    def filldest(sourcearray, destarray, itemstart, itemstop):
+        if itemstart == 0 and itemstop == len(destarray) and destarray.base is sourcearray:
+            return destarray
+        else:
+            destarray[itemstart:itemstop] = sourcearray
+            return destarray[itemstart:itemstop]
 
 class TObject(ROOTStreamedObject):
     @staticmethod
