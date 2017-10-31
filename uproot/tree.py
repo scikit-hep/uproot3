@@ -31,7 +31,6 @@
 import re
 import struct
 import numbers
-from functools import reduce
 
 import numpy
 
@@ -51,69 +50,10 @@ def _delayedraise(excinfo):
 
 ################################################################ interpretation tools
 
-class asnumpy(object):
-    def __init__(self, fromdtype, todtype=None, fromdims=(), todims=None):
-        if isinstance(fromdtype, numpy.dtype):
-            self.fromdtype = fromdtype
-        else:
-            self.fromdtype = numpy.dtype(fromdtype).newbyteorder(">")
+def interpret(branch, classes=None, swapbytes=True):
+    if classes is None:
+        classes = branch._context.classes
 
-        if todtype is None:
-            self.todtype = self.fromdtype.newbyteorder("=")
-        elif isinstance(todtype, numpy.dtype):
-            self.todtype = todtype
-        else:
-            self.todtype = numpy.dtype(todtype)
-
-        self.fromdims = fromdims
-
-        if todims is None:
-            self.todims = self.fromdims
-        else:
-            self.todims = todims
-
-    def __repr__(self):
-        args = []
-        if self.fromdtype.byteorder == ">":
-            args.append(repr(str(self.fromdtype)))
-        else:
-            args.append(repr(self.fromdtype))
-        if self.todtype.newbyteorder(">") != self.fromdtype.newbyteorder(">"):
-            if self.todtype.byteorder == "=":
-                args.append(repr(str(self.todtype)))
-            else:
-                args.append(repr(self.todtype))
-        if self.fromdims != ():
-            args.append(repr(self.fromdims))
-        if self.todims != self.fromdims:
-            args.append(repr(self.todims))
-        return "asnumpy(" + ", ".join(args) + ")"
-
-    def numitems(self, numbytes, numentries, flattened):
-        out = numbytes // self.fromdtype.itemsize
-        if flattened:
-            return out
-        else:
-            return out // reduce(lambda x, y: x*y, self.todims, 1)
-
-    def frombytes(self, data, offsets, entrystart, entrystop):
-        array = data.view(self.fromdtype)
-        if self.fromdims != ():
-            product = reduce(lambda x, y: x*y, self.fromdims, 1)
-            assert len(array) % product == 0, "{0} % {1} == {2}".format(len(array), product, len(array) % product)
-            numitems = len(array) // product
-            array = array.reshape((numitems,) + self.fromdims)
-        return array[entrystart:entrystop]
-
-    def toflat(self, array):
-        return array.reshape(reduce(lambda x, y: x*y, array.shape, 1))
-
-    def fromflat(self, array):
-        product = reduce(lambda x, y: x*y, self.todims, 1)
-        assert len(array) % product == 0, "{0} % {1} == {2}".format(len(array), product, len(array) % product)
-        return array.reshape((len(array) // product,) + self.todims)
-
-def interpret(branch, classes={}):
     class NotNumpy(Exception): pass
 
     def leaf2dtype(leaf):
@@ -159,12 +99,18 @@ def interpret(branch, classes={}):
 
     try:
         if len(branch.fLeaves) == 1:
-            dtype = leaf2dtype(branch.fLeaves[0])
-            return asnumpy(dtype.newbyteorder(">"), dtype.newbyteorder("="), dims, dims)
+            fromdtype = leaf2dtype(branch.fLeaves[0]).newbyteorder(">")
+            if swapbytes:
+                return asdtype(fromdtype, fromdtype.newbyteorder("="), dims, dims)
+            else:
+                return asdtype(fromdtype, fromdtype, dims, dims)
         else:
             fromdtype = numpy.dtype([(leaf.fName, leaf2dtype(leaf).newbyteorder(">")) for leaf in branch.fLeaves])
-            todtype = numpy.dtype([(leaf.fName, leaf2dtype(leaf).newbyteorder("=")) for leaf in branch.fLeaves])
-            return asnumpy(fromdtype, todtype, dims, dims)
+            if swapbytes:
+                todtype = numpy.dtype([(leaf.fName, leaf2dtype(leaf).newbyteorder("=")) for leaf in branch.fLeaves])
+            else:
+                todtype = fromdtype
+            return asdtype(fromdtype, todtype, dims, dims)
 
     except NotNumpy:
         if len(branch.fLeaves) == 1:
@@ -174,13 +120,156 @@ def interpret(branch, classes={}):
             elif branch.fLeaves[0].__class__.__name__ == "TLeafElement":
                 classname = None
                 if classname in classes:
-                    if hasattr(classes[classname], "numitems") and hasattr(classes[classname], "frombytes"):
+                    if hasattr(classes[classname], "frombytes"):
                         return classes[classname]
 
         return None
 
 interpret._titlehasdims = re.compile(br"^([^\[\]]+)(\[[^\[\]]+\])+")
 interpret._itemdimpattern = re.compile(br"\[([1-9][0-9]*)\]")
+
+def _dimsprod(dims):
+    out = 1
+    for x in dims:
+        out *= x
+    return out
+
+class asdtype(object):
+    def __init__(self, fromdtype, todtype=None, fromdims=(), todims=None):
+        if isinstance(fromdtype, numpy.dtype):
+            self.fromdtype = fromdtype
+        else:
+            self.fromdtype = numpy.dtype(fromdtype).newbyteorder(">")
+
+        if todtype is None:
+            self.todtype = self.fromdtype.newbyteorder("=")
+        elif isinstance(todtype, numpy.dtype):
+            self.todtype = todtype
+        else:
+            self.todtype = numpy.dtype(todtype)
+
+        self.fromdims = fromdims
+
+        if todims is None:
+            self.todims = self.fromdims
+        else:
+            self.todims = todims
+
+    def __repr__(self):
+        args = []
+
+        if self.fromdtype.byteorder == ">":
+            args.append(repr(str(self.fromdtype)))
+        else:
+            args.append(repr(self.fromdtype))
+
+        if self.todtype.newbyteorder(">") != self.fromdtype.newbyteorder(">"):
+            if self.todtype.byteorder == "=":
+                args.append(repr(str(self.todtype)))
+            else:
+                args.append(repr(self.todtype))
+
+        if self.fromdims != ():
+            args.append(repr(self.fromdims))
+
+        if self.todims != self.fromdims:
+            args.append(repr(self.todims))
+
+        return "asdtype(" + ", ".join(args) + ")"
+
+    def numitems(self, numbytes, numentries, flattened):
+        out = numbytes // self.fromdtype.itemsize
+        if flattened:
+            return out
+        else:
+            return out // _dimsprod(self.todims)
+
+    def frombytes(self, bytesdata, offsets, entrystart, entrystop):
+        array = bytesdata.view(self.fromdtype)
+
+        if self.fromdims != ():
+            product = _dimsprod(self.fromdims)
+            assert len(array) % product == 0, "{0} % {1} == {2} != 0".format(len(array), product, len(array) % product)
+            array = array.reshape((len(array) // product,) + self.fromdims)
+
+        return array[entrystart:entrystop]
+
+    def array(self, numitems):
+        return numpy.empty((numitems,) + self.todims, dtype=self.todtype)
+
+    def fill(self, fromarray, toarray, itemstart, itemstop):
+        if self.fromdims != ():
+            flattened_fromarray = fromarray.reshape(_dimsprod(self.fromdims) * len(fromarray))
+        else:
+            flattened_fromarray = fromarray
+
+        if self.todims != ():
+            product = _dimsprod(self.todims)
+            flattened_toarray = toarray.reshape(len(toarray) * product)
+            flattened_itemstart = itemstart * product
+            flattened_itemstop = itemstop * product
+        else:
+            flattened_toarray = toarray
+            flattened_itemstart = itemstart
+            flattened_itemstop = itemstop
+
+        flattened_toarray[flattened_itemstart:flattened_itemstop] = flattened_fromarray
+        return toarray[itemstart:itemstop]
+
+
+
+
+    # def toflat(self, array):
+    #     return array.reshape(reduce(lambda x, y: x*y, array.shape, 1))
+
+    # def fromflat(self, array):
+    #     product = reduce(lambda x, y: x*y, self.todims, 1)
+    #     assert len(array) % product == 0, "{0} % {1} == {2}".format(len(array), product, len(array) % product)
+    #     return array.reshape((len(array) // product,) + self.todims)
+
+    # def maybecopy(self, array):
+    #     if self.fromdtype != self.todtype or self.fromdims != self.todims:
+    #         return self.fromflat(numpy.array(self.toflat(array), dtype=self.todtype))
+    #     else:
+    #         return array
+
+class asarray(object):
+    def __init__(self, fromdtype, toarray, fromdims=()):
+        if isinstance(fromdtype, numpy.dtype):
+            self.fromdtype = fromdtype
+        else:
+            self.fromdtype = numpy.dtype(fromdtype).newbyteorder(">")
+
+        self.toarray = toarray
+
+        self.fromdims = fromdims
+
+    def __repr__(self):
+        args = []
+
+        if self.fromdtype.byteorder == ">":
+            args.append(repr(str(self.fromdtype)))
+        else:
+            args.append(repr(self.fromdtype))
+
+        if self.todtype.byteorder == "=":
+            args.append("<array dtype={0} at 0x{1:012x}>".format(repr(str(self.todtype)), id(self.todtype)))
+        else:
+            args.append("<array dtype={0} at 0x{1:012x}>".format(repr(self.todtype), id(self.todtype)))
+
+        return "asarray(" + ", ".join(args) + ")"
+
+    def numitems(self, numbytes, numentries, flattened):
+        out = numbytes // self.fromdtype.itemsize
+        if flattened:
+            return out
+        else:
+            return out // reduce(lambda x, y: x*y, self.toarray.shape[1:], 1)
+
+
+
+
+
 
 ################################################################ methods for TTree
 
@@ -454,18 +543,16 @@ class TBranchMethods(object):
             keysource = self._source
         key = self._basketkey(keysource, i, True)
 
-        data = key.cursor.bytes(key.source, key.border)
+        bytesdata = key.cursor.bytes(key.source, key.border)
         if key.cursor.index >= key.fObjlen:
             offsets = None
         else:
             key.cursor.skip(4)
             offsets = key.cursor.array(key.source, (key.fObjlen - key.border - 8) // 4, numpy.dtype(">i4")) - key.fKeylen
-        out = streamer.frombytes(data, offsets, local_entrystart, local_entrystop)
 
-        if streamer.fromdtype != streamer.todtype or streamer.fromdims != streamer.todims:
-            return streamer.fromflat(numpy.array(streamer.toflat(out), dtype=streamer.todtype))
-        else:
-            return out
+        fromarray = streamer.frombytes(bytesdata, offsets, local_entrystart, local_entrystop)
+        toarray = streamer.array( ??? HERE ??? )
+        return streamer.fill(fromarray, toarray, 0, len(toarray))
 
     def baskets(self, to=None, entrystart=None, entrystop=None, executor=None, blocking=True):
         if isinstance(to, numpy.ndarray):

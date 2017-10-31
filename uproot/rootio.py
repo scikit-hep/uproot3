@@ -31,7 +31,6 @@
 import re
 import struct
 import sys
-from functools import reduce
 
 import numpy
 
@@ -987,12 +986,10 @@ class ROOTStreamedObject(ROOTObject):
         return numentries
 
     @staticmethod
-    def toflat(array):
-        return array.reshape(reduce(lambda x, y: x*y, array.shape, 1))
+    def fill(fromarray, toarray, itemstart, itemstop):
+        toarray[itemstart:itemstop] = fromarray
 
-    @staticmethod
-    def fromflat(array):
-        return array
+    # TODO: each ROOTStreamedObject must define frombytes
 
 class TObject(ROOTStreamedObject):
     @staticmethod
