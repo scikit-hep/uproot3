@@ -856,6 +856,65 @@ class TBranchMethods(object):
         interpretation = self._normalize_interpretation(interpretation)
         return self._LazyArray(self, interpretation)
 
+    class _LazyArray(object):
+        def __init__(self, branch, interpretation):
+            self._branch = branch
+            self._interpretation = interpretation
+
+            self._basket_itemoffset = [0]
+            keysource = self._source.threadlocal()
+            try:
+                for i in range(self._branch.numbaskets):
+                    key = self._basketkey(keysource, i, True)
+                    numitems = interpretation.numitems(key.border, self.basket_numentries(i), False)
+                    self._basket_itemoffset.append(self._basket_itemoffset[-1] + numitems)
+            finally:
+                keysource.dismiss()
+
+            self._baskets = [None] * self._branch.numbaskets
+
+        @property
+        def dtype(self):
+            return self._interpretation.todtype
+
+        @property
+        def shape(self):
+            return (len(self),) + self._interpretation.todims
+
+        def __len__(self):
+            return self._basket_itemoffset[-1]
+
+        def _array(self, itemstart, itemstop):
+            basketstart, basketstop = None, None
+            numitems = 0
+            for i in range(self._branch.numbaskets):
+                if basketstart is None:
+                    if itemstart < self._basket_itemoffset[i + 1] and self._basket_itemoffset[i] < itemstop:
+                        basketstart = i
+
+                if basketstart is not None and self._basket_itemoffset[i] < itemstop:
+                    basketstop = i
+                    numitems += (self._basket_itemoffset[i + 1] - self._basket_itemoffset[i]
+                                 - max(0, itemstart - self._basket_itemoffset[i])
+                                 - max(0, self._basket_itemoffset[i + 1] - itemstop))
+
+            if basketstop is not None:
+                basketstop += 1    # stop is exclusive
+
+            if basketstart is None:
+                return numpy.empty(0, self._interpretation.todtype)
+
+            for i in range(basketstart, basketstop):
+                if self._baskets[i] is None:
+                    self._baskets[i] = self._branch.basket(i, self._interpretation)
+
+            out = self._interpretation.destarray(numitems, None)
+
+            # HERE FIXME TODO HERE FIXME TODO HERE FIXME TODO HERE FIXME TODO HERE FIXME TODO
+
+
+        def cumsum(self, axis=None, dtype=None, out=None):
+            return self._array(self._basket_itemoffset[0], self._basket_itemoffset[-1]).cumsum(axis=axis, dtype=dtype, out=out)
 
 
 
