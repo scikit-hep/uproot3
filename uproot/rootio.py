@@ -525,7 +525,13 @@ def _defineclasses(streamerinfos):
                 classname = streamerinfo.fName
             else:
                 classname = streamerinfo.fName.decode("ascii")
-            code = ["    @staticmethod", "    def _readinto(self, source, cursor, context):", "        start, cnt, vers = _startcheck(source, cursor)"]
+            code = ["    @staticmethod",
+                    "    def _readinto(self, source, cursor, context):",
+                    "        start, cnt, vers = _startcheck(source, cursor)",
+                    "        print self.__class__, {0}".format(streamerinfo.fName),
+                    "        if self.__class__ is {0}:".format(streamerinfo.fName),
+                    "            print self, vers",
+                    "            self.version = vers"]
 
             bases = []
             formats = {}
@@ -787,7 +793,7 @@ class TKey(ROOTObject):
 class TStreamerInfo(ROOTObject):
     @staticmethod
     def _readinto(self, source, cursor, context):
-        start, cnt, vers = _startcheck(source, cursor)
+        start, cnt, self.version = _startcheck(source, cursor)
         self.fName, _ = _nametitle(source, cursor)
         self.fCheckSum, self.fClassVersion = cursor.fields(source, TStreamerInfo._format)
         self.fElements = _readobjany(source, cursor, context)
@@ -803,14 +809,14 @@ class TStreamerInfo(ROOTObject):
 class TStreamerElement(ROOTObject):
     @staticmethod
     def _readinto(self, source, cursor, context):    
-        start, cnt, vers = _startcheck(source, cursor)
+        start, cnt, self.version = _startcheck(source, cursor)
 
         self.fOffset = 0
         # https://github.com/root-project/root/blob/master/core/meta/src/TStreamerElement.cxx#L505
         self.fName, self.fTitle = _nametitle(source, cursor)
         self.fType, self.fSize, self.fArrayLength, self.fArrayDim = cursor.fields(source, TStreamerElement._format1)
 
-        if vers == 1:
+        if self.version == 1:
             n = cursor.field(source, TStreamerElement._format2)
             self.fMaxIndex = cursor.array(source, n, ">i4")
         else:
@@ -821,15 +827,15 @@ class TStreamerElement(ROOTObject):
         if self.fType == 11 and (self.fTypeName == "Bool_t" or self.fTypeName == "bool"):
             self.fType = 18
 
-        if vers <= 2:
+        if self.version <= 2:
             # FIXME
             # self.fSize = self.fArrayLength * gROOT->GetType(GetTypeName())->Size()
             pass
 
         self.fXmin, self.fXmax, self.fFactor = 0.0, 0.0, 0.0
-        if vers == 3:
+        if self.version == 3:
             self.fXmin, self.fXmax, self.fFactor = cursor.fields(source, TStreamerElement._format3)
-        if vers > 3:
+        if self.version > 3:
             # FIXME
             # if (TestBit(kHasRange)) GetRange(GetTitle(),fXmin,fXmax,fFactor)
             pass
@@ -847,7 +853,7 @@ class TStreamerElement(ROOTObject):
 class TStreamerArtificial(TStreamerElement):
     @staticmethod
     def _readinto(self, source, cursor, context):
-        start, cnt, vers = _startcheck(source, cursor)
+        start, cnt, self.version = _startcheck(source, cursor)
         super(TStreamerArtificial, self)._readinto(self, source, cursor, context)
         _endcheck(start, cursor, cnt)
         return self
@@ -855,9 +861,9 @@ class TStreamerArtificial(TStreamerElement):
 class TStreamerBase(TStreamerElement):
     @staticmethod
     def _readinto(self, source, cursor, context):
-        start, cnt, vers = _startcheck(source, cursor)
+        start, cnt, self.version = _startcheck(source, cursor)
         super(TStreamerBase, self)._readinto(self, source, cursor, context)
-        if vers > 2:
+        if self.version > 2:
             self.fBaseVersion = cursor.field(source, TStreamerBase._format)
         _endcheck(start, cursor, cnt)
         return self
@@ -867,7 +873,7 @@ class TStreamerBase(TStreamerElement):
 class TStreamerBasicPointer(TStreamerElement):
     @staticmethod
     def _readinto(self, source, cursor, context):
-        start, cnt, vers = _startcheck(source, cursor)
+        start, cnt, self.version = _startcheck(source, cursor)
         super(TStreamerBasicPointer, self)._readinto(self, source, cursor, context)
         self.fCountVersion = cursor.field(source, TStreamerBasicPointer._format)
         self.fCountName = cursor.string(source)
@@ -880,7 +886,7 @@ class TStreamerBasicPointer(TStreamerElement):
 class TStreamerBasicType(TStreamerElement):
     @staticmethod
     def _readinto(self, source, cursor, context):
-        start, cnt, vers = _startcheck(source, cursor)
+        start, cnt, self.version = _startcheck(source, cursor)
         super(TStreamerBasicType, self)._readinto(self, source, cursor, context)
 
         if uproot.const.kOffsetL < self.fType < uproot.const.kOffsetP:
@@ -913,7 +919,7 @@ class TStreamerBasicType(TStreamerElement):
 class TStreamerLoop(TStreamerElement):
     @staticmethod
     def _readinto(self, source, cursor, context):
-        start, cnt, vers = _startcheck(source, cursor)
+        start, cnt, self.version = _startcheck(source, cursor)
         super(TStreamerLoop, self)._readinto(self, source, cursor, context)
         self.fCountVersion = cursor.field(source, TStreamerLoop._format)
         self.fCountName = cursor.string(source)
@@ -926,7 +932,7 @@ class TStreamerLoop(TStreamerElement):
 class TStreamerObject(TStreamerElement):
     @staticmethod
     def _readinto(self, source, cursor, context):
-        start, cnt, vers = _startcheck(source, cursor)
+        start, cnt, self.version = _startcheck(source, cursor)
         super(TStreamerObject, self)._readinto(self, source, cursor, context)
         _endcheck(start, cursor, cnt)
         return self
@@ -934,7 +940,7 @@ class TStreamerObject(TStreamerElement):
 class TStreamerObjectAny(TStreamerElement):
     @staticmethod
     def _readinto(self, source, cursor, context):
-        start, cnt, vers = _startcheck(source, cursor)
+        start, cnt, self.version = _startcheck(source, cursor)
         super(TStreamerObjectAny, self)._readinto(self, source, cursor, context)
         _endcheck(start, cursor, cnt)
         return self
@@ -942,7 +948,7 @@ class TStreamerObjectAny(TStreamerElement):
 class TStreamerObjectAnyPointer(TStreamerElement):
     @staticmethod
     def _readinto(self, source, cursor, context):
-        start, cnt, vers = _startcheck(source, cursor)
+        start, cnt, self.version = _startcheck(source, cursor)
         super(TStreamerObjectAnyPointer, self)._readinto(self, source, cursor, context)
         _endcheck(start, cursor, cnt)
         return self
@@ -950,7 +956,7 @@ class TStreamerObjectAnyPointer(TStreamerElement):
 class TStreamerObjectPointer(TStreamerElement):
     @staticmethod
     def _readinto(self, source, cursor, context):
-        start, cnt, vers = _startcheck(source, cursor)
+        start, cnt, self.version = _startcheck(source, cursor)
         super(TStreamerObjectPointer, self)._readinto(self, source, cursor, context)
         _endcheck(start, cursor, cnt)
         return self
@@ -958,7 +964,7 @@ class TStreamerObjectPointer(TStreamerElement):
 class TStreamerSTL(TStreamerElement):
     @staticmethod
     def _readinto(self, source, cursor, context):
-        start, cnt, vers = _startcheck(source, cursor)
+        start, cnt, self.version = _startcheck(source, cursor)
         super(TStreamerSTL, self)._readinto(self, source, cursor, context)
 
         self.fSTLtype, self.fCtype = cursor.fields(source, TStreamerSTL._format)
@@ -977,7 +983,7 @@ class TStreamerSTL(TStreamerElement):
 class TStreamerSTLstring(TStreamerSTL):
     @staticmethod
     def _readinto(self, source, cursor, context):
-        start, cnt, vers = _startcheck(source, cursor)
+        start, cnt, self.version = _startcheck(source, cursor)
         super(TStreamerSTLstring, self)._readinto(self, source, cursor, context)
         _endcheck(start, cursor, cnt)
         return self
@@ -985,7 +991,7 @@ class TStreamerSTLstring(TStreamerSTL):
 class TStreamerString(TStreamerElement):
     @staticmethod
     def _readinto(self, source, cursor, context):
-        start, cnt, vers = _startcheck(source, cursor)
+        start, cnt, self.version = _startcheck(source, cursor)
         super(TStreamerString, self)._readinto(self, source, cursor, context)
         _endcheck(start, cursor, cnt)
         return self
@@ -1044,7 +1050,7 @@ class TString(str, ROOTStreamedObject):
 class TNamed(TObject):
     @staticmethod
     def _readinto(self, source, cursor, context):
-        start, cnt, vers = _startcheck(source, cursor)
+        start, cnt, self.version = _startcheck(source, cursor)
         TObject._readinto(self, source, cursor, context)
         self.fName = cursor.string(source)
         self.fTitle = cursor.string(source)
@@ -1054,7 +1060,7 @@ class TNamed(TObject):
 class TObjArray(list, ROOTStreamedObject):
     @staticmethod
     def _readinto(self, source, cursor, context):
-        start, cnt, vers = _startcheck(source, cursor)
+        start, cnt, self.version = _startcheck(source, cursor)
         _skiptobj(source, cursor)
         name = cursor.string(source)
         size, low = cursor.fields(source, struct.Struct(">ii"))
@@ -1065,7 +1071,7 @@ class TObjArray(list, ROOTStreamedObject):
 class TObjString(str, ROOTStreamedObject):
     @staticmethod
     def _readinto(self, source, cursor, context):
-        start, cnt, vers = _startcheck(source, cursor)
+        start, cnt, self.version = _startcheck(source, cursor)
         _skiptobj(source, cursor)
         string = cursor.string(source)
         _endcheck(start, cursor, cnt)
@@ -1074,7 +1080,7 @@ class TObjString(str, ROOTStreamedObject):
 class TList(list, ROOTStreamedObject):
     @staticmethod
     def _readinto(self, source, cursor, context):
-        start, cnt, vers = _startcheck(source, cursor)
+        start, cnt, self.version = _startcheck(source, cursor)
         _skiptobj(source, cursor)
         name = cursor.string(source)
         size = cursor.field(source, struct.Struct(">i"))
@@ -1118,7 +1124,7 @@ class TArrayD(TArray):
 class Undefined(ROOTStreamedObject):
     @staticmethod
     def _readinto(self, source, cursor, context):
-        start, cnt, vers = _startcheck(source, cursor)
+        start, cnt, self.version = _startcheck(source, cursor)
         cursor.skip(cnt - 6)
         _endcheck(start, cursor, cnt)
         return self
