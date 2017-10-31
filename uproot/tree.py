@@ -31,6 +31,7 @@
 import re
 import struct
 import numbers
+import sys
 
 import numpy
 
@@ -47,6 +48,11 @@ def _delayedraise(excinfo):
             exec("raise cls, err, trc")
         else:
             raise err.with_traceback(trc)
+
+if sys.version_info[0] <= 2:
+    string_types = (unicode, str)
+else:
+    string_types = (str, bytes)
 
 ################################################################ interpretation tools
 
@@ -138,6 +144,8 @@ class asdtype(object):
     def __init__(self, fromdtype, todtype=None, fromdims=(), todims=None):
         if isinstance(fromdtype, numpy.dtype):
             self.fromdtype = fromdtype
+        elif isinstance(fromdtype, string_types) and len(fromdtype) > 0 and fromdtype[0] in (">", "<", "=", "|", b">", b"<", b"=", b"|"):
+            self.fromdtype = numpy.dtype(fromdtype)
         else:
             self.fromdtype = numpy.dtype(fromdtype).newbyteorder(">")
 
@@ -145,8 +153,10 @@ class asdtype(object):
             self.todtype = self.fromdtype.newbyteorder("=")
         elif isinstance(todtype, numpy.dtype):
             self.todtype = todtype
-        else:
+        elif isinstance(todtype, string_types) and len(todtype) > 0 and todtype[0] in (">", "<", "=", "|", b">", b"<", b"=", b"|"):
             self.todtype = numpy.dtype(todtype)
+        else:
+            self.todtype = numpy.dtype(todtype).newbyteorder("=")
 
         self.fromdims = fromdims
 
@@ -194,26 +204,48 @@ class asdtype(object):
 
         return array[entrystart:entrystop]
 
-    def array(self, numitems):
-        return numpy.empty((numitems,) + self.todims, dtype=self.todtype)
+    def toarray(self, numitems, fromarray):
+        if fromarray is not None and self.todtype == fromarray.dtype and numitems * _dimsprod(self.todims) <= _dimsprod(fromarray.shape):
+            if len(fromarray.shape) > 1:
+                fromarray_flattened = fromarray.reshape(_dimsprod(fromarray.shape))
+            else:
+                fromarray_flattened = fromarray
+            array = fromarray_flattened[:numitems * _dimsprod(self.todims)]
+            if self.todims != ():
+                return array.reshape((numitems,) + self.todims)
+            else:
+                return array
 
-    def fill(self, fromarray, toarray, itemstart, itemstop):
-        if self.fromdims != ():
-            flattened_fromarray = fromarray.reshape(_dimsprod(self.fromdims) * len(fromarray))
         else:
-            flattened_fromarray = fromarray
+            return numpy.empty((numitems,) + self.todims, dtype=self.todtype)
 
-        if self.todims != ():
-            product = _dimsprod(self.todims)
-            flattened_toarray = toarray.reshape(len(toarray) * product)
-            flattened_itemstart = itemstart * product
-            flattened_itemstop = itemstop * product
-        else:
-            flattened_toarray = toarray
-            flattened_itemstart = itemstart
-            flattened_itemstop = itemstop
+    def fill(self, fromarray, toarray, itemstart, itemstop, copy):
+        if not copy:
+            frombase = fromarray
+            while hasattr(frombase, "base") and frombase.base is not None:
+                frombase = frombase.base
+            tobase = toarray
+            while hasattr(tobase, "base") and tobase.base is not None:
+                tobase = tobase.base
 
-        flattened_toarray[flattened_itemstart:flattened_itemstop] = flattened_fromarray
+        if copy or frombase is not tobase:
+            if self.fromdims != ():
+                flattened_fromarray = fromarray.reshape(_dimsprod(self.fromdims) * len(fromarray))
+            else:
+                flattened_fromarray = fromarray
+
+            if self.todims != ():
+                product = _dimsprod(self.todims)
+                flattened_toarray = toarray.reshape(len(toarray) * product)
+                flattened_itemstart = itemstart * product
+                flattened_itemstop = itemstop * product
+            else:
+                flattened_toarray = toarray
+                flattened_itemstart = itemstart
+                flattened_itemstop = itemstop
+
+            flattened_toarray[flattened_itemstart:flattened_itemstop] = flattened_fromarray
+
         return toarray[itemstart:itemstop]
 
 
@@ -551,8 +583,11 @@ class TBranchMethods(object):
             offsets = key.cursor.array(key.source, (key.fObjlen - key.border - 8) // 4, numpy.dtype(">i4")) - key.fKeylen
 
         fromarray = streamer.frombytes(bytesdata, offsets, local_entrystart, local_entrystop)
-        toarray = streamer.array( ??? HERE ??? )
-        return streamer.fill(fromarray, toarray, 0, len(toarray))
+        numvalues = _dimsprod(fromarray.shape)
+        todimsprod = _dimsprod(streamer.todims)
+        assert numvalues % todimsprod == 0, "{0} % {1} == {2} != 0".format(numvalues, todimsprod, numvalues % todimsprod)
+        toarray = streamer.toarray(numvalues // todimsprod, fromarray)
+        return streamer.fill(fromarray, toarray, 0, len(toarray), False)
 
     def baskets(self, to=None, entrystart=None, entrystop=None, executor=None, blocking=True):
         if isinstance(to, numpy.ndarray):
