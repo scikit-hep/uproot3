@@ -527,11 +527,7 @@ def _defineclasses(streamerinfos):
                 classname = streamerinfo.fName.decode("ascii")
             code = ["    @staticmethod",
                     "    def _readinto(self, source, cursor, context):",
-                    "        start, cnt, vers = _startcheck(source, cursor)",
-                    "        print self.__class__, {0}".format(streamerinfo.fName),
-                    "        if self.__class__ is {0}:".format(streamerinfo.fName),
-                    "            print self, vers",
-                    "            self.version = vers"]
+                    "        start, cnt, version = _startcheck(source, cursor)"]
 
             bases = []
             formats = {}
@@ -678,8 +674,10 @@ def _defineclasses(streamerinfos):
                 else:
                     raise AssertionError
 
-            code.append("        _endcheck(start, cursor, cnt)")
-            code.append("        return self")
+            code.extend(["        _endcheck(start, cursor, cnt)",
+                         "        if self.__class__ is {0}:".format(streamerinfo.fName),
+                         "            self.version = version",
+                         "        return self"])
 
             if len(bases) == 0:
                 bases.append("ROOTStreamedObject")
@@ -691,6 +689,7 @@ def _defineclasses(streamerinfos):
             for n, v in sorted(dtypes.items()):
                 code.append("    {0} = {1}".format(n, v))
 
+            code.insert(0, "    version = {0}".format(streamerinfo.fClassVersion))
             code.insert(0, "class {0}({1}):".format(_safename(classname), ", ".join(bases)))
             classes[_safename(classname)] = _makeclass(classname, id(streamerinfo), "\n".join(code), classes)
 
