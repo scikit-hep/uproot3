@@ -270,6 +270,10 @@ class asarray(object):
         self.fromdims = fromdims
 
     @property
+    def todtype(self):
+        return self.toarray.dtype
+
+    @property
     def todims(self):
         return self.toarray.shape[1:]
 
@@ -533,16 +537,34 @@ class TBranchMethods(object):
 
     @property
     def uncompressedbytes(self):
-        return sum(self.basket_uncompressedbytes(i) for i in range(self.numbaskets))
+        keysource = self._source.threadlocal()
+        out = 0
+        for i in range(self.numbaskets):
+            key = self._basketkey(keysource, i, False)
+            out += key.fObjlen
+        keysource.dismiss()
+        return out
 
     @property
     def compressedbytes(self):
-        return sum(self.basket_compressedbytes(i) for i in range(self.numbaskets))
+        keysource = self._source.threadlocal()
+        out = 0
+        for i in range(self.numbaskets):
+            key = self._basketkey(keysource, i, False)
+            out += key.fNbytes - key.fKeylen
+        keysource.dismiss()
+        return out
 
     @property
     def compressionratio(self):
-        keys = [self._basketkey(keysource, i, False) for i in range(self.numbaskets)]
-        return sum(key.fObjlen for key in keys) / sum(key.fNbytes - key.fKeylen for key in keys)
+        keysource = self._source.threadlocal()
+        numer, denom = 0, 0
+        for i in range(self.numbaskets):
+            key = self._basketkey(keysource, i, False)
+            numer += key.fObjlen
+            denom += key.fNbytes - key.fKeylen
+        keysource.dismiss()
+        return float(numer) / float(denom)
 
     def _normalize_interpretation(self, interpretation):
         if interpretation is None:
@@ -551,9 +573,15 @@ class TBranchMethods(object):
             raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         return interpretation
 
-    def numitems(self, flattened=False, interpretation=None):
+    def numitems(self, interpretation=None, flattened=False):
         interpretation = self._normalize_interpretation(interpretation)
-        return sum(self.basket_numitems(i, flattened=flattened, interpretation=interpretation) for i in range(self.numbaskets))
+        keysource = self._source.threadlocal()
+        out = 0
+        for i in range(self.numbaskets):
+            key = self._basketkey(keysource, i, True)
+            out += interpretation.numitems(key.border, self.basket_numentries(i), flattened)
+        keysource.dismiss()
+        return out
 
     @property
     def compression(self):
@@ -578,17 +606,23 @@ class TBranchMethods(object):
         return self.basket_entrystop(i) - self.basket_entrystart(i)
 
     def basket_uncompressedbytes(self, i):
+        keysource = self._source.threadlocal()
         key = self._basketkey(keysource, i, False)
+        keysource.dismiss()
         return key.fObjlen
 
     def basket_compressedbytes(self, i):
+        keysource = self._source.threadlocal()
         key = self._basketkey(keysource, i, False)
+        keysource.dismiss()
         return key.fNbytes - key.fKeylen
 
-    def basket_numitems(self, flattened=False, interpretation=None):
+    def basket_numitems(self, i, interpretation=None, flattened=False):
         interpretation = self._normalize_interpretation(interpretation)
+        keysource = self._source.threadlocal()
         key = self._basketkey(keysource, i, True)
-        return numitems(key.border, self.basket_numentries(i), flattened)
+        keysource.dismiss()
+        return interpretation.numitems(key.border, self.basket_numentries(i), flattened)
             
     @property
     def branch(self, name):
@@ -602,21 +636,24 @@ class TBranchMethods(object):
                 pass
         raise KeyError("not found: {0}".format(repr(name)))
 
+    def _normalize_entrystartstop(self, entrystart, entrystop):
+        if entrystart is None:
+            entrystart = 0
+        if entrystop is None:
+            entrystop = self.numentries
+        return entrystart, entrystop
+
     def _localentries(self, i, entrystart, entrystop):
         local_entrystart = max(0, entrystart - self.basket_entrystart(i))
         local_entrystop  = max(0, min(entrystop - self.basket_entrystart(i), self.basket_entrystop(i) - self.basket_entrystart(i)))
         return local_entrystart, local_entrystop
         
-    def basket(self, i, interpretation=None, entrystart=None, entrystop=None, basketcache=None, parallel=False):
+    def basket(self, i, interpretation=None, entrystart=None, entrystop=None, basketcache=None):
         if not 0 <= i < self.numbaskets:
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
         interpretation = self._normalize_interpretation(interpretation)
-
-        if entrystart is None:
-            entrystart = 0
-        if entrystop is None:
-            entrystop = self.numentries
+        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
 
         local_entrystart, local_entrystop = self._localentries(i, entrystart, entrystop)
 
@@ -630,10 +667,7 @@ class TBranchMethods(object):
             basketoffsets = basketcache.get(cachekey_offset, None)
 
         if basketdata is None:
-            if parallel:
-                keysource = self._source.threadlocal()
-            else:
-                keysource = self._source
+            keysource = self._source.threadlocal()
             key = self._basketkey(keysource, i, True)
 
             basketdata = key.cursor.bytes(key.source, key.border)
@@ -654,16 +688,8 @@ class TBranchMethods(object):
         assert numvalues % todimsprod == 0, "{0} % {1} == {2} != 0".format(numvalues, todimsprod, numvalues % todimsprod)
         destarray = interpretation.destarray(numvalues // todimsprod, sourcearray)
         return interpretation.filldest(sourcearray, destarray, 0, len(destarray))
-
-    def baskets(self, interpretation=None, entrystart=None, entrystop=None, basketcache=None, reportentries=False, executor=None, blocking=True):
-        interpretation = self._normalize_interpretation(interpretation)
-
-        if entrystart is None:
-            entrystart = 0
-        if entrystop is None:
-            entrystop = self.numentries
-
-        # find out which baskets we'll need
+    
+    def _basketstartstop(self, entrystart, entrystop):
         basketstart, basketstop = None, None
         for i in range(self.numbaskets):
             if basketstart is None:
@@ -673,18 +699,28 @@ class TBranchMethods(object):
             else:
                 if self.basket_entrystart(i) < entrystop:
                     basketstop = i
+
+        if basketstop is not None:
+            basketstop += 1    # stop is exclusive
+
+        return basketstart, basketstop
+
+    def baskets(self, interpretation=None, entrystart=None, entrystop=None, basketcache=None, reportentries=False, executor=None, blocking=True):
+        interpretation = self._normalize_interpretation(interpretation)
+        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+        basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
+
         if basketstart is None:
             if blocking:
-                return []      # no baskets
+                return []
             else:
                 return [], ()
-        basketstop += 1        # stop is exclusive
 
         out = [None] * (basketstop - basketstart)
 
         def fill(i):
             try:
-                result = self.basket(i + basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache, parallel=(executor is not None))
+                result = self.basket(i + basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache)
                 if reportentries:
                     local_entrystart, local_entrystop = self._localentries(i + basketstart, entrystart, entrystop)
                     result = (local_entrystart + self.basket_entrystart(i + basketstart),
@@ -712,11 +748,7 @@ class TBranchMethods(object):
 
     def iterate_baskets(self, interpretation=None, entrystart=None, entrystop=None, basketcache=None, reportentries=False):
         interpretation = self._normalize_interpretation(interpretation)
-
-        if entrystart is None:
-            entrystart = 0
-        if entrystop is None:
-            entrystop = self.numentries
+        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
 
         for i in range(self.numbaskets):
             if entrystart < self.basket_entrystop(i) and self.basket_entrystart(i) < entrystop:
@@ -726,9 +758,25 @@ class TBranchMethods(object):
                     if reportentries:
                         yield (local_entrystart + self.basket_entrystart(i),
                                local_entrystop + self.basket_entrystart(i),
-                               self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache, parallel=False))
+                               self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache))
                     else:
-                        yield self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache, parallel=False)
+                        yield self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache)
+
+    def array(self, interpretation=None, entrystart=None, entrystop=None, basketcache=None, executor=None, blocking=True):
+        interpretation = self._normalize_interpretation(interpretation)
+        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+        basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
+
+        if basketstart is None:
+            if blocking:
+                return numpy.empty(0, dtype=interpretation.todtype)
+            else:
+                return numpy.empty(0, dtype=interpretation.todtype), ()
+
+        out = interpretation.destarray(self.numitems(interpretation, False), None)
+
+        return out.shape
+
 
     # def array(self, to=None, numitems=None, entrystart=None, entrystop=None, executor=None, blocking=True):
     #     if executor is None or blocking:
@@ -759,7 +807,7 @@ class TBranchMethods(object):
             entrystop = self.numentries
         return self._LazyArray(self, to, entrystart, entrystop)
 
-    def _ensure(self, cache, entrystart, entrystop, to, parallel):
+    def _ensure(self, cache, entrystart, entrystop, to):
         basketids = sorted(cache)
         for i in basketids:
             basketstart = self.fBasketEntry[i]
