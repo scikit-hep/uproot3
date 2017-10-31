@@ -126,7 +126,9 @@ def interpret(branch, classes=None, swapbytes=True):
             elif branch.fLeaves[0].__class__.__name__ == "TLeafElement":
                 classname = None
                 if classname in classes:
-                    if hasattr(classes[classname], "frombytes"):
+                    cls = classes[classname]
+                    # the 'interpretation' interface
+                    if hasattr(cls, "numitems") and hasattr(cls, "frombytes") and hasattr(cls, "destarray") and hasattr(cls, "filldest"):
                         return classes[classname]
 
         return None
@@ -200,8 +202,8 @@ class asdtype(object):
         else:
             return out // _dimsprod(self.todims)
 
-    def frombytes(self, basketdata, basketoffsets, entrystart, entrystop):
-        array = basketdata.view(self.fromdtype)
+    def frombytes(self, data, offsets, entrystart, entrystop):
+        array = data.view(self.fromdtype)
 
         if self.fromdims != ():
             product = _dimsprod(self.fromdims)
@@ -299,8 +301,8 @@ class asarray(object):
         else:
             return out // _dimsprod(self.toarray.shape[1:])
 
-    def frombytes(self, basketdata, basketoffsets, entrystart, entrystop):
-        array = basketdata.view(self.fromdtype)
+    def frombytes(self, data, offsets, entrystart, entrystop):
+        array = data.view(self.fromdtype)
 
         if self.fromdims != ():
             product = _dimsprod(self.fromdims)
@@ -538,33 +540,39 @@ class TBranchMethods(object):
     @property
     def uncompressedbytes(self):
         keysource = self._source.threadlocal()
-        out = 0
-        for i in range(self.numbaskets):
-            key = self._basketkey(keysource, i, False)
-            out += key.fObjlen
-        keysource.dismiss()
-        return out
+        try:
+            out = 0
+            for i in range(self.numbaskets):
+                key = self._basketkey(keysource, i, False)
+                out += key.fObjlen
+            return out
+        finally:
+            keysource.dismiss()
 
     @property
     def compressedbytes(self):
         keysource = self._source.threadlocal()
-        out = 0
-        for i in range(self.numbaskets):
-            key = self._basketkey(keysource, i, False)
-            out += key.fNbytes - key.fKeylen
-        keysource.dismiss()
-        return out
+        try:
+            out = 0
+            for i in range(self.numbaskets):
+                key = self._basketkey(keysource, i, False)
+                out += key.fNbytes - key.fKeylen
+            return out
+        finally:
+            keysource.dismiss()
 
     @property
     def compressionratio(self):
         keysource = self._source.threadlocal()
-        numer, denom = 0, 0
-        for i in range(self.numbaskets):
-            key = self._basketkey(keysource, i, False)
-            numer += key.fObjlen
-            denom += key.fNbytes - key.fKeylen
-        keysource.dismiss()
-        return float(numer) / float(denom)
+        try:
+            numer, denom = 0, 0
+            for i in range(self.numbaskets):
+                key = self._basketkey(keysource, i, False)
+                numer += key.fObjlen
+                denom += key.fNbytes - key.fKeylen
+            return float(numer) / float(denom)
+        finally:
+            keysource.dismiss()
 
     def _normalize_interpretation(self, interpretation):
         if interpretation is None:
@@ -576,12 +584,14 @@ class TBranchMethods(object):
     def numitems(self, interpretation=None, flattened=False):
         interpretation = self._normalize_interpretation(interpretation)
         keysource = self._source.threadlocal()
-        out = 0
-        for i in range(self.numbaskets):
-            key = self._basketkey(keysource, i, True)
-            out += interpretation.numitems(key.border, self.basket_numentries(i), flattened)
-        keysource.dismiss()
-        return out
+        try:
+            out = 0
+            for i in range(self.numbaskets):
+                key = self._basketkey(keysource, i, True)
+                out += interpretation.numitems(key.border, self.basket_numentries(i), flattened)
+            return out
+        finally:
+            keysource.dismiss()
 
     @property
     def compression(self):
@@ -607,22 +617,28 @@ class TBranchMethods(object):
 
     def basket_uncompressedbytes(self, i):
         keysource = self._source.threadlocal()
-        key = self._basketkey(keysource, i, False)
-        keysource.dismiss()
-        return key.fObjlen
+        try:
+            key = self._basketkey(keysource, i, False)
+            return key.fObjlen
+        finally:
+            keysource.dismiss()
 
     def basket_compressedbytes(self, i):
         keysource = self._source.threadlocal()
-        key = self._basketkey(keysource, i, False)
-        keysource.dismiss()
-        return key.fNbytes - key.fKeylen
+        try:
+            key = self._basketkey(keysource, i, False)
+            return key.fNbytes - key.fKeylen
+        finally:
+            keysource.dismiss()
 
     def basket_numitems(self, i, interpretation=None, flattened=False):
         interpretation = self._normalize_interpretation(interpretation)
         keysource = self._source.threadlocal()
-        key = self._basketkey(keysource, i, True)
-        keysource.dismiss()
-        return interpretation.numitems(key.border, self.basket_numentries(i), flattened)
+        try:
+            key = self._basketkey(keysource, i, True)
+            return interpretation.numitems(key.border, self.basket_numentries(i), flattened)
+        finally:
+            keysource.dismiss()
             
     @property
     def branch(self, name):
@@ -658,31 +674,28 @@ class TBranchMethods(object):
         local_entrystart, local_entrystop = self._localentries(i, entrystart, entrystop)
 
         basketdata = None
-        basketoffsets = None
-
         if basketcache is not None:
-            cachekey_basketdata = "{0};{1};{2};basketdata;{3}".format(self._context.sourcepath, self._context.treename, self.name, i)
-            cachekey_offset  = "{0};{1};{2};basketoffsets;{3}".format(self._context.sourcepath, self._context.treename, self.name, i)
-            basketdata = basketcache.get(cachekey_basketdata, None)
-            basketoffsets = basketcache.get(cachekey_offset, None)
+            cachekey = "{0};{1};{2};basket-{3}".format(self._context.sourcepath, self._context.treename, self.name, i)
+            basketdata = basketcache.get(cachekey, None)
 
-        if basketdata is None:
-            keysource = self._source.threadlocal()
+        keysource = self._source.threadlocal()
+        try:
             key = self._basketkey(keysource, i, True)
-
-            basketdata = key.cursor.bytes(key.source, key.border)
-            if key.cursor.index >= key.fObjlen:
-                basketoffsets = None
-            else:
-                key.cursor.skip(4)
-                basketoffsets = key.cursor.array(key.source, (key.fObjlen - key.border - 8) // 4, numpy.dtype(">i4")) - key.fKeylen
+            if basketdata is None:
+                basketdata = key.cursor.bytes(key.source, key.fObjlen)
+        finally:
+            keysource.dismiss()
 
         if basketcache is not None:
-            basketcache[cachekey_basketdata] = basketdata
-            if basketoffsets is not None:
-                basketcache[cachekey_offset] = basketoffsets
+            basketcache[cachekey] = basketdata
+
+        if key.fObjlen == key.border:
+            data, offsets = basketdata, None
+        else:
+            data = basketdata[:border]
+            offsets = basketdata[border + 4 : -4].view(">i4") - key.fKeylen
             
-        sourcearray = interpretation.frombytes(basketdata, basketoffsets, local_entrystart, local_entrystop)
+        sourcearray = interpretation.frombytes(data, offsets, local_entrystart, local_entrystop)
         numvalues = _dimsprod(sourcearray.shape)
         todimsprod = _dimsprod(interpretation.todims)
         assert numvalues % todimsprod == 0, "{0} % {1} == {2} != 0".format(numvalues, todimsprod, numvalues % todimsprod)
@@ -720,16 +733,16 @@ class TBranchMethods(object):
 
         def fill(i):
             try:
-                result = self.basket(i + basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache)
+                basket = self.basket(i + basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache)
                 if reportentries:
                     local_entrystart, local_entrystop = self._localentries(i + basketstart, entrystart, entrystop)
-                    result = (local_entrystart + self.basket_entrystart(i + basketstart),
+                    basket = (local_entrystart + self.basket_entrystart(i + basketstart),
                               local_entrystop + self.basket_entrystart(i + basketstart),
-                              result)
+                              basket)
             except:
                 return sys.exc_info()
             else:
-                out[i] = result
+                out[i] = basket
                 return None
 
         if executor is None:
@@ -773,9 +786,23 @@ class TBranchMethods(object):
             else:
                 return numpy.empty(0, dtype=interpretation.todtype), ()
 
+        basket_numitems = []
+        keysource = self._source.threadlocal()
+        try:
+            for i in range(basketstart, basketstop):
+                key = self._basketkey(keysource, i + basketstart, True)
+                basket_numitems.append(interpretation.numitems(key.border, self.basket_numentries(i + basketstart), False))
+        finally:
+            keysource.dismiss()
+
         out = interpretation.destarray(self.numitems(interpretation, False), None)
 
-        return out.shape
+        # def fill(i):
+        #     try:
+        #         basket = self.basket(i + basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache)
+
+
+
 
 
     # def array(self, to=None, numitems=None, entrystart=None, entrystop=None, executor=None, blocking=True):

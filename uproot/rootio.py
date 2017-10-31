@@ -86,70 +86,76 @@ class ROOTDirectory(object):
     @staticmethod
     def read(source, *args):
         if len(args) == 0:
-            # See https://root.cern/doc/master/classTFile.html
-            cursor = Cursor(0)
-            magic, fVersion = cursor.fields(source, ROOTDirectory._format1)
-            if magic != b"root":
-                raise ValueError("not a ROOT file (starts with {0} instead of 'root')".format(repr(magic)))
-            if fVersion < 1000000:
-                fBEGIN, fEND, fSeekFree, fNbytesFree, nfree, fNbytesName, fUnits, fCompress, fSeekInfo, fNbytesInfo, fUUID = cursor.fields(source, ROOTDirectory._format2_small)
-            else:
-                fBEGIN, fEND, fSeekFree, fNbytesFree, nfree, fNbytesName, fUnits, fCompress, fSeekInfo, fNbytesInfo, fUUID = cursor.fields(source, ROOTDirectory._format2_big)
+            try:
+                # See https://root.cern/doc/master/classTFile.html
+                cursor = Cursor(0)
+                magic, fVersion = cursor.fields(source, ROOTDirectory._format1)
+                if magic != b"root":
+                    raise ValueError("not a ROOT file (starts with {0} instead of 'root')".format(repr(magic)))
+                if fVersion < 1000000:
+                    fBEGIN, fEND, fSeekFree, fNbytesFree, nfree, fNbytesName, fUnits, fCompress, fSeekInfo, fNbytesInfo, fUUID = cursor.fields(source, ROOTDirectory._format2_small)
+                else:
+                    fBEGIN, fEND, fSeekFree, fNbytesFree, nfree, fNbytesName, fUnits, fCompress, fSeekInfo, fNbytesInfo, fUUID = cursor.fields(source, ROOTDirectory._format2_big)
 
-            # classes requried to read streamers (bootstrap)
-            streamerclasses = {b"TStreamerInfo":             TStreamerInfo,
-                               b"TStreamerElement":          TStreamerElement,
-                               b"TStreamerBase":             TStreamerBase,
-                               b"TStreamerBasicType":        TStreamerBasicType,
-                               b"TStreamerBasicPointer":     TStreamerBasicPointer,
-                               b"TStreamerLoop":             TStreamerLoop,
-                               b"TStreamerObject":           TStreamerObject,
-                               b"TStreamerObjectPointer":    TStreamerObjectPointer,
-                               b"TStreamerObjectAny":        TStreamerObjectAny,
-                               b"TStreamerObjectAnyPointer": TStreamerObjectAnyPointer,
-                               b"TStreamerString":           TStreamerString,
-                               b"TStreamerSTL":              TStreamerSTL,
-                               b"TStreamerSTLstring":        TStreamerSTLstring,
-                               b"TStreamerArtificial":       TStreamerArtificial,
-                               b"TList":                     TList,
-                               b"TObjArray":                 TObjArray,
-                               b"TObjString":                TObjString}
+                # classes requried to read streamers (bootstrap)
+                streamerclasses = {b"TStreamerInfo":             TStreamerInfo,
+                                   b"TStreamerElement":          TStreamerElement,
+                                   b"TStreamerBase":             TStreamerBase,
+                                   b"TStreamerBasicType":        TStreamerBasicType,
+                                   b"TStreamerBasicPointer":     TStreamerBasicPointer,
+                                   b"TStreamerLoop":             TStreamerLoop,
+                                   b"TStreamerObject":           TStreamerObject,
+                                   b"TStreamerObjectPointer":    TStreamerObjectPointer,
+                                   b"TStreamerObjectAny":        TStreamerObjectAny,
+                                   b"TStreamerObjectAnyPointer": TStreamerObjectAnyPointer,
+                                   b"TStreamerString":           TStreamerString,
+                                   b"TStreamerSTL":              TStreamerSTL,
+                                   b"TStreamerSTLstring":        TStreamerSTLstring,
+                                   b"TStreamerArtificial":       TStreamerArtificial,
+                                   b"TList":                     TList,
+                                   b"TObjArray":                 TObjArray,
+                                   b"TObjString":                TObjString}
 
-            streamercontext = ROOTDirectory._FileContext(source.path, None, streamerclasses, Compression(fCompress), fUUID)
-            streamerkey = TKey.read(source, Cursor(fSeekInfo), streamercontext)
-            streamerinfos, streamerrules = _readstreamers(streamerkey._source, streamerkey._cursor, streamercontext)
-            classes = _defineclasses(streamerinfos)
+                streamercontext = ROOTDirectory._FileContext(source.path, None, streamerclasses, Compression(fCompress), fUUID)
+                streamerkey = TKey.read(source, Cursor(fSeekInfo), streamercontext)
+                streamerinfos, streamerrules = _readstreamers(streamerkey._source, streamerkey._cursor, streamercontext)
+                classes = _defineclasses(streamerinfos)
 
-            context = ROOTDirectory._FileContext(source.path, streamerinfos, classes, Compression(fCompress), fUUID)
+                context = ROOTDirectory._FileContext(source.path, streamerinfos, classes, Compression(fCompress), fUUID)
 
-            keycursor = Cursor(fBEGIN)
-            mykey = TKey.read(source, keycursor, context)
+                keycursor = Cursor(fBEGIN)
+                mykey = TKey.read(source, keycursor, context)
 
-            return ROOTDirectory.read(source, Cursor(fBEGIN + fNbytesName), context, mykey)
+                return ROOTDirectory.read(source, Cursor(fBEGIN + fNbytesName), context, mykey)
+
+            except:
+                source.dismiss()
+                raise
 
         else:
-            cursor, context, mykey = args
+            try:
+                cursor, context, mykey = args
 
-            # See https://root.cern/doc/master/classTDirectoryFile.html.
-            fVersion, fDatimeC, fDatimeM, fNbytesKeys, fNbytesName = cursor.fields(source, ROOTDirectory._format3)
-            if fVersion <= 1000:
-                fSeekDir, fSeekParent, fSeekKeys = cursor.fields(source, ROOTDirectory._format4_small)
-            else:
-                fSeekDir, fSeekParent, fSeekKeys = cursor.fields(source, ROOTDirectory._format4_big)
+                # See https://root.cern/doc/master/classTDirectoryFile.html.
+                fVersion, fDatimeC, fDatimeM, fNbytesKeys, fNbytesName = cursor.fields(source, ROOTDirectory._format3)
+                if fVersion <= 1000:
+                    fSeekDir, fSeekParent, fSeekKeys = cursor.fields(source, ROOTDirectory._format4_small)
+                else:
+                    fSeekDir, fSeekParent, fSeekKeys = cursor.fields(source, ROOTDirectory._format4_big)
 
-            subcursor = Cursor(fSeekKeys)
-            headerkey = TKey.read(source, subcursor, context)
+                subcursor = Cursor(fSeekKeys)
+                headerkey = TKey.read(source, subcursor, context)
 
-            nkeys = subcursor.field(source, ROOTDirectory._format5)
-            keys = [TKey.read(source, subcursor, context) for i in range(nkeys)]
+                nkeys = subcursor.field(source, ROOTDirectory._format5)
+                keys = [TKey.read(source, subcursor, context) for i in range(nkeys)]
 
-            out = ROOTDirectory(mykey.fName, context, keys)
-            out.fVersion, out.fDatimeC, out.fDatimeM, out.fNbytesKeys, out.fNbytesName, out.fSeekDir, out.fSeekParent, out.fSeekKeys = fVersion, fDatimeC, fDatimeM, fNbytesKeys, fNbytesName, fSeekDir, fSeekParent, fSeekKeys
-            out._headerkey = headerkey
+                out = ROOTDirectory(mykey.fName, context, keys)
+                out.fVersion, out.fDatimeC, out.fDatimeM, out.fNbytesKeys, out.fNbytesName, out.fSeekDir, out.fSeekParent, out.fSeekKeys = fVersion, fDatimeC, fDatimeM, fNbytesKeys, fNbytesName, fSeekDir, fSeekParent, fSeekKeys
+                out._headerkey = headerkey
+                return out
 
-            # source may now close the file (and reopen it when we read again)
-            source.dismiss()
-            return out
+            finally:
+                source.dismiss()
 
     _format1       = struct.Struct(">4si")
     _format2_small = struct.Struct(">iiiiiiBiii18s")
@@ -725,7 +731,7 @@ class ROOTObject(object):
 class TKey(ROOTObject):
     """Represents a key; for seeking to an object in a ROOT file.
 
-        * `key.get()` to extract an object (initiates file-reading and possibly decompression).
+        * `key.get(dismiss=True)` to extract an object (initiates file-reading and possibly decompression).
 
     See `https://root.cern/doc/master/classTKey.html` for field definitions.
     """
@@ -767,16 +773,16 @@ class TKey(ROOTObject):
         Objects are not read or decompressed until this function is explicitly called.
         """
 
-        if self.fClassName == b"TDirectory":
-            out = ROOTDirectory.read(self._source, self._cursor, self._context, self)
-        elif self.fClassName in self._context.classes:
-            out = self._context.classes[self.fClassName].read(self._source, self._cursor.copied(), self._context)
-        else:
-            out = Undefined(self._source, self._cursor.copied(), self._context)
-
-        if dismiss:
-            self._source.dismiss()
-        return out
+        try:
+            if self.fClassName == b"TDirectory":
+                return ROOTDirectory.read(self._source, self._cursor, self._context, self)
+            elif self.fClassName in self._context.classes:
+                return self._context.classes[self.fClassName].read(self._source, self._cursor.copied(), self._context)
+            else:
+                return Undefined(self._source, self._cursor.copied(), self._context)
+        finally:
+            if dismiss:
+                self._source.dismiss()
 
 class TStreamerInfo(ROOTObject):
     @staticmethod
@@ -997,7 +1003,7 @@ class ROOTStreamedObject(ROOTObject):
     # TODO: each ROOTStreamedObject must define
     # 
     # @staticmethod
-    # def frombytes(basketdata, basketoffsets, entrystart, entrystop): ...
+    # def frombytes(data, offsets, entrystart, entrystop): ...
 
     @staticmethod
     def destarray(numitems, sourcearray):
