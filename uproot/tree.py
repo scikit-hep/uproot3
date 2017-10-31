@@ -165,6 +165,12 @@ class asdtype(object):
         else:
             self.todims = todims
 
+    def to(self, todtype, todims=None):
+        return asdtype(self.fromdtype, todtype, self.fromdims, todims)
+
+    def toarray(self, array):
+        return asarray(self.fromdtype, array, self.fromdims)
+
     def __repr__(self):
         args = []
 
@@ -369,10 +375,10 @@ class TTreeMethods(object):
                 pass
         raise KeyError("not found: {0}".format(repr(name)))
 
-    def array(self, branch, streamer=None, entrystart=None, entrystop=None, executor=None, blocking=True):
+    def array(self, branch, interpretation=None, entrystart=None, entrystop=None, executor=None, blocking=True):
         raise NotImplementedError
 
-    def lazyarray(self, branch, streamer=None, entrystart=None, entrystop=None):
+    def lazyarray(self, branch, interpretation=None, entrystart=None, entrystop=None):
         raise NotImplementedError
 
     def arrays(self, branches=None, outputtype=dict, entrystart=None, entrystop=None, executor=None, blocking=True):
@@ -385,46 +391,61 @@ class TTreeMethods(object):
         raise NotImplementedError
 
     def _normalize_branches(self, arg, allbranches):
-        if arg is None:
-            for branch in allbranches:
-                if branch.streamer is not None:
-                    yield branch, branch.streamer
+        if arg is None:                                    # no specification; read all branches
+            for branch in allbranches:                     # that have interpretations
+                interpretation = interpret(branch)
+                if interpretation is not None:
+                    yield branch, interpretation
 
         elif callable(arg):
             for branch in allbranches:
-                streamer = arg(branch)
-                if streamer is True:
-                    yield branch, branch.streamer
-                elif streamer is not False and streamer is not None:
-                    yield branch, streamer
+                result = arg(branch)
+                if result is None:
+                    pass
+                elif result is True:                       # function is a filter
+                    interpretation = interpret(branch)
+                    if interpretation is not None:
+                        yield branch, interpretation
+                else:                                      # function is giving interpretations
+                    yield branch, result
 
         elif isinstance(arg, dict):
             lookup = dict((x.fName, x) for x in allbranches)
-            for name, streamer in arg.items():
+            for name, interpretation in arg.items():       # dict of branch-interpretation pairs
                 name = _bytesid(name)
                 if name in lookup:
-                    yield lookup[name], streamer
+                    yield lookup[name], interpretation
+                else:
+                    raise KeyValue("branch {0} not found".format(repr(name)))
 
         elif isinstance(arg, string_types):
-            name = _bytesid(arg)
+            name = _bytesid(arg)                           # one explicitly given branch name
             branch = [x for x in allbranches if x.name == name]
             if len(branch) == 1:
-                yield branch[0], branch[0].streamer
+                interpretation = interpret(branch[0])      # but no interpretation given
+                if interpretation is None:
+                    raise ValueError("cannot interpret branch {0} as a Python type".format(repr(name)))
+                else:
+                    yield branch[0], interpretation
             else:
                 raise KeyError("not found: {0}".format(repr(name)))
 
         else:
             try:
-                names = iter(arg)
+                names = iter(arg)                          # only way to check for iterable (in general)
             except:
                 raise TypeError("branches argument not understood")
             else:
                 lookup = dict((x.name, x) for x in allbranches)
-                for name in names:
+                for name in names:                         # explicitly given branch names
                     name = _bytesid(name)
                     if name in lookup:
                         branch = lookup[name]
-                        yield branch, branch.streamer
+                        interpretation = interpret(branch) # but no interpretation given
+                        if interpretation is not None:
+                            yield branch, interpretation
+                        else:
+                            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(name)))
                     else:
                         raise KeyError("not found: {0}".format(repr(name)))
 
@@ -467,7 +488,7 @@ class TBranchMethods(object):
         self.fBasketEntry = self.fBasketEntry[:self.fWriteBasket]
         self.fBasketSeek = self.fBasketSeek[:self.fWriteBasket]
         self._source = source
-        self.streamer = interpret(self, classes=context.classes)
+        self._context = context
 
     @property
     def name(self):
@@ -518,16 +539,16 @@ class TBranchMethods(object):
         keys = [self._basketkey(keysource, i, False) for i in range(self.numbaskets)]
         return sum(key.fObjlen for key in keys) / sum(key.fNbytes - key.fKeylen for key in keys)
 
-    def _normalize_streamer(self, streamer):
-        if streamer is None:
-            streamer = self.streamer
-        if streamer is None:
-            raise ValueError("no streamer associated with branch {0}".format(repr(self.name)))
-        return streamer
+    def _normalize_interpretation(self, interpretation):
+        if interpretation is None:
+            interpretation = interpret(self)
+        if interpretation is None:
+            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
+        return interpretation
 
-    def numitems(self, flattened=False, streamer=None):
-        streamer = self._normalize_streamer(streamer)
-        return sum(self.basket_numitems(i, flattened=flattened, streamer=streamer) for i in range(self.numbaskets))
+    def numitems(self, flattened=False, interpretation=None):
+        interpretation = self._normalize_interpretation(interpretation)
+        return sum(self.basket_numitems(i, flattened=flattened, interpretation=interpretation) for i in range(self.numbaskets))
 
     @property
     def compression(self):
@@ -559,8 +580,8 @@ class TBranchMethods(object):
         key = self._basketkey(keysource, i, False)
         return key.fNbytes - key.fKeylen
 
-    def basket_numitems(self, flattened=False, streamer=None):
-        streamer = self._normalize_streamer(streamer)
+    def basket_numitems(self, flattened=False, interpretation=None):
+        interpretation = self._normalize_interpretation(interpretation)
         key = self._basketkey(keysource, i, True)
         return numitems(key.border, self.basket_numentries(i), flattened)
             
@@ -576,18 +597,18 @@ class TBranchMethods(object):
                 pass
         raise KeyError("not found: {0}".format(repr(name)))
 
-    def basket(self, i, streamer=None, entrystart=None, entrystop=None, parallel=False):
+    def basket(self, i, interpretation=None, entrystart=None, entrystop=None, parallel=False):
         if not 0 <= i < self.numbaskets:
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
-        streamer = self._normalize_streamer(streamer)
+        interpretation = self._normalize_interpretation(interpretation)
 
         if entrystart is None:
             entrystart = 0
         if entrystop is None:
             entrystop = self.numentries
         local_entrystart = max(0, entrystart - self.basket_entrystart(i))
-        local_entrystop  = min(entrystop - self.basket_entrystart(i), self.basket_entrystop(i) - self.basket_entrystart(i))
+        local_entrystop  = max(0, min(entrystop - self.basket_entrystart(i), self.basket_entrystop(i) - self.basket_entrystart(i)))
 
         if parallel:
             keysource = self._source.threadlocal()
@@ -602,12 +623,12 @@ class TBranchMethods(object):
             key.cursor.skip(4)
             offsets = key.cursor.array(key.source, (key.fObjlen - key.border - 8) // 4, numpy.dtype(">i4")) - key.fKeylen
 
-        sourcearray = streamer.frombytes(bytesdata, offsets, local_entrystart, local_entrystop)
+        sourcearray = interpretation.frombytes(bytesdata, offsets, local_entrystart, local_entrystop)
         numvalues = _dimsprod(sourcearray.shape)
-        todimsprod = _dimsprod(streamer.todims)
+        todimsprod = _dimsprod(interpretation.todims)
         assert numvalues % todimsprod == 0, "{0} % {1} == {2} != 0".format(numvalues, todimsprod, numvalues % todimsprod)
-        destarray = streamer.destarray(numvalues // todimsprod, sourcearray)
-        return streamer.filldest(sourcearray, destarray, 0, len(destarray))
+        destarray = interpretation.destarray(numvalues // todimsprod, sourcearray)
+        return interpretation.filldest(sourcearray, destarray, 0, len(destarray))
 
     def baskets(self, to=None, entrystart=None, entrystop=None, executor=None, blocking=True):
         if isinstance(to, numpy.ndarray):
