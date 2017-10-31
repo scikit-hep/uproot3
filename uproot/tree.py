@@ -128,7 +128,7 @@ def interpret(branch, classes=None, swapbytes=True):
                 if classname in classes:
                     cls = classes[classname]
                     # the 'interpretation' interface
-                    if hasattr(cls, "numitems") and hasattr(cls, "frombytes") and hasattr(cls, "destarray") and hasattr(cls, "filldest"):
+                    if hasattr(cls, "nocopy") and hasattr(cls, "numitems") and hasattr(cls, "frombytes") and hasattr(cls, "destarray") and hasattr(cls, "filldest"):
                         return classes[classname]
 
         return None
@@ -194,6 +194,9 @@ class asdtype(object):
             args.append(repr(self.todims))
 
         return "asdtype(" + ", ".join(args) + ")"
+
+    def nocopy(self):
+        return asdtype(self.fromdtype, self.fromdtype, self.fromdims, self.fromdims)
 
     def numitems(self, numbytes, numentries, flattened):
         out = numbytes // self.fromdtype.itemsize
@@ -293,6 +296,9 @@ class asarray(object):
             args.append("<array dtype={0} at 0x{1:012x}>".format(repr(self.todtype), id(self.todtype)))
 
         return "asarray(" + ", ".join(args) + ")"
+
+    def nocopy(self):
+        return asdtype(self.fromdtype, self.fromdtype, self.fromdims, self.fromdims)
 
     def numitems(self, numbytes, numentries, flattened):
         out = numbytes // self.fromdtype.itemsize
@@ -815,11 +821,12 @@ class TBranchMethods(object):
         finally:
             keysource.dismiss()
 
-        out = interpretation.destarray(basket_itemoffset[-1], None)
+        nocopy = interpretation.nocopy()
+        destarray = interpretation.destarray(basket_itemoffset[-1], None)
 
         def fill(j):
             try:
-                basket = self.basket(j + basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, rawcache=rawcache, cache=cache)
+                basket = self.basket(j + basketstart, interpretation=nocopy, entrystart=entrystart, entrystop=entrystop, rawcache=rawcache, cache=cache)
 
                 expecteditems = basket_itemoffset[j + 1] - basket_itemoffset[j]
 
@@ -829,7 +836,7 @@ class TBranchMethods(object):
                 elif j == 0 and expecteditems > len(basket):
                     basket_itemoffset[j] += expecteditems - len(basket)
 
-                out[basket_itemoffset[j] : basket_itemoffset[j + 1]] = basket
+                interpretation.filldest(basket, destarray, basket_itemoffset[j], basket_itemoffset[j + 1])
 
             except:
                 return sys.exc_info()
@@ -844,12 +851,12 @@ class TBranchMethods(object):
         if blocking:
             for excinfo in excinfos:
                 _delayedraise(excinfo)
-            return out[basket_itemoffset[0] : basket_itemoffset[-1]]
+            return destarray[basket_itemoffset[0] : basket_itemoffset[-1]]
         else:
             def await():
                 for excinfo in excinfos:
                     _delayedraise(excinfo)
-                return out[basket_itemoffset[0] : basket_itemoffset[-1]]
+                return destarray[basket_itemoffset[0] : basket_itemoffset[-1]]
             return await
 
     def lazyarray(self, interpretation=None):

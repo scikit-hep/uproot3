@@ -1002,6 +1002,10 @@ class ROOTStreamedObject(ROOTObject):
     todims = ()
 
     @staticmethod
+    def nocopy():
+        return self
+
+    @staticmethod
     def numitems(numbytes, numentries, flattened):
         return numentries
 
@@ -1019,7 +1023,7 @@ class ROOTStreamedObject(ROOTObject):
 
     @staticmethod
     def filldest(sourcearray, destarray, itemstart, itemstop):
-        if itemstart == 0 and itemstop == len(destarray) and destarray.base is sourcearray:
+        if itemstart == 0 and itemstop == len(destarray) and (destarray is sourcearray or destarray.base is sourcearray):
             return destarray
         else:
             destarray[itemstart:itemstop] = sourcearray
