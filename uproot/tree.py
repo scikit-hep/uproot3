@@ -727,27 +727,29 @@ class TBranchMethods(object):
             if blocking:
                 return []
             else:
-                return [], ()
+                def await():
+                    return []
+                return await
 
         out = [None] * (basketstop - basketstart)
 
-        def fill(i):
+        def fill(j):
             try:
-                basket = self.basket(i + basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache)
+                basket = self.basket(j + basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache)
                 if reportentries:
-                    local_entrystart, local_entrystop = self._localentries(i + basketstart, entrystart, entrystop)
-                    basket = (local_entrystart + self.basket_entrystart(i + basketstart),
-                              local_entrystop + self.basket_entrystart(i + basketstart),
+                    local_entrystart, local_entrystop = self._localentries(j + basketstart, entrystart, entrystop)
+                    basket = (local_entrystart + self.basket_entrystart(j + basketstart),
+                              local_entrystop + self.basket_entrystart(j + basketstart),
                               basket)
             except:
                 return sys.exc_info()
             else:
-                out[i] = basket
+                out[j] = basket
                 return None
 
         if executor is None:
-            for i in range(basketstop - basketstart):
-                _delayedraise(fill(i))
+            for j in range(basketstop - basketstart):
+                _delayedraise(fill(j))
             excinfos = ()
         else:
             excinfos = executor.map(fill, range(basketstop - basketstart))
@@ -757,7 +759,11 @@ class TBranchMethods(object):
                 _delayedraise(excinfo)
             return out
         else:
-            return out, excinfos
+            def await():
+                for excinfo in excinfos:
+                    _delayedraise(excinfo)
+                return out
+            return await
 
     def iterate_baskets(self, interpretation=None, entrystart=None, entrystop=None, basketcache=None, reportentries=False):
         interpretation = self._normalize_interpretation(interpretation)
@@ -784,74 +790,59 @@ class TBranchMethods(object):
             if blocking:
                 return numpy.empty(0, dtype=interpretation.todtype)
             else:
-                return numpy.empty(0, dtype=interpretation.todtype), ()
+                def await():
+                    return numpy.empty(0, dtype=interpretation.todtype)
+                return await
 
         basket_itemoffset = [0]
         keysource = self._source.threadlocal()
         try:
             for i in range(basketstart, basketstop):
-                key = self._basketkey(keysource, i + basketstart, True)
-                numitems = interpretation.numitems(key.border, self.basket_numentries(i + basketstart), False)
+                key = self._basketkey(keysource, i, True)
+                numitems = interpretation.numitems(key.border, self.basket_numentries(i), False)
                 basket_itemoffset.append(basket_itemoffset[-1] + numitems)
         finally:
             keysource.dismiss()
 
-        out = interpretation.destarray(self.numitems(interpretation, False), None)
+        out = interpretation.destarray(basket_itemoffset[-1], None)
 
-        def fill(i):
+        def fill(j):
             try:
-                basket = self.basket(i + basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache)
+                basket = self.basket(j + basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache)
+
+                expecteditems = basket_itemoffset[j + 1] - basket_itemoffset[j]
+
+                if j + 1 == basketstop - basketstart and expecteditems > len(basket):
+                    basket_itemoffset[j + 1] -= expecteditems - len(basket)
+
+                elif j == 0 and expecteditems > len(basket):
+                    basket_itemoffset[j] += expecteditems - len(basket)
+
+                out[basket_itemoffset[j] : basket_itemoffset[j + 1]] = basket
+
             except:
                 return sys.exc_info()
-            else:
-                out[basket_itemoffset[i] : basket_itemoffset[i + 1]] = basket
-
-        truestart = basketstart
-        if entrystart != 0:
-            basket = self.basket(basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache)
-            # HERE FIXME TODO
-            truestart += 1
-
-        truestop = basketstop
-        if entrystop != self.numentries:
-            basket = self.basket(basketstop - 1, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache)
-            # HERE FIXME TODO
-            truestop -= 1
 
         if executor is None:
-            for i in range(truestop - truestart):
-                _delayedraise(fill(i))
+            for j in range(basketstop - basketstart):
+                _delayedraise(fill(j))
             excinfos = ()
         else:
-            excinfos = executor.map(fill, range(truestop - truestart))
+            excinfos = executor.map(fill, range(basketstop - basketstart))
 
         if blocking:
             for excinfo in excinfos:
                 _delayedraise(excinfo)
-            return out
+            return out[basket_itemoffset[0] : basket_itemoffset[-1]]
         else:
-            return out, excinfos
+            def await():
+                for excinfo in excinfos:
+                    _delayedraise(excinfo)
+                return out[basket_itemoffset[0] : basket_itemoffset[-1]]
+            return await
 
 
 
-
-    # def array(self, to=None, numitems=None, entrystart=None, entrystop=None, executor=None, blocking=True):
-    #     if executor is None or blocking:
-    #         baskets, excinfos = self.baskets(to=to, entrystart=entrystart, entrystop=entrystop, executor=executor, blocking=False)
-
-    #         if isinstance(to, numpy.ndarray):
-    #             out = to
-    #         elif isinstance(to, numpy.dtype):
-
-
-
-
-    #             out = numpy.empty((sum( for x in ),) + self.dims, dtype=to)
-
-
-
-    #     else:
-    #         numitems = self._normalize_predict(to, numitems)
 
 
 
