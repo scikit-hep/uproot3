@@ -602,6 +602,11 @@ class TBranchMethods(object):
                 pass
         raise KeyError("not found: {0}".format(repr(name)))
 
+    def _localentries(self, i, entrystart, entrystop):
+        local_entrystart = max(0, entrystart - self.basket_entrystart(i))
+        local_entrystop  = max(0, min(entrystop - self.basket_entrystart(i), self.basket_entrystop(i) - self.basket_entrystart(i)))
+        return local_entrystart, local_entrystop
+        
     def basket(self, i, interpretation=None, entrystart=None, entrystop=None, basketcache=None, parallel=False):
         if not 0 <= i < self.numbaskets:
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
@@ -612,8 +617,8 @@ class TBranchMethods(object):
             entrystart = 0
         if entrystop is None:
             entrystop = self.numentries
-        local_entrystart = max(0, entrystart - self.basket_entrystart(i))
-        local_entrystop  = max(0, min(entrystop - self.basket_entrystart(i), self.basket_entrystop(i) - self.basket_entrystart(i)))
+
+        local_entrystart, local_entrystop = self._localentries(i, entrystart, entrystop)
 
         basketdata = None
         basketoffsets = None
@@ -650,7 +655,9 @@ class TBranchMethods(object):
         destarray = interpretation.destarray(numvalues // todimsprod, sourcearray)
         return interpretation.filldest(sourcearray, destarray, 0, len(destarray))
 
-    def baskets(self, interpretation=None, entrystart=None, entrystop=None, executor=None, blocking=True):
+    def baskets(self, interpretation=None, entrystart=None, entrystop=None, basketcache=None, reportentries=False, executor=None, blocking=True):
+        interpretation = self._normalize_interpretation(interpretation)
+
         if entrystart is None:
             entrystart = 0
         if entrystop is None:
@@ -677,10 +684,16 @@ class TBranchMethods(object):
 
         def fill(i):
             try:
-                out[i] = self.basket(i + basketstart, to=to, entrystart=entrystart, entrystop=entrystop, parallel=executor is not None)
+                result = self.basket(i + basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache, parallel=(executor is not None))
+                if reportentries:
+                    local_entrystart, local_entrystop = self._localentries(i + basketstart, entrystart, entrystop)
+                    result = (local_entrystart + self.basket_entrystart(i + basketstart),
+                              local_entrystop + self.basket_entrystart(i + basketstart),
+                              result)
             except:
                 return sys.exc_info()
             else:
+                out[i] = result
                 return None
 
         if executor is None:
@@ -697,7 +710,9 @@ class TBranchMethods(object):
         else:
             return out, excinfos
 
-    def iterate_baskets(self, to=None, entrystart=None, entrystop=None, reportentries=False):
+    def iterate_baskets(self, interpretation=None, entrystart=None, entrystop=None, basketcache=None, reportentries=False):
+        interpretation = self._normalize_interpretation(interpretation)
+
         if entrystart is None:
             entrystart = 0
         if entrystop is None:
@@ -705,12 +720,15 @@ class TBranchMethods(object):
 
         for i in range(self.numbaskets):
             if entrystart < self.basket_entrystop(i) and self.basket_entrystart(i) < entrystop:
-                if reportentries:
-                    local_entrystart = max(0, entrystart - self.basket_entrystart(i))
-                    local_entrystop  = min(entrystop - self.basket_entrystart(i), self.basket_entrystop(i) - self.basket_entrystart(i))
-                    yield local_entrystart + self.basket_entrystart(i), local_entrystop + self.basket_entrystart(i), self.basket(i, to=to, entrystart=entrystart, entrystop=entrystop)
-                else:
-                    yield self.basket(i, to=to, entrystart=entrystart, entrystop=entrystop)
+                local_entrystart, local_entrystop = self._localentries(i, entrystart, entrystop)
+
+                if local_entrystop > local_entrystart:
+                    if reportentries:
+                        yield (local_entrystart + self.basket_entrystart(i),
+                               local_entrystop + self.basket_entrystart(i),
+                               self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache, parallel=False))
+                    else:
+                        yield self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache, parallel=False)
 
     # def array(self, to=None, numitems=None, entrystart=None, entrystop=None, executor=None, blocking=True):
     #     if executor is None or blocking:
