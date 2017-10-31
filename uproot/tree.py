@@ -200,8 +200,8 @@ class asdtype(object):
         else:
             return out // _dimsprod(self.todims)
 
-    def frombytes(self, bytesdata, offsets, entrystart, entrystop):
-        array = bytesdata.view(self.fromdtype)
+    def frombytes(self, basketdata, basketoffsets, entrystart, entrystop):
+        array = basketdata.view(self.fromdtype)
 
         if self.fromdims != ():
             product = _dimsprod(self.fromdims)
@@ -295,8 +295,8 @@ class asarray(object):
         else:
             return out // _dimsprod(self.toarray.shape[1:])
 
-    def frombytes(self, bytesdata, offsets, entrystart, entrystop):
-        array = bytesdata.view(self.fromdtype)
+    def frombytes(self, basketdata, basketoffsets, entrystart, entrystop):
+        array = basketdata.view(self.fromdtype)
 
         if self.fromdims != ():
             product = _dimsprod(self.fromdims)
@@ -332,6 +332,11 @@ class asarray(object):
 ################################################################ methods for TTree
 
 class TTreeMethods(object):
+    _copycontext = True
+
+    def _postprocess(self, source, cursor, context):
+        context.treename = self.name
+
     @property
     def name(self):
         return self.fName
@@ -597,7 +602,7 @@ class TBranchMethods(object):
                 pass
         raise KeyError("not found: {0}".format(repr(name)))
 
-    def basket(self, i, interpretation=None, entrystart=None, entrystop=None, parallel=False):
+    def basket(self, i, interpretation=None, entrystart=None, entrystop=None, basketcache=None, parallel=False):
         if not 0 <= i < self.numbaskets:
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
@@ -610,30 +615,42 @@ class TBranchMethods(object):
         local_entrystart = max(0, entrystart - self.basket_entrystart(i))
         local_entrystop  = max(0, min(entrystop - self.basket_entrystart(i), self.basket_entrystop(i) - self.basket_entrystart(i)))
 
-        if parallel:
-            keysource = self._source.threadlocal()
-        else:
-            keysource = self._source
-        key = self._basketkey(keysource, i, True)
+        basketdata = None
+        basketoffsets = None
 
-        bytesdata = key.cursor.bytes(key.source, key.border)
-        if key.cursor.index >= key.fObjlen:
-            offsets = None
-        else:
-            key.cursor.skip(4)
-            offsets = key.cursor.array(key.source, (key.fObjlen - key.border - 8) // 4, numpy.dtype(">i4")) - key.fKeylen
+        if basketcache is not None:
+            cachekey_basketdata = "{0};{1};{2};basketdata;{3}".format(self._context.sourcepath, self._context.treename, self.name, i)
+            cachekey_offset  = "{0};{1};{2};basketoffsets;{3}".format(self._context.sourcepath, self._context.treename, self.name, i)
+            basketdata = basketcache.get(cachekey_basketdata, None)
+            basketoffsets = basketcache.get(cachekey_offset, None)
 
-        sourcearray = interpretation.frombytes(bytesdata, offsets, local_entrystart, local_entrystop)
+        if basketdata is None:
+            if parallel:
+                keysource = self._source.threadlocal()
+            else:
+                keysource = self._source
+            key = self._basketkey(keysource, i, True)
+
+            basketdata = key.cursor.bytes(key.source, key.border)
+            if key.cursor.index >= key.fObjlen:
+                basketoffsets = None
+            else:
+                key.cursor.skip(4)
+                basketoffsets = key.cursor.array(key.source, (key.fObjlen - key.border - 8) // 4, numpy.dtype(">i4")) - key.fKeylen
+
+        if basketcache is not None:
+            basketcache[cachekey_basketdata] = basketdata
+            if basketoffsets is not None:
+                basketcache[cachekey_offset] = basketoffsets
+            
+        sourcearray = interpretation.frombytes(basketdata, basketoffsets, local_entrystart, local_entrystop)
         numvalues = _dimsprod(sourcearray.shape)
         todimsprod = _dimsprod(interpretation.todims)
         assert numvalues % todimsprod == 0, "{0} % {1} == {2} != 0".format(numvalues, todimsprod, numvalues % todimsprod)
         destarray = interpretation.destarray(numvalues // todimsprod, sourcearray)
         return interpretation.filldest(sourcearray, destarray, 0, len(destarray))
 
-    def baskets(self, to=None, entrystart=None, entrystop=None, executor=None, blocking=True):
-        if isinstance(to, numpy.ndarray):
-            raise TypeError("the 'baskets' method fills all baskets, so a single array 'to' would be clobbered before returning")
-
+    def baskets(self, interpretation=None, entrystart=None, entrystop=None, executor=None, blocking=True):
         if entrystart is None:
             entrystart = 0
         if entrystop is None:

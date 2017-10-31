@@ -75,8 +75,13 @@ class ROOTDirectory(object):
     """
 
     class _FileContext(object):
-        def __init__(self, streamerinfos, classes, compression, uuid):
-            self.streamerinfos, self.classes, self.compression, self.uuid = streamerinfos, classes, compression, uuid
+        def __init__(self, sourcepath, streamerinfos, classes, compression, uuid):
+            self.sourcepath, self.streamerinfos, self.classes, self.compression, self.uuid = sourcepath, streamerinfos, classes, compression, uuid
+
+        def copy(self):
+            out = ROOTDirectory._FileContext.__new__(ROOTDirectory._FileContext)
+            out.__dict__.update(self.__dict__)
+            return out
 
     @staticmethod
     def read(source, *args):
@@ -110,12 +115,12 @@ class ROOTDirectory(object):
                                b"TObjArray":                 TObjArray,
                                b"TObjString":                TObjString}
 
-            streamercontext = ROOTDirectory._FileContext(None, streamerclasses, Compression(fCompress), fUUID)
+            streamercontext = ROOTDirectory._FileContext(source.path, None, streamerclasses, Compression(fCompress), fUUID)
             streamerkey = TKey.read(source, Cursor(fSeekInfo), streamercontext)
             streamerinfos, streamerrules = _readstreamers(streamerkey._source, streamerkey._cursor, streamercontext)
             classes = _defineclasses(streamerinfos)
 
-            context = ROOTDirectory._FileContext(streamerinfos, classes, Compression(fCompress), fUUID)
+            context = ROOTDirectory._FileContext(source.path, streamerinfos, classes, Compression(fCompress), fUUID)
 
             keycursor = Cursor(fBEGIN)
             mykey = TKey.read(source, keycursor, context)
@@ -693,8 +698,12 @@ def _makeclass(classname, id, codestr, classes):
 ################################################################ built-in ROOT objects for bootstrapping up to streamed classes
 
 class ROOTObject(object):
+    _copycontext = False
+
     @classmethod
     def read(cls, source, cursor, context):
+        if cls._copycontext:
+            context = context.copy()
         out = cls.__new__(cls)
         out = cls._readinto(out, source, cursor, context)
         out._postprocess(source, cursor, context)
@@ -988,7 +997,7 @@ class ROOTStreamedObject(ROOTObject):
     # TODO: each ROOTStreamedObject must define
     # 
     # @staticmethod
-    # def frombytes(bytesdata, offsets, entrystart, entrystop): ...
+    # def frombytes(basketdata, basketoffsets, entrystart, entrystop): ...
 
     @staticmethod
     def destarray(numitems, sourcearray):
