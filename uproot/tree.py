@@ -664,7 +664,7 @@ class TBranchMethods(object):
         local_entrystop  = max(0, min(entrystop - self.basket_entrystart(i), self.basket_entrystop(i) - self.basket_entrystart(i)))
         return local_entrystart, local_entrystop
         
-    def basket(self, i, interpretation=None, entrystart=None, entrystop=None, basketcache=None):
+    def basket(self, i, interpretation=None, entrystart=None, entrystop=None, rawcache=None, cache=None):
         if not 0 <= i < self.numbaskets:
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
@@ -673,35 +673,46 @@ class TBranchMethods(object):
 
         local_entrystart, local_entrystop = self._localentries(i, entrystart, entrystop)
 
-        basketdata = None
-        if basketcache is not None:
-            cachekey = "{0};{1};{2};basket-{3}".format(self._context.sourcepath, self._context.treename, self.name, i)
-            basketdata = basketcache.get(cachekey, None)
+        sourcearray = None
+        if cache is not None:
+            cachekey = "{0};{1};{2};{3};{4}-{5}".format(self._context.sourcepath, self._context.treename, self.name, i, local_entrystart, local_entrystop)
+            sourcearray = cache.get(cachekey, None)
 
-        keysource = self._source.threadlocal()
-        try:
-            key = self._basketkey(keysource, i, True)
-            if basketdata is None:
-                basketdata = key.cursor.bytes(key.source, key.fObjlen)
-        finally:
-            keysource.dismiss()
+        if sourcearray is None:
+            basketdata = None
+            if rawcache is not None:
+                rawcachekey = "{0};{1};{2};{3};raw".format(self._context.sourcepath, self._context.treename, self.name, i)
+                basketdata = rawcache.get(rawcachekey, None)
 
-        if basketcache is not None:
-            basketcache[cachekey] = basketdata
+            keysource = self._source.threadlocal()
+            try:
+                key = self._basketkey(keysource, i, True)
+                if basketdata is None:
+                    basketdata = key.cursor.bytes(key.source, key.fObjlen)
+            finally:
+                keysource.dismiss()
 
-        if key.fObjlen == key.border:
-            data, offsets = basketdata, None
-        else:
-            data = basketdata[:border]
-            offsets = basketdata[border + 4 : -4].view(">i4") - key.fKeylen
-            
-        sourcearray = interpretation.frombytes(data, offsets, local_entrystart, local_entrystop)
+            if rawcache is not None:
+                rawcache[rawcachekey] = basketdata
+
+            if key.fObjlen == key.border:
+                data, offsets = basketdata, None
+            else:
+                data = basketdata[:border]
+                offsets = basketdata[border + 4 : -4].view(">i4") - key.fKeylen
+
+            sourcearray = interpretation.frombytes(data, offsets, local_entrystart, local_entrystop)
+
+        if cache is not None:
+            cache[cachekey] = sourcearray
+
         numvalues = _dimsprod(sourcearray.shape)
         todimsprod = _dimsprod(interpretation.todims)
         assert numvalues % todimsprod == 0, "{0} % {1} == {2} != 0".format(numvalues, todimsprod, numvalues % todimsprod)
+
         destarray = interpretation.destarray(numvalues // todimsprod, sourcearray)
         return interpretation.filldest(sourcearray, destarray, 0, len(destarray))
-    
+
     def _basketstartstop(self, entrystart, entrystop):
         basketstart, basketstop = None, None
         for i in range(self.numbaskets):
@@ -718,7 +729,7 @@ class TBranchMethods(object):
 
         return basketstart, basketstop
 
-    def baskets(self, interpretation=None, entrystart=None, entrystop=None, basketcache=None, reportentries=False, executor=None, blocking=True):
+    def baskets(self, interpretation=None, entrystart=None, entrystop=None, rawcache=None, cache=None, reportentries=False, executor=None, blocking=True):
         interpretation = self._normalize_interpretation(interpretation)
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
         basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
@@ -735,7 +746,7 @@ class TBranchMethods(object):
 
         def fill(j):
             try:
-                basket = self.basket(j + basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache)
+                basket = self.basket(j + basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, rawcache=rawcache, cache=cache)
                 if reportentries:
                     local_entrystart, local_entrystop = self._localentries(j + basketstart, entrystart, entrystop)
                     basket = (local_entrystart + self.basket_entrystart(j + basketstart),
@@ -765,7 +776,7 @@ class TBranchMethods(object):
                 return out
             return await
 
-    def iterate_baskets(self, interpretation=None, entrystart=None, entrystop=None, basketcache=None, reportentries=False):
+    def iterate_baskets(self, interpretation=None, entrystart=None, entrystop=None, rawcache=None, cache=None, reportentries=False):
         interpretation = self._normalize_interpretation(interpretation)
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
 
@@ -777,11 +788,11 @@ class TBranchMethods(object):
                     if reportentries:
                         yield (local_entrystart + self.basket_entrystart(i),
                                local_entrystop + self.basket_entrystart(i),
-                               self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache))
+                               self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, rawcache=rawcache, cache=cache))
                     else:
-                        yield self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache)
+                        yield self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, rawcache=rawcache, cache=cache)
 
-    def array(self, interpretation=None, entrystart=None, entrystop=None, basketcache=None, executor=None, blocking=True):
+    def array(self, interpretation=None, entrystart=None, entrystop=None, rawcache=None, cache=None, executor=None, blocking=True):
         interpretation = self._normalize_interpretation(interpretation)
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
         basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
@@ -808,7 +819,7 @@ class TBranchMethods(object):
 
         def fill(j):
             try:
-                basket = self.basket(j + basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache)
+                basket = self.basket(j + basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, rawcache=rawcache, cache=cache)
 
                 expecteditems = basket_itemoffset[j + 1] - basket_itemoffset[j]
 
@@ -841,105 +852,102 @@ class TBranchMethods(object):
                 return out[basket_itemoffset[0] : basket_itemoffset[-1]]
             return await
 
+    def lazyarray(self, interpretation=None):
+        interpretation = self._normalize_interpretation(interpretation)
+        return self._LazyArray(self, interpretation)
 
 
 
 
 
-    def lazyarray(self, to=None, entrystart=None, entrystop=None):
-        if to is None:
-            to = self.to
-        if entrystart is None:
-            entrystart = 0
-        if entrystop is None:
-            entrystop = self.numentries
-        return self._LazyArray(self, to, entrystart, entrystop)
+    # def _ensure(self, cache, entrystart, entrystop, to):
+    #     basketids = sorted(cache)
+    #     for i in basketids:
+    #         basketstart = self.fBasketEntry[i]
+    #         if i + 1 < len(self.fBasketEntry):
+    #             basketstop = self.fBasketEntry[i + 1]
+    #         else:
+    #             basketstop = self.fEntryNumber
 
-    def _ensure(self, cache, entrystart, entrystop, to):
-        basketids = sorted(cache)
-        for i in basketids:
-            basketstart = self.fBasketEntry[i]
-            if i + 1 < len(self.fBasketEntry):
-                basketstop = self.fBasketEntry[i + 1]
-            else:
-                basketstop = self.fEntryNumber
+    #     raise NotImplementedError
 
+    # class _LazyArray(object):
+    #     def __init__(self, branch, to, entrystart, entrystop):
+    #         self._branch = branch
+    #         self._to = to
+    #         self._entrystart = entrystart
+    #         self._entrystop = entrystop
+    #         self._baskets = [None] * branch.numbaskets
+
+    #     def _ensure(self, entrystart, entrystop):
+    #         raise NotImplementedError
+
+    #     @property
+    #     def dtype(self):
+    #         raise NotImplementedError
+
+    #     @property
+    #     def shape(self):
+    #         raise NotImplementedError
+
+    #     def cumsum(self, axis=None, dtype=None, out=None):
+    #         raise NotImplementedError
+
+    #     # interpret negative indexes as starting at the end of the dataset
+    #     def __normalize(self, i, clip, step):
+    #         lenself = len(self)
+    #         if i < 0:
+    #             j = lenself + i
+    #             if j < 0:
+    #                 if clip:
+    #                     return 0 if step > 0 else lenself
+    #                 else:
+    #                     raise IndexError("index out of range: {0} for length {1}".format(i, lenself))
+    #             else:
+    #                 return j
+    #         elif i < lenself:
+    #             return i
+    #         elif clip:
+    #             return lenself if step > 0 else 0
+    #         else:
+    #             raise IndexError("index out of range: {0} for length {1}".format(i, lenself))
+
+    #     def __normalizeslice(self, s):
+    #         lenself = len(self)
+    #         if s.step is None:
+    #             step = 1
+    #         else:
+    #             step = s.step
+    #         if step == 0:
+    #             raise ValueError("slice step cannot be zero")
+    #         if s.start is None:
+    #             if step > 0:
+    #                 start = 0
+    #             else:
+    #                 start = lenself - 1
+    #         else:
+    #             start = self.__normalize(s.start, True, step)
+    #         if s.stop is None:
+    #             if step > 0:
+    #                 stop = lenself
+    #             else:
+    #                 stop = -1
+    #         else:
+    #             stop = self.__normalize(s.stop, True, step)
+
+    #         return start, stop, step
+
+    #     def __len__(self):
+    #         return self.shape[0]
+
+    #     def __getitem__(self, index):
+    #         raise NotImplementedError
+
+    #     def __getslice__(self, start, end):
+    #         return self.__getitem__(slice(start, end))
+
+    def _ensure(self):
         raise NotImplementedError
-
-    class _LazyArray(object):
-        def __init__(self, branch, to, entrystart, entrystop):
-            self._branch = branch
-            self._to = to
-            self._entrystart = entrystart
-            self._entrystop = entrystop
-            self._baskets = [None] * branch.numbaskets
-
-        def _ensure(self, entrystart, entrystop):
-            raise NotImplementedError
-
-        @property
-        def dtype(self):
-            raise NotImplementedError
-
-        @property
-        def shape(self):
-            raise NotImplementedError
-
-        def cumsum(self, axis=None, dtype=None, out=None):
-            raise NotImplementedError
-
-        # interpret negative indexes as starting at the end of the dataset
-        def __normalize(self, i, clip, step):
-            lenself = len(self)
-            if i < 0:
-                j = lenself + i
-                if j < 0:
-                    if clip:
-                        return 0 if step > 0 else lenself
-                    else:
-                        raise IndexError("index out of range: {0} for length {1}".format(i, lenself))
-                else:
-                    return j
-            elif i < lenself:
-                return i
-            elif clip:
-                return lenself if step > 0 else 0
-            else:
-                raise IndexError("index out of range: {0} for length {1}".format(i, lenself))
-
-        def __normalizeslice(self, s):
-            lenself = len(self)
-            if s.step is None:
-                step = 1
-            else:
-                step = s.step
-            if step == 0:
-                raise ValueError("slice step cannot be zero")
-            if s.start is None:
-                if step > 0:
-                    start = 0
-                else:
-                    start = lenself - 1
-            else:
-                start = self.__normalize(s.start, True, step)
-            if s.stop is None:
-                if step > 0:
-                    stop = lenself
-                else:
-                    stop = -1
-            else:
-                stop = self.__normalize(s.stop, True, step)
-
-            return start, stop, step
-
-        def __len__(self):
-            return self.shape[0]
-
-        def __getitem__(self, index):
-            raise NotImplementedError
-
-        def __getslice__(self, start, end):
-            return self.__getitem__(slice(start, end))
 
     class _BasketKey(object):
         def __init__(self, source, cursor, compression, complete):
