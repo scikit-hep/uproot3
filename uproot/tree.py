@@ -786,21 +786,51 @@ class TBranchMethods(object):
             else:
                 return numpy.empty(0, dtype=interpretation.todtype), ()
 
-        basket_numitems = []
+        basket_itemoffset = [0]
         keysource = self._source.threadlocal()
         try:
             for i in range(basketstart, basketstop):
                 key = self._basketkey(keysource, i + basketstart, True)
-                basket_numitems.append(interpretation.numitems(key.border, self.basket_numentries(i + basketstart), False))
+                numitems = interpretation.numitems(key.border, self.basket_numentries(i + basketstart), False)
+                basket_itemoffset.append(basket_itemoffset[-1] + numitems)
         finally:
             keysource.dismiss()
 
         out = interpretation.destarray(self.numitems(interpretation, False), None)
 
-        # def fill(i):
-        #     try:
-        #         basket = self.basket(i + basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache)
+        def fill(i):
+            try:
+                basket = self.basket(i + basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache)
+            except:
+                return sys.exc_info()
+            else:
+                out[basket_itemoffset[i] : basket_itemoffset[i + 1]] = basket
 
+        truestart = basketstart
+        if entrystart != 0:
+            basket = self.basket(basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache)
+            # HERE FIXME TODO
+            truestart += 1
+
+        truestop = basketstop
+        if entrystop != self.numentries:
+            basket = self.basket(basketstop - 1, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, basketcache=basketcache)
+            # HERE FIXME TODO
+            truestop -= 1
+
+        if executor is None:
+            for i in range(truestop - truestart):
+                _delayedraise(fill(i))
+            excinfos = ()
+        else:
+            excinfos = executor.map(fill, range(truestop - truestart))
+
+        if blocking:
+            for excinfo in excinfos:
+                _delayedraise(excinfo)
+            return out
+        else:
+            return out, excinfos
 
 
 
