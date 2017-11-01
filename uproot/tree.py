@@ -38,6 +38,7 @@ from collections import namedtuple
 import numpy
 
 import uproot.rootio
+from uproot.cache.memorycache import ThreadSafeDict
 from uproot.rootio import _bytesid
 from uproot.source.compressed import CompressedSource
 from uproot.source.compressed import Compression
@@ -401,7 +402,7 @@ class TTreeMethods(object):
         return self.branch(branch).lazyarray(interpretation=interpretation)
 
     def arrays(self, branches=None, outputtype=dict, entrystart=None, entrystop=None, rawcache=None, cache=None, executor=None, blocking=True):
-        branches = self._normalize_branches(branches)
+        branches = list(self._normalize_branches(branches))
 
         if outputtype == namedtuple:
             outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
@@ -411,11 +412,9 @@ class TTreeMethods(object):
         if issubclass(outputtype, dict):
             def await():
                 return outputtype([(name, future()) for name, future in futures])
-
         elif outputtype == tuple or outputtype == list:
             def await():
                 return outputtype([future() for name, future in futures])
-
         else:
             def await():
                 return outputtype(*[future() for name, future in futures])
@@ -425,10 +424,56 @@ class TTreeMethods(object):
         else:
             return await
         
-    def lazyarrays(self, branches=None, outputtype=dict, entrystart=None, entrystop=None):
-        raise NotImplementedError
+    def lazyarrays(self, branches=None, outputtype=dict):
+        branches = list(self._normalize_branches(branches))
 
-    def iterate(self, entrystep, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, executor=None):
+        if outputtype == namedtuple:
+            outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
+
+        lazyarrays = [(branch.name, branch.lazyarray(interpretation=interpretation)) for branch, interpretation in branches]
+
+        if issubclass(outputtype, dict):
+            return outputtype(lazyarrays)
+        elif outputtype == tuple or outputtype == list:
+            return outputtype([lazyarray for name, lazyarray in lazyarrays])
+        else:
+            return outputtype(*[lazyarray for name, lazyarray in lazyarrays])
+
+    def iterate(self, entrystepsize, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, rawcache=None, cache=None, executor=None):
+        branches = list(self._normalize_branches(branches))
+
+        if outputtype == namedtuple:
+            outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
+
+        branchinfo = [(branch, interpretation, {}, branch._basket_itemoffset(interpretation, 0, branch.numbaskets)) for branch, interpretation in branches]
+
+        if rawcache is None:
+            rawcache = ThreadSafeDict()
+            explicit_rawcache = False
+        else:
+            explicit_rawcache = True
+
+        if entrystart is None:
+            entrystart = 0
+        if entrystop is None:
+            entrystop = self.numentries
+
+        start = entrystart
+        stop = start + entrystepsize
+        while start < entrystop and start < self.numentries:
+            futures = [(branch.name, branch._step_array(interpretation, baskets, basket_itemoffset, start, stop, rawcache, cache, executor, explicit_rawcache)) for branch, interpretation, baskets, basket_itemoffset in branchinfo]
+
+            if issubclass(outputtype, dict):
+                yield outputtype([(name, future()) for name, future in futures])
+            elif outputtype == tuple or outputtype == list:
+                yield outputtype([future() for name, future in futures])
+            else:
+                yield outputtype(*[future() for name, future in futures])
+
+            start = stop
+            stop = start + entrystepsize
+
+    def iterate_clusters(self, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, executor=None):
         raise NotImplementedError
 
     def _normalize_branches(self, arg):
@@ -886,7 +931,9 @@ class TBranchMethods(object):
                 return destarray[basket_itemoffset[0] : basket_itemoffset[-1]]
             return await
 
-    def _step_array(self, interpretation, baskets, basket_itemoffset, entrystart, entrystop, rawcache, cache, executor):
+    def _step_array(self, interpretation, baskets, basket_itemoffset, entrystart, entrystop, rawcache, cache, executor, explicit_rawcache):
+        print self.name, entrystart, entrystop
+
         basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
 
         if basketstart is None:
@@ -896,7 +943,11 @@ class TBranchMethods(object):
             i, entrystart, entrystop = key
             if i < basketstart:
                 del baskets[key]
-                del rawcache[self._rawcachekey(i)]
+            if not explicit_rawcache:
+                try:
+                    del rawcache[self._rawcachekey(i)]
+                except KeyError:
+                    pass
 
         basket_itemoffset = basket_itemoffset[basketstart : basketstop + 1]
 
@@ -914,6 +965,14 @@ class TBranchMethods(object):
                     basket = self.basket(j + basketstart, interpretation=nocopy, entrystart=entrystart, entrystop=entrystop, rawcache=rawcache, cache=cache)
                     with lock:
                         baskets[key] = basket
+
+                if not explicit_rawcache:
+                    local_entrystart, local_entrystop = self._localentries(j + basketstart, entrystart, entrystop)
+                    if local_entrystart == 0 and local_entrystop == self.basket_numentries(j + basketstart):
+                        try:
+                            del rawcache[self._rawcachekey(i)]
+                        except KeyError:
+                            pass
 
                 expecteditems = basket_itemoffset[j + 1] - basket_itemoffset[j]
 
