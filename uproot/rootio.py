@@ -84,9 +84,13 @@ class ROOTDirectory(object):
             return out
 
     @staticmethod
-    def read(source, *args):
+    def read(source, *args, **options):
         if len(args) == 0:
             try:
+                readstreamers = options.pop("readstreamers", True)
+                if len(options) > 0:
+                    raise TypeError("unrecognized options: {0}".format(", ".join(options)))
+
                 # See https://root.cern/doc/master/classTFile.html
                 cursor = Cursor(0)
                 magic, fVersion = cursor.fields(source, ROOTDirectory._format1)
@@ -116,11 +120,14 @@ class ROOTDirectory(object):
                                    b"TObjArray":                 TObjArray,
                                    b"TObjString":                TObjString}
 
-                streamercontext = ROOTDirectory._FileContext(source.path, None, streamerclasses, Compression(fCompress), fUUID)
-                streamerkey = TKey.read(source, Cursor(fSeekInfo), streamercontext)
-                streamerinfos, streamerrules = _readstreamers(streamerkey._source, streamerkey._cursor, streamercontext)
-                classes = _defineclasses(streamerinfos)
+                if readstreamers:
+                    streamercontext = ROOTDirectory._FileContext(source.path, None, streamerclasses, Compression(fCompress), fUUID)
+                    streamerkey = TKey.read(source, Cursor(fSeekInfo), streamercontext)
+                    streamerinfos, streamerrules = _readstreamers(streamerkey._source, streamerkey._cursor, streamercontext)
+                else:
+                    streamerinfos, streamerrules = [], []
 
+                classes = _defineclasses(streamerinfos)
                 context = ROOTDirectory._FileContext(source.path, streamerinfos, classes, Compression(fCompress), fUUID)
 
                 keycursor = Cursor(fBEGIN)
@@ -135,6 +142,8 @@ class ROOTDirectory(object):
         else:
             try:
                 cursor, context, mykey = args
+                if len(options) > 0:
+                    raise TypeError("unrecognized options: {0}".format(", ".join(options)))
 
                 # See https://root.cern/doc/master/classTDirectoryFile.html.
                 fVersion, fDatimeC, fDatimeM, fNbytesKeys, fNbytesName = cursor.fields(source, ROOTDirectory._format3)
@@ -499,6 +508,66 @@ def _readstreamers(source, cursor, context):
 
     return list(topological_sort(streamerinfos)), streamerrules
 
+def _ftype2dtype(fType):
+    if fType == uproot.const.kBool:
+        return "numpy.dtype(numpy.bool_)"
+    elif fType == uproot.const.kChar:
+        return "numpy.dtype('i1')"
+    elif fType == uproot.const.kUChar:
+        return "numpy.dtype('u1')"
+    elif fType == uproot.const.kShort:
+        return "numpy.dtype('>i2')"
+    elif fType == uproot.const.kUShort:
+        return "numpy.dtype('>u2')"
+    elif fType == uproot.const.kInt:
+        return "numpy.dtype('>i4')"
+    elif fType in (uproot.const.kBits, uproot.const.kUInt, uproot.const.kCounter):
+        return "numpy.dtype('>u4')"
+    elif fType == uproot.const.kLong:
+        return "numpy.dtype(numpy.long).newbyteorder('>')"
+    elif fType == uproot.const.kULong:
+        return "numpy.dtype(numpy.ulong).newbyteorder('>')"
+    elif fType == uproot.const.kLong64:
+        return "numpy.dtype('>i8')"
+    elif fType == uproot.const.kULong64:
+        return "numpy.dtype('>u8')"
+    elif fType in (uproot.const.kFloat, uproot.const.kFloat16):
+        return "numpy.dtype('>f4')"
+    elif fType in (uproot.const.kDouble, uproot.const.kDouble32):
+        return "numpy.dtype('>f8')"
+    else:
+        raise NotImplementedError(fType)
+
+def _ftype2struct(fType):
+    if fType == uproot.const.kBool:
+        return "?"
+    elif fType == uproot.const.kChar:
+        return "b"
+    elif fType == uproot.const.kUChar:
+        return "B"
+    elif fType == uproot.const.kShort:
+        return "h"
+    elif fType == uproot.const.kUShort:
+        return "H"
+    elif fType == uproot.const.kInt:
+        return "i"
+    elif fType in (uproot.const.kBits, uproot.const.kUInt, uproot.const.kCounter):
+        return "I"
+    elif fType == uproot.const.kLong:
+        return "l"
+    elif fType == uproot.const.kULong:
+        return "L"
+    elif fType == uproot.const.kLong64:
+        return "q"
+    elif fType == uproot.const.kULong64:
+        return "Q"
+    elif fType in (uproot.const.kFloat, uproot.const.kFloat16):
+        return "f"
+    elif fType in (uproot.const.kDouble, uproot.const.kDouble32):
+        return "d"
+    else:
+        raise NotImplementedError(fType)
+
 def _safename(name):
     return re.sub("[^a-zA-Z0-9]+", lambda bad: "_" + "".join("%02x" % ord(x) for x in bad.group(0)) + "_", name)
 
@@ -519,12 +588,10 @@ def _defineclasses(streamerinfos):
 
     skip    = {b"TBranch":                   [b"fBaskets"]}
 
+    rename = dict((streamerinfo.fName, _safename(streamerinfo.fName)) for streamerinfo in streamerinfos)
+
     for streamerinfo in streamerinfos:
-        if isinstance(streamerinfo, TStreamerInfo) and streamerinfo.fName not in classes:
-            if isinstance(streamerinfo.fName, str):
-                classname = streamerinfo.fName
-            else:
-                classname = streamerinfo.fName.decode("ascii")
+        if isinstance(streamerinfo, TStreamerInfo) and _safename(streamerinfo.fName) not in classes:
             code = ["    @staticmethod",
                     "    def _readinto(self, source, cursor, context):",
                     "        start, cnt, version = _startcheck(source, cursor)"]
@@ -540,17 +607,10 @@ def _defineclasses(streamerinfos):
                     raise NotImplementedError
 
                 elif isinstance(element, TStreamerBase):
-                    code.append("        {0}._readinto(self, source, cursor, context)".format(_safename(element.fName)))
-                    bases.append(element.fName)
+                    code.append("        {0}._readinto(self, source, cursor, context)".format(rename.get(element.fName, element.fName)))
+                    bases.append(rename.get(element.fName, element.fName))
 
                 elif isinstance(element, TStreamerBasicPointer):
-                    if isinstance(element.fName, str):
-                        name = element.fName
-                    else:
-                        name = element.fName.decode("ascii")
-                    # formatnum = len(formats) + 1
-                    # formats["_format{0}".format(formatnum)] = "struct.Struct('>B')"
-                    # code.append("        cursor.field(source, {0}._format{1})".format(classname, formatnum))
                     code.append("        cursor.skip(1)")
 
                     m = re.search("\[([^\]]*)\]", element.fTitle.decode("ascii"))
@@ -562,100 +622,50 @@ def _defineclasses(streamerinfos):
                     fType = element.fType - uproot.const.kOffsetP
 
                     dtypename = "_dtype{0}".format(len(dtypes) + 1)
-                    if fType == uproot.const.kBool:
-                        dtypes[dtypename] = "numpy.dtype(numpy.bool_)"
-                    elif fType == uproot.const.kChar:
-                        dtypes[dtypename] = "numpy.dtype('i1')"
-                    elif fType == uproot.const.kUChar:
-                        dtypes[dtypename] = "numpy.dtype('u1')"
-                    elif fType == uproot.const.kShort:
-                        dtypes[dtypename] = "numpy.dtype('>i2')"
-                    elif fType == uproot.const.kUShort:
-                        dtypes[dtypename] = "numpy.dtype('>u2')"
-                    elif fType == uproot.const.kInt:
-                        dtypes[dtypename] = "numpy.dtype('>i4')"
-                    elif fType in (uproot.const.kBits, uproot.const.kUInt, uproot.const.kCounter):
-                        dtypes[dtypename] = "numpy.dtype('>u4')"
-                    elif fType == uproot.const.kLong:
-                        dtypes[dtypename] = "numpy.dtype(numpy.long).newbyteorder('>')"
-                    elif fType == uproot.const.kULong:
-                        dtypes[dtypename] = "numpy.dtype(numpy.ulong).newbyteorder('>')"
-                    elif fType == uproot.const.kLong64:
-                        dtypes[dtypename] = "numpy.dtype('>i8')"
-                    elif fType == uproot.const.kULong64:
-                        dtypes[dtypename] = "numpy.dtype('>u8')"
-                    elif fType in (uproot.const.kFloat, uproot.const.kFloat16):
-                        dtypes[dtypename] = "numpy.dtype('>f4')"
-                    elif fType in (uproot.const.kDouble, uproot.const.kDouble32):
-                        dtypes[dtypename] = "numpy.dtype('>f8')"
-                    else:
-                        raise NotImplementedError(fType)
-                    code.append("        self.{0} = cursor.array(source, self.{1}, self.{2})".format(_safename(name), _safename(counter), dtypename))
-                    fields.append(_safename(name))
+                    dtypes[dtypename] = _ftype2dtype(fType)
+                    code.append("        self.{0} = cursor.array(source, self.{1}, self.{2})".format(_safename(element.fName), _safename(counter), dtypename))
+                    fields.append(_safename(element.fName))
 
                 elif isinstance(element, TStreamerBasicType):
                     if element.fArrayLength == 0:
                         basicnames.append("self." + _safename(element.fName))
                         fields.append(_safename(element.fName))
-                        if element.fType == uproot.const.kBool:
-                            basicletters += "?"
-                        elif element.fType == uproot.const.kChar:
-                            basicletters += "b"
-                        elif element.fType == uproot.const.kUChar:
-                            basicletters += "B"
-                        elif element.fType == uproot.const.kShort:
-                            basicletters += "h"
-                        elif element.fType == uproot.const.kUShort:
-                            basicletters += "H"
-                        elif element.fType == uproot.const.kInt:
-                            basicletters += "i"
-                        elif element.fType in (uproot.const.kBits, uproot.const.kUInt, uproot.const.kCounter):
-                            basicletters += "I"
-                        elif element.fType == uproot.const.kLong:
-                            basicletters += "l"
-                        elif element.fType == uproot.const.kULong:
-                            basicletters += "L"
-                        elif element.fType == uproot.const.kLong64:
-                            basicletters += "q"
-                        elif element.fType == uproot.const.kULong64:
-                            basicletters += "Q"
-                        elif element.fType in (uproot.const.kFloat, uproot.const.kFloat16):
-                            basicletters += "f"
-                        elif element.fType in (uproot.const.kDouble, uproot.const.kDouble32):
-                            basicletters += "d"
-                        else:
-                            raise NotImplementedError(element.fType)
+                        basicletters += _ftype2struct(element.fType)
 
                         if elementi + 1 == len(streamerinfo.fElements) or not isinstance(streamerinfo.fElements[elementi + 1], TStreamerBasicType) or streamerinfo.fElements[elementi + 1].fArrayLength != 0:
                             formatnum = len(formats) + 1
                             formats["_format{0}".format(formatnum)] = "struct.Struct('>{0}')".format(basicletters)
 
                             if len(basicnames) == 1:
-                                code.append("        {0} = cursor.field(source, {1}._format{2})".format(basicnames[0], _safename(classname), formatnum))
+                                code.append("        {0} = cursor.field(source, {1}._format{2})".format(basicnames[0], _safename(streamerinfo.fName), formatnum))
                             else:
-                                code.append("        {0} = cursor.fields(source, {1}._format{2})".format(", ".join(basicnames), _safename(classname), formatnum))
+                                code.append("        {0} = cursor.fields(source, {1}._format{2})".format(", ".join(basicnames), _safename(streamerinfo.fName), formatnum))
 
                             basicnames = []
                             basicletters = ""
 
                     else:
-                        raise NotImplementedError(element.fArrayLength)
+                        dtypename = "_dtype{0}".format(len(dtypes) + 1)
+                        dtypes[dtypename] = _ftype2dtype(element.fType)
+                        code.append("        self.{0} = cursor.array(source, {1}, self.{2})".format(_safename(element.fName), element.fArrayLength, dtypename))
+                        fields.append(_safename(element.fName))
 
                 elif isinstance(element, TStreamerLoop):
                     raise NotImplementedError
 
                 elif isinstance(element, TStreamerObjectAnyPointer):
-                    raise NotImplementedError
+                    # raise NotImplementedError
+                    pass   # FIXME
 
                 elif isinstance(element, TStreamerObjectPointer):
                     if element.fType == uproot.const.kObjectp:
-                        if streamerinfo.fName in skip and element.fName in skip[streamerinfo.fName]:
+                        if _safename(streamerinfo.fName) in skip and _safename(element.fName) in skip[_safename(streamerinfo.fName)]:
                             code.append("        Undefined.read(source, cursor, context)")
                         else:
-                            code.append("        self.{0} = {1}.read(source, cursor, context)".format(_safename(element.fName), element.fTypeName.rstrip("*")))
+                            code.append("        self.{0} = {1}.read(source, cursor, context)".format(_safename(element.fName), rename.get(element.fTypeName, element.fTypeName).rstrip("*")))
                             fields.append(_safename(element.fName))
                     elif element.fType == uproot.const.kObjectP:
-                        if streamerinfo.fName in skip and element.fName in skip[streamerinfo.fName]:
+                        if _safename(streamerinfo.fName) in skip and _safename(element.fName) in skip[_safename(streamerinfo.fName)]:
                             code.append("        _readobjany(source, cursor, context, wantundefined=True)")
                         else:
                             code.append("        self.{0} = _readobjany(source, cursor, context)".format(_safename(element.fName)))
@@ -671,24 +681,24 @@ def _defineclasses(streamerinfos):
                     raise NotImplementedError
 
                 elif isinstance(element, (TStreamerObject, TStreamerObjectAny, TStreamerString)):
-                    if streamerinfo.fName in skip and element.fName in skip[streamerinfo.fName]:
+                    if _safename(streamerinfo.fName) in skip and _safename(element.fName) in skip[_safename(streamerinfo.fName)]:
                         code.append("        Undefined.read(source, cursor, context)")
                     else:
-                        code.append("        self.{0} = {1}.read(source, cursor, context)".format(_safename(element.fName), element.fTypeName))
+                        code.append("        self.{0} = {1}.read(source, cursor, context)".format(_safename(element.fName), rename.get(element.fTypeName, element.fTypeName)))
                         fields.append(_safename(element.fName))
 
                 else:
                     raise AssertionError
 
             code.extend(["        _endcheck(start, cursor, cnt)",
-                         "        if self.__class__ is {0}:".format(streamerinfo.fName),
+                         "        if self.__class__ is {0}:".format(_safename(streamerinfo.fName)),
                          "            self.version = version",
                          "        return self"])
 
             if len(bases) == 0:
                 bases.append("ROOTStreamedObject")
-            if streamerinfo.fName in methods:
-                bases.insert(0, methods[streamerinfo.fName].__name__)
+            if _safename(streamerinfo.fName) in methods:
+                bases.insert(0, methods[_safename(streamerinfo.fName)].__name__)
 
             for n, v in sorted(formats.items()):
                 code.append("    {0} = {1}".format(n, v))
@@ -697,8 +707,8 @@ def _defineclasses(streamerinfos):
 
             code.insert(0, "    version = {0}".format(streamerinfo.fClassVersion))
             code.insert(0, "    _fields = [{0}]".format(", ".join(repr(x) for x in fields)))
-            code.insert(0, "class {0}({1}):".format(_safename(classname), ", ".join(bases)))
-            classes[_safename(classname)] = _makeclass(classname, id(streamerinfo), "\n".join(code), classes)
+            code.insert(0, "class {0}({1}):".format(_safename(streamerinfo.fName), ", ".join(bases)))
+            classes[_safename(streamerinfo.fName)] = _makeclass(streamerinfo.fName, id(streamerinfo), "\n".join(code), classes)
 
     return classes
 
