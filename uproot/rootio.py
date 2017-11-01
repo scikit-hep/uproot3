@@ -47,8 +47,6 @@ from uproot.source.cursor import Cursor
 
 ################################################################ register mixins for user-facing ROOT classes
 
-# import uproot.ttree before loading a file to add methods to TTree and TBranch
-
 methods = {}
 
 ################################################################ high-level interface

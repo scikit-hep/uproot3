@@ -28,9 +28,11 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import glob
+import numbers
+import os.path
 import re
 import struct
-import numbers
 import sys
 import threading
 from collections import namedtuple
@@ -38,6 +40,30 @@ try:
     from urlparse import urlparse
 except ImportError:
     from urllib.parse import urlparse
+try:
+    from collections import OrderedDict
+except ImportError:
+    class OrderedDict(dict):
+        def __init__(self, items=(), **kwds):
+            items = list(items)
+            self._order = [k for k, v in items] + [k for k, v in kwds.items()]
+            super(OrderedDict, self).__init__(items)
+        def keys(self):
+            return self._order
+        def values(self):
+            return [self[k] for k in self._order]
+        def items(self):
+            return [(k, self[k]) for k in self._order]
+        def __setitem__(self, name, order):
+            if name not in self._order:
+                self._order.append(name)
+            super(OrderedDict, self).__setitem__(name, value)
+        def __delitem__(self, name):
+            if name in self._order:
+                self._order.remove(name)
+            super(OrderedDict, self).__delitem__(name)
+        def __repr__(self):
+            return "OrderedDict([{0}])".format(", ".join("({0}, {1})".format(repr(k), repr(v)) for k, v in self.items()))
 
 import numpy
 
@@ -60,8 +86,87 @@ else:
 
 ################################################################ high-level interface
 
-def iterate(path, treepath, entrystepsize, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, rawcache=None, cache=None, executor=None, memmap=True, chunkbytes=8*1024, limitbytes=1024**2):
-    raise NotImplementedError
+def iterate(path, treepath, entrystepsize, branches=None, outputtype=dict, reportentries=False, rawcache=None, cache=None, executor=None, memmap=True, chunkbytes=8*1024, limitbytes=1024**2):
+    def explode(x):
+        parsed = urlparse(x)
+        if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0:
+            return sorted(glob.glob(os.path.expanduser(parsed.netloc + parsed.path)))
+        else:
+            return [x]
+
+    if isinstance(path, string_types):
+        paths = explode(path)
+    else:
+        paths = [y for x in path for y in explode(x)]
+
+    if not isinstance(entrystepsize, numbers.Integral) or entrystepsize <= 0:
+        raise ValueError("'entrystepsize' must be a positive integer")
+
+    oldpath = None
+    oldbranches = None
+    holdover = None
+    holdoverentries = 0
+    outerstart = 0
+    for path in paths:
+        tree = uproot.rootio.open(path, memmap=memmap, chunkbytes=chunkbytes, limitbytes=limitbytes)[treepath]
+        listbranches = list(tree._normalize_branches(branches))
+
+        newbranches = OrderedDict((branch.name, interpretation) for branch, interpretation in listbranches)
+        if oldbranches is not None:
+            for key in set(oldbranches.keys()).union(set(newbranches.keys())):
+                if key not in newbranches:
+                    raise ValueError("branch {0} cannot be found in {1}, but it was in {2}".format(repr(key), repr(path), repr(oldpath)))
+                if key not in oldbranches:
+                    del newbranches[key]
+                elif not _compatible_interpretation(newbranches[key], oldbranches[key]):
+                    raise ValueError("branch {0} interpreted as {1} in {2}, but as {3} in {4}".format(repr(key), newbranches[key], repr(path), oldbranches[key], repr(oldpath)))
+
+        oldpath = path
+        oldbranches = newbranches
+
+        if outputtype == namedtuple:
+            outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in listbranches])
+
+        def output(arrays, outerstart, outerstop):
+            if issubclass(outputtype, dict):
+                out = outputtype(arrays.items())
+            elif outputtype == tuple or outputtype == list:
+                out = outputtype(arrays.values())
+            else:
+                out = outputtype(*arrays.values())
+            if reportentries:
+                return outerstart, outerstop, out
+            else:
+                return out
+
+        def startstop():
+            start = 0
+            while start < tree.numentries:
+                if start == 0 and holdoverentries != 0:
+                    stop = start + (entrystepsize - holdoverentries)
+                else:
+                    stop = start + entrystepsize
+                yield start, stop
+                start = stop
+
+        for innerstart, innerstop, arrays in tree._iterate(startstop(), newbranches, OrderedDict, True, rawcache, cache, executor):
+            numentries = innerstop - innerstart
+
+            if holdover is not None:
+                arrays = OrderedDict((name, numpy.concatenate((oldarray, arrays[name]))) for name, oldarray in holdover.items())
+                numentries += holdoverentries
+                holdover = None
+                holdoverentries = 0
+
+            if numentries < entrystepsize:
+                holdover = arrays
+                holdoverentries = numentries
+            else:
+                yield output(arrays, outerstart, outerstart + numentries)
+                outerstart += numentries
+
+    if holdover is not None:
+        yield output(arrays, outerstart, outerstart + numentries)
 
 ################################################################ interpretation tools
 
@@ -150,6 +255,14 @@ def _dimsprod(dims):
     for x in dims:
         out *= x
     return out
+
+def _compatible_interpretation(one, two):
+    if isinstance(one, (asdtype, asarray)) and isinstance(two, (asdtype, asarray)):
+        return one.todtype == two.todtype and one.todims == two.todims
+    elif isinstance(one, uproot.rootio.ROOTStreamedObject) and isinstance(two, uproot.rootio.ROOTStreamedObject):
+        return one.__name__ == two.__name__
+    else:
+        return False
 
 class asdtype(object):
     def __init__(self, fromdtype, todtype=None, fromdims=(), todims=None):
@@ -465,7 +578,7 @@ class TTreeMethods(object):
         else:
             explicit_rawcache = True
 
-        for start, stop in startstop():
+        for start, stop in startstop:
             futures = [(branch.name, branch._step_array(interpretation, baskets, basket_itemoffset, start, stop, rawcache, cache, executor, explicit_rawcache)) for branch, interpretation, baskets, basket_itemoffset in branchinfo]
 
             if issubclass(outputtype, dict):
@@ -476,7 +589,7 @@ class TTreeMethods(object):
                 out = outputtype(*[future() for name, future in futures])
 
             if reportentries:
-                yield start, stop, out
+                yield max(0, start), min(stop, self.numentries), out
             else:
                 yield out
 
@@ -497,7 +610,7 @@ class TTreeMethods(object):
                 start = stop
                 stop = start + entrystepsize
 
-        return self._iterate(startstop, branches, outputtype, reportentries, rawcache, cache, executor)
+        return self._iterate(startstop(), branches, outputtype, reportentries, rawcache, cache, executor)
 
     def iterate_clusters(self, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, executor=None):
         return self._iterate(self.clusters, branches, outputtype, reportentries, rawcache, cache, executor)
@@ -798,8 +911,8 @@ class TBranchMethods(object):
             if key.fObjlen == key.border:
                 data, offsets = basketdata, None
             else:
-                data = basketdata[:border]
-                offsets = basketdata[border + 4 : -4].view(">i4") - key.fKeylen
+                data = basketdata[:key.border]
+                offsets = basketdata[key.border + 4 : -4].view(">i4") - key.fKeylen
 
             sourcearray = interpretation.frombytes(data, offsets, local_entrystart, local_entrystop)
 
