@@ -869,11 +869,11 @@ class TBranchMethods(object):
             self._interpretation = interpretation
 
             self._basket_itemoffset = [0]
-            keysource = self._source.threadlocal()
+            keysource = self._branch._source.threadlocal()
             try:
                 for i in range(self._branch.numbaskets):
-                    key = self._basketkey(keysource, i, True)
-                    numitems = interpretation.numitems(key.border, self.basket_numentries(i), False)
+                    key = self._branch._basketkey(keysource, i, True)
+                    numitems = interpretation.numitems(key.border, self._branch.basket_numentries(i), False)
                     self._basket_itemoffset.append(self._basket_itemoffset[-1] + numitems)
             finally:
                 keysource.dismiss()
@@ -891,7 +891,12 @@ class TBranchMethods(object):
         def __len__(self):
             return self._basket_itemoffset[-1]
 
-        def _array(self, itemstart, itemstop):
+        def _array(self, itemstart=None, itemstop=None):
+            if itemstart is None:
+                itemstart = 0
+            if itemstop is None:
+                itemstop = self._branch.numitems(self._interpretation)
+
             basketstart, basketstop = None, None
             numitems = 0
             for i in range(self._branch.numbaskets):
@@ -911,14 +916,19 @@ class TBranchMethods(object):
             if basketstart is None:
                 return numpy.empty(0, self._interpretation.todtype)
 
+            destarray = self._interpretation.destarray(numitems, None)
+            desti = 0
             for i in range(basketstart, basketstop):
                 if self._baskets[i] is None:
                     self._baskets[i] = self._branch.basket(i, self._interpretation)
 
-            out = self._interpretation.destarray(numitems, None)
+                start = max(0, itemstart - self._basket_itemoffset[i])
+                stop = self._basket_itemoffset[i + 1] - self._basket_itemoffset[i] - max(0, self._basket_itemoffset[i + 1] - itemstop)
 
-            # HERE FIXME TODO HERE FIXME TODO HERE FIXME TODO HERE FIXME TODO HERE FIXME TODO
+                self._interpretation.filldest(self._baskets[i][start:stop], destarray, desti, desti + (stop - start))
+                desti += stop - start
 
+            return destarray
 
         def cumsum(self, axis=None, dtype=None, out=None):
             return self._array(self._basket_itemoffset[0], self._basket_itemoffset[-1]).cumsum(axis=axis, dtype=dtype, out=out)
