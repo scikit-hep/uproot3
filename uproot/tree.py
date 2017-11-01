@@ -33,6 +33,7 @@ import struct
 import numbers
 import sys
 import threading
+from collections import namedtuple
 
 import numpy
 
@@ -393,30 +394,52 @@ class TTreeMethods(object):
                 pass
         raise KeyError("not found: {0}".format(repr(name)))
 
-    def array(self, branch, interpretation=None, entrystart=None, entrystop=None, executor=None, blocking=True):
-        raise NotImplementedError
+    def array(self, branch, interpretation=None, entrystart=None, entrystop=None, rawcache=None, cache=None, executor=None, blocking=True):
+        return self.branch(branch).array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, rawcache=rawcache, cache=cache, executor=executor, blocking=blocking)
 
-    def lazyarray(self, branch, interpretation=None, entrystart=None, entrystop=None):
-        raise NotImplementedError
+    def lazyarray(self, branch, interpretation=None):
+        return self.branch(branch).lazyarray(interpretation=interpretation)
 
-    def arrays(self, branches=None, outputtype=dict, entrystart=None, entrystop=None, executor=None, blocking=True):
-        raise NotImplementedError
+    def arrays(self, branches=None, outputtype=dict, entrystart=None, entrystop=None, rawcache=None, cache=None, executor=None, blocking=True):
+        branches = self._normalize_branches(branches)
 
+        if outputtype == namedtuple:
+            outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
+
+        futures = [(branch.name, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, rawcache=rawcache, cache=cache, executor=executor, blocking=False)) for branch, interpretation in branches]
+
+        if issubclass(outputtype, dict):
+            def await():
+                return outputtype([(name, future()) for name, future in futures])
+
+        elif outputtype == tuple or outputtype == list:
+            def await():
+                return outputtype([future() for name, future in futures])
+
+        else:
+            def await():
+                return outputtype(*[future() for name, future in futures])
+
+        if blocking:
+            return await()
+        else:
+            return await
+        
     def lazyarrays(self, branches=None, outputtype=dict, entrystart=None, entrystop=None):
         raise NotImplementedError
 
     def iterate(self, entrystep, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, executor=None):
         raise NotImplementedError
 
-    def _normalize_branches(self, arg, allbranches):
+    def _normalize_branches(self, arg):
         if arg is None:                                    # no specification; read all branches
-            for branch in allbranches:                     # that have interpretations
+            for branch in self.allbranches:                # that have interpretations
                 interpretation = interpret(branch)
                 if interpretation is not None:
                     yield branch, interpretation
 
         elif callable(arg):
-            for branch in allbranches:
+            for branch in self.allbranches:
                 result = arg(branch)
                 if result is None:
                     pass
@@ -428,44 +451,38 @@ class TTreeMethods(object):
                     yield branch, result
 
         elif isinstance(arg, dict):
-            lookup = dict((x.fName, x) for x in allbranches)
             for name, interpretation in arg.items():       # dict of branch-interpretation pairs
                 name = _bytesid(name)
-                if name in lookup:
-                    yield lookup[name], interpretation
-                else:
-                    raise KeyValue("branch {0} not found".format(repr(name)))
-
-        elif isinstance(arg, string_types):
-            name = _bytesid(arg)                           # one explicitly given branch name
-            branch = [x for x in allbranches if x.name == name]
-            if len(branch) == 1:
-                interpretation = interpret(branch[0])      # but no interpretation given
+                branch = self.branch(name)
+                interpretation = interpret(branch)         # but no interpretation given
                 if interpretation is None:
                     raise ValueError("cannot interpret branch {0} as a Python type".format(repr(name)))
                 else:
-                    yield branch[0], interpretation
+                    yield branch, interpretation
+
+        elif isinstance(arg, string_types):
+            name = _bytesid(arg)                           # one explicitly given branch name
+            branch = self.branch(name)
+            interpretation = interpret(branch)             # but no interpretation given
+            if interpretation is None:
+                raise ValueError("cannot interpret branch {0} as a Python type".format(repr(name)))
             else:
-                raise KeyError("not found: {0}".format(repr(name)))
+                yield branch, interpretation
 
         else:
             try:
                 names = iter(arg)                          # only way to check for iterable (in general)
             except:
-                raise TypeError("branches argument not understood")
+                raise TypeError("'branches' argument not understood")
             else:
-                lookup = dict((x.name, x) for x in allbranches)
-                for name in names:                         # explicitly given branch names
+                for name in names:
                     name = _bytesid(name)
-                    if name in lookup:
-                        branch = lookup[name]
-                        interpretation = interpret(branch) # but no interpretation given
-                        if interpretation is not None:
-                            yield branch, interpretation
-                        else:
-                            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(name)))
+                    branch = self.branch(name)
+                    interpretation = interpret(branch)     # but no interpretation given
+                    if interpretation is None:
+                        raise ValueError("cannot interpret branch {0} as a Python type".format(repr(name)))
                     else:
-                        raise KeyError("not found: {0}".format(repr(name)))
+                        yield branch, interpretation
 
     def __len__(self):
         return self.numentries
@@ -647,7 +664,6 @@ class TBranchMethods(object):
         finally:
             keysource.dismiss()
             
-    @property
     def branch(self, name):
         name = _bytesid(name)
         for branch in self.branches:
@@ -870,6 +886,61 @@ class TBranchMethods(object):
                 return destarray[basket_itemoffset[0] : basket_itemoffset[-1]]
             return await
 
+    def _step_array(self, interpretation, baskets, basket_itemoffset, entrystart, entrystop, rawcache, cache, executor):
+        basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
+
+        if basketstart is None:
+            return lambda: numpy.empty(0, dtype=interpretation.todtype)
+
+        for key in list(baskets):
+            i, entrystart, entrystop = key
+            if i < basketstart:
+                del baskets[key]
+                del rawcache[self._rawcachekey(i)]
+
+        basket_itemoffset = basket_itemoffset[basketstart : basketstop + 1]
+
+        nocopy = interpretation.nocopy()
+        destarray = interpretation.destarray(basket_itemoffset[-1], None)
+        lock = threading.Lock()
+        
+        def fill(j):
+            try:
+                key = (j + basketstart, entrystart, entrystop)
+
+                with lock:
+                    basket = baskets.get(key, None)
+                if basket is None:
+                    basket = self.basket(j + basketstart, interpretation=nocopy, entrystart=entrystart, entrystop=entrystop, rawcache=rawcache, cache=cache)
+                    with lock:
+                        baskets[key] = basket
+
+                expecteditems = basket_itemoffset[j + 1] - basket_itemoffset[j]
+
+                if j + 1 == basketstop - basketstart and expecteditems > len(basket):
+                    basket_itemoffset[j + 1] -= expecteditems - len(basket)
+
+                elif j == 0 and expecteditems > len(basket):
+                    basket_itemoffset[j] += expecteditems - len(basket)
+
+                interpretation.filldest(basket, destarray, basket_itemoffset[j], basket_itemoffset[j + 1])
+
+            except:
+                return sys.exc_info()
+
+        if executor is None:
+            for j in range(basketstop - basketstart):
+                _delayedraise(fill(j))
+            excinfos = ()
+        else:
+            excinfos = executor.map(fill, range(basketstop - basketstart))
+
+        def await():
+            for excinfo in excinfos:
+                _delayedraise(excinfo)
+            return destarray[basket_itemoffset[0] : basket_itemoffset[-1]]
+        return await
+
     def lazyarray(self, interpretation=None):
         interpretation = self._normalize_interpretation(interpretation)
         return self._LazyArray(self, interpretation)
@@ -994,61 +1065,6 @@ class TBranchMethods(object):
                 stop = self._normalize_index(s.stop, True, step)
 
             return start, stop, step
-
-    def _step_array(self, interpretation, baskets, basket_itemoffset, entrystart, entrystop, rawcache, cache, executor):
-        basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
-
-        if basketstart is None:
-            return lambda: numpy.empty(0, dtype=interpretation.todtype)
-
-        for key in list(baskets):
-            i, entrystart, entrystop = key
-            if i < basketstart:
-                del baskets[key]
-                del rawcache[self._rawcachekey(i)]
-
-        basket_itemoffset = basket_itemoffset[basketstart : basketstop + 1]
-
-        nocopy = interpretation.nocopy()
-        destarray = interpretation.destarray(basket_itemoffset[-1], None)
-        lock = threading.Lock()
-        
-        def fill(j):
-            try:
-                key = (j + basketstart, entrystart, entrystop)
-
-                with lock:
-                    basket = baskets.get(key, None)
-                if basket is None:
-                    basket = self.basket(j + basketstart, interpretation=nocopy, entrystart=entrystart, entrystop=entrystop, rawcache=rawcache, cache=cache)
-                    with lock:
-                        baskets[key] = basket
-
-                expecteditems = basket_itemoffset[j + 1] - basket_itemoffset[j]
-
-                if j + 1 == basketstop - basketstart and expecteditems > len(basket):
-                    basket_itemoffset[j + 1] -= expecteditems - len(basket)
-
-                elif j == 0 and expecteditems > len(basket):
-                    basket_itemoffset[j] += expecteditems - len(basket)
-
-                interpretation.filldest(basket, destarray, basket_itemoffset[j], basket_itemoffset[j + 1])
-
-            except:
-                return sys.exc_info()
-
-        if executor is None:
-            for j in range(basketstop - basketstart):
-                _delayedraise(fill(j))
-            excinfos = ()
-        else:
-            excinfos = executor.map(fill, range(basketstop - basketstart))
-
-        def await():
-            for excinfo in excinfos:
-                _delayedraise(excinfo)
-            return destarray[basket_itemoffset[0] : basket_itemoffset[-1]]
-        return await
 
     class _BasketKey(object):
         def __init__(self, source, cursor, compression, complete):
