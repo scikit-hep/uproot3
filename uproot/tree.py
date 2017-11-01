@@ -439,10 +439,7 @@ class TTreeMethods(object):
         else:
             return outputtype(*[lazyarray for name, lazyarray in lazyarrays])
 
-    def iterate(self, entrystepsize, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, rawcache=None, cache=None, executor=None):
-        if not isinstance(entrystepsize, numbers.Integral) or entrystepsize <= 0:
-            raise ValueError("'entrystepsize' must be a positive integer")
-
+    def _iterate(self, startstop, branches, outputtype, reportentries, rawcache, cache, executor):
         branches = list(self._normalize_branches(branches))
 
         if outputtype == namedtuple:
@@ -456,14 +453,7 @@ class TTreeMethods(object):
         else:
             explicit_rawcache = True
 
-        if entrystart is None:
-            entrystart = 0
-        if entrystop is None:
-            entrystop = self.numentries
-
-        start = entrystart
-        stop = start + entrystepsize
-        while start < entrystop and start < self.numentries:
+        for start, stop in startstop():
             futures = [(branch.name, branch._step_array(interpretation, baskets, basket_itemoffset, start, stop, rawcache, cache, executor, explicit_rawcache)) for branch, interpretation, baskets, basket_itemoffset in branchinfo]
 
             if issubclass(outputtype, dict):
@@ -473,8 +463,24 @@ class TTreeMethods(object):
             else:
                 yield outputtype(*[future() for name, future in futures])
 
-            start = stop
+    def iterate(self, entrystepsize, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, rawcache=None, cache=None, executor=None):
+        if not isinstance(entrystepsize, numbers.Integral) or entrystepsize <= 0:
+            raise ValueError("'entrystepsize' must be a positive integer")
+
+        if entrystart is None:
+            entrystart = 0
+        if entrystop is None:
+            entrystop = self.numentries
+
+        def startstop():
+            start = entrystart
             stop = start + entrystepsize
+            while start < entrystop and start < self.numentries:
+                yield start, stop
+                start = stop
+                stop = start + entrystepsize
+
+        return self._iterate(startstop, branches, outputtype, reportentries, rawcache, cache, executor)
 
     def iterate_clusters(self, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, executor=None):
         raise NotImplementedError
