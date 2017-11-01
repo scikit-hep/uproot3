@@ -440,6 +440,9 @@ class TTreeMethods(object):
             return outputtype(*[lazyarray for name, lazyarray in lazyarrays])
 
     def iterate(self, entrystepsize, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, rawcache=None, cache=None, executor=None):
+        if not isinstance(entrystepsize, numbers.Integral) or entrystepsize <= 0:
+            raise ValueError("'entrystepsize' must be a positive integer")
+
         branches = list(self._normalize_branches(branches))
 
         if outputtype == namedtuple:
@@ -932,15 +935,13 @@ class TBranchMethods(object):
             return await
 
     def _step_array(self, interpretation, baskets, basket_itemoffset, entrystart, entrystop, rawcache, cache, executor, explicit_rawcache):
-        print self.name, entrystart, entrystop
-
         basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
 
         if basketstart is None:
             return lambda: numpy.empty(0, dtype=interpretation.todtype)
 
         for key in list(baskets):
-            i, entrystart, entrystop = key
+            i, _, _ = key
             if i < basketstart:
                 del baskets[key]
             if not explicit_rawcache:
@@ -970,7 +971,7 @@ class TBranchMethods(object):
                     local_entrystart, local_entrystop = self._localentries(j + basketstart, entrystart, entrystop)
                     if local_entrystart == 0 and local_entrystop == self.basket_numentries(j + basketstart):
                         try:
-                            del rawcache[self._rawcachekey(i)]
+                            del rawcache[self._rawcachekey(j + basketstart)]
                         except KeyError:
                             pass
 
