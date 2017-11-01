@@ -888,8 +888,28 @@ class TBranchMethods(object):
         def shape(self):
             return (len(self),) + self._interpretation.todims
 
+        def cumsum(self, axis=None, dtype=None, out=None):
+            return self._array(self._basket_itemoffset[0], self._basket_itemoffset[-1]).cumsum(axis=axis, dtype=dtype, out=out)
+
         def __len__(self):
             return self._basket_itemoffset[-1]
+
+        def __getitem__(self, index):
+            if isinstance(index, slice):
+                start, stop, step = self._normalize_slice(index)
+                array = self._array(start, stop)
+                if step == 1:
+                    return array
+                else:
+                    return array[::step]
+
+            else:
+                index = self._normalize_index(index, False, 1)
+                array = self._array(index, index + 1)
+                return array[0]
+
+        def __getslice__(self, start, end):
+            return self.__getitem__(slice(start, end))
 
         def _array(self, itemstart=None, itemstop=None):
             if itemstart is None:
@@ -930,11 +950,48 @@ class TBranchMethods(object):
 
             return destarray
 
-        def cumsum(self, axis=None, dtype=None, out=None):
-            return self._array(self._basket_itemoffset[0], self._basket_itemoffset[-1]).cumsum(axis=axis, dtype=dtype, out=out)
+        def _normalize_index(self, i, clip, step):
+            lenself = len(self)
+            if i < 0:
+                j = lenself + i
+                if j < 0:
+                    if clip:
+                        return 0 if step > 0 else lenself
+                    else:
+                        raise IndexError("index out of range: {0} for length {1}".format(i, lenself))
+                else:
+                    return j
+            elif i < lenself:
+                return i
+            elif clip:
+                return lenself if step > 0 else 0
+            else:
+                raise IndexError("index out of range: {0} for length {1}".format(i, lenself))
 
+        def _normalize_slice(self, s):
+            lenself = len(self)
+            if s.step is None:
+                step = 1
+            else:
+                step = s.step
+            if step == 0:
+                raise ValueError("slice step cannot be zero")
+            if s.start is None:
+                if step > 0:
+                    start = 0
+                else:
+                    start = lenself - 1
+            else:
+                start = self._normalize_index(s.start, True, step)
+            if s.stop is None:
+                if step > 0:
+                    stop = lenself
+                else:
+                    stop = -1
+            else:
+                stop = self._normalize_index(s.stop, True, step)
 
-
+            return start, stop, step
 
     # def _ensure(self, cache, entrystart, entrystop, to):
     #     basketids = sorted(cache)
@@ -946,81 +1003,6 @@ class TBranchMethods(object):
     #             basketstop = self.fEntryNumber
 
     #     raise NotImplementedError
-
-    # class _LazyArray(object):
-    #     def __init__(self, branch, to, entrystart, entrystop):
-    #         self._branch = branch
-    #         self._to = to
-    #         self._entrystart = entrystart
-    #         self._entrystop = entrystop
-    #         self._baskets = [None] * branch.numbaskets
-
-    #     def _ensure(self, entrystart, entrystop):
-    #         raise NotImplementedError
-
-    #     @property
-    #     def dtype(self):
-    #         raise NotImplementedError
-
-    #     @property
-    #     def shape(self):
-    #         raise NotImplementedError
-
-    #     def cumsum(self, axis=None, dtype=None, out=None):
-    #         raise NotImplementedError
-
-    #     # interpret negative indexes as starting at the end of the dataset
-    #     def __normalize(self, i, clip, step):
-    #         lenself = len(self)
-    #         if i < 0:
-    #             j = lenself + i
-    #             if j < 0:
-    #                 if clip:
-    #                     return 0 if step > 0 else lenself
-    #                 else:
-    #                     raise IndexError("index out of range: {0} for length {1}".format(i, lenself))
-    #             else:
-    #                 return j
-    #         elif i < lenself:
-    #             return i
-    #         elif clip:
-    #             return lenself if step > 0 else 0
-    #         else:
-    #             raise IndexError("index out of range: {0} for length {1}".format(i, lenself))
-
-    #     def __normalizeslice(self, s):
-    #         lenself = len(self)
-    #         if s.step is None:
-    #             step = 1
-    #         else:
-    #             step = s.step
-    #         if step == 0:
-    #             raise ValueError("slice step cannot be zero")
-    #         if s.start is None:
-    #             if step > 0:
-    #                 start = 0
-    #             else:
-    #                 start = lenself - 1
-    #         else:
-    #             start = self.__normalize(s.start, True, step)
-    #         if s.stop is None:
-    #             if step > 0:
-    #                 stop = lenself
-    #             else:
-    #                 stop = -1
-    #         else:
-    #             stop = self.__normalize(s.stop, True, step)
-
-    #         return start, stop, step
-
-    #     def __len__(self):
-    #         return self.shape[0]
-
-    #     def __getitem__(self, index):
-    #         raise NotImplementedError
-
-    #     def __getslice__(self, start, end):
-    #         return self.__getitem__(slice(start, end))
 
     def _ensure(self):
         raise NotImplementedError
