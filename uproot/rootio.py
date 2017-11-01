@@ -84,13 +84,9 @@ class ROOTDirectory(object):
             return out
 
     @staticmethod
-    def read(source, *args, **options):
+    def read(source, *args):
         if len(args) == 0:
             try:
-                readstreamers = options.pop("readstreamers", True)
-                if len(options) > 0:
-                    raise TypeError("unrecognized options: {0}".format(", ".join(options)))
-
                 # See https://root.cern/doc/master/classTFile.html
                 cursor = Cursor(0)
                 magic, fVersion = cursor.fields(source, ROOTDirectory._format1)
@@ -120,12 +116,9 @@ class ROOTDirectory(object):
                                    b"TObjArray":                 TObjArray,
                                    b"TObjString":                TObjString}
 
-                if readstreamers:
-                    streamercontext = ROOTDirectory._FileContext(source.path, None, streamerclasses, Compression(fCompress), fUUID)
-                    streamerkey = TKey.read(source, Cursor(fSeekInfo), streamercontext)
-                    streamerinfos, streamerrules = _readstreamers(streamerkey._source, streamerkey._cursor, streamercontext)
-                else:
-                    streamerinfos, streamerrules = [], []
+                streamercontext = ROOTDirectory._FileContext(source.path, None, streamerclasses, Compression(fCompress), fUUID)
+                streamerkey = TKey.read(source, Cursor(fSeekInfo), streamercontext)
+                streamerinfos, streamerrules = _readstreamers(streamerkey._source, streamerkey._cursor, streamercontext)
 
                 classes = _defineclasses(streamerinfos)
                 context = ROOTDirectory._FileContext(source.path, streamerinfos, classes, Compression(fCompress), fUUID)
@@ -142,8 +135,6 @@ class ROOTDirectory(object):
         else:
             try:
                 cursor, context, mykey = args
-                if len(options) > 0:
-                    raise TypeError("unrecognized options: {0}".format(", ".join(options)))
 
                 # See https://root.cern/doc/master/classTDirectoryFile.html.
                 fVersion, fDatimeC, fDatimeM, fNbytesKeys, fNbytesName = cursor.fields(source, ROOTDirectory._format3)
