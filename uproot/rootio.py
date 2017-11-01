@@ -529,6 +529,7 @@ def _defineclasses(streamerinfos):
                     "    def _readinto(self, source, cursor, context):",
                     "        start, cnt, version = _startcheck(source, cursor)"]
 
+            fields = []
             bases = []
             formats = {}
             dtypes = {}
@@ -590,10 +591,12 @@ def _defineclasses(streamerinfos):
                     else:
                         raise NotImplementedError(fType)
                     code.append("        self.{0} = cursor.array(source, self.{1}, self.{2})".format(_safename(name), _safename(counter), dtypename))
+                    fields.append(_safename(name))
 
                 elif isinstance(element, TStreamerBasicType):
                     if element.fArrayLength == 0:
                         basicnames.append("self." + _safename(element.fName))
+                        fields.append(_safename(element.fName))
                         if element.fType == uproot.const.kBool:
                             basicletters += "?"
                         elif element.fType == uproot.const.kChar:
@@ -650,11 +653,13 @@ def _defineclasses(streamerinfos):
                             code.append("        Undefined.read(source, cursor, context)")
                         else:
                             code.append("        self.{0} = {1}.read(source, cursor, context)".format(_safename(element.fName), element.fTypeName.rstrip("*")))
+                            fields.append(_safename(element.fName))
                     elif element.fType == uproot.const.kObjectP:
                         if streamerinfo.fName in skip and element.fName in skip[streamerinfo.fName]:
                             code.append("        _readobjany(source, cursor, context, wantundefined=True)")
                         else:
                             code.append("        self.{0} = _readobjany(source, cursor, context)".format(_safename(element.fName)))
+                            fields.append(_safename(element.fName))
                     else:
                         raise NotImplementedError
 
@@ -670,6 +675,7 @@ def _defineclasses(streamerinfos):
                         code.append("        Undefined.read(source, cursor, context)")
                     else:
                         code.append("        self.{0} = {1}.read(source, cursor, context)".format(_safename(element.fName), element.fTypeName))
+                        fields.append(_safename(element.fName))
 
                 else:
                     raise AssertionError
@@ -690,6 +696,7 @@ def _defineclasses(streamerinfos):
                 code.append("    {0} = {1}".format(n, v))
 
             code.insert(0, "    version = {0}".format(streamerinfo.fClassVersion))
+            code.insert(0, "    _fields = [{0}]".format(", ".join(repr(x) for x in fields)))
             code.insert(0, "class {0}({1}):".format(_safename(classname), ", ".join(bases)))
             classes[_safename(classname)] = _makeclass(classname, id(streamerinfo), "\n".join(code), classes)
 
