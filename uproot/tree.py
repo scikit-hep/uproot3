@@ -457,11 +457,16 @@ class TTreeMethods(object):
             futures = [(branch.name, branch._step_array(interpretation, baskets, basket_itemoffset, start, stop, rawcache, cache, executor, explicit_rawcache)) for branch, interpretation, baskets, basket_itemoffset in branchinfo]
 
             if issubclass(outputtype, dict):
-                yield outputtype([(name, future()) for name, future in futures])
+                out = outputtype([(name, future()) for name, future in futures])
             elif outputtype == tuple or outputtype == list:
-                yield outputtype([future() for name, future in futures])
+                out = outputtype([future() for name, future in futures])
             else:
-                yield outputtype(*[future() for name, future in futures])
+                out = outputtype(*[future() for name, future in futures])
+
+            if reportentries:
+                yield start, stop, out
+            else:
+                yield out
 
     def iterate(self, entrystepsize, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, rawcache=None, cache=None, executor=None):
         if not isinstance(entrystepsize, numbers.Integral) or entrystepsize <= 0:
