@@ -30,16 +30,16 @@
 
 import numpy
 
-from uproot.cache.memorycache import ThreadSafeMemoryCache
+import uproot.cache.memorycache
 
 class ChunkedSource(object):
-    def __init__(self, path, chunkbytes=8*1024, limitbytes=1024**2):
+    def __init__(self, path, chunkbytes, limitbytes):
         self.path = path
         self._chunkbytes = chunkbytes
         if limitbytes is None:
-            self._cache = {}
+            self._cache = uproot.cache.memorycache.ThreadSafeDict()
         else:
-            self._cache = ThreadSafeMemoryCache(limitbytes)
+            self._cache = uproot.cache.memorycache.ThreadSafeMemoryCache(limitbytes)
         self._source = None
 
     def parent(self):

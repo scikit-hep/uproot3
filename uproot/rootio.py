@@ -31,12 +31,18 @@
 import re
 import struct
 import sys
+try:
+    from urlparse import urlparse
+except ImportError:
+    from urllib.parse import urlparse
 
 import numpy
 
 import uproot.const
-from uproot.source.compressed import Compression
-from uproot.source.compressed import CompressedSource
+import uproot.source.chunkedfile
+import uproot.source.chunkedxrootd
+import uproot.source.compressed
+import uproot.source.memmap
 from uproot.source.cursor import Cursor
 
 ################################################################ register mixins for user-facing ROOT classes
@@ -44,6 +50,26 @@ from uproot.source.cursor import Cursor
 # import uproot.ttree before loading a file to add methods to TTree and TBranch
 
 methods = {}
+
+################################################################ high-level interface
+
+def open(path, memmap=True, chunkbytes=8*1024, limitbytes=1024**2):
+    parsed = urlparse(path)
+    if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0:
+        path = parsed.netloc + parsed.path
+        if memmap:
+            return ROOTDirectory.read(uproot.source.memmap.MemmapSource(path))
+        else:
+            return ROOTDirectory.read(uproot.source.chunkedfile.ChunkedFile(path, chunkbytes, limitbytes))
+
+    elif _bytesid(parsed.scheme) == b"root":
+        return xrootd(path, chunkbytes=chunkbytes, limitbytes=limitbytes)
+
+    else:
+        raise ValueError("URI scheme not recognized: {0}".format(path))
+
+def xrootd(path, chunkbytes=8*1024, limitbytes=1024**2):
+    return ROOTDirectory.read(uproot.source.chunkedxrootd.ChunkedXRootD(path, chunkbytes, limitbytes))
 
 ################################################################ ROOTDirectory
 
@@ -116,12 +142,12 @@ class ROOTDirectory(object):
                                    b"TObjArray":                 TObjArray,
                                    b"TObjString":                TObjString}
 
-                streamercontext = ROOTDirectory._FileContext(source.path, None, streamerclasses, Compression(fCompress), fUUID)
+                streamercontext = ROOTDirectory._FileContext(source.path, None, streamerclasses, uproot.source.compressed.Compression(fCompress), fUUID)
                 streamerkey = TKey.read(source, Cursor(fSeekInfo), streamercontext)
                 streamerinfos, streamerrules = _readstreamers(streamerkey._source, streamerkey._cursor, streamercontext)
 
                 classes = _defineclasses(streamerinfos)
-                context = ROOTDirectory._FileContext(source.path, streamerinfos, classes, Compression(fCompress), fUUID)
+                context = ROOTDirectory._FileContext(source.path, streamerinfos, classes, uproot.source.compressed.Compression(fCompress), fUUID)
 
                 keycursor = Cursor(fBEGIN)
                 mykey = TKey.read(source, keycursor, context)
@@ -767,7 +793,7 @@ class TKey(ROOTObject):
 
         # object size != compressed size means it's compressed
         if self.fObjlen != self.fNbytes - self.fKeylen:
-            self._source = CompressedSource(context.compression, source, Cursor(self.fSeekKey + self.fKeylen), self.fNbytes - self.fKeylen, self.fObjlen)
+            self._source = uproot.source.compressed.CompressedSource(context.compression, source, Cursor(self.fSeekKey + self.fKeylen), self.fNbytes - self.fKeylen, self.fObjlen)
             self._cursor = Cursor(0, origin=-self.fKeylen)
 
         # otherwise, it's uncompressed

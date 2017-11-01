@@ -32,10 +32,10 @@ import os.path
 
 import numpy
 
-from uproot.source.chunked import ChunkedSource
-from uproot.cache.memorycache import ThreadSafeMemoryCache
+import uproot.cache.memorycache
+import uproot.source.chunked
 
-class ChunkedFile(ChunkedSource):
+class ChunkedFile(uproot.source.chunked.ChunkedSource):
     def __init__(self, path, *args, **kwds):
         super(ChunkedFile, self).__init__(os.path.expanduser(path), *args, **kwds)
 
@@ -43,11 +43,11 @@ class ChunkedFile(ChunkedSource):
         out = ChunkedFile.__new__(self.__class__)
         out.path = self.path
         out._chunkbytes = self._chunkbytes
-        if isinstance(self._cache, ThreadSafeMemoryCache):
+        if isinstance(self._cache, (uproot.cache.memorycache.ThreadSafeMemoryCache, uproot.cache.memorycache.ThreadSafeDict)):
             out._cache = self._cache
         else:
             out._cache = {}
-        out._source = None
+        out._source = None             # local file connections are *not shared* among threads (they're *not* thread-safe)
         return out
 
     def _open(self):
@@ -60,4 +60,4 @@ class ChunkedFile(ChunkedSource):
     
     def dismiss(self):
         if self._source is not None:
-            self._source.close()
+            self._source.close()       # local file connections are *not shared* among threads

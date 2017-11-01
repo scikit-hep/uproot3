@@ -33,12 +33,14 @@ import string
 
 import numpy
 
+import uproot.cache.memorycache
+
 class Cursor(object):
     def __init__(self, index, origin=0, refs=None):
         self.index = index
         self.origin = origin
         if refs is None:
-            self.refs = {}
+            self.refs = uproot.cache.memorycache.ThreadSafeDict()
         else:
             self.refs = refs
 

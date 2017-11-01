@@ -32,9 +32,9 @@ import os.path
 
 import numpy
 
-from uproot.source.chunked import ChunkedSource
+import uproot.source.chunked
 
-class ChunkedXRootD(ChunkedSource):
+class ChunkedXRootD(uproot.source.chunked.ChunkedSource):
     def _open(self):
         try:
             import pyxrootd.client
@@ -47,9 +47,16 @@ class ChunkedXRootD(ChunkedSource):
             if status.get("error", None) is not None:
                 raise OSError(status["message"])
 
-    # # is the XRootD client thread-safe? let's assume it is
-    # def threadlocal(self):
-    #     return self
+    def threadlocal(self):
+        out = ChunkedXRootD.__new__(self.__class__)
+        out.path = self.path
+        out._chunkbytes = self._chunkbytes
+        if isinstance(self._cache, (uproot.cache.memorycache.ThreadSafeMemoryCache, uproot.cache.memorycache.ThreadSafeDict)):
+            out._cache = self._cache
+        else:
+            out._cache = {}
+        out._source = self._source     # XRootD connections are *shared* among threads (I'm assuming they're thread-safe)
+        return out
 
     def _read(self, chunkindex):
         status, data = self._source.read(chunkindex * self._chunkbytes, self._chunkbytes)
@@ -60,3 +67,6 @@ class ChunkedXRootD(ChunkedSource):
     def __del__(self):
         if self._source is not None:
             self._source.close()
+    
+    def dismiss(self):
+        pass                           # XRootD connections are *shared* among threads
