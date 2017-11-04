@@ -113,13 +113,16 @@ class CompressedSource(object):
         if start == stop:
             return numpy.empty(0, dtype=dtype)
 
+        algo = self._cursor.bytes(self._compressed, 2).tostring()
+        print algo
+
         if self._uncompressed is None:
             if self.compression.algo == uproot.const.kZLIB:
-                skip = 9      # https://github.com/root-project/root/blob/master/core/zip/src/Bits.h#L646
+                skip = 7      # https://github.com/root-project/root/blob/master/core/zip/src/Bits.h#L646
             elif self.compression.algo == uproot.const.kLZMA:
-                skip = 9      # https://github.com/root-project/root/blob/master/core/lzma/src/ZipLZMA.c#L81
+                skip = 7      # https://github.com/root-project/root/blob/master/core/lzma/src/ZipLZMA.c#L81
             elif self.compression.algo == uproot.const.kLZ4:
-                skip = 9 + 8  # https://github.com/root-project/root/blob/master/core/lz4/src/ZipLZ4.cxx#L38
+                skip = 7 + 8  # https://github.com/root-project/root/blob/master/core/lz4/src/ZipLZ4.cxx#L38
             else:
                 skip = 0
 
