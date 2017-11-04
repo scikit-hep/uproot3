@@ -71,42 +71,26 @@ def _interpret_compression(compression):
         return Compression("unknown", compression % 100)
 
 def _decompressfcn(compression, objlen, debug=False):
-    algo, level = compression
-    if algo == "zlib":
-        # skip 9-byte header for ROOT's custom frame:
-        # https://github.com/root-project/root/blob/master/core/zip/src/Bits.h#L646
-        if debug:
-            def out(x):
-                print("decompressing {0} bytes".format(len(x) - 9))
-                return zlib_decompress(x[9:])
-            return out
+    def out(x):
+        twochar = x[:2].tostring()
+        if twochar == b"ZL":
+            # https://github.com/root-project/root/blob/master/core/zip/src/Bits.h#L646
+            if debug:
+                print("decompressing {0} bytes as ZL ({1})".format(len(x) - 9, compression))
+            return zlib_decompress(x[9:])
+        elif twochar == b"XZ":
+            # https://github.com/root-project/root/blob/master/core/lzma/src/ZipLZMA.c#L81
+            if debug:
+                print("decompressing {0} bytes as XZ ({1})".format(len(x) - 9, compression))
+            return lzma_decompress(x[9:])
+        elif twochar == b"L4":
+            # https://github.com/root-project/root/blob/master/core/lz4/src/ZipLZ4.cxx#L38
+            if debug:
+                print("decompressing {0} bytes as L4 ({1})".format(len(x) - 9 - 8, compression))
+            return lz4_decompress(x[9 + 8:], uncompressed_size=objlen)
         else:
-            return lambda x: zlib_decompress(x[9:])
-
-    elif algo == "lzma":
-        # skip 9-byte header for LZMA, too:
-        # https://github.com/root-project/root/blob/master/core/lzma/src/ZipLZMA.c#L81
-        if debug:
-            def out(x):
-                print("decompressing {0} bytes".format(len(x) - 9))
-                return lzma_decompress(x[9:])
-            return out
-        else:
-            return lambda x: lzma_decompress(x[9:])
-
-    elif algo == "lz4":
-        # skip 9-byte header plus 8-byte hash: are there any official ROOT versions without the hash?
-        # https://github.com/root-project/root/blob/master/core/lz4/src/ZipLZ4.cxx#L38
-        if debug:
-            def out(x):
-                print("decompressing {0} bytes".format(len(x) - 9 - 8))
-                return lz4_decompress(x[9 + 8:], uncompressed_size=objlen)
-            return out
-        else:
-            return lambda x: lz4_decompress(x[9 + 8:], uncompressed_size=objlen)
-
-    else:
-        raise NotImplementedError("cannot decompress \"{0}\"".format(algo))
+            raise NotImplementedError("cannot decompress {0}".format(repr(twochar)))
+    return out
 
 class TFile(object):
     """Represents a ROOT file; use to extract objects.
