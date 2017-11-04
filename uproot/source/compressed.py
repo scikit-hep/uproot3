@@ -114,7 +114,7 @@ class CompressedSource(object):
             return numpy.empty(0, dtype=dtype)
 
         algo = self._cursor.bytes(self._compressed, 2).tostring()
-        print algo
+        print repr(algo)
 
         if self._uncompressed is None:
             if self.compression.algo == uproot.const.kZLIB:
