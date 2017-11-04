@@ -51,14 +51,14 @@ methods = {}
 
 ################################################################ high-level interface
 
-def open(path, memmap=True, chunkbytes=8*1024, limitbytes=1024**2):
+def open(path, memmap=True, chunkbytes=8*1024, limitbytes=1024**2, **options):
     parsed = urlparse(path)
     if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0:
         path = parsed.netloc + parsed.path
         if memmap:
-            return ROOTDirectory.read(uproot.source.memmap.MemmapSource(path))
+            return ROOTDirectory.read(uproot.source.memmap.MemmapSource(path), **options)
         else:
-            return ROOTDirectory.read(uproot.source.chunkedfile.ChunkedFile(path, chunkbytes, limitbytes))
+            return ROOTDirectory.read(uproot.source.chunkedfile.ChunkedFile(path, chunkbytes, limitbytes), **options)
 
     elif _bytesid(parsed.scheme) == b"root":
         return xrootd(path, chunkbytes=chunkbytes, limitbytes=limitbytes)
@@ -66,8 +66,8 @@ def open(path, memmap=True, chunkbytes=8*1024, limitbytes=1024**2):
     else:
         raise ValueError("URI scheme not recognized: {0}".format(path))
 
-def xrootd(path, chunkbytes=8*1024, limitbytes=1024**2):
-    return ROOTDirectory.read(uproot.source.chunkedxrootd.ChunkedXRootD(path, chunkbytes, limitbytes))
+def xrootd(path, chunkbytes=8*1024, limitbytes=1024**2, **options):
+    return ROOTDirectory.read(uproot.source.chunkedxrootd.ChunkedXRootD(path, chunkbytes, limitbytes), **options)
 
 ################################################################ ROOTDirectory
 
@@ -108,9 +108,13 @@ class ROOTDirectory(object):
             return out
 
     @staticmethod
-    def read(source, *args):
+    def read(source, *args, **options):
         if len(args) == 0:
             try:
+                readstreamers = options.pop("readstreamers", True)
+                if len(options) > 0:
+                    raise TypeError("unrecognized options: {0}".format(", ".join(options)))
+
                 # See https://root.cern/doc/master/classTFile.html
                 cursor = Cursor(0)
                 magic, fVersion = cursor.fields(source, ROOTDirectory._format1)
@@ -158,6 +162,9 @@ class ROOTDirectory(object):
 
         else:
             try:
+                if len(options) > 0:
+                    raise TypeError("unrecognized options: {0}".format(", ".join(options)))
+
                 cursor, context, mykey = args
 
                 # See https://root.cern/doc/master/classTDirectoryFile.html.

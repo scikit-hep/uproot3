@@ -703,9 +703,9 @@ uproot.rootio.methods[b"TTree"] = TTreeMethods
 
 class TBranchMethods(object):
     def _postprocess(self, source, cursor, context):
-        self.fBasketBytes = self.fBasketBytes[:self.fWriteBasket]
-        self.fBasketEntry = self.fBasketEntry[:self.fWriteBasket]
-        self.fBasketSeek = self.fBasketSeek[:self.fWriteBasket]
+        self.fBasketBytes = self.fBasketBytes
+        self.fBasketEntry = self.fBasketEntry
+        self.fBasketSeek = self.fBasketSeek
         self._source = source
         self._context = context
 
