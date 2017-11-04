@@ -1280,6 +1280,8 @@ class TBranchMethods(object):
 
                 self.border = self.fLast - self.fKeylen
 
+                print "source", source
+
                 if self.fObjlen != self.fNbytes - self.fKeylen:
                     self.source = uproot.source.compressed.CompressedSource(compression, source, Cursor(self.fSeekKey + self.fKeylen), self.fNbytes - self.fKeylen, self.fObjlen)
                     self.cursor = Cursor(0)

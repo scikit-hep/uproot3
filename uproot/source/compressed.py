@@ -41,6 +41,18 @@ class Compression(object):
         if not 0 <= self.level <= 9:
             raise ValueError("unrecognized compression level: {0} (from fCompress {1})".format(self.level, fCompress))
 
+    def copy(self, algo=None, level=None):
+        out = Compression.__new__(Compression)
+        if algo is None:
+            out.algo = self.algo
+        else:
+            out.algo = algo
+        if level is None:
+            out.level = self.level
+        else:
+            out.level = level
+        return out
+
     @property
     def algoname(self):
         if self.algo == uproot.const.kZLIB:
@@ -114,19 +126,22 @@ class CompressedSource(object):
             return numpy.empty(0, dtype=dtype)
 
         algo = self._cursor.bytes(self._compressed, 2).tostring()
-        print repr(algo)
+        print repr(algo), self.compression
 
         if self._uncompressed is None:
-            if self.compression.algo == uproot.const.kZLIB:
-                skip = 7      # https://github.com/root-project/root/blob/master/core/zip/src/Bits.h#L646
-            elif self.compression.algo == uproot.const.kLZMA:
-                skip = 7      # https://github.com/root-project/root/blob/master/core/lzma/src/ZipLZMA.c#L81
-            elif self.compression.algo == uproot.const.kLZ4:
-                skip = 7 + 8  # https://github.com/root-project/root/blob/master/core/lz4/src/ZipLZ4.cxx#L38
-            else:
-                skip = 0
+            if algo == "XZ":    # self.compression.algo == uproot.const.kLZMA:
+                compression = self.compression.copy(uproot.const.kLZMA)
+                skip = 7        # https://github.com/root-project/root/blob/master/core/lzma/src/ZipLZMA.c#L81
+            elif algo == "L4":  # self.compression.algo == uproot.const.kLZ4:
+                compression = self.compression.copy(uproot.const.kLZ4)
+                skip = 7 + 8    # https://github.com/root-project/root/blob/master/core/lz4/src/ZipLZ4.cxx#L38
+            else:               #  self.compression.algo == uproot.const.kZLIB:
+                compression = self.compression.copy(uproot.const.kZLIB)
+                skip = 7        # https://github.com/root-project/root/blob/master/core/zip/src/Bits.h#L646
 
-            self._uncompressed = numpy.frombuffer(self.compression.decompress(self._compressed, self._cursor.skipped(skip), self._compressedbytes - skip, self._uncompressedbytes), dtype=numpy.uint8)
+            print compression
+
+            self._uncompressed = numpy.frombuffer(compression.decompress(self._compressed, self._cursor.skipped(skip), self._compressedbytes - skip, self._uncompressedbytes), dtype=numpy.uint8)
             
         if dtype == numpy.dtype(numpy.uint8):
             return self._uncompressed[start:stop]

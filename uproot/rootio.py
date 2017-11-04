@@ -144,9 +144,12 @@ class ROOTDirectory(object):
                                    b"TObjArray":                 TObjArray,
                                    b"TObjString":                TObjString}
 
-                streamercontext = ROOTDirectory._FileContext(source.path, None, streamerclasses, uproot.source.compressed.Compression(fCompress), fUUID)
-                streamerkey = TKey.read(source, Cursor(fSeekInfo), streamercontext)
-                streamerinfos, streamerrules = _readstreamers(streamerkey._source, streamerkey._cursor, streamercontext)
+                if readstreamers:
+                    streamercontext = ROOTDirectory._FileContext(source.path, None, streamerclasses, uproot.source.compressed.Compression(fCompress), fUUID)
+                    streamerkey = TKey.read(source, Cursor(fSeekInfo), streamercontext)
+                    streamerinfos, streamerrules = _readstreamers(streamerkey._source, streamerkey._cursor, streamercontext)
+                else:
+                    streamerinfos, streamerrules = [], []
 
                 classes = _defineclasses(streamerinfos)
                 context = ROOTDirectory._FileContext(source.path, streamerinfos, classes, uproot.source.compressed.Compression(fCompress), fUUID)
@@ -795,6 +798,8 @@ class TKey(ROOTObject):
         self.fClassName = cursor.string(source)
         self.fName = cursor.string(source)
         self.fTitle = cursor.string(source)
+
+        print "source 2", source
 
         # object size != compressed size means it's compressed
         if self.fObjlen != self.fNbytes - self.fKeylen:
