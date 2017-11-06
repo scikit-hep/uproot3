@@ -49,21 +49,17 @@ class TestTree(unittest.TestCase):
 
         self.assertEqual(tree["one"].array().tolist(), [1, 2, 3, 4])
         self.assertEqual(tree["two"].array().tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
+
         self.assertEqual(tree["three"].array().tolist(), [b"uno", b"dos", b"tres", b"quatro"])
 
+        self.assertEqual(tree["one"].array().tolist(), [1, 2, 3, 4])
+        self.assertEqual(tree["two"].array().tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
+        self.assertEqual(tree["three"].array().tolist(), [b"uno", b"dos", b"tres", b"quatro"])
 
-
-
-    #     # get branches again
-    #     self.assertEqual(tree.branch("one").array().tolist(), [1, 2, 3, 4])
-    #     self.assertEqual(tree.branch("two").array().tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
-    #     self.assertEqual(tree.branch("three").array().tolist(), [b"uno", b"dos", b"tres", b"quatro"])
-
-    #     # get tree again
-    #     tree = file["tree"]
-    #     self.assertEqual(tree.branch("one").array().tolist(), [1, 2, 3, 4])
-    #     self.assertEqual(tree.branch("two").array().tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
-    #     self.assertEqual(tree.branch("three").array().tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+        tree = file["tree"]
+        self.assertEqual(tree["one"].array().tolist(), [1, 2, 3, 4])
+        self.assertEqual(tree["two"].array().tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
+        self.assertEqual(tree["three"].array().tolist(), [b"uno", b"dos", b"tres", b"quatro"])
 
     # def test_tree_arrays(self):
     #     file = uproot.open("tests/simple.root")

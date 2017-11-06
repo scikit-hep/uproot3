@@ -40,7 +40,7 @@ except ImportError:
 
 else:
     def withpython(function):
-        return numba.jit()(function)
+        return numba.jit(cache=True)(function)
 
     def nopython(function):
-        return numba.jit(nopython=True)(function)
+        return numba.jit(nopython=True, cache=True)(function)

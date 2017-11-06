@@ -927,6 +927,7 @@ class TBranchMethods(object):
         assert numvalues % todimsprod == 0, "{0} % {1} == {2} != 0".format(numvalues, todimsprod, numvalues % todimsprod)
 
         destarray = interpretation.destarray(numvalues // todimsprod, sourcearray)
+
         return interpretation.filldest(sourcearray, destarray, 0, len(destarray))
 
     def _basketstartstop(self, entrystart, entrystop):
