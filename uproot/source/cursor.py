@@ -101,9 +101,9 @@ class Cursor(object):
         while char != 0:
             char = source.data(self.index, self.index + 1)
             if char != 0:
-                chars.append(chr(char[0]))
+                chars.append(chr(char[0]).encode("ascii"))
             self.index += 1
-        return "".join(chars)
+        return b"".join(chars)
 
     def skipstring(self, source):
         length = source.data(self.index, self.index + 1)[0]

@@ -44,6 +44,7 @@ import uproot.source.chunkedxrootd
 import uproot.source.compressed
 import uproot.source.memmap
 from uproot.source.cursor import Cursor
+from uproot.acceleration import withpython, nopython
 
 ################################################################ register mixins for user-facing ROOT classes
 
@@ -109,6 +110,9 @@ class ROOTDirectory(object):
 
     @staticmethod
     def read(source, *args, **options):
+        # make sure that all methods classes have been loaded
+        import uproot.tree
+
         if len(args) == 0:
             try:
                 readstreamers = options.pop("readstreamers", True)
@@ -126,23 +130,23 @@ class ROOTDirectory(object):
                     fBEGIN, fEND, fSeekFree, fNbytesFree, nfree, fNbytesName, fUnits, fCompress, fSeekInfo, fNbytesInfo, fUUID = cursor.fields(source, ROOTDirectory._format2_big)
 
                 # classes requried to read streamers (bootstrap)
-                streamerclasses = {b"TStreamerInfo":             TStreamerInfo,
-                                   b"TStreamerElement":          TStreamerElement,
-                                   b"TStreamerBase":             TStreamerBase,
-                                   b"TStreamerBasicType":        TStreamerBasicType,
-                                   b"TStreamerBasicPointer":     TStreamerBasicPointer,
-                                   b"TStreamerLoop":             TStreamerLoop,
-                                   b"TStreamerObject":           TStreamerObject,
-                                   b"TStreamerObjectPointer":    TStreamerObjectPointer,
-                                   b"TStreamerObjectAny":        TStreamerObjectAny,
-                                   b"TStreamerObjectAnyPointer": TStreamerObjectAnyPointer,
-                                   b"TStreamerString":           TStreamerString,
-                                   b"TStreamerSTL":              TStreamerSTL,
-                                   b"TStreamerSTLstring":        TStreamerSTLstring,
-                                   b"TStreamerArtificial":       TStreamerArtificial,
-                                   b"TList":                     TList,
-                                   b"TObjArray":                 TObjArray,
-                                   b"TObjString":                TObjString}
+                streamerclasses = {"TStreamerInfo":             TStreamerInfo,
+                                   "TStreamerElement":          TStreamerElement,
+                                   "TStreamerBase":             TStreamerBase,
+                                   "TStreamerBasicType":        TStreamerBasicType,
+                                   "TStreamerBasicPointer":     TStreamerBasicPointer,
+                                   "TStreamerLoop":             TStreamerLoop,
+                                   "TStreamerObject":           TStreamerObject,
+                                   "TStreamerObjectPointer":    TStreamerObjectPointer,
+                                   "TStreamerObjectAny":        TStreamerObjectAny,
+                                   "TStreamerObjectAnyPointer": TStreamerObjectAnyPointer,
+                                   "TStreamerString":           TStreamerString,
+                                   "TStreamerSTL":              TStreamerSTL,
+                                   "TStreamerSTLstring":        TStreamerSTLstring,
+                                   "TStreamerArtificial":       TStreamerArtificial,
+                                   "TList":                     TList,
+                                   "TObjArray":                 TObjArray,
+                                   "TObjString":                TObjString}
 
                 if readstreamers:
                     streamercontext = ROOTDirectory._FileContext(source.path, None, streamerclasses, uproot.source.compressed.Compression(fCompress), fUUID)
@@ -443,7 +447,7 @@ def _readobjany(source, cursor, context, wantundefined=False):
 
     elif tag == uproot.const.kNewClassTag:
         # new class and object
-        cname = cursor.cstring(source)
+        cname = cursor.cstring(source).decode("ascii")
 
         fct = context.classes.get(cname, Undefined)
 
@@ -476,7 +480,7 @@ def _readobjany(source, cursor, context, wantundefined=False):
         fct = cursor.refs[ref]                             # reference class
 
         if fct not in context.classes.values():
-            raise IOError("invalid class-tag reference (not a factory)")
+            raise IOError("invalid class-tag reference (not a recognized class: {0})".format(fct))
 
         if wantundefined:
             obj = Undefined.read(source, cursor, context)  # placeholder new object
@@ -502,7 +506,7 @@ def _readstreamers(source, cursor, context):
                 if isinstance(element, TStreamerBase):
                     dependencies.add(element.fName)
                 if isinstance(element, (TStreamerObject, TStreamerObjectAny, TStreamerString)) or (isinstance(element, TStreamerObjectPointer) and element.fType == uproot.const.kObjectp):
-                    dependencies.add(element.fTypeName.rstrip("*"))
+                    dependencies.add(element.fTypeName.rstrip(b"*"))
             streamerinfos.append((obj, dependencies))
 
         elif isinstance(obj, TList) and all(isinstance(x, TObjString) for x in obj):
@@ -594,24 +598,24 @@ def _ftype2struct(fType):
         raise NotImplementedError(fType)
 
 def _safename(name):
-    return re.sub("[^a-zA-Z0-9]+", lambda bad: "_" + "".join("%02x" % ord(x) for x in bad.group(0)) + "_", name)
+    return re.sub(b"[^a-zA-Z0-9]+", lambda bad: b"_" + b"".join(b"%02x" % ord(x) for x in bad.group(0)) + b"_", name).decode("ascii")
 
 def _defineclasses(streamerinfos):
-    classes = {b"TObject":                   TObject,
-               b"TNamed":                    TNamed,
-               b"TString":                   TString,
-               b"TList":                     TList,
-               b"TObjArray":                 TObjArray,
-               b"TObjString":                TObjString,
-               b"TArrayC":                   TArrayC,
-               b"TArrayS":                   TArrayS,
-               b"TArrayI":                   TArrayI,
-               b"TArrayL":                   TArrayL,
-               b"TArrayL64":                 TArrayL64,
-               b"TArrayF":                   TArrayF,
-               b"TArrayD":                   TArrayD}
+    classes = {"TObject":                   TObject,
+               "TNamed":                    TNamed,
+               "TString":                   TString,
+               "TList":                     TList,
+               "TObjArray":                 TObjArray,
+               "TObjString":                TObjString,
+               "TArrayC":                   TArrayC,
+               "TArrayS":                   TArrayS,
+               "TArrayI":                   TArrayI,
+               "TArrayL":                   TArrayL,
+               "TArrayL64":                 TArrayL64,
+               "TArrayF":                   TArrayF,
+               "TArrayD":                   TArrayD}
 
-    skip    = {b"TBranch":                   [b"fBaskets"]}
+    skip    = {"TBranch":                   ["fBaskets"]}
 
     rename = dict((streamerinfo.fName, _safename(streamerinfo.fName)) for streamerinfo in streamerinfos)
 
@@ -640,7 +644,7 @@ def _defineclasses(streamerinfos):
                 elif isinstance(element, TStreamerBasicPointer):
                     code.append("        cursor.skip(1)")
 
-                    m = re.search("\[([^\]]*)\]", element.fTitle.decode("ascii"))
+                    m = re.search(b"\[([^\]]*)\]", element.fTitle)
                     if m is None:
                         raise ValueError("TStreamerBasicPointer fTitle should have a counter name between brackets: {0}".format(repr(element.fTitle)))
                     counter = m.group(1)
@@ -655,7 +659,7 @@ def _defineclasses(streamerinfos):
 
                 elif isinstance(element, TStreamerBasicType):
                     if element.fArrayLength == 0:
-                        basicnames.append("self." + _safename(element.fName))
+                        basicnames.append("self.{0}".format(_safename(element.fName)))
                         fields.append(_safename(element.fName))
                         basicletters += _ftype2struct(element.fType)
 
@@ -689,7 +693,7 @@ def _defineclasses(streamerinfos):
                         if _safename(streamerinfo.fName) in skip and _safename(element.fName) in skip[_safename(streamerinfo.fName)]:
                             code.append("        Undefined.read(source, cursor, context)")
                         else:
-                            code.append("        self.{0} = {1}.read(source, cursor, context)".format(_safename(element.fName), rename.get(element.fTypeName, element.fTypeName).rstrip("*")))
+                            code.append("        self.{0} = {1}.read(source, cursor, context)".format(_safename(element.fName), rename.get(element.fTypeName, element.fTypeName.decode("ascii")).rstrip("*")))
                             fields.append(_safename(element.fName))
                     elif element.fType == uproot.const.kObjectP:
                         if _safename(streamerinfo.fName) in skip and _safename(element.fName) in skip[_safename(streamerinfo.fName)]:
@@ -711,7 +715,7 @@ def _defineclasses(streamerinfos):
                     if _safename(streamerinfo.fName) in skip and _safename(element.fName) in skip[_safename(streamerinfo.fName)]:
                         code.append("        Undefined.read(source, cursor, context)")
                     else:
-                        code.append("        self.{0} = {1}.read(source, cursor, context)".format(_safename(element.fName), rename.get(element.fTypeName, element.fTypeName)))
+                        code.append("        self.{0} = {1}.read(source, cursor, context)".format(_safename(element.fName), rename.get(element.fTypeName, element.fTypeName.decode("ascii"))))
                         fields.append(_safename(element.fName))
 
                 else:
@@ -799,8 +803,6 @@ class TKey(ROOTObject):
         self.fName = cursor.string(source)
         self.fTitle = cursor.string(source)
 
-        print "source 2", source
-
         # object size != compressed size means it's compressed
         if self.fObjlen != self.fNbytes - self.fKeylen:
             self._source = uproot.source.compressed.CompressedSource(context.compression, source, Cursor(self.fSeekKey + self.fKeylen), self.fNbytes - self.fKeylen, self.fObjlen)
@@ -824,13 +826,19 @@ class TKey(ROOTObject):
         Objects are not read or decompressed until this function is explicitly called.
         """
 
+        classname = self.fClassName.decode("ascii")
         try:
-            if self.fClassName == b"TDirectory":
+            if classname == "TDirectory":
                 return ROOTDirectory.read(self._source, self._cursor, self._context, self)
-            elif self.fClassName in self._context.classes:
-                return self._context.classes[self.fClassName].read(self._source, self._cursor.copied(), self._context)
+
+            elif classname in self._context.classes:
+                return self._context.classes[classname].read(self._source, self._cursor.copied(), self._context)
+
             else:
-                return Undefined(self._source, self._cursor.copied(), self._context)
+                out = Undefined.read(self._source, self._cursor.copied(), self._context)
+                out.classname = classname
+                return out
+
         finally:
             if dismiss:
                 self._source.dismiss()
@@ -1047,9 +1055,9 @@ class ROOTStreamedObject(ROOTObject):
     todtype = numpy.dtype(numpy.object)
     todims = ()
 
-    @staticmethod
-    def nocopy():
-        return self
+    @classmethod
+    def nocopy(cls):
+        return cls
 
     @staticmethod
     def numitems(numbytes, numentries, flattened):
@@ -1086,15 +1094,17 @@ class TString(str, ROOTStreamedObject):
     def _readinto(cls, self, source, cursor, context):
         return TString(cursor.string(source))
 
-    # FIXME
-    # @staticmethod
-    # def to(data, offsets, entrystart, entrystop):
-    #     out = numpy.empty(entrystop - entrystart, dtype=numpy.object)
-    #     for i, offset in enumerate(offsets):
-    #         if entrystart <= i < entrystop:
-    #             size = data[offset]
-    #             out[i - entrystart] = data[offset + 1 : offset + 1 + size].tostring()
-    #     return out
+    @staticmethod
+    @withpython
+    def frombytes(data, offsets, entrystart, entrystop):
+        out = numpy.empty(entrystop - entrystart, dtype=numpy.object)
+        for i, offset in enumerate(offsets):
+            if entrystart <= i < entrystop:
+                if data[offset] < 255:
+                    out[i - entrystart] = data[offset + 1 : offsets[i + 1]].tostring()
+                else:
+                    out[i - entrystart] = data[offset + 5 : offsets[i + 1]].tostring()
+        return out
 
 class TNamed(TObject):
     @classmethod

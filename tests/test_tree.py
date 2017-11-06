@@ -38,18 +38,21 @@ import uproot
 class TestTree(unittest.TestCase):
     def runTest(self):
         pass
-    
-    # def test_branch_array(self):
-    #     file = uproot.open("tests/simple.root")
-    #     repr(file)
 
-    #     tree = file["tree"]
-    #     repr(tree)
-    #     repr(tree.branch("one"))
-    #     repr(tree.branch("one"))
-    #     self.assertEqual(tree.branch("one").array().tolist(), [1, 2, 3, 4])
-    #     self.assertEqual(tree.branch("two").array().tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
-    #     self.assertEqual(tree.branch("three").array().tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+    def test_branch_array(self):
+        file = uproot.open("tests/simple.root")
+        repr(file)
+
+        tree = file["tree"]
+        repr(tree)
+        repr(tree["one"])
+
+        self.assertEqual(tree["one"].array().tolist(), [1, 2, 3, 4])
+        self.assertEqual(tree["two"].array().tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
+        self.assertEqual(tree["three"].array().tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+
+
+
 
     #     # get branches again
     #     self.assertEqual(tree.branch("one").array().tolist(), [1, 2, 3, 4])

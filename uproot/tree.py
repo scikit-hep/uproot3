@@ -178,31 +178,31 @@ def interpret(branch, classes=None, swapbytes=True):
 
     def leaf2dtype(leaf):
         classname = leaf.__class__.__name__
-        if classname == b"TLeafO":
+        if classname == "TLeafO":
             return numpy.dtype(numpy.bool)
-        elif classname == b"TLeafB":
+        elif classname == "TLeafB":
             if leaf.fIsUnsigned:
                 return numpy.dtype(numpy.uint8)
             else:
                 return numpy.dtype(numpy.int8)
-        elif classname == b"TLeafS":
+        elif classname == "TLeafS":
             if leaf.fIsUnsigned:
                 return numpy.dtype(numpy.uint16)
             else:
                 return numpy.dtype(numpy.int16)
-        elif classname == b"TLeafI":
+        elif classname == "TLeafI":
             if leaf.fIsUnsigned:
                 return numpy.dtype(numpy.uint32)
             else:
                 return numpy.dtype(numpy.int32)
-        elif classname == b"TLeafL":
+        elif classname == "TLeafL":
             if leaf.fIsUnsigned:
                 return numpy.dtype(numpy.uint64)
             else:
                 return numpy.dtype(numpy.int64)
-        elif classname == b"TLeafF":
+        elif classname == "TLeafF":
             return numpy.dtype(numpy.float32)
-        elif classname == b"TLeafD":
+        elif classname == "TLeafD":
             return numpy.dtype(numpy.float64)
         else:
             raise NotNumpy
@@ -697,7 +697,7 @@ class TTreeMethods(object):
         connector.compile = uproot._connect.to_oamap.compile
         return connector
 
-uproot.rootio.methods[b"TTree"] = TTreeMethods
+uproot.rootio.methods["TTree"] = TTreeMethods
 
 ################################################################ methods for TBranch
 
@@ -912,7 +912,10 @@ class TBranchMethods(object):
                 data, offsets = basketdata, None
             else:
                 data = basketdata[:key.border]
-                offsets = basketdata[key.border + 4 : -4].view(">i4") - key.fKeylen
+                offsets = numpy.empty((key.fObjlen - key.border - 4) // 4, dtype=numpy.int32)
+                offsets[:-1] = basketdata[key.border + 4 : -4].view(">i4")
+                offsets[-1] = key.fLast
+                numpy.subtract(offsets, key.fKeylen, offsets)
 
             sourcearray = interpretation.frombytes(data, offsets, local_entrystart, local_entrystop)
 
@@ -1280,8 +1283,6 @@ class TBranchMethods(object):
 
                 self.border = self.fLast - self.fKeylen
 
-                print "source", source
-
                 if self.fObjlen != self.fNbytes - self.fKeylen:
                     self.source = uproot.source.compressed.CompressedSource(compression, source, Cursor(self.fSeekKey + self.fKeylen), self.fNbytes - self.fKeylen, self.fObjlen)
                     self.cursor = Cursor(0)
@@ -1308,4 +1309,4 @@ class TBranchMethods(object):
         # prevent Python's attempt to interpret __len__ and __getitem__ as iteration
         raise TypeError("'TBranch' object is not iterable")
 
-uproot.rootio.methods[b"TBranch"] = TBranchMethods
+uproot.rootio.methods["TBranch"] = TBranchMethods

@@ -126,7 +126,6 @@ class CompressedSource(object):
             return numpy.empty(0, dtype=dtype)
 
         algo = self._cursor.bytes(self._compressed, 2).tostring()
-        print repr(algo), self.compression
 
         if self._uncompressed is None:
             if algo == "XZ":    # self.compression.algo == uproot.const.kLZMA:
@@ -138,8 +137,6 @@ class CompressedSource(object):
             else:               #  self.compression.algo == uproot.const.kZLIB:
                 compression = self.compression.copy(uproot.const.kZLIB)
                 skip = 7        # https://github.com/root-project/root/blob/master/core/zip/src/Bits.h#L646
-
-            print compression
 
             self._uncompressed = numpy.frombuffer(compression.decompress(self._compressed, self._cursor.skipped(skip), self._compressedbytes - skip, self._uncompressedbytes), dtype=numpy.uint8)
             
