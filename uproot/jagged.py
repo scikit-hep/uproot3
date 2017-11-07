@@ -83,6 +83,9 @@ class JaggedArrayType(numba.types.Type):
             JaggedArrayType.concrete[key] = JaggedArrayType(contents, starts, sizes)
             return JaggedArrayType.concrete[key]
 
+    def tupletype(self):
+        return numba.types.Tuple((self.contents, self.starts, self.sizes))
+
 @numba.extending.typeof_impl.register(JaggedArray)
 def jaggedarray_typeof(val, c):
     assert isinstance(val, JaggedArray)
@@ -91,16 +94,13 @@ def jaggedarray_typeof(val, c):
                                numba.typing.typeof._typeof_ndarray(val.sizes, c))
 
 @numba.extending.register_model(JaggedArrayType)
-class JaggedArrayModel(numba.datamodel.models.StructModel):
+class JaggedArrayModel(numba.datamodel.models.TupleModel):
     def __init__(self, dmm, fe_type):
-        members = [("contents", fe_type.contents),
-                   ("starts", fe_type.starts),
-                   ("sizes", fe_type.sizes)]
-        super(JaggedArrayModel, self).__init__(dmm, fe_type, members)
+        super(JaggedArrayModel, self).__init__(dmm, fe_type.tupletype())
 
-numba.extending.make_attribute_wrapper(JaggedArrayType, "contents", "contents")
-numba.extending.make_attribute_wrapper(JaggedArrayType, "starts", "starts")
-numba.extending.make_attribute_wrapper(JaggedArrayType, "sizes", "sizes")
+class Whatever(Exception):
+    def __init__(self, stuff):
+        self.stuff = stuff
 
 @numba.extending.unbox(JaggedArrayType)
 def jaggedarray_unbox(typ, obj, c):
@@ -108,24 +108,26 @@ def jaggedarray_unbox(typ, obj, c):
     contents_obj = c.pyapi.object_getattr_string(obj, "contents")
     starts_obj = c.pyapi.object_getattr_string(obj, "starts")
     sizes_obj = c.pyapi.object_getattr_string(obj, "sizes")
-    jaggedarray = numba.cgutils.create_struct_proxy(typ)(c.context, c.builder)
-
-    print "ONE.1", contents_obj
-
-    jaggedarray.contents = numba.targets.boxing.unbox_array(typ.contents, contents_obj, c)
-    jaggedarray.starts = numba.targets.boxing.unbox_array(typ.starts, starts_obj, c)
-    jaggedarray.sizes = numba.targets.boxing.unbox_array(typ.sizes, sizes_obj, c)
-    c.pyapi.decref(contents_obj)
-    c.pyapi.decref(starts_obj)
-    c.pyapi.decref(sizes_obj)
-    is_error = numba.cgutils.is_not_null(c.builder, c.pyapi.err_occurred())
     print "TWO"
-    out = numba.extending.NativeValue(jaggedarray._getvalue(), is_error=is_error)
+    tuple_obj = c.pyapi.tuple_new(3)
     print "THREE"
+    c.pyapi.tuple_setitem(tuple_obj, 0, contents_obj)
+    c.pyapi.tuple_setitem(tuple_obj, 1, starts_obj)
+    c.pyapi.tuple_setitem(tuple_obj, 2, sizes_obj)
+    print "FOUR"
+    out = c.unbox(typ.tupletype(), tuple_obj)
+    # c.pyapi.decref(contents_obj)
+    # c.pyapi.decref(starts_obj)
+    # c.pyapi.decref(sizes_obj)
+    # c.pyapi.decref(tuple_obj)
+    print "FIVE"
     return out
 
 @numba.njit
 def test1(a):
-    return a.contents
+    return 2 + 2
 
-print test1(a)
+try:
+    print test1(a)
+except Whatever as err:
+    pass
