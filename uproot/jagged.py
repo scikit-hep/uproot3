@@ -68,8 +68,14 @@ class JaggedArrayType(numba.types.Type):
         self.contents = contents
         self.starts = starts
         self.sizes = sizes
+        if contents.name.startswith("array"):
+            name = "jagged" + contents.name
+        else:
+            name = "jaggedarray({0})".format(contents.name)
+        super(JaggedArrayType, self).__init__(name=name)
 
-    def get(self, contents, starts, sizes):
+    @staticmethod
+    def get(contents, starts, sizes):
         key = (contents, starts, sizes)
         try:
             return JaggedArrayType.concrete[key]
@@ -78,11 +84,11 @@ class JaggedArrayType(numba.types.Type):
             return JaggedArrayType.concrete[key]
 
 @numba.extending.typeof_impl.register(JaggedArray)
-def typeof_index(val, c):
+def jaggedarray_typeof(val, c):
     assert isinstance(val, JaggedArray)
-    return JaggedArrayType.get(numba.typing._typeof_ndarray(val.contents, c),
-                               numba.typing._typeof_ndarray(val.starts, c),
-                               numba.typing._typeof_ndarray(val.sizes, c))
+    return JaggedArrayType.get(numba.typing.typeof._typeof_ndarray(val.contents, c),
+                               numba.typing.typeof._typeof_ndarray(val.starts, c),
+                               numba.typing.typeof._typeof_ndarray(val.sizes, c))
 
 @numba.extending.register_model(JaggedArrayType)
 class JaggedArrayModel(numba.datamodel.models.StructModel):
@@ -96,19 +102,30 @@ numba.extending.make_attribute_wrapper(JaggedArrayType, "contents", "contents")
 numba.extending.make_attribute_wrapper(JaggedArrayType, "starts", "starts")
 numba.extending.make_attribute_wrapper(JaggedArrayType, "sizes", "sizes")
 
-@numba.extending.lower_builtin(JaggedArray, numba.types.Array, numba.types.Array, numba.types.Array)
-def jaggedarray_impl(context, builder, sig, args):
-    typ = sig.return_type
-    contents, starts, sizes = args
-    jaggedarray = numba.cgutils.create_struct_proxy(typ)(context, builder)
-    jaggedarray.contents = contents
-    jaggedarray.starts = starts
-    jaggedarray.sizes = sizes
-    return jaggedarray._getvalue()
+@numba.extending.unbox(JaggedArrayType)
+def jaggedarray_unbox(typ, obj, c):
+    print "ONE"
+    contents_obj = c.pyapi.object_getattr_string(obj, "contents")
+    starts_obj = c.pyapi.object_getattr_string(obj, "starts")
+    sizes_obj = c.pyapi.object_getattr_string(obj, "sizes")
+    jaggedarray = numba.cgutils.create_struct_proxy(typ)(c.context, c.builder)
+
+    print "ONE.1", contents_obj
+
+    jaggedarray.contents = numba.targets.boxing.unbox_array(typ.contents, contents_obj, c)
+    jaggedarray.starts = numba.targets.boxing.unbox_array(typ.starts, starts_obj, c)
+    jaggedarray.sizes = numba.targets.boxing.unbox_array(typ.sizes, sizes_obj, c)
+    c.pyapi.decref(contents_obj)
+    c.pyapi.decref(starts_obj)
+    c.pyapi.decref(sizes_obj)
+    is_error = numba.cgutils.is_not_null(c.builder, c.pyapi.err_occurred())
+    print "TWO"
+    out = numba.extending.NativeValue(jaggedarray._getvalue(), is_error=is_error)
+    print "THREE"
+    return out
 
 @numba.njit
-def test1(x, y, z):
-    a = JaggedArray(x, y, z)
+def test1(a):
     return a.contents
 
-print test1(numpy.array([1.1, 1.1, 1.1, 3.3, 3.3]), numpy.array([0, 3, 3]), numpy.array([3, 0, 2]))
+print test1(a)
