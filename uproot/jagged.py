@@ -74,6 +74,36 @@ class JaggedArrayType(numba.types.Type):
             name = "jaggedarray({0})".format(contents.name)
         super(JaggedArrayType, self).__init__(name=name)
 
+        @numba.extending.lower_getattr(JaggedArrayType, "contents")
+        def jaggedarray_getattr_contents_impl(context, builder, typ, val):
+            @numba.njit([typ.contents(typ.tupletype())])
+            def get_field(astuple):
+                return astuple[0]
+            cres = get_field.overloads.values()[0]
+            get_field_imp = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
+            del cres.target_context._defns[cres.entry_point]
+            return get_field_imp(context, builder, cres.signature, (val,))
+
+        @numba.extending.lower_getattr(JaggedArrayType, "starts")
+        def jaggedarray_getattr_starts_impl(context, builder, typ, val):
+            @numba.njit([typ.starts(typ.tupletype())])
+            def get_field(astuple):
+                return astuple[1]
+            cres = get_field.overloads.values()[0]
+            get_field_imp = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
+            del cres.target_context._defns[cres.entry_point]
+            return get_field_imp(context, builder, cres.signature, (val,))
+
+        @numba.extending.lower_getattr(JaggedArrayType, "sizes")
+        def jaggedarray_getattr_sizes_impl(context, builder, typ, val):
+            @numba.njit([typ.sizes(typ.tupletype())])
+            def get_field(astuple):
+                return astuple[2]
+            cres = get_field.overloads.values()[0]
+            get_field_imp = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
+            del cres.target_context._defns[cres.entry_point]
+            return get_field_imp(context, builder, cres.signature, (val,))
+
     @staticmethod
     def get(contents, starts, sizes):
         key = (contents, starts, sizes)
@@ -104,18 +134,10 @@ class StructAttribute(numba.typing.templates.AttributeTemplate):
     def generic_resolve(self, typ, attr):
         if attr == "contents":
             return typ.contents
-
-@numba.extending.lower_getattr(JaggedArrayType, "contents")
-def jaggedarray_getattr_contents_impl(context, builder, typ, val):
-    @numba.njit([typ.contents(typ.tupletype())])
-    def getitem0(astuple):
-        return astuple[0]
-
-    cres = getitem0.overloads.values()[0]
-    getitem0_imp = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
-    del cres.target_context._defns[cres.entry_point]
-
-    return getitem0_imp(context, builder, cres.signature, (val,))
+        elif attr == "starts":
+            return typ.starts
+        elif attr == "sizes":
+            return typ.sizes
 
 @numba.extending.unbox(JaggedArrayType)
 def jaggedarray_unbox(typ, obj, c):
@@ -135,6 +157,6 @@ def jaggedarray_unbox(typ, obj, c):
 
 @numba.njit
 def test1(a):
-    return a.contents
+    return a.sizes
 
 print test1(a)
