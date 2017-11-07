@@ -98,36 +98,43 @@ class JaggedArrayModel(numba.datamodel.models.TupleModel):
     def __init__(self, dmm, fe_type):
         super(JaggedArrayModel, self).__init__(dmm, fe_type.tupletype())
 
-class Whatever(Exception):
-    def __init__(self, stuff):
-        self.stuff = stuff
+@numba.extending.infer_getattr
+class StructAttribute(numba.typing.templates.AttributeTemplate):
+    key = JaggedArrayType
+    def generic_resolve(self, typ, attr):
+        if attr == "contents":
+            return typ.contents
+
+@numba.extending.lower_getattr(JaggedArrayType, "contents")
+def jaggedarray_getattr_contents_impl(context, builder, typ, val):
+    @numba.njit([typ.contents(typ.tupletype())])
+    def getitem0(astuple):
+        return astuple[0]
+
+    cres = getitem0.overloads.values()[0]
+    getitem0_imp = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
+    del cres.target_context._defns[cres.entry_point]
+
+    return getitem0_imp(context, builder, cres.signature, (val,))
 
 @numba.extending.unbox(JaggedArrayType)
 def jaggedarray_unbox(typ, obj, c):
-    print "ONE"
     contents_obj = c.pyapi.object_getattr_string(obj, "contents")
     starts_obj = c.pyapi.object_getattr_string(obj, "starts")
     sizes_obj = c.pyapi.object_getattr_string(obj, "sizes")
-    print "TWO"
     tuple_obj = c.pyapi.tuple_new(3)
-    print "THREE"
     c.pyapi.tuple_setitem(tuple_obj, 0, contents_obj)
     c.pyapi.tuple_setitem(tuple_obj, 1, starts_obj)
     c.pyapi.tuple_setitem(tuple_obj, 2, sizes_obj)
-    print "FOUR"
     out = c.unbox(typ.tupletype(), tuple_obj)
     # c.pyapi.decref(contents_obj)
     # c.pyapi.decref(starts_obj)
     # c.pyapi.decref(sizes_obj)
     # c.pyapi.decref(tuple_obj)
-    print "FIVE"
     return out
 
 @numba.njit
 def test1(a):
-    return 2 + 2
+    return a.contents
 
-try:
-    print test1(a)
-except Whatever as err:
-    pass
+print test1(a)
