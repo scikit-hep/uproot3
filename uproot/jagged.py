@@ -129,6 +129,28 @@ def jaggedarray_type(context):
         raise TypeError("cannot create JaggedArray objects in compiled code (pass them into the function)")
     return typer
 
+@numba.typing.templates.infer
+class JaggedArray_getitem(numba.typing.templates.AbstractTemplate):
+    key = "getitem"
+    def generic(self, args, kwds):
+        objtyp, idxtyp = args
+        if isinstance(objtyp, JaggedArrayType):
+            idxtyp = numba.typing.builtins.normalize_1d_index(idxtyp)
+            if isinstance(idxtyp, numba.types.Integer):
+                return numba.typing.templates.signature(objtyp.contents, objtyp, idxtyp)
+
+@numba.extending.lower_builtin("getitem", JaggedArrayType, numba.types.Integer)
+def jaggedarray_getitem(context, builder, sig, args):
+    @numba.njit([sig])
+    def getitem(jaggedarray, index):
+        start = jaggedarray.starts[index]
+        stop  = start + jaggedarray.sizes[index]
+        return jaggedarray.contents[start:stop]
+
+    cres = getitem.overloads.values()[0]
+    getitem_imp = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
+    return getitem_imp(context, builder, sig, args)
+
 @numba.extending.register_model(JaggedArrayType)
 class JaggedArrayModel(numba.datamodel.models.TupleModel):
     def __init__(self, dmm, fe_type):
@@ -168,8 +190,13 @@ def jaggedarray_box(typ, val, c):
     c.pyapi.decref(class_obj)
     return res
 
+import time
+
+startTime = time.time()
 @numba.njit
-def test1(contents, starts, sizes):
-    return JaggedArray(contents, starts, sizes)
-b = test1(a.contents, a.starts, a.sizes)
-print b, b.contents, b.starts, b.sizes
+def test1(a, i):
+    return a[i]
+print test1(a, 0)
+print test1(a, 1)
+print test1(a, 2)
+print time.time() - startTime
