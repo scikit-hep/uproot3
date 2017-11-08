@@ -135,138 +135,40 @@ def strings_type(context):
             return StringsType(jaggedarray)
     return typer
 
-# @numba.extending.register_model(StringsType)
-# class StringsArrayModel(numba.datamodel.models.StructModel):
-#     def __init__(self, dmm, fe_type):
-#         members = [("jaggedarray", fe_type.jaggedarray)]
-#         super(StringsArrayModel, self).__init__(dmm, fe_type, members)
-
-# numba.extending.make_attribute_wrapper(StringsType, "jaggedarray", "jaggedarray")
-
 @numba.extending.register_model(StringsType)
 class StringsModel(numba.datamodel.models.TupleModel):
     def __init__(self, dmm, fe_type):
         super(StringsModel, self).__init__(dmm, fe_type.jaggedarray.tupletype())
 
-class Stuff(Exception):
-    def __init__(self, x):
-        self.x = x
+@numba.extending.infer_getattr
+class StructAttribute(numba.typing.templates.AttributeTemplate):
+    key = StringsType
+    def generic_resolve(self, typ, attr):
+        if attr == "jaggedarray":
+            return typ.jaggedarray
+
+@numba.extending.lower_getattr(StringsType, "jaggedarray")
+def strings_getattr_jaggedarray_impl(context, builder, typ, val):
+    return val
 
 @numba.extending.unbox(StringsType)
 def strings_unbox(typ, obj, c):
-    print "ONE"
     jaggedarray_obj = c.pyapi.object_getattr_string(obj, "jaggedarray")
-    print "TWO"
     out = uproot.types.jagged.jaggedarray_unbox(typ.jaggedarray, jaggedarray_obj, c)
-    # c.pyapi.decref(jaggedarray_obj)
-    print "THREE"
+    c.pyapi.decref(jaggedarray_obj)
     return out
 
 @numba.extending.box(StringsType)
 def strings_box(typ, val, c):
-    print "UNO"
     jaggedarray_obj = uproot.types.jagged.jaggedarray_box(typ.jaggedarray, val, c)
-    print "DOS"
     class_obj = c.pyapi.unserialize(c.pyapi.serialize_object(Strings))
-    print "TRES"
     out = c.pyapi.call_function_objargs(class_obj, [jaggedarray_obj])
-    print "QUATRE"
-    # c.pyapi.decref(jaggedarray_obj)
-    # c.pyapi.decref(class_obj)
+    c.pyapi.decref(jaggedarray_obj)
+    c.pyapi.decref(class_obj)
     return out
 
 
 
-
-# @numba.extending.unbox(StringsType)
-# def strings_unbox(typ, obj, c):
-#     print "ONE"
-#     jaggedarray_obj = c.pyapi.object_getattr_string(obj, "jaggedarray")
-#     print "TWO"
-#     out = uproot.types.jagged.jaggedarray_unbox(typ.jaggedarray, jaggedarray_obj, c)
-#     # c.pyapi.decref(jaggedarray_obj)
-#     print "THREE"
-#     out.value.type = llvmlite.ir.types.LiteralStructType([out.value.type])
-#     print "FOUR"
-#     return out
-
-# @numba.extending.box(StringsType)
-# def strings_box(typ, val, c):
-#     # raise Stuff((typ, val, c))
-#     val.value.type = val.value.type.elements[0]
-#     print "UNO", val.value
-#     jaggedarray_obj = uproot.types.jagged.jaggedarray_box(typ.jaggedarray, val, c)
-#     print "DOS"
-#     class_obj = c.pyapi.unserialize(c.pyapi.serialize_object(Strings))
-#     print "TRES"
-#     out = c.pyapi.call_function_objargs(class_obj, [jaggedarray_obj])
-#     print "QUATRE"
-#     # c.pyapi.decref(jaggedarray_obj)
-#     # c.pyapi.decref(class_obj)
-#     return out
-
-
-    
-# @numba.extending.unbox(StringsType)
-# def strings_unbox(typ, obj, c):
-#     print "ONE"
-#     jaggedarray_obj = c.pyapi.object_getattr_string(obj, "jaggedarray")
-#     print "TWO"
-#     strings = numba.cgutils.create_struct_proxy(typ)(c.context, c.builder)
-#     print "THREE"
-#     tmp = uproot.types.jagged.jaggedarray_unbox(typ.jaggedarray, jaggedarray_obj, c)
-#     print "THREE.five", tmp
-#     tmp.type = typ.jaggedarray
-#     strings.jaggedarray = tmp
-#     # c.pyapi.decref(jaggedarray_obj)
-#     print "FOUR"
-#     is_error = numba.cgutils.is_not_null(c.builder, c.pyapi.err_occurred())
-#     print "FIVE"
-#     out = numba.extending.NativeValue(strings._getvalue(), is_error=is_error)
-#     print "SIX"
-#     return out
-
-# @numba.extending.box(StringsType)
-# def strings_box(typ, val, c):
-#     print "UNO"
-#     strings = numba.cgutils.create_struct_proxy(typ)(c.context, c.builder, value=val)
-#     print "DOS"
-#     jaggedarray_obj = uproot.types.jagged.jaggedarray_box(typ.jaggedarray, strings.jaggedarray, c)
-#     print "TRES"
-#     class_obj = c.pyapi.unserialize(c.pyapi.serialize_object(Strings))
-#     print "QUATRO"
-#     out = c.pyapi.call_function_objargs(class_obj, [jaggedarray_obj])
-#     # c.pyapi.decref(jaggedarray_obj)
-#     # c.pyapi.decref(class_obj)
-#     print "CINQO"
-#     return out
-
-
-# @numba.typing.templates.infer_getattr
-# class StructAttribute(numba.typing.templates.AttributeTemplate):
-#     key = StringsType
-#     def generic_resolve(self, typ, attr):
-#         if attr == "jaggedarray":
-#             return typ.jaggedarray
-
-# @numba.extending.lower_getattr(StringsType, "jaggedarray")
-# def strings_getattr_jaggedarray_impl(context, builder, typ, val):
-#     return val
-
-# @numba.extending.unbox(StringsType)
-# def strings_unbox(typ, obj, c):
-#     jaggedarray_obj = c.pyapi.object_getattr_string(obj, "jaggedarray")
-#     out = uproot.types.jagged.jaggedarray_unbox(typ, jaggedarray_obj, c)
-#     # c.pyapi.decref(jaggedarray_obj)
-#     return out
-
-# @numba.extending.box(StringsType)
-# def strings_box(typ, val, c):
-#     class_obj = c.pyapi.unserialize(c.pyapi.serialize_object(Strings))
-#     args = [c.box(typ.jaggedarray, val)]
-#     out = c.pyapi.call_function_objargs(class_obj, args)
-#     # c.pyapi.decref(class_obj)
-#     return out
 
 
 
@@ -278,9 +180,5 @@ print a
 
 @numba.njit
 def test1(x):
-    return x
-
-try:
-    print test1(a)
-except Stuff as stuff:
-    pass
+    return x.jaggedarray
+print test1(a)
