@@ -27,20 +27,3 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-try:
-    import numba
-
-except ImportError:
-    def withpython(function):
-        return function
-
-    def nopython(function):
-        return function
-
-else:
-    def withpython(function):
-        return numba.jit(cache=True)(function)
-
-    def nopython(function):
-        return numba.jit(nopython=True, cache=True)(function)
