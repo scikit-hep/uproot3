@@ -212,31 +212,8 @@ if numba is not None:
     @numba.extending.type_callable(JaggedArray)
     def jaggedarray_type(context):
         def typer(contents, stops):
-            raise TypeError("cannot create JaggedArray object in compiled code (pass them into the function)")
+            raise TypeError("cannot create JaggedArray object in compiled code (pass it into the function)")
         return typer
-
-    @numba.typing.templates.infer
-    class JaggedArray_getitem(numba.typing.templates.AbstractTemplate):
-        key = "getitem"
-        def generic(self, args, kwds):
-            objtyp, idxtyp = args
-            if isinstance(objtyp, JaggedArrayType):
-                idxtyp = numba.typing.builtins.normalize_1d_index(idxtyp)
-                if isinstance(idxtyp, numba.types.Integer):
-                    return numba.typing.templates.signature(objtyp.contents, objtyp, idxtyp)
-
-    @numba.extending.lower_builtin("getitem", JaggedArrayType, numba.types.Integer)
-    def jaggedarray_getitem(context, builder, sig, args):
-        try:
-            getitem_imp = jaggedarray_getitem.cache[sig.args]
-        except KeyError:
-            getitem = numba.njit([sig])(_jaggedarray_getitem)
-            cres = getitem.overloads.values()[0]
-            getitem_imp = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
-            del cres.target_context._defns[cres.entry_point]
-            jaggedarray_getitem.cache[sig.args] = getitem_imp
-        return getitem_imp(context, builder, sig, args)
-    jaggedarray_getitem.cache = {}
 
     @numba.extending.register_model(JaggedArrayType)
     class JaggedArrayModel(numba.datamodel.models.TupleModel):
@@ -272,12 +249,49 @@ if numba is not None:
         c.pyapi.decref(class_obj)
         return out
 
-    @numba.extending.overload(len)
-    def jaggedarray_len(obj):
-        if isinstance(obj, JaggedArrayType):
-            def len_impl(jaggedarray):
+    @numba.extending.type_callable(len)
+    def jaggedarray_len_type(context):
+        def typer(jaggedarray):
+            return numba.types.intp
+        return typer
+
+    @numba.extending.lower_builtin(len, JaggedArrayType)
+    def jaggedarray_len(context, builder, sig, args):
+        try:
+            len_imp = jaggedarray_len.cache[sig.args]
+        except KeyError:
+            @numba.njit([sig])
+            def _jaggedarray_len(jaggedarray):
                 return len(jaggedarray.stops)
-            return len_impl
+            cres = _jaggedarray_len.overloads.values()[0]
+            len_imp = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
+            del cres.target_context._defns[cres.entry_point]
+            jaggedarray_len.cache[sig.args] = len_imp
+        return len_imp(context, builder, sig, args)
+    jaggedarray_len.cache = {}
+
+    @numba.typing.templates.infer
+    class JaggedArray_getitem(numba.typing.templates.AbstractTemplate):
+        key = "getitem"
+        def generic(self, args, kwds):
+            objtyp, idxtyp = args
+            if isinstance(objtyp, JaggedArrayType):
+                idxtyp = numba.typing.builtins.normalize_1d_index(idxtyp)
+                if isinstance(idxtyp, numba.types.Integer):
+                    return numba.typing.templates.signature(objtyp.contents, objtyp, idxtyp)
+
+    @numba.extending.lower_builtin("getitem", JaggedArrayType, numba.types.Integer)
+    def jaggedarray_getitem(context, builder, sig, args):
+        try:
+            getitem_imp = jaggedarray_getitem.cache[sig.args]
+        except KeyError:
+            getitem = numba.njit([sig])(_jaggedarray_getitem)
+            cres = getitem.overloads.values()[0]
+            getitem_imp = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
+            del cres.target_context._defns[cres.entry_point]
+            jaggedarray_getitem.cache[sig.args] = getitem_imp
+        return getitem_imp(context, builder, sig, args)
+    jaggedarray_getitem.cache = {}
 
     class JaggedArrayIteratorType(numba.types.common.SimpleIteratorType):
         def __init__(self, jaggedarraytype):
@@ -357,3 +371,11 @@ if numba is not None:
             result.yield_(value)
             nindex = numba.cgutils.increment_index(builder, index)
             builder.store(nindex, iterobj.index)
+
+a = JaggedArray(numpy.array([1.1, 1.1, 1.1, 3.3, 3.3]), numpy.array([3, 3, 5]))
+
+@numba.njit
+def test2(x):
+    return len(x)
+
+print test2(a)

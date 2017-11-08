@@ -130,26 +130,46 @@ def strings_typeof(val, c):
 
 @numba.extending.type_callable(Strings)
 def strings_type(context):
-    def typer(jaggedarray):
-        if isinstance(jaggedarray, uproot.types.jagged.JaggedArrayType):
-            return StringsType(jaggedarray)
+    def typer(strings):
+        raise TypeError("cannot create Strings object in compiled code (pass it into the function)")
     return typer
+
+# @numba.extending.type_callable(len)
+# def strings_len(context):
+#     def typer(strings):
+#         return strings.jaggedarray.stops.dtype
+
+# @numba.extending.lower_builtin(len, StringsType)
+# def strings_len_impl(context, builder, sig, args):
+    
+
+
+
+@numba.extending.overload(len)
+def strings_len(obj):
+    if isinstance(obj, StringsType):
+        def len_impl(strings):
+            return len(strings.jaggedarray)
+        return len_impl
+
+@numba.typing.templates.infer
+class Strings_getitem(numba.typing.templates.AbstractTemplate):
+    key = "getitem"
+    def generic(self, args, kwds):
+        objtyp, idxtyp = args
+        if isinstance(objtyp, StringsType):
+            idxtyp = numba.typing.builtins.normalize_1d_index(idxtyp)
+            if isinstance(idxtyp, numba.types.Integer):
+                return numba.typing.templates.signature(objtyp.jaggedarray.contents, objtyp, idxtyp)
+
+@numba.extending.lower_builtin("getitem", StringsType, numba.types.Integer)
+def strings_getitem(context, builder, sig, args):
+    return uproot.types.jagged.jaggedarray_getitem(context, builder, sig.return_type(sig.args[0].jaggedarray, sig.args[1]), args)
 
 @numba.extending.register_model(StringsType)
 class StringsModel(numba.datamodel.models.TupleModel):
     def __init__(self, dmm, fe_type):
         super(StringsModel, self).__init__(dmm, fe_type.jaggedarray.tupletype())
-
-@numba.extending.infer_getattr
-class StructAttribute(numba.typing.templates.AttributeTemplate):
-    key = StringsType
-    def generic_resolve(self, typ, attr):
-        if attr == "jaggedarray":
-            return typ.jaggedarray
-
-@numba.extending.lower_getattr(StringsType, "jaggedarray")
-def strings_getattr_jaggedarray_impl(context, builder, typ, val):
-    return val
 
 @numba.extending.unbox(StringsType)
 def strings_unbox(typ, obj, c):
@@ -179,6 +199,14 @@ a = Strings.fromroot(data, offsets)
 print a
 
 @numba.njit
-def test1(x):
-    return x.jaggedarray
-print test1(a)
+def test2(x):
+    return len(x)
+
+print test2(a)
+
+@numba.njit
+def test1(x, i):
+    return x[i]
+
+print test1(a, 0).tostring()
+print test1(a, 1).tostring()
