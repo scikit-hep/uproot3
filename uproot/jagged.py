@@ -174,22 +174,22 @@ if numba is not None:
             @numba.extending.lower_getattr(JaggedArrayType, "contents")
             def jaggedarray_getattr_contents_impl(context, builder, typ, val):
                 @numba.njit([typ.contents(typ.tupletype())])
-                def get_field(astuple):
+                def _jaggedarray_getfield(astuple):
                     return astuple[0]
-                cres = get_field.overloads.values()[0]
-                get_field_imp = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
+                cres = _jaggedarray_getfield.overloads.values()[0]
+                getfield_imp = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
                 del cres.target_context._defns[cres.entry_point]
-                return get_field_imp(context, builder, cres.signature, (val,))
+                return getfield_imp(context, builder, cres.signature, (val,))
 
             @numba.extending.lower_getattr(JaggedArrayType, "stops")
             def jaggedarray_getattr_stops_impl(context, builder, typ, val):
                 @numba.njit([typ.stops(typ.tupletype())])
-                def get_field(astuple):
+                def _jaggedarray_getfield(astuple):
                     return astuple[1]
-                cres = get_field.overloads.values()[0]
-                get_field_imp = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
+                cres = _jaggedarray_getfield.overloads.values()[0]
+                getfield_imp = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
                 del cres.target_context._defns[cres.entry_point]
-                return get_field_imp(context, builder, cres.signature, (val,))
+                return getfield_imp(context, builder, cres.signature, (val,))
 
         @staticmethod
         def get(contents, stops):
@@ -233,6 +233,7 @@ if numba is not None:
             getitem = numba.njit([sig])(_jaggedarray_getitem)
             cres = getitem.overloads.values()[0]
             getitem_imp = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
+            del cres.target_context._defns[cres.entry_point]
             jaggedarray_getitem.cache[sig.args] = getitem_imp
         return getitem_imp(context, builder, sig, args)
     jaggedarray_getitem.cache = {}
@@ -323,15 +324,17 @@ if numba is not None:
     def jaggedarray_getitem_foriter(context, builder, jaggedarraytype, jaggedarray, index):
         if jaggedarray_getitem_foriter.cache is None:
             @numba.njit([jaggedarraytype.contents(jaggedarraytype, JaggedArrayIteratorModel.integertype)])
-            def getitem(a, i):
+            def _jaggedarray_getitem(a, i):
                 if i == 0:
                     start = 0
                 else:
                     start = a.stops[i - 1]
                 stop = a.stops[i]
                 return a.contents[start:stop]
-            cres = getitem.overloads.values()[0]
-            jaggedarray_getitem_foriter.cache = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
+            cres = _jaggedarray_getitem.overloads.values()[0]
+            getitem_imp = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
+            del cres.target_context._defns[cres.entry_point]
+            jaggedarray_getitem_foriter.cache = getitem_imp
         return jaggedarray_getitem_foriter.cache(context, builder, jaggedarraytype.contents(jaggedarraytype, JaggedArrayIteratorModel.integertype), (jaggedarray, index))
     jaggedarray_getitem_foriter.cache = None
 
