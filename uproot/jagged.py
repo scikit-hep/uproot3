@@ -50,6 +50,63 @@ def _jaggedarray_getitem(jaggedarray, index):
         raise IndexError("index out of range for JaggedArray")
 
 class JaggedArray(object):
+    @staticmethod
+    def fromlists(*lists):
+        stops = numpy.empty(len(lists), dtype=numpy.int64)
+
+        stop = 0
+        anybool = False
+        anyint = False
+        anyfloat = False
+        anycomplex = False
+        for i, x in enumerate(lists):
+            stops[i] = stop = stop + len(x)
+            if isinstance(x, numpy.ndarray):
+                if issubclass(x.dtype.type, (numpy.bool, numpy.bool_)):
+                    anybool = True
+                elif issubclass(x.dtype.type, numpy.integer):
+                    anyint = True
+                elif issubclass(x.dtype.type, numpy.floating):
+                    anyfloat = True
+                elif issubclass(x.dtype.type, numpy.complexfloating):
+                    anycomplex = True
+            else:
+                if not anybool and not anyint and not anyfloat and not anycomplex and any(isinstance(y, bool) for y in x):
+                    anybool = True
+                if not anyint and not anyfloat and not anycomplex and any(isinstance(y, int) for y in x):
+                    anyint = True
+                if not anyfloat and not anycomplex and any(isinstance(y, float) for y in x):
+                    anyfloat = True
+                if not anycomplex and any(isinstance(y, complex) for y in x):
+                    anycomplex = True
+                    
+        if anycomplex:
+            dtype = numpy.dtype(numpy.complex)
+        elif anyfloat:
+            dtype = numpy.dtype(numpy.float64)
+        elif anyint:
+            dtype = numpy.dtype(numpy.int64)
+        elif anybool:
+            dtype = numpy.dtype(numpy.bool)
+        else:
+            raise TypeError("no numerical types found in lists")
+
+        if len(stops) == 0:
+            contents = numpy.empty(0, dtype=dtype)
+        else:
+            contents = numpy.empty(stops[-1], dtype=dtype)
+
+        for i, x in enumerate(lists):
+            if i == 0:
+                start = 0
+            else:
+                start = stops[i - 1]
+            stop = stops[i]
+
+            contents[start:stop] = x
+
+        return JaggedArray(contents, stops)
+
     def __init__(self, contents, stops):
         assert isinstance(contents, numpy.ndarray)
         assert isinstance(stops, numpy.ndarray) and issubclass(stops.dtype.type, numpy.integer)
@@ -57,8 +114,46 @@ class JaggedArray(object):
         self.contents = contents
         self.stops = stops
 
+    def __len__(self):
+        return len(self.stops)
+
     def __getitem__(self, index):
         return _jaggedarray_getitem(self, index)
+
+    def __iter__(self):
+        for i, stop in enumerate(self.stops):
+            if i == 0:
+                start = 0
+            else:
+                start = self.stops[i - 1]
+            yield self.contents[start:stop]
+
+    def __repr__(self, indent="", linewidth=None):
+        if linewidth is None:
+            linewidth = numpy.get_printoptions()["linewidth"]
+        dtypestr = repr(self.contents.dtype).replace("(", "=").rstrip(")")
+        linewidth = linewidth - 12 - 2 - len(dtypestr)
+        return "jaggedarray({0})".format(self.__str__(indent=" " * 12, linewidth=linewidth))
+
+    def __str__(self, indent="", linewidth=None):
+        if linewidth is None:
+            linewidth = numpy.get_printoptions()["linewidth"]
+
+        def single(a):
+            if len(a) > 6:
+                return numpy.array_str(a[:3], max_line_width=numpy.inf).rstrip("]") + " ... " + numpy.array_str(a[-3:], max_line_width=numpy.inf).lstrip("[")
+            else:
+                return numpy.array_str(a, max_line_width=numpy.inf)
+
+        if len(self) > 10:
+            contents = [single(self[i]) for i in range(3)] + ["..."] + [single(self[i]) for i in range(-3, 0)]
+        else:
+            contents = [single(x) for x in self]
+
+        if sum(len(x) for x in contents) + 2*(len(contents) - 1) + 2 <= linewidth:
+            return "[" + ", ".join(contents) + "]"
+        else:
+            return "[" + (",\n " + indent).join(contents) + "]"
 
 class JaggedArrayType(numba.types.Type):
     concrete = {}
@@ -175,6 +270,13 @@ def jaggedarray_box(typ, val, c):
     c.pyapi.decref(class_obj)
     return res
 
+@numba.extending.overload(len)
+def jaggedarray_len(obj):
+    if isinstance(obj, JaggedArrayType):
+        def len_impl(jaggedarray):
+            return len(jaggedarray.stops)
+        return len_impl
+
 class JaggedArrayIteratorType(numba.types.common.SimpleIteratorType):
     def __init__(self, jaggedarraytype):
         self.jaggedarray = jaggedarraytype
@@ -243,7 +345,7 @@ def jaggedarray_iternext(context, builder, sig, args, result):
     nitems, = numba.cgutils.unpack_tuple(builder, stopsary.shape, count=1)
 
     index = builder.load(iterobj.index)
-    is_valid = builder.icmp(llvmlite.llvmpy.core.ICMP_SLT, index, nitems)
+    is_valid = builder.icmp(llvmlite.llvmpy.core.ICMP_SLT, index, nitems)  # http://llvm.org/doxygen/classllvm_1_1CmpInst.html
     result.set_valid(is_valid)
 
     with builder.if_then(is_valid):
@@ -251,25 +353,3 @@ def jaggedarray_iternext(context, builder, sig, args, result):
         result.yield_(value)
         nindex = numba.cgutils.increment_index(builder, index)
         builder.store(nindex, iterobj.index)
-
-a = JaggedArray(numpy.array([1.1, 1.1, 1.1, 3.3, 3.3]), numpy.array([3, 3, 5]))
-
-@numba.njit
-def test1(a, i):
-    return a[i]
-print test1(a, 0), a[0]
-print test1(a, 1), a[1]
-print test1(a, 2), a[2]
-print test1(a, -1), a[-1]
-print test1(a, -2), a[-2]
-print test1(a, -3), a[-3]
-
-@numba.njit
-def test2(a):
-    out = 0.0
-    for ai in a:
-        out += ai.sum()
-    return out
-print test2(a)
-print test2(a)
-print test2(a)
