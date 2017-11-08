@@ -123,6 +123,12 @@ def jaggedarray_typeof(val, c):
                                numba.typing.typeof._typeof_ndarray(val.starts, c),
                                numba.typing.typeof._typeof_ndarray(val.sizes, c))
 
+@numba.extending.type_callable(JaggedArray)
+def jaggedarray_type(context):
+    def typer(contents, starts, sizes):
+        raise TypeError("cannot create JaggedArray objects in compiled code (pass them into the function)")
+    return typer
+
 @numba.extending.register_model(JaggedArrayType)
 class JaggedArrayModel(numba.datamodel.models.TupleModel):
     def __init__(self, dmm, fe_type):
@@ -163,7 +169,7 @@ def jaggedarray_box(typ, val, c):
     return res
 
 @numba.njit
-def test1(a):
-    return a
-b = test1(a)
+def test1(contents, starts, sizes):
+    return JaggedArray(contents, starts, sizes)
+b = test1(a.contents, a.starts, a.sizes)
 print b, b.contents, b.starts, b.sizes
