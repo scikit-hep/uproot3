@@ -183,8 +183,10 @@ class JaggedArrayIteratorType(numba.types.common.SimpleIteratorType):
 
 @numba.datamodel.registry.register_default(JaggedArrayIteratorType)
 class JaggedArrayIteratorModel(numba.datamodel.models.StructModel):
+    integertype = numba.types.int64
+
     def __init__(self, dmm, fe_type):
-        members = [("index", numba.types.EphemeralPointer(numba.types.uintp)),
+        members = [("index", numba.types.EphemeralPointer(JaggedArrayIteratorModel.integertype)),
                    ("jaggedarray", fe_type.jaggedarray)]
         super(JaggedArrayIteratorModel, self).__init__(dmm, fe_type, members)
 
@@ -203,7 +205,7 @@ def jaggedarray_getiter(context, builder, sig, args):
 
     iterobj = context.make_helper(builder, sig.return_type)
 
-    zero = context.get_constant(numba.types.uintp, 0)
+    zero = context.get_constant(JaggedArrayIteratorModel.integertype, 0)
     indexptr = numba.cgutils.alloca_once_value(builder, zero)
     iterobj.index = indexptr
     iterobj.jaggedarray = array
@@ -217,7 +219,7 @@ def jaggedarray_getiter(context, builder, sig, args):
 
 def jaggedarray_getitem_foriter(context, builder, jaggedarraytype, jaggedarray, index):
     if jaggedarray_getitem_foriter.cache is None:
-        @numba.njit([jaggedarraytype.contents(jaggedarraytype, numba.types.uintp)])
+        @numba.njit([jaggedarraytype.contents(jaggedarraytype, JaggedArrayIteratorModel.integertype)])
         def getitem(a, i):
             if i == 0:
                 start = 0
@@ -227,7 +229,7 @@ def jaggedarray_getitem_foriter(context, builder, jaggedarraytype, jaggedarray, 
             return a.contents[start:stop]
         cres = getitem.overloads.values()[0]
         jaggedarray_getitem_foriter.cache = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
-    return jaggedarray_getitem_foriter.cache(context, builder, jaggedarraytype.contents(jaggedarraytype, numba.types.uintp), (jaggedarray, index))
+    return jaggedarray_getitem_foriter.cache(context, builder, jaggedarraytype.contents(jaggedarraytype, JaggedArrayIteratorModel.integertype), (jaggedarray, index))
 jaggedarray_getitem_foriter.cache = None
 
 @numba.extending.lower_builtin("iternext", JaggedArrayIteratorType)
@@ -252,15 +254,15 @@ def jaggedarray_iternext(context, builder, sig, args, result):
 
 a = JaggedArray(numpy.array([1.1, 1.1, 1.1, 3.3, 3.3]), numpy.array([3, 3, 5]))
 
-# @numba.njit
-# def test1(a, i):
-#     return a[i]
-# print test1(a, 0), a[0]
-# print test1(a, 1), a[1]
-# print test1(a, 2), a[2]
-# print test1(a, -1), a[-1]
-# print test1(a, -2), a[-2]
-# print test1(a, -3), a[-3]
+@numba.njit
+def test1(a, i):
+    return a[i]
+print test1(a, 0), a[0]
+print test1(a, 1), a[1]
+print test1(a, 2), a[2]
+print test1(a, -1), a[-1]
+print test1(a, -2), a[-2]
+print test1(a, -3), a[-3]
 
 @numba.njit
 def test2(a):
@@ -268,4 +270,6 @@ def test2(a):
     for ai in a:
         out += ai.sum()
     return out
+print test2(a)
+print test2(a)
 print test2(a)
