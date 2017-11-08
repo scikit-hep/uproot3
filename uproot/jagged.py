@@ -152,19 +152,18 @@ def jaggedarray_unbox(typ, obj, c):
     c.pyapi.decref(tuple_obj)
     return out
 
+@numba.extending.box(JaggedArrayType)
+def jaggedarray_box(typ, val, c):
+    class_obj = c.pyapi.unserialize(c.pyapi.serialize_object(JaggedArray))
+    args = [c.box(typ.contents, c.builder.extract_value(val, 0)),
+            c.box(typ.starts, c.builder.extract_value(val, 1)),
+            c.box(typ.sizes, c.builder.extract_value(val, 2))]
+    res = c.pyapi.call_function_objargs(class_obj, args)
+    c.pyapi.decref(class_obj)
+    return res
+
 @numba.njit
 def test1(a):
-    return a.contents
-
-@numba.njit
-def test2(a):
-    return a.starts
-
-@numba.njit
-def test3(a):
-    return a.sizes
-
-for i in range(100):
-    print test1(a)
-    print test2(a)
-    print test3(a)
+    return a
+b = test1(a)
+print b, b.contents, b.starts, b.sizes
