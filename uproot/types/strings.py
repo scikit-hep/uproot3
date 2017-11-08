@@ -134,17 +134,14 @@ def strings_type(context):
         raise TypeError("cannot create Strings object in compiled code (pass it into the function)")
     return typer
 
-# @numba.extending.type_callable(len)
-# def strings_len(context):
-#     def typer(strings):
-#         return strings.jaggedarray.stops.dtype
+@numba.extending.type_callable(len)
+def strings_len_type(context):
+    return uproot.types.jagged.jaggedarray_len_type(context)
 
-# @numba.extending.lower_builtin(len, StringsType)
-# def strings_len_impl(context, builder, sig, args):
+@numba.extending.lower_builtin(len, StringsType)
+def strings_len(context, builder, sig, args):
+    return uproot.types.jagged.jaggedarray_len(context, builder, sig.return_type(sig.args[0].jaggedarray), args)
     
-
-
-
 @numba.extending.overload(len)
 def strings_len(obj):
     if isinstance(obj, StringsType):
@@ -199,14 +196,14 @@ a = Strings.fromroot(data, offsets)
 print a
 
 @numba.njit
-def test2(x):
-    return len(x)
-
-print test2(a)
-
-@numba.njit
 def test1(x, i):
     return x[i]
 
 print test1(a, 0).tostring()
 print test1(a, 1).tostring()
+
+@numba.njit
+def test2(x):
+    return len(x)
+
+print test2(a)

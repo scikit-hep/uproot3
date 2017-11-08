@@ -252,7 +252,7 @@ if numba is not None:
     @numba.extending.type_callable(len)
     def jaggedarray_len_type(context):
         def typer(jaggedarray):
-            return numba.types.intp
+            return numba.types.int64  # verified len type
         return typer
 
     @numba.extending.lower_builtin(len, JaggedArrayType)
@@ -371,11 +371,3 @@ if numba is not None:
             result.yield_(value)
             nindex = numba.cgutils.increment_index(builder, index)
             builder.store(nindex, iterobj.index)
-
-a = JaggedArray(numpy.array([1.1, 1.1, 1.1, 3.3, 3.3]), numpy.array([3, 3, 5]))
-
-@numba.njit
-def test2(x):
-    return len(x)
-
-print test2(a)
