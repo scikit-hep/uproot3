@@ -56,7 +56,6 @@ class JaggedArray(object):
         return self.contents[start:stop]
 
 a = JaggedArray(numpy.array([1.1, 1.1, 1.1, 3.3, 3.3]), numpy.array([0, 3, 3]), numpy.array([3, 0, 2]))
-print a[0], a[1], a[2]
 
 class JaggedArrayType(numba.types.Type):
     concrete = {}
@@ -141,15 +140,37 @@ class JaggedArray_getitem(numba.typing.templates.AbstractTemplate):
 
 @numba.extending.lower_builtin("getitem", JaggedArrayType, numba.types.Integer)
 def jaggedarray_getitem(context, builder, sig, args):
-    @numba.njit([sig])
-    def getitem(jaggedarray, index):
-        start = jaggedarray.starts[index]
-        stop  = start + jaggedarray.sizes[index]
-        return jaggedarray.contents[start:stop]
+    try:
+        getitem_imp = jaggedarray_getitem.cache[sig.args[1]]
 
-    cres = getitem.overloads.values()[0]
-    getitem_imp = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
+    except KeyError:
+        @numba.njit([sig])
+        def getitem(jaggedarray, index):
+            startslen = len(jaggedarray.starts)
+            if -startslen <= index < startslen:
+                start = jaggedarray.starts[index]
+                stop  = start + jaggedarray.sizes[index]
+                return jaggedarray.contents[start:stop]
+            else:
+                raise IndexError("index out of range for JaggedArray")
+
+        cres = getitem.overloads.values()[0]
+        getitem_imp = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
+        jaggedarray_getitem.cache[sig.args[1]] = getitem_imp
+
     return getitem_imp(context, builder, sig, args)
+
+jaggedarray_getitem.cache = {}
+
+# @numba.typing.templates.infer
+# class JaggedArray_getiter(numba.typing.templates.AbstractTemplate):
+#     key = "getiter"
+#     def generic(self, args, kwds):
+#         objtyp, idxtyp = args
+#         if isinstance(objtyp, JaggedArrayType):
+#             idxtyp = numba.typing.builtins.normalize_1d_index(idxtyp)
+#             if isinstance(idxtyp, numba.types.Integer):
+#                 return numba.typing.templates.signature(objtyp.contents, objtyp, idxtyp)
 
 @numba.extending.register_model(JaggedArrayType)
 class JaggedArrayModel(numba.datamodel.models.TupleModel):
@@ -190,13 +211,21 @@ def jaggedarray_box(typ, val, c):
     c.pyapi.decref(class_obj)
     return res
 
-import time
-
-startTime = time.time()
 @numba.njit
 def test1(a, i):
     return a[i]
 print test1(a, 0)
 print test1(a, 1)
 print test1(a, 2)
-print time.time() - startTime
+print test1(a, -1)
+print test1(a, -2)
+print test1(a, -3)
+
+# @numba.njit
+# def test2(a):
+#     out = 0.0
+#     for ai in a:
+#         out += ai.sum()
+#     return out
+# print test2(a)
+
