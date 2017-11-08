@@ -912,8 +912,8 @@ class TBranchMethods(object):
                 data, offsets = basketdata, None
             else:
                 data = basketdata[:key.border]
-                offsets = numpy.empty((key.fObjlen - key.border - 4) // 4, dtype=numpy.int32)
-                offsets[:-1] = basketdata[key.border + 4 : -4].view(">i4")
+                offsets = numpy.empty((key.fObjlen - key.border - 4) // 4, dtype=numpy.int32)  # native endian
+                offsets[:-1] = basketdata[key.border + 4 : -4].view(">i4")                     # read as big-endian and convert
                 offsets[-1] = key.fLast
                 numpy.subtract(offsets, key.fKeylen, offsets)
 

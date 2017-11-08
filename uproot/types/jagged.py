@@ -212,7 +212,7 @@ if numba is not None:
     @numba.extending.type_callable(JaggedArray)
     def jaggedarray_type(context):
         def typer(contents, stops):
-            raise TypeError("cannot create JaggedArray objects in compiled code (pass them into the function)")
+            raise TypeError("cannot create JaggedArray object in compiled code (pass them into the function)")
         return typer
 
     @numba.typing.templates.infer
@@ -268,9 +268,9 @@ if numba is not None:
         class_obj = c.pyapi.unserialize(c.pyapi.serialize_object(JaggedArray))
         args = [c.box(typ.contents, c.builder.extract_value(val, 0)),
                 c.box(typ.stops, c.builder.extract_value(val, 1))]
-        res = c.pyapi.call_function_objargs(class_obj, args)
+        out = c.pyapi.call_function_objargs(class_obj, args)
         c.pyapi.decref(class_obj)
-        return res
+        return out
 
     @numba.extending.overload(len)
     def jaggedarray_len(obj):
