@@ -115,95 +115,81 @@ class Strings(object):
         else:
             return "[{0}]".format(" ".join(repr(x) for x in self))
 
+if numba is not None:
+    class StringsType(numba.types.Type):
+        def __init__(self, jaggedarray):
+            self.jaggedarray = jaggedarray
+            super(StringsType, self).__init__("strings({0})".format(jaggedarray.name))
 
+    @numba.extending.typeof_impl.register(Strings)
+    def strings_typeof(val, c):
+        assert isinstance(val, Strings)
+        return StringsType(uproot.types.jagged.jaggedarray_typeof(val.jaggedarray, c))
 
+    @numba.extending.type_callable(Strings)
+    def strings_type(context):
+        def typer(strings):
+            raise TypeError("cannot create Strings object in compiled code (pass it into the function)")
+        return typer
 
-class StringsType(numba.types.Type):
-    def __init__(self, jaggedarray):
-        self.jaggedarray = jaggedarray
-        super(StringsType, self).__init__("strings({0})".format(jaggedarray.name))
+    @numba.extending.register_model(StringsType)
+    class StringsModel(numba.datamodel.models.TupleModel):
+        def __init__(self, dmm, fe_type):
+            super(StringsModel, self).__init__(dmm, fe_type.jaggedarray.tupletype())
 
-@numba.extending.typeof_impl.register(Strings)
-def strings_typeof(val, c):
-    assert isinstance(val, Strings)
-    return StringsType(uproot.types.jagged.jaggedarray_typeof(val.jaggedarray, c))
+    @numba.extending.unbox(StringsType)
+    def strings_unbox(typ, obj, c):
+        jaggedarray_obj = c.pyapi.object_getattr_string(obj, "jaggedarray")
+        out = uproot.types.jagged.jaggedarray_unbox(typ.jaggedarray, jaggedarray_obj, c)
+        c.pyapi.decref(jaggedarray_obj)
+        return out
 
-@numba.extending.type_callable(Strings)
-def strings_type(context):
-    def typer(strings):
-        raise TypeError("cannot create Strings object in compiled code (pass it into the function)")
-    return typer
+    @numba.extending.box(StringsType)
+    def strings_box(typ, val, c):
+        jaggedarray_obj = uproot.types.jagged.jaggedarray_box(typ.jaggedarray, val, c)
+        class_obj = c.pyapi.unserialize(c.pyapi.serialize_object(Strings))
+        out = c.pyapi.call_function_objargs(class_obj, [jaggedarray_obj])
+        c.pyapi.decref(jaggedarray_obj)
+        c.pyapi.decref(class_obj)
+        return out
 
-@numba.extending.type_callable(len)
-def strings_len_type(context):
-    return uproot.types.jagged.jaggedarray_len_type(context)
+    @numba.extending.type_callable(len)
+    def strings_len_type(context):
+        return uproot.types.jagged.jaggedarray_len_type(context)
 
-@numba.extending.lower_builtin(len, StringsType)
-def strings_len(context, builder, sig, args):
-    return uproot.types.jagged.jaggedarray_len(context, builder, sig.return_type(sig.args[0].jaggedarray), args)
-    
-@numba.extending.overload(len)
-def strings_len(obj):
-    if isinstance(obj, StringsType):
-        def len_impl(strings):
-            return len(strings.jaggedarray)
-        return len_impl
+    @numba.extending.lower_builtin(len, StringsType)
+    def strings_len(context, builder, sig, args):
+        return uproot.types.jagged.jaggedarray_len(context, builder, sig.return_type(sig.args[0].jaggedarray), args)
 
-@numba.typing.templates.infer
-class Strings_getitem(numba.typing.templates.AbstractTemplate):
-    key = "getitem"
-    def generic(self, args, kwds):
-        objtyp, idxtyp = args
-        if isinstance(objtyp, StringsType):
-            idxtyp = numba.typing.builtins.normalize_1d_index(idxtyp)
-            if isinstance(idxtyp, numba.types.Integer):
-                return numba.typing.templates.signature(objtyp.jaggedarray.contents, objtyp, idxtyp)
+    @numba.extending.overload(len)
+    def strings_len(obj):
+        if isinstance(obj, StringsType):
+            def len_impl(strings):
+                return len(strings.jaggedarray)
+            return len_impl
 
-@numba.extending.lower_builtin("getitem", StringsType, numba.types.Integer)
-def strings_getitem(context, builder, sig, args):
-    return uproot.types.jagged.jaggedarray_getitem(context, builder, sig.return_type(sig.args[0].jaggedarray, sig.args[1]), args)
+    @numba.typing.templates.infer
+    class Strings_getitem(numba.typing.templates.AbstractTemplate):
+        key = "getitem"
+        def generic(self, args, kwds):
+            objtyp, idxtyp = args
+            if isinstance(objtyp, StringsType):
+                idxtyp = numba.typing.builtins.normalize_1d_index(idxtyp)
+                if isinstance(idxtyp, numba.types.Integer):
+                    return numba.typing.templates.signature(objtyp.jaggedarray.contents, objtyp, idxtyp)
 
-@numba.extending.register_model(StringsType)
-class StringsModel(numba.datamodel.models.TupleModel):
-    def __init__(self, dmm, fe_type):
-        super(StringsModel, self).__init__(dmm, fe_type.jaggedarray.tupletype())
+    @numba.extending.lower_builtin("getitem", StringsType, numba.types.Integer)
+    def strings_getitem(context, builder, sig, args):
+        return uproot.types.jagged.jaggedarray_getitem(context, builder, sig.return_type(sig.args[0].jaggedarray, sig.args[1]), args)
 
-@numba.extending.unbox(StringsType)
-def strings_unbox(typ, obj, c):
-    jaggedarray_obj = c.pyapi.object_getattr_string(obj, "jaggedarray")
-    out = uproot.types.jagged.jaggedarray_unbox(typ.jaggedarray, jaggedarray_obj, c)
-    c.pyapi.decref(jaggedarray_obj)
-    return out
+    @numba.typing.templates.infer
+    class Strings_getiter(numba.typing.templates.AbstractTemplate):
+        key = "getiter"
+        def generic(self, args, kwds):
+            objtyp, = args
+            if isinstance(objtyp, StringsType):
+                return numba.typing.templates.signature(uproot.types.jagged.JaggedArrayIteratorType(objtyp.jaggedarray), objtyp)
 
-@numba.extending.box(StringsType)
-def strings_box(typ, val, c):
-    jaggedarray_obj = uproot.types.jagged.jaggedarray_box(typ.jaggedarray, val, c)
-    class_obj = c.pyapi.unserialize(c.pyapi.serialize_object(Strings))
-    out = c.pyapi.call_function_objargs(class_obj, [jaggedarray_obj])
-    c.pyapi.decref(jaggedarray_obj)
-    c.pyapi.decref(class_obj)
-    return out
-
-
-
-
-
-
-import numpy
-data = numpy.array([5] + map(ord, "hello") + [5] + map(ord, "there"), dtype=numpy.uint8)
-offsets = numpy.array([0, 6, 12])
-a = Strings.fromroot(data, offsets)
-print a
-
-@numba.njit
-def test1(x, i):
-    return x[i]
-
-print test1(a, 0).tostring()
-print test1(a, 1).tostring()
-
-@numba.njit
-def test2(x):
-    return len(x)
-
-print test2(a)
+    @numba.extending.lower_builtin("getiter", StringsType)
+    def strings_getiter(context, builder, sig, args):
+        return uproot.types.jagged.jaggedarray_getiter(context, builder, sig.return_type(sig.args[0].jaggedarray), args)
