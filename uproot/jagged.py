@@ -149,14 +149,22 @@ def jaggedarray_unbox(typ, obj, c):
     c.pyapi.tuple_setitem(tuple_obj, 1, starts_obj)
     c.pyapi.tuple_setitem(tuple_obj, 2, sizes_obj)
     out = c.unbox(typ.tupletype(), tuple_obj)
-    # c.pyapi.decref(contents_obj)
-    # c.pyapi.decref(starts_obj)
-    # c.pyapi.decref(sizes_obj)
-    # c.pyapi.decref(tuple_obj)
+    c.pyapi.decref(tuple_obj)
     return out
 
 @numba.njit
 def test1(a):
+    return a.contents
+
+@numba.njit
+def test2(a):
+    return a.starts
+
+@numba.njit
+def test3(a):
     return a.sizes
 
-print test1(a)
+for i in range(100):
+    print test1(a)
+    print test2(a)
+    print test3(a)
