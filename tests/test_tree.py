@@ -144,6 +144,8 @@ class TestTree(unittest.TestCase):
         for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
             self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop).tolist(), expectation[entrystart:entrystop])
 
+    # TODO: next is iteration over arrays (_step_array) and lazyarrays (_LazyArray._array)
+    # ALSO: verify that we're not needlessly uncompressing baskets when we scan over keys.
 
 
     
