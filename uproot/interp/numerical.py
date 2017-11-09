@@ -115,21 +115,18 @@ class asdtype(Interpretation):
             raise ValueError("cannot reshape {0} items as {1} (groups of {2})".format(numitems, self.todims, product))
         return numpy.empty((numitems // product,) + self.todims, dtype=self.todtype)
 
-    def fill(self, source, destination, start, stop, skipentries, numentries):
-        if self.fromdims == self.todims:
-            destination[start:stop] = source
-
+    def fill(self, source, destination, itemstart, itemstop, skipentries, numentries):
+        if self.fromdims == ():
+            flattened_source = source
         else:
-            product_source = _dimsprod(self.fromdims)
-            product_destination = _dimsprod(self.todims)
+            flattened_source = source.reshape(len(source) * _dimsprod(self.fromdims))
 
-            flattened_source = source.reshape(len(source) * product_source)
+        if self.todims == ():
+            flattened_destination = destination
+        else:
+            flattened_destination = destination.reshape(len(destination) * _dimsprod(self.todims))
 
-            flattened_destination = destination.reshape(len(destination) * product_destination)
-            flattened_start = start * product_destination
-            flattened_stop = stop * product_destination
-
-            flattened_destination[flattened_start:flattened_stop] = flattened_source
+        flattened_destination[itemstart:itemstop] = flattened_source
 
     def clipitems(self, destination, itemstart, itemstop):
         return destination[itemstart:itemstop]
@@ -177,8 +174,8 @@ class asarray(asdtype):
             raise ValueError("cannot put {0} items into an array of {1} items".format(numitems, _dimsprod(self.toarray.shape)))
         return self.toarray, numitems // product
 
-    def fill(self, source, destination, start, stop, skipentries, numentries):
-        super(asarray, self).fill(source, destination[0], start, stop, skipentries, numentries)
+    def fill(self, source, destination, itemstart, itemstop, skipentries, numentries):
+        super(asarray, self).fill(source, destination[0], itemstart, itemstop, skipentries, numentries)
 
     def clipitems(self, destination, itemstart, itemstop):
         array, stop = destination

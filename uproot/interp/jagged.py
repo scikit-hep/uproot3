@@ -75,9 +75,9 @@ class asjagged(Interpretation):
         sizes = numpy.empty(numentries, dtype=numpy.int64)
         return JaggedArray._Prep(contents, sizes)
 
-    def fill(self, source, destination, start, stop, skipentries, numentries):
+    def fill(self, source, destination, itemstart, itemstop, skipentries, numentries):
         destination.sizes[skipentries : skipentries + numentries] = stops2sizes(source.stops)
-        self.asdtype.fill(source.contents, destination.contents, start, stop, None, None)
+        self.asdtype.fill(source.contents, destination.contents, itemstart, itemstop, None, None)
 
     def clipitems(self, destination, itemstart, itemstop):
         destination.contents = self.asdtype.clipitems(destination.contents, itemstart, itemstop)
