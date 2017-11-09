@@ -68,19 +68,21 @@ class asjagged(Interpretation):
     def fromroot(self, data, offsets, local_entrystart, local_entrystop):
         contents = self.asdtype.fromroot(data, None, None, None)
         stops = offsets[local_entrystart + 1 : local_entrystop + 1]
+        numpy.floor_divide(stops, contents.dtype.itemsize, stops)
         return JaggedArray(contents, stops)
 
-    def destination(self, numitems, numentries):
-        contents = self.asdtype.destination(numitems, None)
-        sizes = numpy.empty(numentries, dtype=numpy.int64)
+    def destination(self, numitems, entrystart, entrystop):
+        contents = self.asdtype.destination(numitems, entrystart, entrystop)
+        sizes = numpy.empty(entrystop - entrystart, dtype=numpy.int64)
         return JaggedArray._Prep(contents, sizes)
 
     def fill(self, source, destination, itemstart, itemstop, skipentries, numentries):
         destination.sizes[skipentries : skipentries + numentries] = stops2sizes(source.stops)
         self.asdtype.fill(source.contents, destination.contents, itemstart, itemstop, None, None)
 
-    def clipitems(self, destination, itemstart, itemstop):
-        destination.contents = self.asdtype.clipitems(destination.contents, itemstart, itemstop)
+    def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
+        destination.contents = self.asdtype.clip(destination.contents, itemstart, itemstop, entrystart, entrystop)
+        destination.sizes = destination.sizes[entrystart:entrystop]
         return destination
 
     def finalize(self, destination):

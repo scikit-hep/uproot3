@@ -137,10 +137,18 @@ class TestTree(unittest.TestCase):
         for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
             self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop).tolist(), expectation[entrystart:entrystop])
 
+    def test_branch_irregular_array(self):
+        branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["Ai8"]
+        expectation = [[], [-15], [-15, -13], [-15, -13, -11], [-15, -13, -11, -9], [], [-10], [-10, -8], [-10, -8, -6], [-10, -8, -6, -4], [], [-5], [-5, -3], [-5, -3, -1], [-5, -3, -1, 1], [], [0], [0, 2], [0, 2, 4], [0, 2, 4, 6], [], [5], [5, 7], [5, 7, 9], [5, 7, 9, 11], [], [10], [10, 12], [10, 12, 14], [10, 12, 14, 16]]
+        self.assertEqual([len(x) for x in expectation], [0, 1, 2, 3, 4] * 6)
+        for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
+            print
+            print branch.array(entrystart=entrystart, entrystop=entrystop).tolist()
+            print expectation[entrystart:entrystop]
 
 
 
-
+    
     # def test_branch_array(self):
     #     file = uproot.open("tests/simple.root")
     #     repr(file)

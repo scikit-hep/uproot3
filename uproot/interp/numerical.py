@@ -109,7 +109,7 @@ class asdtype(Interpretation):
             array = array.reshape((len(array) // product,) + self.fromdims)
         return array[local_entrystart:local_entrystop]
 
-    def destination(self, numitems, numentries):
+    def destination(self, numitems, entrystart, entrystop):
         product = _dimsprod(self.todims)
         if numitems % product != 0:
             raise ValueError("cannot reshape {0} items as {1} (groups of {2})".format(numitems, self.todims, product))
@@ -128,7 +128,7 @@ class asdtype(Interpretation):
 
         flattened_destination[itemstart:itemstop] = flattened_source
 
-    def clipitems(self, destination, itemstart, itemstop):
+    def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
         return destination[itemstart:itemstop]
 
     def finalize(self, destination):
@@ -166,7 +166,7 @@ class asarray(asdtype):
 
         return "asarray(" + ", ".join(args) + ")"
 
-    def destination(self, numitems, numentries):
+    def destination(self, numitems, entrystart, entrystop):
         product = _dimsprod(self.todims)
         if numitems % product != 0:
             raise ValueError("cannot reshape {0} items as {1} (groups of {2})".format(numitems, self.todims, product))
@@ -177,9 +177,9 @@ class asarray(asdtype):
     def fill(self, source, destination, itemstart, itemstop, skipentries, numentries):
         super(asarray, self).fill(source, destination[0], itemstart, itemstop, skipentries, numentries)
 
-    def clipitems(self, destination, itemstart, itemstop):
+    def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
         array, stop = destination
-        return super(asarray, self).clipitems(array, itemstart, itemstop), stop
+        return super(asarray, self).clip(array, itemstart, itemstop, entrystart, entrystop), stop
 
     def finalize(self, destination):
         array, stop = destination

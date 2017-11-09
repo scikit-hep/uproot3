@@ -639,7 +639,7 @@ class TBranchMethods(object):
         source = self._basket(i, interpretation, local_entrystart, local_entrystop, rawcache, cache)
         numitems = interpretation.source_numitems(source)
 
-        destination = interpretation.destination(numitems, numentries)
+        destination = interpretation.destination(numitems, 0, numentries)
         interpretation.fill(source, destination, 0, numitems, 0, numentries)
         return interpretation.finalize(destination)
 
@@ -749,7 +749,7 @@ class TBranchMethods(object):
 
         basket_itemoffset = self._basket_itemoffset(interpretation, basketstart, basketstop)
 
-        destination = interpretation.destination(basket_itemoffset[-1], entrystop - entrystart)
+        destination = interpretation.destination(basket_itemoffset[-1], self.basket_entrystart(basketstart), self.basket_entrystop(basketstop - 1))
 
         def fill(j):
             try:
@@ -785,12 +785,21 @@ class TBranchMethods(object):
         if blocking:
             for excinfo in excinfos:
                 _delayedraise(excinfo)
-            return interpretation.finalize(interpretation.clipitems(destination, basket_itemoffset[0], basket_itemoffset[-1]))
+            clipped = interpretation.clip(destination,
+                                          basket_itemoffset[0],
+                                          basket_itemoffset[-1],
+                                          entrystart - self.basket_entrystart(basketstart),
+                                          entrystop - self.basket_entrystart(basketstart))
+            return interpretation.finalize(clipped)
         else:
             def await():
                 for excinfo in excinfos:
                     _delayedraise(excinfo)
-                return interpretation.finalize(interpretation.clipitems(basket_itemoffset[0], basket_itemoffset[-1]))
+                clipped = interpretation.clip(basket_itemoffset[0],
+                                              basket_itemoffset[-1],
+                                              entrystart - self.basket_entrystart(basketstart),
+                                              entrystop - self.basket_entrystart(basketstart))
+                return interpretation.finalize(clipped)
             return await
 
     def _step_array(self, interpretation, baskets, basket_itemoffset, entrystart, entrystop, rawcache, cache, executor, explicit_rawcache):
