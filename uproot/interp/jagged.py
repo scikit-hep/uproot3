@@ -66,7 +66,7 @@ class asjagged(Interpretation):
         return self.asdtype.source_numitems(source.contents)
 
     def fromroot(self, data, offsets, local_entrystart, local_entrystop):
-        contents = self.asdtype.fromroot(data, None, local_entrystart, local_entrystop)
+        contents = self.asdtype.fromroot(data, None, None, None)
         stops = offsets[local_entrystart + 1 : local_entrystop + 1]
         return JaggedArray(contents, stops)
 
@@ -208,6 +208,9 @@ class JaggedArray(object):
             return "[" + ", ".join(contents) + "]"
         else:
             return "[" + (",\n " + indent).join(contents) + "]"
+
+    def tolist(self):
+        return [x.tolist() for x in self]
 
 if numba is not None:
     class JaggedArrayType(numba.types.Type):

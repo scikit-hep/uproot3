@@ -28,9 +28,16 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import sys
+
 import numpy
 
 from uproot.interp.interp import Interpretation
+
+if sys.version_info[0] <= 2:
+    string_types = (unicode, str)
+else:
+    string_types = (str, bytes)
 
 class asdtype(Interpretation):
     def __init__(self, fromdtype, todtype=None, fromdims=(), todims=None):
@@ -96,12 +103,10 @@ class asdtype(Interpretation):
 
     def fromroot(self, data, offsets, local_entrystart, local_entrystop):
         array = data.view(self.fromdtype)
-
         if self.fromdims != ():
             product = _dimsprod(self.fromdims)
             assert len(array) % product == 0, "{0} % {1} == {2} != 0".format(len(array), product, len(array) % product)
             array = array.reshape((len(array) // product,) + self.fromdims)
-
         return array[local_entrystart:local_entrystop]
 
     def destination(self, numitems, numentries):

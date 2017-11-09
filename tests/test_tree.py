@@ -106,6 +106,26 @@ class TestTree(unittest.TestCase):
         self.assertTrue(numpy.array_equal(three[0], numpy.array([], dtype=">i8")))
         self.assertTrue(numpy.array_equal(three[1], numpy.array([-15], dtype=">i8")))
 
+    def test_branch_flat_baskets(self):
+        branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["i8"]
+        expectation = [[-15, -14, -13], [-12, -11, -10], [-9, -8, -7], [-6, -5, -4], [-3, -2, -1], [0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14]]
+        self.assertEqual([x.tolist() for x in branch.baskets()], expectation)
+        self.assertEqual([x.tolist() for x in branch.iterate_baskets()], expectation)
+
+    def test_branch_regular_basket(self):
+        branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["ai8"]
+        expectation = [[[-14, -13, -12]], [[-13, -12, -11]], [[-12, -11, -10]], [[-11, -10, -9]], [[-10, -9, -8]], [[-9, -8, -7]], [[-8, -7, -6]], [[-7, -6, -5]], [[-6, -5, -4]], [[-5, -4, -3]], [[-4, -3, -2]], [[-3, -2, -1]], [[-2, -1, 0]], [[-1, 0, 1]], [[0, 1, 2]], [[1, 2, 3]], [[2, 3, 4]], [[3, 4, 5]], [[4, 5, 6]], [[5, 6, 7]], [[6, 7, 8]], [[7, 8, 9]], [[8, 9, 10]], [[9, 10, 11]], [[10, 11, 12]], [[11, 12, 13]], [[12, 13, 14]], [[13, 14, 15]], [[14, 15, 16]], [[15, 16, 17]]]
+        self.assertEqual([x.tolist() for x in branch.baskets()], expectation)
+        self.assertEqual([x.tolist() for x in branch.iterate_baskets()], expectation)
+
+    def test_branch_irregular_basket(self):
+        branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["Ai8"]
+        expectation = [[[], [-15]], [[-15, -13]], [[-15, -13, -11]], [[-15, -13, -11, -9]], [[], [-10]], [[-10, -8]], [[-10, -8, -6]], [[-10, -8, -6, -4]], [[], [-5]], [[-5, -3]], [[-5, -3, -1]], [[-5, -3, -1, 1]], [[], [0]], [[0, 2]], [[0, 2, 4]], [[0, 2, 4, 6]], [[], [5]], [[5, 7]], [[5, 7, 9]], [[5, 7, 9, 11]], [[], [10]], [[10, 12]], [[10, 12, 14]], [[10, 12, 14, 16]]]
+        self.assertEqual([len(y) for x in expectation for y in x], [0, 1, 2, 3, 4] * 6)
+        self.assertEqual([x.tolist() for x in branch.baskets()], expectation)
+        self.assertEqual([x.tolist() for x in branch.iterate_baskets()], expectation)
+
+
 
     # def test_branch_array(self):
     #     file = uproot.open("tests/simple.root")
