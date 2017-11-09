@@ -1051,6 +1051,10 @@ class TStreamerString(TStreamerElement):
 
 ################################################################ streamed classes (with some overrides)
 
+# def interpretation(obj):
+#     # the 'interpretation' interface
+#     return hasattr(obj, "compatible") and hasattr(obj, "nocopy") and hasattr(obj, "numitems") and hasattr(obj, "fromroot") and hasattr(obj, "destination") and hasattr(obj, "fill")
+
 class ROOTStreamedObject(ROOTObject):
     # TODO: each ROOTStreamedObject must define
     # 

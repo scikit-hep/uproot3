@@ -28,6 +28,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from types import MethodType
+
 import numpy
 try:
     import numba
@@ -36,28 +38,67 @@ except ImportError:
     numba = None
 
 import uproot.interp.jagged
+from uproot.interp.interp import Interpretation
 
-def _strings_flatten(data, offsets, contents, stops):
+CHARTYPE = numpy.dtype(numpy.uint8)
+
+asstrings = Interpretation("asstrings")
+asstrings.compatible = MethodType(lambda self, other: self is other, asstrings, Interpretation)
+asstrings.nocopy = MethodType(lambda self: self, asstrings, Interpretation)
+asstrings.numitems = lambda numbytes, numentries, flattened: numentries
+
+def _asstrings_fromroot(data, offsets, local_entrystart, local_entrystop):
+    if local_entrystart < 0 or local_entrystop >= len(offsets) or local_entrystart > local_entrystop:
+        raise ValueError("illegal local_entrystart or local_entrystop in asstrings.fromroot")
+
+    contents = numpy.empty(offsets[local_entrystop] - offsets[local_entrystart] - (local_entrystop - local_entrystart), dtype=CHARTYPE)
+    stops    = numpy.empty(local_entrystop - local_entrystart, dtype=numpy.int64)
+
     start = stop = 0
-    for i in range(len(offsets) - 1):
-        if data[offsets[i]] == 255:
-            instart = offsets[i] + 5
+    for entry in range(local_entrystart, local_entrystop):
+        datastart = offsets[entry]
+        datastop = offsets[entry + 1]
+        if data[datastart] == 255:
+            datastart += 5
         else:
-            instart = offsets[i] + 1
-        instop = offsets[i + 1]
+            datastart += 1
 
-        stop = start + (instop - instart)
+        stop = start + (datastop - datastart)
 
-        contents[start:stop] = data[instart:instop]
-        stops[i] = stop
+        contents[start:stop] = data[datastart:datastop]
+        stops[entry - local_entrystart] = stop
+
         start = stop
 
+    return contents, stops
+
 if numba is not None:
-    _strings_flatten = numba.njit(_strings_flatten)
+    _asstrings_fromroot = numba.njit(_asstrings_fromroot)
+
+asstrings.fromroot = lambda data, offsets, local_entrystart, local_entrystop: Strings(uproot.interp.jagged.JaggedArray(*_asstrings_fromroot(data, offsets, local_entrystart, local_entrystop)))
+
+
+
+# class asstrings(Interpretation):
+#     def fromroot(self, data, offsets, local_entrystart, local_entrystop):
+
+#     def destination(self, numitems, source):
+
+#     def fill(self, source, destination, itemstart, itemstop):
+
+#     # interpretation interface:
+
+#     @staticmethod
+#     def fromroot(data, offsets, local_entrystart, local_entrystop):
+#         contents = numpy.empty(len(data) - (len(offsets) - 1), dtype=CHARTYPE)
+#         stops = numpy.empty(len(offsets) - 1, dtype=offsets.dtype)
+#         _strings_flatten(data, offsets, contents, stops)
+#         return Strings(uproot.types.jagged.JaggedArray(contents, stops))
+
+#     # HERE!
+
 
 class Strings(object):
-    chartype = numpy.dtype(numpy.uint8)
-
     @staticmethod
     def fromstrs(*strs):
         stops = numpy.empty(len(strs), dtype=numpy.int64)
@@ -68,9 +109,9 @@ class Strings(object):
             stops[i] = stop = stop + len(x)
 
         if len(stops) == 0:
-            contents = numpy.empty(0, dtype=Strings.chartype)
+            contents = numpy.empty(0, dtype=CHARTYPE)
         else:
-            contents = numpy.empty(stops[-1], dtype=Strings.chartype)
+            contents = numpy.empty(stops[-1], dtype=CHARTYPE)
 
         for i, x, in enumerate(strs):
             if i == 0:
@@ -86,7 +127,7 @@ class Strings(object):
         return Strings(uproot.types.jagged.JaggedArray(contents, stops))
 
     def __init__(self, jaggedarray):
-        assert jaggedarray.contents.dtype == Strings.chartype
+        assert jaggedarray.contents.dtype == CHARTYPE
         self.jaggedarray = jaggedarray
 
     def __len__(self):
@@ -107,28 +148,6 @@ class Strings(object):
             return "[{0} ... {1}]".format(" ".join(repr(self[i]) for i in range(3)), " ".join(repr(self[i]) for i in range(-3, 0)))
         else:
             return "[{0}]".format(" ".join(repr(x) for x in self))
-
-    # interpretation interface:
-    todtype = numpy.dtype(numpy.object)
-    todims = ()
-
-    def nocopy(self):
-        return self
-
-    def numitems(self, numbytes, numentries, flattened):
-        return numentries
-
-    @staticmethod
-    def fromroot(data, offsets):
-        contents = numpy.empty(len(data) - (len(offsets) - 1), dtype=Strings.chartype)
-        stops = numpy.empty(len(offsets) - 1, dtype=offsets.dtype)
-        _strings_flatten(data, offsets, contents, stops)
-        return Strings(uproot.types.jagged.JaggedArray(contents, stops))
-
-    # HERE!
-
-
-
 
 if numba is not None:
     class StringsType(numba.types.Type):

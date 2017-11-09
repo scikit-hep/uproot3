@@ -35,10 +35,6 @@ import numpy
 from uproot.interp.numerical import asdtype
 from uproot.interp.numerical import asarray
 
-def interpretation(obj):
-    # the 'interpretation' interface
-    return hasattr(obj, "compatible") and hasattr(obj, "nocopy") and hasattr(obj, "numitems") and hasattr(obj, "fromroot") and hasattr(obj, "destination") and hasattr(obj, "fill")
-
 def interpret(branch, classes=None, swapbytes=True):
     if classes is None:
         classes = branch._context.classes

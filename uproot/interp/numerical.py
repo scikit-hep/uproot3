@@ -30,7 +30,9 @@
 
 import numpy
 
-class asdtype(object):
+from uproot.interp.interp import Interpretation
+
+class asdtype(Interpretation):
     def __init__(self, fromdtype, todtype=None, fromdims=(), todims=None):
         if isinstance(fromdtype, numpy.dtype):
             self.fromdtype = fromdtype
@@ -96,7 +98,7 @@ class asdtype(object):
         else:
             return out // _dimsprod(self.todims)
 
-    def fromroot(self, data, offsets, entrystart, entrystop):
+    def fromroot(self, data, offsets, local_entrystart, local_entrystop):
         array = data.view(self.fromdtype)
 
         if self.fromdims != ():
@@ -104,7 +106,7 @@ class asdtype(object):
             assert len(array) % product == 0, "{0} % {1} == {2} != 0".format(len(array), product, len(array) % product)
             array = array.reshape((len(array) // product,) + self.fromdims)
 
-        return array[entrystart:entrystop]
+        return array[local_entrystart:local_entrystop]
 
     def destination(self, numitems, source):
         if numitems is None and source is not None:
@@ -162,7 +164,7 @@ class asdtype(object):
             flattened_destination[flattened_itemstart:flattened_itemstop] = flattened_source
             return destination[itemstart:itemstop]
 
-class asarray(object):
+class asarray(Interpretation):
     def __init__(self, fromdtype, toarray, fromdims=()):
         if isinstance(fromdtype, numpy.dtype):
             self.fromdtype = fromdtype
@@ -207,7 +209,7 @@ class asarray(object):
         else:
             return out // _dimsprod(self.toarray.shape[1:])
 
-    def fromroot(self, data, offsets, entrystart, entrystop):
+    def fromroot(self, data, offsets, local_entrystart, local_entrystop):
         array = data.view(self.fromdtype)
 
         if self.fromdims != ():
@@ -215,7 +217,7 @@ class asarray(object):
             assert len(array) % product == 0, "{0} % {1} == {2} != 0".format(len(array), product, len(array) % product)
             array = array.reshape((len(array) // product,) + self.fromdims)
 
-        return array[entrystart:entrystop]
+        return array[local_entrystart:local_entrystop]
 
     def destination(self, numitems, source):
         if numitems is None and source is not None:
