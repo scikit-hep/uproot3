@@ -639,7 +639,7 @@ class TBranchMethods(object):
         source = self._basket(i, interpretation, local_entrystart, local_entrystop, rawcache, cache)
         numitems = interpretation.source_numitems(source)
 
-        destination = interpretation.destination(numitems, 0, numentries)
+        destination = interpretation.destination(numitems, numentries)
         interpretation.fill(source, destination, 0, numitems, 0, numentries)
         return interpretation.finalize(destination)
 
@@ -734,6 +734,12 @@ class TBranchMethods(object):
             keysource.dismiss()
         return basket_itemoffset
 
+    def _basket_entryoffset(self, basketstart, basketstop):
+        basket_entryoffset = [0]
+        for i in range(basketstart, basketstop):
+            basket_entryoffset.append(basket_entryoffset[-1] + self.basket_numentries(i))
+        return basket_entryoffset
+
     def array(self, interpretation=None, entrystart=None, entrystop=None, rawcache=None, cache=None, executor=None, blocking=True):
         interpretation = self._normalize_interpretation(interpretation)
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
@@ -748,8 +754,9 @@ class TBranchMethods(object):
                 return await
 
         basket_itemoffset = self._basket_itemoffset(interpretation, basketstart, basketstop)
+        basket_entryoffset = self._basket_entryoffset(basketstart, basketstop)
 
-        destination = interpretation.destination(basket_itemoffset[-1], self.basket_entrystart(basketstart), self.basket_entrystop(basketstop - 1))
+        destination = interpretation.destination(basket_itemoffset[-1], basket_entryoffset[-1])
 
         def fill(j):
             try:
@@ -759,18 +766,27 @@ class TBranchMethods(object):
                 expecteditems = basket_itemoffset[j + 1] - basket_itemoffset[j]
                 source_numitems = interpretation.source_numitems(source)
 
-                if j + 1 == basketstop - basketstart and expecteditems > source_numitems:
-                    basket_itemoffset[j + 1] -= expecteditems - source_numitems
+                expectedentries = basket_entryoffset[j + 1] - basket_entryoffset[j]
+                source_numentries = local_entrystop - local_entrystart 
 
-                elif j == 0 and expecteditems > source_numitems:
-                    basket_itemoffset[j] += expecteditems - source_numitems
+                if j + 1 == basketstop - basketstart:
+                    if expecteditems > source_numitems:
+                        basket_itemoffset[j + 1] -= expecteditems - source_numitems
+                    if expectedentries > source_numentries:
+                        basket_entryoffset[j + 1] -= expectedentries - source_numentries
+
+                elif j == 0:
+                    if expecteditems > source_numitems:
+                        basket_itemoffset[j] += expecteditems - source_numitems
+                    if expectedentries > source_numentries:
+                        basket_entryoffset[j] += expectedentries - source_numentries
 
                 interpretation.fill(source,
                                     destination,
                                     basket_itemoffset[j],
                                     basket_itemoffset[j + 1],
-                                    self.basket_entrystart(j + basketstart) + local_entrystart,
-                                    local_entrystop - local_entrystart)
+                                    basket_entryoffset[j],
+                                    basket_entryoffset[j + 1])
 
             except:
                 return sys.exc_info()
@@ -788,8 +804,8 @@ class TBranchMethods(object):
             clipped = interpretation.clip(destination,
                                           basket_itemoffset[0],
                                           basket_itemoffset[-1],
-                                          entrystart - self.basket_entrystart(basketstart),
-                                          entrystop - self.basket_entrystart(basketstart))
+                                          basket_entryoffset[0],
+                                          basket_entryoffset[-1])
             return interpretation.finalize(clipped)
         else:
             def await():
@@ -797,8 +813,8 @@ class TBranchMethods(object):
                     _delayedraise(excinfo)
                 clipped = interpretation.clip(basket_itemoffset[0],
                                               basket_itemoffset[-1],
-                                              entrystart - self.basket_entrystart(basketstart),
-                                              entrystop - self.basket_entrystart(basketstart))
+                                              basket_entryoffset[0],
+                                              basket_entryoffset[-1])
                 return interpretation.finalize(clipped)
             return await
 

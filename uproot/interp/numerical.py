@@ -109,13 +109,13 @@ class asdtype(Interpretation):
             array = array.reshape((len(array) // product,) + self.fromdims)
         return array[local_entrystart:local_entrystop]
 
-    def destination(self, numitems, entrystart, entrystop):
+    def destination(self, numitems, numentries):
         product = _dimsprod(self.todims)
         if numitems % product != 0:
             raise ValueError("cannot reshape {0} items as {1} (groups of {2})".format(numitems, self.todims, product))
         return numpy.empty((numitems // product,) + self.todims, dtype=self.todtype)
 
-    def fill(self, source, destination, itemstart, itemstop, skipentries, numentries):
+    def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
         if self.fromdims == ():
             flattened_source = source
         else:
@@ -166,7 +166,7 @@ class asarray(asdtype):
 
         return "asarray(" + ", ".join(args) + ")"
 
-    def destination(self, numitems, entrystart, entrystop):
+    def destination(self, numitems, numentries):
         product = _dimsprod(self.todims)
         if numitems % product != 0:
             raise ValueError("cannot reshape {0} items as {1} (groups of {2})".format(numitems, self.todims, product))
@@ -174,8 +174,8 @@ class asarray(asdtype):
             raise ValueError("cannot put {0} items into an array of {1} items".format(numitems, _dimsprod(self.toarray.shape)))
         return self.toarray, numitems // product
 
-    def fill(self, source, destination, itemstart, itemstop, skipentries, numentries):
-        super(asarray, self).fill(source, destination[0], itemstart, itemstop, skipentries, numentries)
+    def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
+        super(asarray, self).fill(source, destination[0], itemstart, itemstop, entrystart, entrystop)
 
     def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
         array, stop = destination
