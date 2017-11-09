@@ -50,10 +50,10 @@ class Interpretation(object):
     def fromroot(self, data, offsets, local_entrystart, local_entrystop):
         raise NotImplementedError
 
-    def destination(self, numitems, entrystart, entrystop):
+    def destination(self, numitems, numentries):
         raise NotImplementedError
 
-    def fill(self, source, destination, start, stop, entrystart, entrystop):
+    def fill(self, source, destination, start, stop, skipentries, numentries):
         raise NotImplementedError
 
     def finalize(self, destination):

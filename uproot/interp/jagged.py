@@ -79,13 +79,9 @@ class asjagged(Interpretation):
         destination.sizes[skipentries : skipentries + numentries] = stops2sizes(source.stops)
         self.asdtype.fill(source.contents, destination.contents, start, stop, None, None)
 
-    def finalize(self, destination, numentries):
-        if numentries is None:
-            stops = sizes2stops(destination.sizes)
-        else:
-            stops = sizes2stops(destination.sizes[:numentries])
-
-        contents = self.asdtype.finalize(destination.contents, stops[-1] if len(stops) > 0 else 0)
+    def finalize(self, destination):
+        stops = sizes2stops(destination.sizes)
+        contents = self.asdtype.finalize(destination.contents)
         return JaggedArray(contents, stops)
 
 def _jaggedarray_getitem(jaggedarray, index):

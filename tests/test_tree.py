@@ -59,6 +59,11 @@ class TestTree(unittest.TestCase):
         self.assertTrue(numpy.array_equal(three, numpy.array([-15, -14, -13], dtype=">i8")))
         self.assertFalse(basest(one) is basest(three))
 
+        buf = numpy.zeros(10, dtype=numpy.float64)
+        four = branch.basket(0, interpretation.toarray(buf))
+        self.assertTrue(numpy.array_equal(four, numpy.array([-15, -14, -13], dtype=">i8")))
+        self.assertTrue(basest(four) is buf)
+
     def test_branch_regular_basket(self):
         branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["ai8"]
         interpretation = branch._normalize_interpretation(None)
@@ -79,6 +84,11 @@ class TestTree(unittest.TestCase):
         self.assertEqual(branch.basket(0, interpretation.to(todims=(1,))).shape, (3, 1))
         self.assertEqual(branch.basket(0, interpretation.to(todims=(1, 1))).shape, (3, 1, 1))
         self.assertEqual(branch.basket(0, interpretation.to(todims=(1, 3))).shape, (1, 1, 3))
+
+        buf = numpy.zeros(10, dtype=numpy.float64)
+        four = branch.basket(0, interpretation.toarray(buf))
+        self.assertTrue(numpy.array_equal(four, numpy.array([-14, -13, -12], dtype=">i8")))
+        self.assertTrue(basest(four) is buf)
 
     def test_branch_irregular_basket(self):
         branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["Ai8"]

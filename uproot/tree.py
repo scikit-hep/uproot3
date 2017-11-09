@@ -637,9 +637,11 @@ class TBranchMethods(object):
         numentries = local_entrystop - local_entrystart
 
         source = self._basket(i, interpretation, local_entrystart, local_entrystop, rawcache, cache)
-        destination = interpretation.destination(interpretation.source_numitems(source), numentries)
-        interpretation.fill(source, destination, 0, interpretation.source_numitems(source), 0, numentries)
-        return interpretation.finalize(destination, None)
+        numitems = interpretation.source_numitems(source)
+
+        destination = interpretation.destination(numitems, numentries)
+        interpretation.fill(source, destination, 0, numitems, 0, numentries)
+        return interpretation.finalize(destination)
 
     def _basketstartstop(self, entrystart, entrystop):
         basketstart, basketstop = None, None

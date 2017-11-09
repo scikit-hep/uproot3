@@ -126,13 +126,10 @@ class asdtype(Interpretation):
 
             flattened_destination[flattened_start:flattened_stop] = flattened_source
 
-    def finalize(self, destination, numentries):
-        if numentries is None:
-            return destination
-        else:
-            return destination[:numentries]
+    def finalize(self, destination):
+        return destination
 
-class asarray(Interpretation):
+class asarray(asdtype):
     def __init__(self, fromdtype, toarray, fromdims=()):
         if isinstance(fromdtype, numpy.dtype):
             self.fromdtype = fromdtype
@@ -164,55 +161,20 @@ class asarray(Interpretation):
 
         return "asarray(" + ", ".join(args) + ")"
 
-    def compatible(self, other):
-        return isinstance(other, (asdtype, asarray)) and self.todtype == other.todtype and self.todims == other.todims
+    def destination(self, numitems, numentries):
+        product = _dimsprod(self.todims)
+        if numitems % product != 0:
+            raise ValueError("cannot reshape {0} items as {1} (groups of {2})".format(numitems, self.todims, product))
+        if _dimsprod(self.toarray.shape) < numitems:
+            raise ValueError("cannot put {0} items into an array of {1} items".format(numitems, _dimsprod(self.toarray.shape)))
+        return self.toarray, numitems // product
 
-    # def numitems(self, numbytes, numentries):
-    #     return numbytes // self.fromdtype.itemsize
+    def fill(self, source, destination, start, stop, skipentries, numentries):
+        super(asarray, self).fill(source, destination[0], start, stop, skipentries, numentries)
 
-    # def fromroot(self, data, offsets, local_entrystart, local_entrystop):
-    #     array = data.view(self.fromdtype)
-
-    #     if self.fromdims != ():
-    #         product = _dimsprod(self.fromdims)
-    #         assert len(array) % product == 0, "{0} % {1} == {2} != 0".format(len(array), product, len(array) % product)
-    #         array = array.reshape((len(array) // product,) + self.fromdims)
-
-    #     return array[local_entrystart:local_entrystop]
-
-    # def destination(self, numitems, numentries):
-    #     if numitems is None and source is not None:
-    #         numvalues = _dimsprod(source.shape)
-    #         todimsprod = _dimsprod(self.todims)
-    #         assert numvalues % todimsprod == 0, "{0} % {1} == {2} != 0".format(numvalues, todimsprod, numvalues % todimsprod)
-    #         numitems = numvalues // todimsprod
-
-    #     if numitems > len(self.toarray):
-    #         raise ValueError("{0} items to fill, but provided an array with only {1} items".format(numitems, len(self.toarray)))
-
-    #     return self.toarray[:numitems]
-
-    # def fill(self, source, destination, itemstart, itemstop):
-    #     if self.fromdims != ():
-    #         flattened_source = source.reshape(_dimsprod(self.fromdims) * len(source))
-    #     else:
-    #         flattened_source = source
-
-    #     if len(destination.shape) > 1:
-    #         flattened_destination = destination.reshape(_dimsprod(destination.shape))
-    #         product = len(flattened_destination) // len(destination)
-    #         flattened_itemstart = itemstart * product
-    #         flattened_itemstop = itemstop * product
-    #     else:
-    #         flattened_destination = destination
-    #         flattened_itemstart = itemstart
-    #         flattened_itemstop = itemstop
-
-    #     flattened_destination[flattened_itemstart:flattened_itemstop] = flattened_source
-    #     return destination[itemstart:itemstop]
-
-    # def finalize(self, destination):
-    #     return destination
+    def finalize(self, destination):
+        array, stop = destination
+        return array[:stop]
 
 def _dimsprod(dims):
     out = 1
