@@ -62,20 +62,32 @@ class asjagged(Interpretation):
     def numitems(self, numbytes, numentries):
         return self.asdtype.numitems(numbytes, numentries)
 
+    def source_numitems(self, source):
+        return self.asdtype.source_numitems(source.contents)
+
     def fromroot(self, data, offsets, local_entrystart, local_entrystop):
         contents = self.asdtype.fromroot(data, None, local_entrystart, local_entrystop)
         stops = offsets[local_entrystart + 1 : local_entrystop + 1]
         return JaggedArray(contents, stops)
 
     def destination(self, numitems, numentries):
-        raise NotImplementedError
+        contents = self.asdtype.destination(numitems, None)
+        sizes = numpy.empty(numentries, dtype=numpy.int64)
+        return JaggedArray._Prep(contents, sizes)
 
-    def fill(self, source, destination, itemstart, itemstop):
-        raise NotImplementedError
+    def fill(self, source, destination, start, stop, skipentries, numentries):
+        destination.sizes[skipentries : skipentries + numentries] = stops2sizes(source.stops)
+        self.asdtype.fill(source.contents, destination.contents, start, stop, None, None)
 
-    def finalize(self, destination):
-        raise NotImplementedError
-    
+    def finalize(self, destination, numentries):
+        if numentries is None:
+            stops = sizes2stops(destination.sizes)
+        else:
+            stops = sizes2stops(destination.sizes[:numentries])
+
+        contents = self.asdtype.finalize(destination.contents, stops[-1] if len(stops) > 0 else 0)
+        return JaggedArray(contents, stops)
+
 def _jaggedarray_getitem(jaggedarray, index):
     stopslen = len(jaggedarray.stops)
     if index < 0:
@@ -95,9 +107,6 @@ class JaggedArray(object):
         def __init__(self, contents, sizes):
             self.contents = contents
             self.sizes = sizes
-
-        def finalize(self):
-            return JaggedArray(self.contents, sizes2stops(self.sizes))
 
     @staticmethod
     def fromlists(*lists):

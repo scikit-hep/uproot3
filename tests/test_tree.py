@@ -44,7 +44,7 @@ class TestTree(unittest.TestCase):
     def runTest(self):
         pass
 
-    def test_branch_asdtype_flat_basket(self):
+    def test_branch_flat_basket(self):
         branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["i8"]
         interpretation = branch._normalize_interpretation(None)
         entrystart, entrystop = branch._normalize_entrystartstop(None, None)
@@ -59,7 +59,7 @@ class TestTree(unittest.TestCase):
         self.assertTrue(numpy.array_equal(three, numpy.array([-15, -14, -13], dtype=">i8")))
         self.assertFalse(basest(one) is basest(three))
 
-    def test_branch_asdtype_regular_basket(self):
+    def test_branch_regular_basket(self):
         branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["ai8"]
         interpretation = branch._normalize_interpretation(None)
         entrystart, entrystop = branch._normalize_entrystartstop(None, None)
@@ -80,7 +80,7 @@ class TestTree(unittest.TestCase):
         self.assertEqual(branch.basket(0, interpretation.to(todims=(1, 1))).shape, (3, 1, 1))
         self.assertEqual(branch.basket(0, interpretation.to(todims=(1, 3))).shape, (1, 1, 3))
 
-    def test_branch_asdtype_irregular_basket(self):
+    def test_branch_irregular_basket(self):
         branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["Ai8"]
         interpretation = branch._normalize_interpretation(None)
         entrystart, entrystop = branch._normalize_entrystartstop(None, None)
@@ -92,6 +92,9 @@ class TestTree(unittest.TestCase):
         self.assertTrue(numpy.array_equal(one[1], numpy.array([-15], dtype=">i8")))
         self.assertTrue(basest(one.contents) is basest(two.contents))
 
+        three = branch.basket(0)
+        self.assertTrue(numpy.array_equal(three[0], numpy.array([], dtype=">i8")))
+        self.assertTrue(numpy.array_equal(three[1], numpy.array([-15], dtype=">i8")))
 
 
     # def test_branch_array(self):

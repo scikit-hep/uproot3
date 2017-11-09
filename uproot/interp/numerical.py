@@ -104,44 +104,13 @@ class asdtype(Interpretation):
 
         return array[local_entrystart:local_entrystop]
 
-    # def fromroot(self, data, offsets, local_entrystart, local_entrystop):
-    #     array = data.view(self.fromdtype)
-
-    #     if self.fromdims != ():
-    #         product = _dimsprod(self.fromdims)
-    #         assert len(array) % product == 0, "{0} % {1} == {2} != 0".format(len(array), product, len(array) % product)
-    #         array = array.reshape((len(array) // product,) + self.fromdims)
-
-    #     return array[local_entrystart:local_entrystop]
-
     def destination(self, numitems, numentries):
         product = _dimsprod(self.todims)
         if numitems % product != 0:
             raise ValueError("cannot reshape {0} items as {1} (groups of {2})".format(numitems, self.todims, product))
         return numpy.empty((numitems // product,) + self.todims, dtype=self.todtype)
 
-    # def destination(self, numitems, numentries):
-    #     if numitems is None and source is not None:
-    #         numvalues = _dimsprod(source.shape)
-    #         todimsprod = _dimsprod(self.todims)
-    #         assert numvalues % todimsprod == 0, "{0} % {1} == {2} != 0".format(numvalues, todimsprod, numvalues % todimsprod)
-    #         numitems = numvalues // todimsprod
-
-    #     if source is not None and self.todtype == source.dtype and numitems * _dimsprod(self.todims) <= _dimsprod(source.shape):
-    #         if len(source.shape) > 1:
-    #             source_flattened = source.reshape(_dimsprod(source.shape))
-    #         else:
-    #             source_flattened = source
-    #         array = source_flattened[:numitems * _dimsprod(self.todims)]
-    #         if self.todims != ():
-    #             return array.reshape((numitems,) + self.todims)
-    #         else:
-    #             return array
-
-    #     else:
-    #         return numpy.empty((numitems,) + self.todims, dtype=self.todtype)
-
-    def fill(self, source, destination, start, stop):
+    def fill(self, source, destination, start, stop, skipentries, numentries):
         if self.fromdims == self.todims:
             destination[start:stop] = source
 
@@ -156,46 +125,12 @@ class asdtype(Interpretation):
             flattened_stop = stop * product_destination
 
             flattened_destination[flattened_start:flattened_stop] = flattened_source
-            
-        return destination[start:stop]
 
-    # def fill(self, source, destination, itemstart, itemstop):
-    #     reusable = itemstart == 0 and itemstop == len(destination)
-
-    #     if reusable:
-    #         frombase = source
-    #         while hasattr(frombase, "base") and frombase.base is not None:
-    #             frombase = frombase.base
-    #         tobase = destination
-    #         while hasattr(tobase, "base") and tobase.base is not None:
-    #             tobase = tobase.base
-    #         if frombase is not tobase:
-    #             reusable = False
-
-    #     if reusable:
-    #         return destination
-
-    #     else:
-    #         if self.fromdims != ():
-    #             flattened_source = source.reshape(_dimsprod(self.fromdims) * len(source))
-    #         else:
-    #             flattened_source = source
-
-    #         if self.todims != ():
-    #             product = _dimsprod(self.todims)
-    #             flattened_destination = destination.reshape(len(destination) * product)
-    #             flattened_itemstart = itemstart * product
-    #             flattened_itemstop = itemstop * product
-    #         else:
-    #             flattened_destination = destination
-    #             flattened_itemstart = itemstart
-    #             flattened_itemstop = itemstop
-
-    #         flattened_destination[flattened_itemstart:flattened_itemstop] = flattened_source
-    #         return destination[itemstart:itemstop]
-
-    def finalize(self, destination):
-        return destination
+    def finalize(self, destination, numentries):
+        if numentries is None:
+            return destination
+        else:
+            return destination[:numentries]
 
 class asarray(Interpretation):
     def __init__(self, fromdtype, toarray, fromdims=()):

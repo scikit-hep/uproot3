@@ -634,10 +634,12 @@ class TBranchMethods(object):
         interpretation = self._normalize_interpretation(interpretation)
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
         local_entrystart, local_entrystop = self._localentries(i, entrystart, entrystop)
+        numentries = local_entrystop - local_entrystart
 
         source = self._basket(i, interpretation, local_entrystart, local_entrystop, rawcache, cache)
-        destination = interpretation.destination(interpretation.source_numitems(source), local_entrystop - local_entrystart)
-        return interpretation.finalize(interpretation.fill(source, destination, 0, len(destination)))
+        destination = interpretation.destination(interpretation.source_numitems(source), numentries)
+        interpretation.fill(source, destination, 0, interpretation.source_numitems(source), 0, numentries)
+        return interpretation.finalize(destination, None)
 
     def _basketstartstop(self, entrystart, entrystop):
         basketstart, basketstop = None, None
