@@ -1052,17 +1052,6 @@ class TStreamerString(TStreamerElement):
 ################################################################ streamed classes (with some overrides)
 
 class ROOTStreamedObject(ROOTObject):
-    todtype = numpy.dtype(numpy.object)
-    todims = ()
-
-    @classmethod
-    def nocopy(cls):
-        return cls
-
-    @staticmethod
-    def numitems(numbytes, numentries, flattened):
-        return numentries
-
     # TODO: each ROOTStreamedObject must define
     # 
     # @staticmethod

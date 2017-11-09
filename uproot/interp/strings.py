@@ -35,7 +35,7 @@ try:
 except ImportError:
     numba = None
 
-import uproot.types.jagged
+import uproot.interp.jagged
 
 def _strings_flatten(data, offsets, contents, stops):
     start = stop = 0
@@ -85,13 +85,6 @@ class Strings(object):
 
         return Strings(uproot.types.jagged.JaggedArray(contents, stops))
 
-    @staticmethod
-    def fromroot(data, offsets):
-        contents = numpy.empty(len(data) - (len(offsets) - 1), dtype=Strings.chartype)
-        stops = numpy.empty(len(offsets) - 1, dtype=offsets.dtype)
-        _strings_flatten(data, offsets, contents, stops)
-        return Strings(uproot.types.jagged.JaggedArray(contents, stops))
-
     def __init__(self, jaggedarray):
         assert jaggedarray.contents.dtype == Strings.chartype
         self.jaggedarray = jaggedarray
@@ -114,6 +107,28 @@ class Strings(object):
             return "[{0} ... {1}]".format(" ".join(repr(self[i]) for i in range(3)), " ".join(repr(self[i]) for i in range(-3, 0)))
         else:
             return "[{0}]".format(" ".join(repr(x) for x in self))
+
+    # interpretation interface:
+    todtype = numpy.dtype(numpy.object)
+    todims = ()
+
+    def nocopy(self):
+        return self
+
+    def numitems(self, numbytes, numentries, flattened):
+        return numentries
+
+    @staticmethod
+    def fromroot(data, offsets):
+        contents = numpy.empty(len(data) - (len(offsets) - 1), dtype=Strings.chartype)
+        stops = numpy.empty(len(offsets) - 1, dtype=offsets.dtype)
+        _strings_flatten(data, offsets, contents, stops)
+        return Strings(uproot.types.jagged.JaggedArray(contents, stops))
+
+    # HERE!
+
+
+
 
 if numba is not None:
     class StringsType(numba.types.Type):

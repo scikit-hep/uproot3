@@ -31,7 +31,6 @@
 import glob
 import numbers
 import os.path
-import re
 import struct
 import sys
 import threading
@@ -43,6 +42,7 @@ except ImportError:
 try:
     from collections import OrderedDict
 except ImportError:
+    # simple OrderedDict implementation for Python 2.6
     class OrderedDict(dict):
         def __init__(self, items=(), **kwds):
             items = list(items)
@@ -70,6 +70,12 @@ import numpy
 import uproot.rootio
 from uproot.rootio import _bytesid
 from uproot.source.cursor import Cursor
+from uproot.interp.auto import interpret
+
+if sys.version_info[0] <= 2:
+    string_types = (unicode, str)
+else:
+    string_types = (str, bytes)
 
 def _delayedraise(excinfo):
     if excinfo is not None:
@@ -78,11 +84,6 @@ def _delayedraise(excinfo):
             exec("raise cls, err, trc")
         else:
             raise err.with_traceback(trc)
-
-if sys.version_info[0] <= 2:
-    string_types = (unicode, str)
-else:
-    string_types = (str, bytes)
 
 ################################################################ high-level interface
 
@@ -118,7 +119,7 @@ def iterate(path, treepath, entrystepsize, branches=None, outputtype=dict, repor
                     raise ValueError("branch {0} cannot be found in {1}, but it was in {2}".format(repr(key), repr(path), repr(oldpath)))
                 if key not in oldbranches:
                     del newbranches[key]
-                elif not _compatible_interpretation(newbranches[key], oldbranches[key]):
+                elif not newbranches[key].compatible(oldbranches[key]):
                     raise ValueError("branch {0} interpreted as {1} in {2}, but as {3} in {4}".format(repr(key), newbranches[key], repr(path), oldbranches[key], repr(oldpath)))
 
         oldpath = path
@@ -167,301 +168,6 @@ def iterate(path, treepath, entrystepsize, branches=None, outputtype=dict, repor
 
     if holdover is not None:
         yield output(arrays, outerstart, outerstart + numentries)
-
-################################################################ interpretation tools
-
-def interpret(branch, classes=None, swapbytes=True):
-    if classes is None:
-        classes = branch._context.classes
-
-    class NotNumpy(Exception): pass
-
-    def leaf2dtype(leaf):
-        classname = leaf.__class__.__name__
-        if classname == "TLeafO":
-            return numpy.dtype(numpy.bool)
-        elif classname == "TLeafB":
-            if leaf.fIsUnsigned:
-                return numpy.dtype(numpy.uint8)
-            else:
-                return numpy.dtype(numpy.int8)
-        elif classname == "TLeafS":
-            if leaf.fIsUnsigned:
-                return numpy.dtype(numpy.uint16)
-            else:
-                return numpy.dtype(numpy.int16)
-        elif classname == "TLeafI":
-            if leaf.fIsUnsigned:
-                return numpy.dtype(numpy.uint32)
-            else:
-                return numpy.dtype(numpy.int32)
-        elif classname == "TLeafL":
-            if leaf.fIsUnsigned:
-                return numpy.dtype(numpy.uint64)
-            else:
-                return numpy.dtype(numpy.int64)
-        elif classname == "TLeafF":
-            return numpy.dtype(numpy.float32)
-        elif classname == "TLeafD":
-            return numpy.dtype(numpy.float64)
-        else:
-            raise NotNumpy
-
-    dims = ()
-    if len(branch.fLeaves) == 1:
-        m = interpret._titlehasdims.match(branch.fLeaves[0].fTitle)
-        if m is not None:
-            dims = tuple(int(x) for x in re.findall(interpret._itemdimpattern, branch.fLeaves[0].fTitle))
-    else:
-        for leaf in branch.fLeaves:
-            if interpret._titlehasdims.match(leaf.fTitle):
-                return None
-
-    try:
-        if len(branch.fLeaves) == 1:
-            fromdtype = leaf2dtype(branch.fLeaves[0]).newbyteorder(">")
-            if swapbytes:
-                return asdtype(fromdtype, fromdtype.newbyteorder("="), dims, dims)
-            else:
-                return asdtype(fromdtype, fromdtype, dims, dims)
-        else:
-            fromdtype = numpy.dtype([(leaf.fName, leaf2dtype(leaf).newbyteorder(">")) for leaf in branch.fLeaves])
-            if swapbytes:
-                todtype = numpy.dtype([(leaf.fName, leaf2dtype(leaf).newbyteorder("=")) for leaf in branch.fLeaves])
-            else:
-                todtype = fromdtype
-            return asdtype(fromdtype, todtype, dims, dims)
-
-    except NotNumpy:
-        if len(branch.fLeaves) == 1:
-            if branch.fLeaves[0].__class__.__name__ == "TLeafC":
-                return uproot.rootio.TString
-
-            elif branch.fLeaves[0].__class__.__name__ == "TLeafElement":
-                classname = None
-                if classname in classes:
-                    cls = classes[classname]
-                    # the 'interpretation' interface
-                    if hasattr(cls, "nocopy") and hasattr(cls, "numitems") and hasattr(cls, "frombytes") and hasattr(cls, "destarray") and hasattr(cls, "filldest"):
-                        return classes[classname]
-
-        return None
-
-interpret._titlehasdims = re.compile(br"^([^\[\]]+)(\[[^\[\]]+\])+")
-interpret._itemdimpattern = re.compile(br"\[([1-9][0-9]*)\]")
-
-def _dimsprod(dims):
-    out = 1
-    for x in dims:
-        out *= x
-    return out
-
-def _compatible_interpretation(one, two):
-    if isinstance(one, (asdtype, asarray)) and isinstance(two, (asdtype, asarray)):
-        return one.todtype == two.todtype and one.todims == two.todims
-    elif isinstance(one, uproot.rootio.ROOTStreamedObject) and isinstance(two, uproot.rootio.ROOTStreamedObject):
-        return one.__name__ == two.__name__
-    else:
-        return False
-
-class asdtype(object):
-    def __init__(self, fromdtype, todtype=None, fromdims=(), todims=None):
-        if isinstance(fromdtype, numpy.dtype):
-            self.fromdtype = fromdtype
-        elif isinstance(fromdtype, string_types) and len(fromdtype) > 0 and fromdtype[0] in (">", "<", "=", "|", b">", b"<", b"=", b"|"):
-            self.fromdtype = numpy.dtype(fromdtype)
-        else:
-            self.fromdtype = numpy.dtype(fromdtype).newbyteorder(">")
-
-        if todtype is None:
-            self.todtype = self.fromdtype.newbyteorder("=")
-        elif isinstance(todtype, numpy.dtype):
-            self.todtype = todtype
-        elif isinstance(todtype, string_types) and len(todtype) > 0 and todtype[0] in (">", "<", "=", "|", b">", b"<", b"=", b"|"):
-            self.todtype = numpy.dtype(todtype)
-        else:
-            self.todtype = numpy.dtype(todtype).newbyteorder("=")
-
-        self.fromdims = fromdims
-
-        if todims is None:
-            self.todims = self.fromdims
-        else:
-            self.todims = todims
-
-    def to(self, todtype, todims=None):
-        return asdtype(self.fromdtype, todtype, self.fromdims, todims)
-
-    def toarray(self, array):
-        return asarray(self.fromdtype, array, self.fromdims)
-
-    def __repr__(self):
-        args = []
-
-        if self.fromdtype.byteorder == ">":
-            args.append(repr(str(self.fromdtype)))
-        else:
-            args.append(repr(self.fromdtype))
-
-        if self.todtype.newbyteorder(">") != self.fromdtype.newbyteorder(">"):
-            if self.todtype.byteorder == "=":
-                args.append(repr(str(self.todtype)))
-            else:
-                args.append(repr(self.todtype))
-
-        if self.fromdims != ():
-            args.append(repr(self.fromdims))
-
-        if self.todims != self.fromdims:
-            args.append(repr(self.todims))
-
-        return "asdtype(" + ", ".join(args) + ")"
-
-    def nocopy(self):
-        return asdtype(self.fromdtype, self.fromdtype, self.fromdims, self.fromdims)
-
-    def numitems(self, numbytes, numentries, flattened):
-        out = numbytes // self.fromdtype.itemsize
-        if flattened:
-            return out
-        else:
-            return out // _dimsprod(self.todims)
-
-    def frombytes(self, data, offsets, entrystart, entrystop):
-        array = data.view(self.fromdtype)
-
-        if self.fromdims != ():
-            product = _dimsprod(self.fromdims)
-            assert len(array) % product == 0, "{0} % {1} == {2} != 0".format(len(array), product, len(array) % product)
-            array = array.reshape((len(array) // product,) + self.fromdims)
-
-        return array[entrystart:entrystop]
-
-    def destarray(self, numitems, sourcearray):
-        if sourcearray is not None and self.todtype == sourcearray.dtype and numitems * _dimsprod(self.todims) <= _dimsprod(sourcearray.shape):
-            if len(sourcearray.shape) > 1:
-                sourcearray_flattened = sourcearray.reshape(_dimsprod(sourcearray.shape))
-            else:
-                sourcearray_flattened = sourcearray
-            array = sourcearray_flattened[:numitems * _dimsprod(self.todims)]
-            if self.todims != ():
-                return array.reshape((numitems,) + self.todims)
-            else:
-                return array
-
-        else:
-            return numpy.empty((numitems,) + self.todims, dtype=self.todtype)
-
-    def filldest(self, sourcearray, destarray, itemstart, itemstop):
-        reusable = itemstart == 0 and itemstop == len(destarray)
-
-        if reusable:
-            frombase = sourcearray
-            while hasattr(frombase, "base") and frombase.base is not None:
-                frombase = frombase.base
-            tobase = destarray
-            while hasattr(tobase, "base") and tobase.base is not None:
-                tobase = tobase.base
-            if frombase is not tobase:
-                reusable = False
-
-        if reusable:
-            return destarray
-
-        else:
-            if self.fromdims != ():
-                flattened_sourcearray = sourcearray.reshape(_dimsprod(self.fromdims) * len(sourcearray))
-            else:
-                flattened_sourcearray = sourcearray
-
-            if self.todims != ():
-                product = _dimsprod(self.todims)
-                flattened_destarray = destarray.reshape(len(destarray) * product)
-                flattened_itemstart = itemstart * product
-                flattened_itemstop = itemstop * product
-            else:
-                flattened_destarray = destarray
-                flattened_itemstart = itemstart
-                flattened_itemstop = itemstop
-
-            flattened_destarray[flattened_itemstart:flattened_itemstop] = flattened_sourcearray
-            return destarray[itemstart:itemstop]
-
-class asarray(object):
-    def __init__(self, fromdtype, toarray, fromdims=()):
-        if isinstance(fromdtype, numpy.dtype):
-            self.fromdtype = fromdtype
-        else:
-            self.fromdtype = numpy.dtype(fromdtype).newbyteorder(">")
-        self.toarray = toarray
-        self.fromdims = fromdims
-
-    @property
-    def todtype(self):
-        return self.toarray.dtype
-
-    @property
-    def todims(self):
-        return self.toarray.shape[1:]
-
-    def __repr__(self):
-        args = []
-
-        if self.fromdtype.byteorder == ">":
-            args.append(repr(str(self.fromdtype)))
-        else:
-            args.append(repr(self.fromdtype))
-
-        if self.todtype.byteorder == "=":
-            args.append("<array dtype={0} at 0x{1:012x}>".format(repr(str(self.todtype)), id(self.todtype)))
-        else:
-            args.append("<array dtype={0} at 0x{1:012x}>".format(repr(self.todtype), id(self.todtype)))
-
-        return "asarray(" + ", ".join(args) + ")"
-
-    def nocopy(self):
-        return asdtype(self.fromdtype, self.fromdtype, self.fromdims, self.fromdims)
-
-    def numitems(self, numbytes, numentries, flattened):
-        out = numbytes // self.fromdtype.itemsize
-        if flattened:
-            return out
-        else:
-            return out // _dimsprod(self.toarray.shape[1:])
-
-    def frombytes(self, data, offsets, entrystart, entrystop):
-        array = data.view(self.fromdtype)
-
-        if self.fromdims != ():
-            product = _dimsprod(self.fromdims)
-            assert len(array) % product == 0, "{0} % {1} == {2} != 0".format(len(array), product, len(array) % product)
-            array = array.reshape((len(array) // product,) + self.fromdims)
-
-        return array[entrystart:entrystop]
-
-    def destarray(self, numitems, sourcearray):
-        if numitems > len(self.toarray):
-            raise ValueError("{0} items to fill, but provided an array with only {1} items".format(numitems, len(self.toarray)))
-        return self.toarray[:numitems]
-
-    def filldest(self, sourcearray, destarray, itemstart, itemstop):
-        if self.fromdims != ():
-            flattened_sourcearray = sourcearray.reshape(_dimsprod(self.fromdims) * len(sourcearray))
-        else:
-            flattened_sourcearray = sourcearray
-
-        if len(destarray.shape) > 1:
-            flattened_destarray = destarray.reshape(_dimsprod(destarray.shape))
-            product = len(flattened_destarray) // len(destarray)
-            flattened_itemstart = itemstart * product
-            flattened_itemstop = itemstop * product
-        else:
-            flattened_destarray = destarray
-            flattened_itemstart = itemstart
-            flattened_itemstop = itemstop
-
-        flattened_destarray[flattened_itemstart:flattened_itemstop] = flattened_sourcearray
-        return destarray[itemstart:itemstop]
 
 ################################################################ methods for TTree
 
@@ -886,12 +592,12 @@ class TBranchMethods(object):
 
         local_entrystart, local_entrystop = self._localentries(i, entrystart, entrystop)
 
-        sourcearray = None
+        source = None
         if cache is not None:
             cachekey = self._cachekey(i, local_entrystart, local_entrystop)
-            sourcearray = cache.get(cachekey, None)
+            source = cache.get(cachekey, None)
 
-        if sourcearray is None:
+        if source is None:
             basketdata = None
             if rawcache is not None:
                 rawcachekey = self._rawcachekey(i)
@@ -917,18 +623,13 @@ class TBranchMethods(object):
                 offsets[-1] = key.fLast
                 numpy.subtract(offsets, key.fKeylen, offsets)
 
-            sourcearray = interpretation.frombytes(data, offsets, local_entrystart, local_entrystop)
+            source = interpretation.fromroot(data, offsets, local_entrystart, local_entrystop)
 
         if cache is not None:
-            cache[cachekey] = sourcearray
+            cache[cachekey] = source
 
-        numvalues = _dimsprod(sourcearray.shape)
-        todimsprod = _dimsprod(interpretation.todims)
-        assert numvalues % todimsprod == 0, "{0} % {1} == {2} != 0".format(numvalues, todimsprod, numvalues % todimsprod)
-
-        destarray = interpretation.destarray(numvalues // todimsprod, sourcearray)
-
-        return interpretation.filldest(sourcearray, destarray, 0, len(destarray))
+        destination = interpretation.destination(None, source)
+        return interpretation.fill(source, destination, 0, len(destination))
 
     def _basketstartstop(self, entrystart, entrystop):
         basketstart, basketstop = None, None
@@ -1037,7 +738,7 @@ class TBranchMethods(object):
         basket_itemoffset = self._basket_itemoffset(interpretation, basketstart, basketstop)
 
         nocopy = interpretation.nocopy()
-        destarray = interpretation.destarray(basket_itemoffset[-1], None)
+        destination = interpretation.destination(basket_itemoffset[-1], None)
 
         def fill(j):
             try:
@@ -1051,7 +752,7 @@ class TBranchMethods(object):
                 elif j == 0 and expecteditems > len(basket):
                     basket_itemoffset[j] += expecteditems - len(basket)
 
-                interpretation.filldest(basket, destarray, basket_itemoffset[j], basket_itemoffset[j + 1])
+                interpretation.fill(basket, destination, basket_itemoffset[j], basket_itemoffset[j + 1])
 
             except:
                 return sys.exc_info()
@@ -1066,12 +767,12 @@ class TBranchMethods(object):
         if blocking:
             for excinfo in excinfos:
                 _delayedraise(excinfo)
-            return destarray[basket_itemoffset[0] : basket_itemoffset[-1]]
+            return destination[basket_itemoffset[0] : basket_itemoffset[-1]]
         else:
             def await():
                 for excinfo in excinfos:
                     _delayedraise(excinfo)
-                return destarray[basket_itemoffset[0] : basket_itemoffset[-1]]
+                return destination[basket_itemoffset[0] : basket_itemoffset[-1]]
             return await
 
     def _step_array(self, interpretation, baskets, basket_itemoffset, entrystart, entrystop, rawcache, cache, executor, explicit_rawcache):
@@ -1093,7 +794,7 @@ class TBranchMethods(object):
         basket_itemoffset = basket_itemoffset[basketstart : basketstop + 1]
 
         nocopy = interpretation.nocopy()
-        destarray = interpretation.destarray(basket_itemoffset[-1], None)
+        destination = interpretation.destination(basket_itemoffset[-1], None)
         lock = threading.Lock()
         
         def fill(j):
@@ -1123,7 +824,7 @@ class TBranchMethods(object):
                 elif j == 0 and expecteditems > len(basket):
                     basket_itemoffset[j] += expecteditems - len(basket)
 
-                interpretation.filldest(basket, destarray, basket_itemoffset[j], basket_itemoffset[j + 1])
+                interpretation.fill(basket, destination, basket_itemoffset[j], basket_itemoffset[j + 1])
 
             except:
                 return sys.exc_info()
@@ -1138,7 +839,7 @@ class TBranchMethods(object):
         def await():
             for excinfo in excinfos:
                 _delayedraise(excinfo)
-            return destarray[basket_itemoffset[0] : basket_itemoffset[-1]]
+            return destination[basket_itemoffset[0] : basket_itemoffset[-1]]
         return await
 
     def lazyarray(self, interpretation=None):
@@ -1209,7 +910,7 @@ class TBranchMethods(object):
                 return numpy.empty(0, self._interpretation.todtype)
 
             nocopy = self._interpretation.nocopy()
-            destarray = self._interpretation.destarray(numitems, None)
+            destination = self._interpretation.destination(numitems, None)
             desti = 0
             for i in range(basketstart, basketstop):
                 if self._baskets[i] is None:
@@ -1218,10 +919,10 @@ class TBranchMethods(object):
                 start = max(0, itemstart - self._basket_itemoffset[i])
                 stop = self._basket_itemoffset[i + 1] - self._basket_itemoffset[i] - max(0, self._basket_itemoffset[i + 1] - itemstop)
 
-                self._interpretation.filldest(self._baskets[i][start:stop], destarray, desti, desti + (stop - start))
+                self._interpretation.fill(self._baskets[i][start:stop], destination, desti, desti + (stop - start))
                 desti += stop - start
 
-            return destarray
+            return destination
 
         def _normalize_index(self, i, clip, step):
             lenself = len(self)

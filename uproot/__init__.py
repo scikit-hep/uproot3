@@ -28,5 +28,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# high-level entry points
 from uproot.rootio import open, xrootd
 from uproot.tree import iterate
+from uproot.interp.auto import interpret
