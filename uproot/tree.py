@@ -130,11 +130,11 @@ def iterate(path, treepath, entrystepsize, branches=None, outputtype=dict, repor
 
         def output(arrays, outerstart, outerstop):
             if issubclass(outputtype, dict):
-                out = outputtype(arrays.items())
+                out = outputtype((n, newbranches[n].finalize(a)) for n, a in arrays.items())
             elif outputtype == tuple or outputtype == list:
-                out = outputtype(arrays.values())
+                out = outputtype(newbranches[n].finalize(a) for n, a in arrays.items())
             else:
-                out = outputtype(*arrays.values())
+                out = outputtype(*[newbranches[n].finalize(a) for n, a in arrays.values()])
             if reportentries:
                 return outerstart, outerstop, out
             else:
@@ -150,7 +150,7 @@ def iterate(path, treepath, entrystepsize, branches=None, outputtype=dict, repor
                 yield start, stop
                 start = stop
 
-        for innerstart, innerstop, arrays in tree._iterate(startstop(), newbranches, OrderedDict, True, rawcache, cache, executor):
+        for innerstart, innerstop, arrays in tree._iterate(startstop(), newbranches, OrderedDict, True, rawcache, cache, executor, False):
             numentries = innerstop - innerstart
 
             if holdover is not None:
@@ -270,7 +270,7 @@ class TTreeMethods(object):
         else:
             return outputtype(*[lazyarray for name, lazyarray in lazyarrays])
 
-    def _iterate(self, startstop, branches, outputtype, reportentries, rawcache, cache, executor):
+    def _iterate(self, startstop, branches, outputtype, reportentries, rawcache, cache, executor, finalize):
         branches = list(self._normalize_branches(branches))
 
         if outputtype == namedtuple:
@@ -284,8 +284,13 @@ class TTreeMethods(object):
         else:
             explicit_rawcache = True
 
+        if finalize:
+            finish = lambda interpretation, array: interpretation.finalize(array)
+        else:
+            finish = lambda interpretation, array: array
+                
         for start, stop in startstop:
-            futures = [(branch.name, branch._step_array(interpretation, baskets, basket_itemoffset, start, stop, rawcache, cache, executor, explicit_rawcache)) for branch, interpretation, baskets, basket_itemoffset in branchinfo]
+            futures = [(branch.name, finish(interpretation, branch._step_array(interpretation, baskets, basket_itemoffset, start, stop, rawcache, cache, executor, explicit_rawcache))) for branch, interpretation, baskets, basket_itemoffset in branchinfo]
 
             if issubclass(outputtype, dict):
                 out = outputtype([(name, future()) for name, future in futures])
@@ -316,10 +321,10 @@ class TTreeMethods(object):
                 start = stop
                 stop = start + entrystepsize
 
-        return self._iterate(startstop(), branches, outputtype, reportentries, rawcache, cache, executor)
+        return self._iterate(startstop(), branches, outputtype, reportentries, rawcache, cache, executor, True)
 
     def iterate_clusters(self, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, executor=None):
-        return self._iterate(self.clusters, branches, outputtype, reportentries, rawcache, cache, executor)
+        return self._iterate(self.clusters, branches, outputtype, reportentries, rawcache, cache, executor, True)
 
     def _normalize_branches(self, arg):
         if arg is None:                                    # no specification; read all branches
@@ -583,7 +588,7 @@ class TBranchMethods(object):
     def _rawcachekey(self, i):
         return "{0};{1};{2};{3};raw".format(self._context.sourcepath, self._context.treename, self.name, i)
         
-    def basket(self, i, interpretation=None, entrystart=None, entrystop=None, rawcache=None, cache=None):
+    def _basket(self, i, interpretation=None, entrystart=None, entrystop=None, rawcache=None, cache=None):
         if not 0 <= i < self.numbaskets:
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
@@ -628,8 +633,12 @@ class TBranchMethods(object):
         if cache is not None:
             cache[cachekey] = source
 
+        return source
+
+    def basket(self, i, interpretation=None, entrystart=None, entrystop=None, rawcache=None, cache=None):
+        source = self._basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, rawcache=rawcache, cache=cache)
         destination = interpretation.destination(None, source)
-        return interpretation.fill(source, destination, 0, len(destination))
+        return interpretation.finalize(interpretation.fill(source, destination, 0, len(destination)))
 
     def _basketstartstop(self, entrystart, entrystop):
         basketstart, basketstop = None, None
@@ -742,7 +751,7 @@ class TBranchMethods(object):
 
         def fill(j):
             try:
-                basket = self.basket(j + basketstart, interpretation=nocopy, entrystart=entrystart, entrystop=entrystop, rawcache=rawcache, cache=cache)
+                basket = self._basket(j + basketstart, interpretation=nocopy, entrystart=entrystart, entrystop=entrystop, rawcache=rawcache, cache=cache)
 
                 expecteditems = basket_itemoffset[j + 1] - basket_itemoffset[j]
 
@@ -767,12 +776,12 @@ class TBranchMethods(object):
         if blocking:
             for excinfo in excinfos:
                 _delayedraise(excinfo)
-            return destination[basket_itemoffset[0] : basket_itemoffset[-1]]
+            return interpretation.finalize(destination[basket_itemoffset[0] : basket_itemoffset[-1]])
         else:
             def await():
                 for excinfo in excinfos:
                     _delayedraise(excinfo)
-                return destination[basket_itemoffset[0] : basket_itemoffset[-1]]
+                return interpretation.finalize(destination[basket_itemoffset[0] : basket_itemoffset[-1]])
             return await
 
     def _step_array(self, interpretation, baskets, basket_itemoffset, entrystart, entrystop, rawcache, cache, executor, explicit_rawcache):

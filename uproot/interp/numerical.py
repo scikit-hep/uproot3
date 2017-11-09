@@ -164,6 +164,9 @@ class asdtype(Interpretation):
             flattened_destination[flattened_itemstart:flattened_itemstop] = flattened_source
             return destination[itemstart:itemstop]
 
+    def finalize(self, destination):
+        return destination
+
 class asarray(Interpretation):
     def __init__(self, fromdtype, toarray, fromdims=()):
         if isinstance(fromdtype, numpy.dtype):
@@ -249,6 +252,9 @@ class asarray(Interpretation):
 
         flattened_destination[flattened_itemstart:flattened_itemstop] = flattened_source
         return destination[itemstart:itemstop]
+
+    def finalize(self, destination):
+        return destination
 
 def _dimsprod(dims):
     out = 1

@@ -35,6 +35,18 @@ try:
 except ImportError:
     numba = None
 
+def sizes2stops(sizes, inplace=True):
+    return numpy.cumsum(sizes, out=(sizes if inplace else None))
+
+def stops2sizes(stops, inplace=True):
+    if inplace:
+        stops[1:] -= stops[:-1].copy()
+        return stops
+    else:
+        out = stops.copy()
+        out[1:] -= stops[:-1].copy()
+        return out
+    
 def _jaggedarray_getitem(jaggedarray, index):
     stopslen = len(jaggedarray.stops)
     if index < 0:

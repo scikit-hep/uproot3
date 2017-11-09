@@ -37,8 +37,10 @@ try:
 except ImportError:
     numba = None
 
-import uproot.interp.jagged
+from uproot.interp.jagged import JaggedArray
 from uproot.interp.interp import Interpretation
+from uproot.interp.interp import sizes2stops
+from uproot.interp.interp import stops2sizes
 
 CHARTYPE = numpy.dtype(numpy.uint8)
 
@@ -75,10 +77,15 @@ def _asstrings_fromroot(data, offsets, local_entrystart, local_entrystop):
 if numba is not None:
     _asstrings_fromroot = numba.njit(_asstrings_fromroot)
 
-asstrings.fromroot = lambda data, offsets, local_entrystart, local_entrystop: Strings(uproot.interp.jagged.JaggedArray(*_asstrings_fromroot(data, offsets, local_entrystart, local_entrystop)))
+asstrings.fromroot = lambda data, offsets, local_entrystart, local_entrystop: Strings(JaggedArray(*_asstrings_fromroot(data, offsets, local_entrystart, local_entrystop)))
 
+def _asstrings_destination(numitems, source):
+    if source is not None and numitems <= len(source):
+        return Strings(JaggedArray())
+    else:
+        return 
 
-
+    
 # class asstrings(Interpretation):
 #     def fromroot(self, data, offsets, local_entrystart, local_entrystop):
 

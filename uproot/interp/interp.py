@@ -55,3 +55,6 @@ class Interpretation(object):
 
     def fill(self, source, destination, itemstart, itemstop):
         raise NotImplementedError
+
+    def finalize(self, destination):
+        raise NotImplementedError
