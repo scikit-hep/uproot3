@@ -131,6 +131,9 @@ class asdtype(Interpretation):
 
             flattened_destination[flattened_start:flattened_stop] = flattened_source
 
+    def clipitems(self, destination, itemstart, itemstop):
+        return destination[itemstart:itemstop]
+
     def finalize(self, destination):
         return destination
 
@@ -176,6 +179,10 @@ class asarray(asdtype):
 
     def fill(self, source, destination, start, stop, skipentries, numentries):
         super(asarray, self).fill(source, destination[0], start, stop, skipentries, numentries)
+
+    def clipitems(self, destination, itemstart, itemstop):
+        array, stop = destination
+        return super(asarray, self).clipitems(array, itemstart, itemstop), stop
 
     def finalize(self, destination):
         array, stop = destination

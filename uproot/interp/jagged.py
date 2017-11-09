@@ -79,6 +79,10 @@ class asjagged(Interpretation):
         destination.sizes[skipentries : skipentries + numentries] = stops2sizes(source.stops)
         self.asdtype.fill(source.contents, destination.contents, start, stop, None, None)
 
+    def clipitems(self, destination, itemstart, itemstop):
+        destination.contents = self.asdtype.clipitems(destination.contents, itemstart, itemstop)
+        return destination
+
     def finalize(self, destination):
         stops = sizes2stops(destination.sizes)
         contents = self.asdtype.finalize(destination.contents)

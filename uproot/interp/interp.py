@@ -56,5 +56,8 @@ class Interpretation(object):
     def fill(self, source, destination, start, stop, skipentries, numentries):
         raise NotImplementedError
 
+    def clipitems(self, destination, itemstart, itemstop):
+        raise NotImplementedError
+
     def finalize(self, destination):
         raise NotImplementedError
