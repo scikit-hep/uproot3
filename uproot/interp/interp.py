@@ -41,19 +41,19 @@ class Interpretation(object):
     def compatible(self, other):
         raise NotImplementedError
 
-    def nocopy(self):
+    def numitems(self, numbytes, numentries):
         raise NotImplementedError
 
-    def numitems(self, numbytes, numentries, flattened):
+    def source_numitems(self, source):
         raise NotImplementedError
 
     def fromroot(self, data, offsets, local_entrystart, local_entrystop):
         raise NotImplementedError
 
-    def destination(self, numitems, source):
+    def destination(self, numitems, numentries):
         raise NotImplementedError
 
-    def fill(self, source, destination, itemstart, itemstop):
+    def fill(self, source, destination, start, stop):
         raise NotImplementedError
 
     def finalize(self, destination):

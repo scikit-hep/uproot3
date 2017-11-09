@@ -1051,30 +1051,8 @@ class TStreamerString(TStreamerElement):
 
 ################################################################ streamed classes (with some overrides)
 
-# def interpretation(obj):
-#     # the 'interpretation' interface
-#     return hasattr(obj, "compatible") and hasattr(obj, "nocopy") and hasattr(obj, "numitems") and hasattr(obj, "fromroot") and hasattr(obj, "destination") and hasattr(obj, "fill")
-
 class ROOTStreamedObject(ROOTObject):
-    # TODO: each ROOTStreamedObject must define
-    # 
-    # @staticmethod
-    # def frombytes(data, offsets, entrystart, entrystop): ...
-
-    @staticmethod
-    def destarray(numitems, sourcearray):
-        if sourcearray is not None and numitems <= len(sourcearray):
-            return sourcearray[:numitems]
-        else:
-            return numpy.empty((numitems,), dtype=ROOTStreamedObject.todtype)
-
-    @staticmethod
-    def filldest(sourcearray, destarray, itemstart, itemstop):
-        if itemstart == 0 and itemstop == len(destarray) and (destarray is sourcearray or destarray.base is sourcearray):
-            return destarray
-        else:
-            destarray[itemstart:itemstop] = sourcearray
-            return destarray[itemstart:itemstop]
+    pass
 
 class TObject(ROOTStreamedObject):
     @classmethod
@@ -1086,82 +1064,6 @@ class TString(str, ROOTStreamedObject):
     @classmethod
     def _readinto(cls, self, source, cursor, context):
         return TString(cursor.string(source))
-
-    class array(numpy.ndarray):
-        def __new__(cls, offsets, chardata):
-            assert isinstance(offsets, numpy.ndarray) and offsets.dtype.type is numpy.int32 and len(offsets.shape) == 1
-            assert all(isinstance(start, numbers.Integral) and isinstance(stop, numbers.Integral) and isinstance(page, numpy.ndarray) and page.dtype.type is numpy.uint8 and len(page.shape) == 1 for start, stop, page in chardata)
-            if offsets[0] == 0:
-                obj = offsets[1:].view(cls)
-            else:
-                obj = offsets.view(cls)
-            obj.chardata = chardata
-            return obj
-
-        def __array_finalize__(self, obj):
-            if obj is None:
-                return
-            else:
-                self.chardata = getattr(obj, "chardata", None)
-
-        def __getitem__(self, i):
-            if isinstance(i, numbers.Integral):
-                if i < 0:
-                    i = len(self) + i
-                if i == 0:
-                    charstart = 0
-                else:
-                    charstart = super(TString.array, self).__getitem__(i - 1)
-                charstop = super(TString.array, self).__getitem__(i)
-
-                for start, stop, page in self.chardata:
-                    if start <= i < stop:
-                        if page[charstart] == 255:
-                            return page[charstart + 5 : charstop].tostring()
-                        else:
-                            return page[charstart + 1 : charstop].tostring()
-                return None
-
-            else:
-                return super(TString.array, self).__getitem__(i)
-
-        def __setitem__(self, i, value):
-            assert isinstance(i, slice)
-            assert isinstance(value, TString.array)
-            super(TString.array, self).__setitem__(i, value)
-            self.chardata = value.chardata + self.chardata
-
-        def __str__(self):
-            if len(self) > 6:
-                return "[{0} ... {1}]".format(" ".join(repr(self[i]) for i in range(3)), ", ".join(repr(self[i]) for i in range(-3, 0)))
-            else:
-                return "[{0}]".format(" ".join(repr(self[i]) for i in range(len(self))))
-
-        def __repr__(self):
-            if len(self) > 6:
-                return "TString.array([{0}, ..., {1}])".format(", ".join(repr(self[i]) for i in range(3)), ", ".join(repr(self[i]) for i in range(-3, 0)))
-            else:
-                return "TString.array([{0}])".format(", ".join(repr(self[i]) for i in range(len(self))))
-
-        def __iter__(self):
-            for i in range(len(self)):
-                yield self[i]
-
-        def tolist(self):
-            return [self[i] for i in range(len(self))]
-
-    todtype = numpy.dtype(numpy.int32)
-
-    @staticmethod
-    def destarray(numitems, sourcearray):
-        if sourcearray is not None and numitems <= len(sourcearray):
-            return sourcearray[:numitems]
-        else:
-            return TString.array(numpy.empty((numitems,), dtype=TString.todtype), [])
-
-    @staticmethod
-    def frombytes(data, offsets, entrystart, entrystop):
-        return TString.array(offsets, [(0, offsets[-1], data)])
 
 class TNamed(TObject):
     @classmethod

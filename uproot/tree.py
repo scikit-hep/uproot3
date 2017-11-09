@@ -500,14 +500,14 @@ class TBranchMethods(object):
             raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         return interpretation
 
-    def numitems(self, interpretation=None, flattened=False):
+    def numitems(self, interpretation=None):
         interpretation = self._normalize_interpretation(interpretation)
         keysource = self._source.threadlocal()
         try:
             out = 0
             for i in range(self.numbaskets):
                 key = self._basketkey(keysource, i, True)
-                out += interpretation.numitems(key.border, self.basket_numentries(i), flattened)
+                out += interpretation.numitems(key.border, self.basket_numentries(i))
             return out
         finally:
             keysource.dismiss()
@@ -550,12 +550,12 @@ class TBranchMethods(object):
         finally:
             keysource.dismiss()
 
-    def basket_numitems(self, i, interpretation=None, flattened=False):
+    def basket_numitems(self, i, interpretation=None):
         interpretation = self._normalize_interpretation(interpretation)
         keysource = self._source.threadlocal()
         try:
             key = self._basketkey(keysource, i, True)
-            return interpretation.numitems(key.border, self.basket_numentries(i), flattened)
+            return interpretation.numitems(key.border, self.basket_numentries(i))
         finally:
             keysource.dismiss()
             
@@ -588,15 +588,7 @@ class TBranchMethods(object):
     def _rawcachekey(self, i):
         return "{0};{1};{2};{3};raw".format(self._context.sourcepath, self._context.treename, self.name, i)
         
-    def _basket(self, i, interpretation=None, entrystart=None, entrystop=None, rawcache=None, cache=None):
-        if not 0 <= i < self.numbaskets:
-            raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
-
-        interpretation = self._normalize_interpretation(interpretation)
-        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
-
-        local_entrystart, local_entrystop = self._localentries(i, entrystart, entrystop)
-
+    def _basket(self, i, interpretation, local_entrystart, local_entrystop, rawcache, cache):
         source = None
         if cache is not None:
             cachekey = self._cachekey(i, local_entrystart, local_entrystop)
@@ -636,8 +628,15 @@ class TBranchMethods(object):
         return source
 
     def basket(self, i, interpretation=None, entrystart=None, entrystop=None, rawcache=None, cache=None):
-        source = self._basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, rawcache=rawcache, cache=cache)
-        destination = interpretation.destination(None, source)
+        if not 0 <= i < self.numbaskets:
+            raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
+
+        interpretation = self._normalize_interpretation(interpretation)
+        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+        local_entrystart, local_entrystop = self._localentries(i, entrystart, entrystop)
+
+        source = self._basket(i, interpretation, local_entrystart, local_entrystop, rawcache, cache)
+        destination = interpretation.destination(interpretation.source_numitems(source), local_entrystop - local_entrystart)
         return interpretation.finalize(interpretation.fill(source, destination, 0, len(destination)))
 
     def _basketstartstop(self, entrystart, entrystop):
@@ -751,7 +750,8 @@ class TBranchMethods(object):
 
         def fill(j):
             try:
-                basket = self._basket(j + basketstart, interpretation=nocopy, entrystart=entrystart, entrystop=entrystop, rawcache=rawcache, cache=cache)
+                local_entrystart, local_entrystop = self._localentries(j + basketstart, entrystart, entrystop)
+                basket = self._basket(j + basketstart, nocopy, local_entrystart, local_entrystop, rawcache, cache)
 
                 expecteditems = basket_itemoffset[j + 1] - basket_itemoffset[j]
 

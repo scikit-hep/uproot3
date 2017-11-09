@@ -34,6 +34,7 @@ import numpy
 
 from uproot.interp.numerical import asdtype
 from uproot.interp.numerical import asarray
+from uproot.interp.jagged import asjagged
 
 def interpret(branch, classes=None, swapbytes=True):
     if classes is None:
@@ -85,17 +86,28 @@ def interpret(branch, classes=None, swapbytes=True):
     try:
         if len(branch.fLeaves) == 1:
             fromdtype = leaf2dtype(branch.fLeaves[0]).newbyteorder(">")
+
             if swapbytes:
-                return asdtype(fromdtype, fromdtype.newbyteorder("="), dims, dims)
+                out = asdtype(fromdtype, fromdtype.newbyteorder("="), dims, dims)
             else:
-                return asdtype(fromdtype, fromdtype, dims, dims)
+                out = asdtype(fromdtype, fromdtype, dims, dims)
+
+            if branch.fLeaves[0].fLeafCount is None:
+                return out
+            else:
+                return asjagged(out)
+
         else:
             fromdtype = numpy.dtype([(leaf.fName, leaf2dtype(leaf).newbyteorder(">")) for leaf in branch.fLeaves])
             if swapbytes:
                 todtype = numpy.dtype([(leaf.fName, leaf2dtype(leaf).newbyteorder("=")) for leaf in branch.fLeaves])
             else:
                 todtype = fromdtype
-            return asdtype(fromdtype, todtype, dims, dims)
+
+            if all(leaf.fLeafCount is None for leaf in branch.fLeaves):
+                return asdtype(fromdtype, todtype, dims, dims)
+            else:
+                return None
 
     except NotNumpy:
         if len(branch.fLeaves) == 1:

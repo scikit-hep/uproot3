@@ -35,33 +35,85 @@ import numpy
 
 import uproot
 
+def basest(array):
+    while getattr(array, "base", None) is not None:
+        array = array.base
+    return array
+
 class TestTree(unittest.TestCase):
     def runTest(self):
         pass
 
-    def test_branch_array(self):
-        file = uproot.open("tests/simple.root")
-        repr(file)
+    def test_branch_asdtype_flat_basket(self):
+        branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["i8"]
+        interpretation = branch._normalize_interpretation(None)
+        entrystart, entrystop = branch._normalize_entrystartstop(None, None)
+        local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
 
-        tree = file["tree"]
-        repr(tree)
-        repr(tree["one"])
+        one = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None)
+        two = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None)
+        self.assertTrue(numpy.array_equal(one, numpy.array([-15, -14, -13], dtype=">i8")))
+        self.assertTrue(basest(one) is basest(two))
 
-        self.assertEqual(tree["one"].array().tolist(), [1, 2, 3, 4])
-        self.assertEqual(tree["two"].array().tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
+        three = branch.basket(0)
+        self.assertTrue(numpy.array_equal(three, numpy.array([-15, -14, -13], dtype=">i8")))
+        self.assertFalse(basest(one) is basest(three))
 
-        print tree["three"].array().tolist()
+    def test_branch_asdtype_regular_basket(self):
+        branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["ai8"]
+        interpretation = branch._normalize_interpretation(None)
+        entrystart, entrystop = branch._normalize_entrystartstop(None, None)
+        local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
 
-        # self.assertEqual(tree["three"].array().tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+        one = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None)
+        two = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None)
+        self.assertTrue(numpy.array_equal(one, numpy.array([[-14, -13, -12]], dtype=">i8")))
+        self.assertTrue(basest(one) is basest(two))
 
-        self.assertEqual(tree["one"].array().tolist(), [1, 2, 3, 4])
-        self.assertEqual(tree["two"].array().tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
-        # self.assertEqual(tree["three"].array().tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+        three = branch.basket(0)
+        self.assertTrue(numpy.array_equal(three, numpy.array([[-14, -13, -12]], dtype=">i8")))
+        self.assertFalse(basest(one) is basest(three))
 
-        tree = file["tree"]
-        self.assertEqual(tree["one"].array().tolist(), [1, 2, 3, 4])
-        self.assertEqual(tree["two"].array().tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
-        # self.assertEqual(tree["three"].array().tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+        self.assertEqual(branch.basket(0, interpretation.to(todims=(3,))).shape, (1, 3))
+        self.assertEqual(branch.basket(0, interpretation.to(todims=())).shape, (3,))
+        self.assertEqual(branch.basket(0, interpretation.to(todims=(1,))).shape, (3, 1))
+        self.assertEqual(branch.basket(0, interpretation.to(todims=(1, 1))).shape, (3, 1, 1))
+        self.assertEqual(branch.basket(0, interpretation.to(todims=(1, 3))).shape, (1, 1, 3))
+
+    def test_branch_asdtype_irregular_basket(self):
+        branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["Ai8"]
+        interpretation = branch._normalize_interpretation(None)
+        entrystart, entrystop = branch._normalize_entrystartstop(None, None)
+        local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
+
+        one = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None)
+        two = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None)
+        self.assertTrue(numpy.array_equal(one[0], numpy.array([], dtype=">i8")))
+        self.assertTrue(numpy.array_equal(one[1], numpy.array([-15], dtype=">i8")))
+        self.assertTrue(basest(one.contents) is basest(two.contents))
+
+
+
+    # def test_branch_array(self):
+    #     file = uproot.open("tests/simple.root")
+    #     repr(file)
+
+    #     tree = file["tree"]
+    #     repr(tree)
+    #     repr(tree["one"])
+
+    #     self.assertEqual(tree["one"].array().tolist(), [1, 2, 3, 4])
+    #     self.assertEqual(tree["two"].array().tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
+    #     self.assertEqual(tree["three"].array().tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+
+    #     self.assertEqual(tree["one"].array().tolist(), [1, 2, 3, 4])
+    #     self.assertEqual(tree["two"].array().tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
+    #     self.assertEqual(tree["three"].array().tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+
+    #     tree = file["tree"]
+    #     self.assertEqual(tree["one"].array().tolist(), [1, 2, 3, 4])
+    #     self.assertEqual(tree["two"].array().tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
+    #     self.assertEqual(tree["three"].array().tolist(), [b"uno", b"dos", b"tres", b"quatro"])
 
     # def test_tree_arrays(self):
     #     file = uproot.open("tests/simple.root")

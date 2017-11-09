@@ -35,17 +35,46 @@ try:
 except ImportError:
     numba = None
 
-def sizes2stops(sizes, inplace=True):
-    return numpy.cumsum(sizes, out=(sizes if inplace else None))
+from uproot.interp.interp import Interpretation
 
-def stops2sizes(stops, inplace=True):
+def sizes2stops(sizes, inplace=False):
+    return sizes.cumsum(out=(sizes if inplace else None))
+
+def stops2sizes(stops, inplace=False):
     if inplace:
         stops[1:] -= stops[:-1].copy()
         return stops
     else:
         out = stops.copy()
-        out[1:] -= stops[:-1].copy()
+        out[1:] -= stops[:-1]
         return out
+
+class asjagged(Interpretation):
+    def __init__(self, asdtype):
+        self.asdtype = asdtype
+
+    def __repr__(self):
+        return "asjagged(" + repr(self.asdtype) + ")"
+
+    def compatible(self, other):
+        return isinstance(other, asjagged) and self.asdtype.compatible(other.asdtype)
+
+    def numitems(self, numbytes, numentries):
+        return self.asdtype.numitems(numbytes, numentries)
+
+    def fromroot(self, data, offsets, local_entrystart, local_entrystop):
+        contents = self.asdtype.fromroot(data, None, local_entrystart, local_entrystop)
+        stops = offsets[local_entrystart + 1 : local_entrystop + 1]
+        return JaggedArray(contents, stops)
+
+    def destination(self, numitems, numentries):
+        raise NotImplementedError
+
+    def fill(self, source, destination, itemstart, itemstop):
+        raise NotImplementedError
+
+    def finalize(self, destination):
+        raise NotImplementedError
     
 def _jaggedarray_getitem(jaggedarray, index):
     stopslen = len(jaggedarray.stops)
@@ -62,6 +91,14 @@ def _jaggedarray_getitem(jaggedarray, index):
         raise IndexError("index out of range for JaggedArray")
 
 class JaggedArray(object):
+    class _Prep(object):
+        def __init__(self, contents, sizes):
+            self.contents = contents
+            self.sizes = sizes
+
+        def finalize(self):
+            return JaggedArray(self.contents, sizes2stops(self.sizes))
+
     @staticmethod
     def fromlists(*lists):
         stops = numpy.empty(len(lists), dtype=numpy.int64)

@@ -39,8 +39,6 @@ except ImportError:
 
 from uproot.interp.jagged import JaggedArray
 from uproot.interp.interp import Interpretation
-from uproot.interp.interp import sizes2stops
-from uproot.interp.interp import stops2sizes
 
 CHARTYPE = numpy.dtype(numpy.uint8)
 
