@@ -144,6 +144,27 @@ class TestTree(unittest.TestCase):
         for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
             self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop).tolist(), expectation[entrystart:entrystop])
 
+    def test_tree_flat_iterate(self):
+        tree = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]
+        expectation = [-15, -14, -13, -12, -11, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+        for n in 1000, 5, 6, 7:
+            self.assertEqual([x.tolist() for (x,) in tree.iterate(n, "i8", outputtype=tuple)], [expectation[x : x + n] for x in range(0, len(expectation), n)])
+
+    def test_tree_regular_iterate(self):
+        tree = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]
+        expectation = [[-14, -13, -12], [-13, -12, -11], [-12, -11, -10], [-11, -10, -9], [-10, -9, -8], [-9, -8, -7], [-8, -7, -6], [-7, -6, -5], [-6, -5, -4], [-5, -4, -3], [-4, -3, -2], [-3, -2, -1], [-2, -1, 0], [-1, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, 4], [3, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, 8], [7, 8, 9], [8, 9, 10], [9, 10, 11], [10, 11, 12], [11, 12, 13], [12, 13, 14], [13, 14, 15], [14, 15, 16], [15, 16, 17]]
+        for n in 1000,:
+            self.assertEqual([x.tolist() for (x,) in tree.iterate(n, "ai8", outputtype=tuple)], [expectation[x : x + n] for x in range(0, len(expectation), n)])
+
+    def test_tree_irregular_iterate(self):
+        tree = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]
+        expectation = [[], [-15], [-15, -13], [-15, -13, -11], [-15, -13, -11, -9], [], [-10], [-10, -8], [-10, -8, -6], [-10, -8, -6, -4], [], [-5], [-5, -3], [-5, -3, -1], [-5, -3, -1, 1], [], [0], [0, 2], [0, 2, 4], [0, 2, 4, 6], [], [5], [5, 7], [5, 7, 9], [5, 7, 9, 11], [], [10], [10, 12], [10, 12, 14], [10, 12, 14, 16]]
+        for n in 1000,:
+            self.assertEqual([x.tolist() for (x,) in tree.iterate(n, "Ai8", outputtype=tuple)], [expectation[x : x + n] for x in range(0, len(expectation), n)])
+        
+
+
+
     # TODO: next is iteration over arrays (_step_array) and lazyarrays (_LazyArray._array)
     # ALSO: verify that we're not needlessly uncompressing baskets when we scan over keys.
 

@@ -276,7 +276,7 @@ class TTreeMethods(object):
         if outputtype == namedtuple:
             outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
 
-        branchinfo = [(branch, interpretation, {}, branch._basket_itemoffset(interpretation, 0, branch.numbaskets), branch._basket_entryoffset(basketstart, basketstop)) for branch, interpretation in branches]
+        branchinfo = [(branch, interpretation, {}, branch._basket_itemoffset(interpretation, 0, branch.numbaskets), branch._basket_entryoffset(0, branch.numbaskets)) for branch, interpretation in branches]
 
         if rawcache is None:
             rawcache = uproot.cache.memorycache.ThreadSafeDict()
@@ -290,14 +290,14 @@ class TTreeMethods(object):
             finish = lambda interpretation, array: array
                 
         for entrystart, entrystop in startstop:
-            futures = [(branch.name, finish(interpretation, branch._step_array(interpretation, basket_sources, basket_itemoffset, basket_entryoffset, entrystart, entrystop, rawcache, cache, executor, explicit_rawcache))) for branch, interpretation, basket_sources, basket_itemoffset, basket_entryoffset in branchinfo]
+            futures = [(branch.name, interpretation, branch._step_array(interpretation, basket_sources, basket_itemoffset, basket_entryoffset, entrystart, entrystop, rawcache, cache, executor, explicit_rawcache)) for branch, interpretation, basket_sources, basket_itemoffset, basket_entryoffset in branchinfo]
 
             if issubclass(outputtype, dict):
-                out = outputtype([(name, future()) for name, future in futures])
+                out = outputtype([(name, finish(interpretation, future())) for name, interpretation, future in futures])
             elif outputtype == tuple or outputtype == list:
-                out = outputtype([future() for name, future in futures])
+                out = outputtype([finish(interpretation, future()) for name, interpretation, future in futures])
             else:
-                out = outputtype(*[future() for name, future in futures])
+                out = outputtype(*[finish(interpretation, future()) for name, interpretation, future in futures])
 
             if reportentries:
                 yield max(0, entrystart), min(entrystop, self.numentries), out
@@ -835,7 +835,10 @@ class TBranchMethods(object):
                     pass
 
         basket_itemoffset = basket_itemoffset[basketstart : basketstop + 1]
+        basket_itemoffset = [x - basket_itemoffset[0] for x in basket_itemoffset]
+
         basket_entryoffset = basket_entryoffset[basketstart : basketstop + 1]
+        basket_entryoffset = [x - basket_entryoffset[0] for x in basket_entryoffset]
 
         destination = interpretation.destination(basket_itemoffset[-1], basket_entryoffset[-1])
         lock = threading.Lock()
