@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import numbers
+import sys
 from types import MethodType
 
 import numpy
@@ -40,8 +41,7 @@ except ImportError:
 
 from uproot.interp.interp import Interpretation
 from uproot.interp.jagged import JaggedArray
-from uproot.interp.jagged import stops2sizes
-from uproot.interp.jagged import sizes2stops
+from uproot.interp.jagged import sizes2offsets
 
 CHARTYPE = numpy.dtype(numpy.uint8)
 
@@ -50,7 +50,8 @@ def _asstrings_fromroot(data, offsets, local_entrystart, local_entrystop):
         raise ValueError("illegal local_entrystart or local_entrystop in asstrings.fromroot")
 
     contents = numpy.empty(offsets[local_entrystop] - offsets[local_entrystart] - (local_entrystop - local_entrystart), dtype=CHARTYPE)
-    stops    = numpy.empty(local_entrystop - local_entrystart, dtype=numpy.int64)
+    newoffsets  = numpy.empty(1 + local_entrystop - local_entrystart, dtype=offsets.dtype)
+    newoffsets[0] = 0
 
     start = stop = 0
     for entry in range(local_entrystart, local_entrystop):
@@ -64,11 +65,11 @@ def _asstrings_fromroot(data, offsets, local_entrystart, local_entrystop):
         stop = start + (datastop - datastart)
 
         contents[start:stop] = data[datastart:datastop]
-        stops[entry - local_entrystart] = stop
+        newoffsets[1 + entry - local_entrystart] = stop
 
         start = stop
 
-    return contents, stops
+    return contents[:stop], newoffsets[:-1], newoffsets[1:]
 
 if numba is not None:
     _asstrings_fromroot = numba.njit(_asstrings_fromroot)
@@ -96,7 +97,7 @@ class _asstrings(Interpretation):
 
     def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
         destination.contents[itemstart:itemstop] = source.jaggedarray.contents
-        destination.sizes[entrystart:entrystop] = stops2sizes(source.jaggedarray.stops)
+        destination.sizes[entrystart:entrystop] = source.jaggedarray.stops - source.jaggedarray.starts
         
     def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
         destination.contents = destination.contents[itemstart:itemstop]
@@ -105,8 +106,10 @@ class _asstrings(Interpretation):
 
     def finalize(self, destination):
         contents = destination.contents
-        stops = sizes2stops(destination.sizes)
-        return Strings(JaggedArray(contents, stops))
+        offsets = sizes2offsets(destination.sizes)
+        starts = offsets[:-1]
+        stops  = offsets[1:]
+        return Strings(JaggedArray(contents, starts, stops))
 
 asstrings = _asstrings()
 del _asstrings
@@ -114,30 +117,30 @@ del _asstrings
 class Strings(object):
     @staticmethod
     def fromstrs(*strs):
-        stops = numpy.empty(len(strs), dtype=numpy.int64)
+        offsets = numpy.empty(len(strs) + 1, dtype=numpy.int64)
+        offsets[0] = 0
         stop = 0
         for i, x in enumerate(strs):
             if not isinstance(x, bytes) or hasattr(x, "encode"):
                 x = x.encode("utf-8", "replace")
-            stops[i] = stop = stop + len(x)
+            offsets[i + 1] = stop = stop + len(x)
 
-        if len(stops) == 0:
-            contents = numpy.empty(0, dtype=CHARTYPE)
+        contents = numpy.empty(offsets[-1], dtype=CHARTYPE)
+        starts = offsets[:-1]
+        stops = offsets[1:]
+
+        if sys.version_info[0] <= 2:
+            for i, x, in enumerate(strs):
+                if isinstance(x, unicode):
+                    x = x.encode("utf-8", "replace")
+                contents[starts[i]:stops[i]] = map(ord, x)
         else:
-            contents = numpy.empty(stops[-1], dtype=CHARTYPE)
-
-        for i, x, in enumerate(strs):
-            if i == 0:
-                start = 0
-            else:
-                start = stops[i - 1]
-            stop = stops[i]
-
-            if not isinstance(x, bytes) or hasattr(x, "encode"):
-                x = x.encode("utf-8", "replace")
-            contents[start:stop] = map(ord, x)
-
-        return Strings(uproot.types.jagged.JaggedArray(contents, stops))
+            for i, x, in enumerate(strs):
+                if isinstance(x, str):
+                    x = x.encode("utf-8", "replace")
+                contents[starts[i]:stops[i]] = memoryview(x)
+            
+        return Strings(uproot.types.jagged.JaggedArray(contents, starts, stops))
 
     def __init__(self, jaggedarray):
         assert jaggedarray.contents.dtype == CHARTYPE
