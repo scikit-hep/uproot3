@@ -455,76 +455,76 @@ class TestTree(unittest.TestCase):
         self.assertEqual(one.shape, two.shape)
         self.assertTrue(numpy.array_equal(one, two))
 
-    # def test_pass_array(self):
-    #     tree = uproot.open("tests/Zmumu.root")["events"]
-    #     one = numpy.cast[numpy.int32](numpy.floor(tree.array("M")))
-    #     two = numpy.zeros(one.shape, dtype=one.dtype)
-    #     tree.array("M", two)
-    #     self.assertTrue(numpy.array_equal(one, two))
+    def test_pass_array(self):
+        tree = uproot.open("tests/Zmumu.root")["events"]
+        one = numpy.cast[numpy.int32](numpy.floor(tree.array("M")))
+        two = numpy.zeros(one.shape, dtype=one.dtype)
+        tree.array("M", two)
+        self.assertTrue(numpy.array_equal(one, two))
 
-    #     for (one,) in tree.iterator(10000, "M", outputtype=tuple):
-    #         one = numpy.cast[numpy.int32](numpy.floor(one))
-    #         two = numpy.zeros(one.shape, dtype=one.dtype)
-    #         for (two,) in tree.iterator(10000, {"M": numpy.int32}, outputtype=tuple):
-    #             self.assertTrue(numpy.array_equal(one, two))
+        for (one,) in tree.iterate(10000, "M", outputtype=tuple):
+            one = numpy.cast[numpy.int32](numpy.floor(one))
+            two = numpy.zeros(one.shape, dtype=one.dtype)
+            for (two,) in tree.iterate(10000, {"M": numpy.int32}, outputtype=tuple):
+                self.assertTrue(numpy.array_equal(one, two))
 
-    # def test_outputtype(self):
-    #     tree = uproot.open("tests/simple.root")["tree"]
+    def test_outputtype(self):
+        tree = uproot.open("tests/simple.root")["tree"]
 
-    #     arrays = tree.arrays(["three", "two", "one"], outputtype=dict)
-    #     self.assertTrue(isinstance(arrays, dict))
-    #     self.assertEqual(arrays[b"one"].tolist(), [1, 2, 3, 4])
-    #     self.assertEqual(arrays[b"three"].tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+        arrays = tree.arrays(["three", "two", "one"], outputtype=dict)
+        self.assertTrue(isinstance(arrays, dict))
+        self.assertEqual(arrays[b"one"].tolist(), [1, 2, 3, 4])
+        self.assertEqual(arrays[b"three"].tolist(), [b"uno", b"dos", b"tres", b"quatro"])
 
-    #     arrays = tree.arrays(["three", "two", "one"], outputtype=tuple)
-    #     self.assertTrue(isinstance(arrays, tuple))
-    #     self.assertEqual(arrays[2].tolist(), [1, 2, 3, 4])
-    #     self.assertEqual(arrays[0].tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+        arrays = tree.arrays(["three", "two", "one"], outputtype=tuple)
+        self.assertTrue(isinstance(arrays, tuple))
+        self.assertEqual(arrays[2].tolist(), [1, 2, 3, 4])
+        self.assertEqual(arrays[0].tolist(), [b"uno", b"dos", b"tres", b"quatro"])
 
-    #     arrays = tree.arrays(["three", "two", "one"], outputtype=namedtuple)
-    #     self.assertEqual(arrays.one.tolist(), [1, 2, 3, 4])
-    #     self.assertEqual(arrays.three.tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+        arrays = tree.arrays(["three", "two", "one"], outputtype=namedtuple)
+        self.assertEqual(arrays.one.tolist(), [1, 2, 3, 4])
+        self.assertEqual(arrays.three.tolist(), [b"uno", b"dos", b"tres", b"quatro"])
 
-    #     arrays = tree.arrays(["three", "two", "one"], outputtype=list)
-    #     self.assertTrue(isinstance(arrays, list))
-    #     self.assertEqual(arrays[2].tolist(), [1, 2, 3, 4])
-    #     self.assertEqual(arrays[0].tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+        arrays = tree.arrays(["three", "two", "one"], outputtype=list)
+        self.assertTrue(isinstance(arrays, list))
+        self.assertEqual(arrays[2].tolist(), [1, 2, 3, 4])
+        self.assertEqual(arrays[0].tolist(), [b"uno", b"dos", b"tres", b"quatro"])
 
-    #     class Awesome(object):
-    #         def __init__(self, one, two, three):
-    #             self.one = one
-    #             self.two = two
-    #             self.three = three
+        class Awesome(object):
+            def __init__(self, one, two, three):
+                self.one = one
+                self.two = two
+                self.three = three
 
-    #     arrays = tree.arrays(["one", "two", "three"], outputtype=Awesome)
-    #     self.assertTrue(isinstance(arrays, Awesome))
-    #     self.assertEqual(arrays.one.tolist(), [1, 2, 3, 4])
-    #     self.assertEqual(arrays.three.tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+        arrays = tree.arrays(["one", "two", "three"], outputtype=Awesome)
+        self.assertTrue(isinstance(arrays, Awesome))
+        self.assertEqual(arrays.one.tolist(), [1, 2, 3, 4])
+        self.assertEqual(arrays.three.tolist(), [b"uno", b"dos", b"tres", b"quatro"])
 
-    # def test_informational(self):
-    #     self.assertEqual(uproot.open("tests/simple.root")["tree"].branchnames, [b"one", b"two", b"three"])
-    #     self.assertEqual(uproot.open("tests/simple.root")["tree"].branchtypes, {b"two": numpy.dtype(">f4"), b"one": numpy.dtype(">i4"), b"three": numpy.dtype("O")})
-    #     self.assertEqual(uproot.open("tests/small-evnt-tree-fullsplit.root")["tree"].allbranchnames, [b"evt", b"Beg", b"I16", b"I32", b"I64", b"U16", b"U32", b"U64", b"F32", b"F64", b"Str", b"P3.Px", b"P3.Py", b"P3.Pz", b"ArrayI16[10]", b"ArrayI32[10]", b"ArrayI64[10]", b"ArrayU16[10]", b"ArrayU32[10]", b"ArrayU64[10]", b"ArrayF32[10]", b"ArrayF64[10]", b"N", b"SliceI16", b"SliceI32", b"SliceI64", b"SliceU16", b"SliceU32", b"SliceU64", b"SliceF32", b"SliceF64", b"End"])
-    #     self.assertEqual(uproot.open("tests/small-evnt-tree-fullsplit.root")["tree"].allbranchtypes, {b"Str": numpy.dtype("O"), b"P3.Px": numpy.dtype(">i4"), b"I64": numpy.dtype(">i8"), b"U64": numpy.dtype(">u8"), b"ArrayF32[10]": numpy.dtype(">f4"), b"SliceI16": numpy.dtype(">i2"), b"ArrayI64[10]": numpy.dtype(">i8"), b"evt": numpy.dtype(">i4"), b"SliceF64": numpy.dtype(">f8"), b"End": numpy.dtype("O"), b"U32": numpy.dtype(">u4"), b"Beg": numpy.dtype("O"), b"I32": numpy.dtype(">i4"), b"N": numpy.dtype(">i4"), b"SliceI32": numpy.dtype(">i4"), b"P3.Py": numpy.dtype(">f8"), b"U16": numpy.dtype(">u2"), b"SliceU32": numpy.dtype(">u4"), b"P3.Pz": numpy.dtype(">i4"), b"ArrayI32[10]": numpy.dtype(">i4"), b"ArrayF64[10]": numpy.dtype(">f8"), b"I16": numpy.dtype(">i2"), b"SliceU64": numpy.dtype(">u8"), b"F64": numpy.dtype(">f8"), b"ArrayI16[10]": numpy.dtype(">i2"), b"ArrayU16[10]": numpy.dtype(">u2"), b"ArrayU32[10]": numpy.dtype(">u4"), b"F32": numpy.dtype(">f4"), b"SliceF32": numpy.dtype(">f4"), b"ArrayU64[10]": numpy.dtype(">u8"), b"SliceU16": numpy.dtype(">u2"), b"SliceI64": numpy.dtype(">i8")})
+    def test_tree_lazy(self):
+        tree = uproot.open("tests/sample-5.30.00-uncompressed.root")["sample"]
 
-    # def test_tree_lazy(self):
-    #     tree = uproot.open("tests/sample-5.30.00-uncompressed.root")["sample"]
+        for branchname in b"u1", b"i8", b"Ai8", b"f4", b"af4":
+            strict = tree[branchname].array()
 
-    #     for branchname in b"u1", b"i8", b"Ai8", b"f4", b"af4":
-    #         strict = tree[branchname].array()
+            lazy = tree[branchname].lazyarray()
 
-    #         lazy = tree[branchname].lazyarray()
-    #         for i in range(len(lazy)):
-    #             self.assertEqual(lazy[i].tolist(), strict[i].tolist())
+            for i in range(len(lazy)):
+                self.assertEqual(lazy[i].tolist(), strict[i].tolist())
 
-    #         lazy = tree[branchname].lazyarray()
-    #         for i in range(len(lazy), 0, -1):
-    #             self.assertEqual(lazy[i - 1].tolist(), strict[i - 1].tolist())
+            lazy = tree[branchname].lazyarray()
+            for i in range(len(lazy), 0, -1):
+                self.assertEqual(lazy[i - 1].tolist(), strict[i - 1].tolist())
 
-    #         lazy = tree[branchname].lazyarray()
-    #         for i in range(len(lazy)):
-    #             self.assertEqual(lazy[i : i + 3].tolist(), strict[i : i + 3].tolist())
+            lazy = tree[branchname].lazyarray()
+            for i in range(len(lazy)):
+                print branchname, i
+                print lazy[i : i + 3]
+                print strict[i : i + 3]
 
-    #         lazy = tree[branchname].lazyarray()
-    #         for i in range(len(lazy), 0, -1):
-    #             self.assertEqual(lazy[i - 1 : i + 3].tolist(), strict[i - 1 : i + 3].tolist())
+
+                self.assertEqual(lazy[i : i + 3].tolist(), strict[i : i + 3].tolist())
+
+            lazy = tree[branchname].lazyarray()
+            for i in range(len(lazy), 0, -1):
+                self.assertEqual(lazy[i - 1 : i + 3].tolist(), strict[i - 1 : i + 3].tolist())

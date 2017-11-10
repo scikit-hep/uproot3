@@ -476,10 +476,10 @@ class TBranchMethods(object):
             else:
                 raise ValueError("cannot cast branch {0} (default interpretation {1}) as dtype {2}".format(repr(self.name), default, interpretation))
 
-        elif isinstance(interpretation, numpy.array):      # user specified a Numpy array
+        elif isinstance(interpretation, numpy.ndarray):    # user specified a Numpy array
             default = interpret(self)
             if isinstance(default, asdtype):
-                return default.to(interpretation)
+                return default.toarray(interpretation)
             else:
                 raise ValueError("cannot cast branch {0} (default interpretation {1}) as dtype {2}".format(repr(self.name), default, interpretation))
 
@@ -636,7 +636,11 @@ class TBranchMethods(object):
                     keysource.dismiss()
 
             if basketdata is None:
-                basketdata = key.cursor.bytes(key.source, key.fObjlen)
+                datasource = key.source.threadlocal()
+                try:
+                    basketdata = key.cursor.copied().bytes(datasource, key.fObjlen)
+                finally:
+                    datasource.dismiss()
 
             if rawcache is not None:
                 rawcache[rawcachekey] = basketdata
@@ -890,7 +894,7 @@ class TBranchMethods(object):
         basket_entryoffset = [x - basket_entryoffset[0] for x in basket_entryoffset]
 
         destination = interpretation.destination(basket_itemoffset[-1], basket_entryoffset[-1])
-        lock = threading.Lock()
+        lock = threading.Lock()   # branch-level lock on basket_sources, rather than global
         
         def fill(j):
             try:
@@ -982,7 +986,7 @@ class TBranchMethods(object):
             self._cache = cache
             self._executor = executor
 
-            self._len = self._basket.numitems(self._interpretation, self._keycache)
+            self._len = self._branch.numentries
 
             if hasattr(self._interpretation, "todtype"):
                 self.dtype = self._interpretation.todtype
@@ -1016,7 +1020,7 @@ class TBranchMethods(object):
             return self._array(self._basket_entryoffset[0], self._basket_entryoffset[-1]).cumsum(axis=axis, dtype=dtype, out=out)
 
         def _array(self, entrystart, entrystop):
-            return self._branch.array(self._interpretation, entrystart, entrystop, self._keycache, self._rawcache, self._cache, self._executor, blocking=True)
+            return self._branch.array(interpretation=self._interpretation, entrystart=entrystart, entrystop=entrystop, keycache=self._keycache, rawcache=self._rawcache, cache=self._cache, executor=self._executor, blocking=True)
 
         def _normalize_index(self, i, clip, step):
             lenself = len(self)

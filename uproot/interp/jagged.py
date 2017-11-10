@@ -190,10 +190,10 @@ class JaggedArray(object):
             return _jaggedarray_getitem(self, index)
 
         elif isinstance(index, slice):
-            if slice.step is not None and slice.step != 1:
+            if index.step is not None and index.step != 1:
                 raise NotImplementedError("cannot slice a JaggedArray with step != 1")  # we'd need stops AND starts to do this
             else:
-                return JaggedArray(self.contents, self.stops[slice])
+                return JaggedArray(self.contents, self.stops[index])
 
         else:
             raise TypeError("JaggedArray index must be an integer or a slice")
