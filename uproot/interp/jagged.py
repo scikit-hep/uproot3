@@ -69,10 +69,9 @@ class asjagged(Interpretation):
 
     def fromroot(self, data, offsets, local_entrystart, local_entrystop):
         contents = self.asdtype.fromroot(data, None, None, None)
+        numpy.floor_divide(offsets, self.asdtype.fromdtype.itemsize, offsets)
         starts = offsets[local_entrystart     : local_entrystop    ]
         stops  = offsets[local_entrystart + 1 : local_entrystop + 1]
-        numpy.floor_divide(starts, contents.dtype.itemsize, starts)
-        numpy.floor_divide(stops,  contents.dtype.itemsize, stops)
         return JaggedArray(contents, starts, stops)
 
     def destination(self, numitems, numentries):

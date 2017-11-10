@@ -130,13 +130,13 @@ class CompressedSource(object):
         algo = cursor.bytes(self._compressed, 2).tostring()
 
         if self._uncompressed is None:
-            if algo == "ZL":    #  self.compression.algo == uproot.const.kZLIB:
+            if algo == b"ZL":   # self.compression.algo == uproot.const.kZLIB:
                 compression = self.compression.copy(uproot.const.kZLIB)
                 skip = 7        # https://github.com/root-project/root/blob/master/core/zip/src/Bits.h#L646
-            elif algo == "XZ":  # self.compression.algo == uproot.const.kLZMA:
+            elif algo == b"XZ": # self.compression.algo == uproot.const.kLZMA:
                 compression = self.compression.copy(uproot.const.kLZMA)
                 skip = 7        # https://github.com/root-project/root/blob/master/core/lzma/src/ZipLZMA.c#L81
-            elif algo == "L4":  # self.compression.algo == uproot.const.kLZ4:
+            elif algo == b"L4": # self.compression.algo == uproot.const.kLZ4:
                 compression = self.compression.copy(uproot.const.kLZ4)
                 skip = 7 + 8    # https://github.com/root-project/root/blob/master/core/lz4/src/ZipLZ4.cxx#L38
             else:
