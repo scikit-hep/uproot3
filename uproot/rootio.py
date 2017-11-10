@@ -551,7 +551,7 @@ def _ftype2dtype(fType):
     elif fType == uproot.const.kLong:
         return "numpy.dtype(numpy.long).newbyteorder('>')"
     elif fType == uproot.const.kULong:
-        return "numpy.dtype(numpy.ulong).newbyteorder('>')"
+        return "numpy.dtype('>u' + repr(numpy.dtype(numpy.long).itemsize))"
     elif fType == uproot.const.kLong64:
         return "numpy.dtype('>i8')"
     elif fType == uproot.const.kULong64:
@@ -825,7 +825,7 @@ class TKey(ROOTObject):
         classname = self.fClassName.decode("ascii")
         try:
             if classname == "TDirectory":
-                return ROOTDirectory.read(self._source, self._cursor, self._context, self)
+                return ROOTDirectory.read(self._source, self._cursor.copied(), self._context, self)
 
             elif classname in self._context.classes:
                 return self._context.classes[classname].read(self._source, self._cursor.copied(), self._context)
