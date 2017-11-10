@@ -35,32 +35,195 @@ import numpy
 
 import uproot
 
+def basest(array):
+    while getattr(array, "base", None) is not None:
+        array = array.base
+    return array
+
 class TestTree(unittest.TestCase):
     def runTest(self):
         pass
-    
+
+    ###################################################### basket
+
+    def test_flat_basket(self):
+        branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["i8"]
+        interpretation = branch._normalize_interpretation(None)
+        entrystart, entrystop = branch._normalize_entrystartstop(None, None)
+        local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
+
+        one = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None, None)
+        two = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None, None)
+        self.assertTrue(numpy.array_equal(one, numpy.array([-15, -14, -13], dtype=">i8")))
+        self.assertTrue(basest(one) is basest(two))
+
+        three = branch.basket(0)
+        self.assertTrue(numpy.array_equal(three, numpy.array([-15, -14, -13], dtype=">i8")))
+        self.assertFalse(basest(one) is basest(three))
+
+        buf = numpy.zeros(10, dtype=numpy.float64)
+        four = branch.basket(0, interpretation.toarray(buf))
+        self.assertTrue(numpy.array_equal(four, numpy.array([-15, -14, -13], dtype=">i8")))
+        self.assertTrue(basest(four) is buf)
+
+    def test_regular_basket(self):
+        branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["ai8"]
+        interpretation = branch._normalize_interpretation(None)
+        entrystart, entrystop = branch._normalize_entrystartstop(None, None)
+        local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
+
+        one = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None, None)
+        two = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None, None)
+        self.assertTrue(numpy.array_equal(one, numpy.array([[-14, -13, -12]], dtype=">i8")))
+        self.assertTrue(basest(one) is basest(two))
+
+        three = branch.basket(0)
+        self.assertTrue(numpy.array_equal(three, numpy.array([[-14, -13, -12]], dtype=">i8")))
+        self.assertFalse(basest(one) is basest(three))
+
+        self.assertEqual(branch.basket(0, interpretation.to(todims=(3,))).shape, (1, 3))
+        self.assertEqual(branch.basket(0, interpretation.to(todims=())).shape, (3,))
+        self.assertEqual(branch.basket(0, interpretation.to(todims=(1,))).shape, (3, 1))
+        self.assertEqual(branch.basket(0, interpretation.to(todims=(1, 1))).shape, (3, 1, 1))
+        self.assertEqual(branch.basket(0, interpretation.to(todims=(1, 3))).shape, (1, 1, 3))
+
+        buf = numpy.zeros(10, dtype=numpy.float64)
+        four = branch.basket(0, interpretation.toarray(buf))
+        self.assertTrue(numpy.array_equal(four, numpy.array([-14, -13, -12], dtype=">i8")))
+        self.assertTrue(basest(four) is buf)
+
+    def test_irregular_basket(self):
+        branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["Ai8"]
+        interpretation = branch._normalize_interpretation(None)
+        entrystart, entrystop = branch._normalize_entrystartstop(None, None)
+        local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
+
+        one = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None, None)
+        two = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None, None)
+        self.assertTrue(numpy.array_equal(one[0], numpy.array([], dtype=">i8")))
+        self.assertTrue(numpy.array_equal(one[1], numpy.array([-15], dtype=">i8")))
+        self.assertTrue(basest(one.contents) is basest(two.contents))
+
+        three = branch.basket(0)
+        self.assertTrue(numpy.array_equal(three[0], numpy.array([], dtype=">i8")))
+        self.assertTrue(numpy.array_equal(three[1], numpy.array([-15], dtype=">i8")))
+
+    def test_strings_basket(self):
+        branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["str"]
+        interpretation = branch._normalize_interpretation(None)
+        entrystart, entrystop = branch._normalize_entrystartstop(None, None)
+        local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
+
+        one = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None, None)
+        two = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None, None)
+        self.assertTrue(one.tolist() == [b"hey-0", b"hey-1", b"hey-2", b"hey-3", b"hey-4", b"hey-5"])
+        self.assertFalse(basest(one.jaggedarray.contents) is basest(two.jaggedarray.contents))
+
+        three = branch.basket(0)
+        self.assertTrue(three.tolist() == [b"hey-0", b"hey-1", b"hey-2", b"hey-3", b"hey-4", b"hey-5"])
+
+    ###################################################### baskets
+
+    def test_flat_baskets(self):
+        branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["i8"]
+        expectation = [[-15, -14, -13], [-12, -11, -10], [-9, -8, -7], [-6, -5, -4], [-3, -2, -1], [0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14]]
+        self.assertEqual([x.tolist() for x in branch.baskets()], expectation)
+        self.assertEqual([x.tolist() for x in branch.iterate_baskets()], expectation)
+
+    def test_regular_baskets(self):
+        branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["ai8"]
+        expectation = [[[-14, -13, -12]], [[-13, -12, -11]], [[-12, -11, -10]], [[-11, -10, -9]], [[-10, -9, -8]], [[-9, -8, -7]], [[-8, -7, -6]], [[-7, -6, -5]], [[-6, -5, -4]], [[-5, -4, -3]], [[-4, -3, -2]], [[-3, -2, -1]], [[-2, -1, 0]], [[-1, 0, 1]], [[0, 1, 2]], [[1, 2, 3]], [[2, 3, 4]], [[3, 4, 5]], [[4, 5, 6]], [[5, 6, 7]], [[6, 7, 8]], [[7, 8, 9]], [[8, 9, 10]], [[9, 10, 11]], [[10, 11, 12]], [[11, 12, 13]], [[12, 13, 14]], [[13, 14, 15]], [[14, 15, 16]], [[15, 16, 17]]]
+        self.assertEqual([x.tolist() for x in branch.baskets()], expectation)
+        self.assertEqual([x.tolist() for x in branch.iterate_baskets()], expectation)
+
+    def test_irregular_baskets(self):
+        branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["Ai8"]
+        expectation = [[[], [-15]], [[-15, -13]], [[-15, -13, -11]], [[-15, -13, -11, -9]], [[], [-10]], [[-10, -8]], [[-10, -8, -6]], [[-10, -8, -6, -4]], [[], [-5]], [[-5, -3]], [[-5, -3, -1]], [[-5, -3, -1, 1]], [[], [0]], [[0, 2]], [[0, 2, 4]], [[0, 2, 4, 6]], [[], [5]], [[5, 7]], [[5, 7, 9]], [[5, 7, 9, 11]], [[], [10]], [[10, 12]], [[10, 12, 14]], [[10, 12, 14, 16]]]
+        self.assertEqual([len(y) for x in expectation for y in x], [0, 1, 2, 3, 4] * 6)
+        self.assertEqual([x.tolist() for x in branch.baskets()], expectation)
+        self.assertEqual([x.tolist() for x in branch.iterate_baskets()], expectation)
+
+    def test_strings_baskets(self):
+        branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["str"]
+        expectation = [[b"hey-0", b"hey-1", b"hey-2", b"hey-3", b"hey-4", b"hey-5"], [b"hey-6", b"hey-7", b"hey-8", b"hey-9", b"hey-10"], [b"hey-11", b"hey-12", b"hey-13", b"hey-14", b"hey-15"], [b"hey-16", b"hey-17", b"hey-18", b"hey-19", b"hey-20"], [b"hey-21", b"hey-22", b"hey-23", b"hey-24", b"hey-25"], [b"hey-26", b"hey-27", b"hey-28", b"hey-29"]]
+        self.assertEqual([x.tolist() for x in branch.baskets()], expectation)
+        self.assertEqual([x.tolist() for x in branch.iterate_baskets()], expectation)
+
+    ###################################################### array
+
+    def test_flat_array(self):
+        branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["i8"]
+        expectation = [-15, -14, -13, -12, -11, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+        for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
+            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop).tolist(), expectation[entrystart:entrystop])
+
+    def test_regular_array(self):
+        branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["ai8"]
+        expectation = [[-14, -13, -12], [-13, -12, -11], [-12, -11, -10], [-11, -10, -9], [-10, -9, -8], [-9, -8, -7], [-8, -7, -6], [-7, -6, -5], [-6, -5, -4], [-5, -4, -3], [-4, -3, -2], [-3, -2, -1], [-2, -1, 0], [-1, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, 4], [3, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, 8], [7, 8, 9], [8, 9, 10], [9, 10, 11], [10, 11, 12], [11, 12, 13], [12, 13, 14], [13, 14, 15], [14, 15, 16], [15, 16, 17]]
+        for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
+            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop).tolist(), expectation[entrystart:entrystop])
+
+    def test_irregular_array(self):
+        branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["Ai8"]
+        expectation = [[], [-15], [-15, -13], [-15, -13, -11], [-15, -13, -11, -9], [], [-10], [-10, -8], [-10, -8, -6], [-10, -8, -6, -4], [], [-5], [-5, -3], [-5, -3, -1], [-5, -3, -1, 1], [], [0], [0, 2], [0, 2, 4], [0, 2, 4, 6], [], [5], [5, 7], [5, 7, 9], [5, 7, 9, 11], [], [10], [10, 12], [10, 12, 14], [10, 12, 14, 16]]
+        self.assertEqual([len(x) for x in expectation], [0, 1, 2, 3, 4] * 6)
+        for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
+            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop).tolist(), expectation[entrystart:entrystop])
+
+    def test_strings_array(self):
+        branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["str"]
+        expectation = [b"hey-0", b"hey-1", b"hey-2", b"hey-3", b"hey-4", b"hey-5", b"hey-6", b"hey-7", b"hey-8", b"hey-9", b"hey-10", b"hey-11", b"hey-12", b"hey-13", b"hey-14", b"hey-15", b"hey-16", b"hey-17", b"hey-18", b"hey-19", b"hey-20", b"hey-21", b"hey-22", b"hey-23", b"hey-24", b"hey-25", b"hey-26", b"hey-27", b"hey-28", b"hey-29"]
+        for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
+            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop).tolist(), expectation[entrystart:entrystop])
+
+    ###################################################### iterate
+
+    def test_flat_iterate(self):
+        tree = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]
+        expectation = [-15, -14, -13, -12, -11, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+        for n in 1000, 5, 6, 7:
+            self.assertEqual([x.tolist() for (x,) in tree.iterate(n, "i8", outputtype=tuple)], [expectation[x : x + n] for x in range(0, len(expectation), n)])
+
+    def test_regular_iterate(self):
+        tree = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]
+        expectation = [[-14, -13, -12], [-13, -12, -11], [-12, -11, -10], [-11, -10, -9], [-10, -9, -8], [-9, -8, -7], [-8, -7, -6], [-7, -6, -5], [-6, -5, -4], [-5, -4, -3], [-4, -3, -2], [-3, -2, -1], [-2, -1, 0], [-1, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, 4], [3, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, 8], [7, 8, 9], [8, 9, 10], [9, 10, 11], [10, 11, 12], [11, 12, 13], [12, 13, 14], [13, 14, 15], [14, 15, 16], [15, 16, 17]]
+        for n in 1000, 5, 6, 7:
+            self.assertEqual([x.tolist() for (x,) in tree.iterate(n, "ai8", outputtype=tuple)], [expectation[x : x + n] for x in range(0, len(expectation), n)])
+
+    def test_irregular_iterate(self):
+        tree = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]
+        expectation = [[], [-15], [-15, -13], [-15, -13, -11], [-15, -13, -11, -9], [], [-10], [-10, -8], [-10, -8, -6], [-10, -8, -6, -4], [], [-5], [-5, -3], [-5, -3, -1], [-5, -3, -1, 1], [], [0], [0, 2], [0, 2, 4], [0, 2, 4, 6], [], [5], [5, 7], [5, 7, 9], [5, 7, 9, 11], [], [10], [10, 12], [10, 12, 14], [10, 12, 14, 16]]
+        for n in 1000, 5, 6, 7:
+            self.assertEqual([x.tolist() for (x,) in tree.iterate(n, "Ai8", outputtype=tuple)], [expectation[x : x + n] for x in range(0, len(expectation), n)])
+
+    def test_strings_iterate(self):
+        tree = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]
+        expectation = [b"hey-0", b"hey-1", b"hey-2", b"hey-3", b"hey-4", b"hey-5", b"hey-6", b"hey-7", b"hey-8", b"hey-9", b"hey-10", b"hey-11", b"hey-12", b"hey-13", b"hey-14", b"hey-15", b"hey-16", b"hey-17", b"hey-18", b"hey-19", b"hey-20", b"hey-21", b"hey-22", b"hey-23", b"hey-24", b"hey-25", b"hey-26", b"hey-27", b"hey-28", b"hey-29"]
+        for n in 1000, 5, 6, 7:
+            self.assertEqual([x.tolist() for (x,) in tree.iterate(n, "str", outputtype=tuple)], [expectation[x : x + n] for x in range(0, len(expectation), n)])
+
+    ###################################################### old tests
+
     def test_branch_array(self):
         file = uproot.open("tests/simple.root")
         repr(file)
 
         tree = file["tree"]
         repr(tree)
-        repr(tree.branch("one"))
-        repr(tree.branch("one"))
-        self.assertEqual(tree.branch("one").array().tolist(), [1, 2, 3, 4])
-        self.assertEqual(tree.branch("two").array().tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
-        self.assertEqual(tree.branch("three").array().tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+        repr(tree["one"])
 
-        # get branches again
-        self.assertEqual(tree.branch("one").array().tolist(), [1, 2, 3, 4])
-        self.assertEqual(tree.branch("two").array().tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
-        self.assertEqual(tree.branch("three").array().tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+        self.assertEqual(tree["one"].array().tolist(), [1, 2, 3, 4])
+        self.assertEqual(tree["two"].array().tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
+        self.assertEqual(tree["three"].array().tolist(), [b"uno", b"dos", b"tres", b"quatro"])
 
-        # get tree again
+        self.assertEqual(tree["one"].array().tolist(), [1, 2, 3, 4])
+        self.assertEqual(tree["two"].array().tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
+        self.assertEqual(tree["three"].array().tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+
         tree = file["tree"]
-        self.assertEqual(tree.branch("one").array().tolist(), [1, 2, 3, 4])
-        self.assertEqual(tree.branch("two").array().tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
-        self.assertEqual(tree.branch("three").array().tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+        self.assertEqual(tree["one"].array().tolist(), [1, 2, 3, 4])
+        self.assertEqual(tree["two"].array().tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
+        self.assertEqual(tree["three"].array().tolist(), [b"uno", b"dos", b"tres", b"quatro"])
 
     def test_tree_arrays(self):
         file = uproot.open("tests/simple.root")
@@ -86,38 +249,38 @@ class TestTree(unittest.TestCase):
 
     def test_tree_iterator1(self):
         # one big array
-        for arrays in uproot.open("tests/foriter.root")["foriter"].iterator(1000):
+        for arrays in uproot.open("tests/foriter.root")["foriter"].iterate(1000):
             self.assertEqual(arrays[b"data"].tolist(), list(range(46)))
 
         # size is equal to basket size (for most baskets)
         i = 0
-        for arrays in uproot.open("tests/foriter.root")["foriter"].iterator(6):
+        for arrays in uproot.open("tests/foriter.root")["foriter"].iterate(6):
             self.assertEqual(arrays[b"data"].tolist(), list(range(i, min(i + 6, 46))))
             i += 6
 
         # size is smaller
         i = 0
-        for arrays in uproot.open("tests/foriter.root")["foriter"].iterator(3):
+        for arrays in uproot.open("tests/foriter.root")["foriter"].iterate(3):
             self.assertEqual(arrays[b"data"].tolist(), list(range(i, min(i + 3, 46))))
             i += 3
         i = 0
-        for arrays in uproot.open("tests/foriter.root")["foriter"].iterator(4):
+        for arrays in uproot.open("tests/foriter.root")["foriter"].iterate(4):
             self.assertEqual(arrays[b"data"].tolist(), list(range(i, min(i + 4, 46))))
             i += 4
 
         # size is larger
         i = 0
-        for arrays in uproot.open("tests/foriter.root")["foriter"].iterator(12):
+        for arrays in uproot.open("tests/foriter.root")["foriter"].iterate(12):
             self.assertEqual(arrays[b"data"].tolist(), list(range(i, min(i + 12, 46))))
             i += 12
         i = 0
-        for arrays in uproot.open("tests/foriter.root")["foriter"].iterator(10):
+        for arrays in uproot.open("tests/foriter.root")["foriter"].iterate(10):
             self.assertEqual(arrays[b"data"].tolist(), list(range(i, min(i + 10, 46))))
             i += 10
 
         # singleton case
         i = 0
-        for arrays in uproot.open("tests/foriter.root")["foriter"].iterator(1):
+        for arrays in uproot.open("tests/foriter.root")["foriter"].iterate(1):
             self.assertEqual(arrays[b"data"].tolist(), list(range(i, min(i + 1, 46))))
             i += 1
 
@@ -125,123 +288,136 @@ class TestTree(unittest.TestCase):
         words = [b"zero", b"one", b"two", b"three", b"four", b"five", b"six", b"seven", b"eight", b"nine", b"ten", b"eleven", b"twelve", b"thirteen", b"fourteen", b"fifteen", b"sixteen", b"seventeen", b"eighteen", b"ninteen", b"twenty", b"twenty-one", b"twenty-two", b"twenty-three", b"twenty-four", b"twenty-five", b"twenty-six", b"twenty-seven", b"twenty-eight", b"twenty-nine", b"thirty"]
 
         # one big array
-        for arrays in uproot.open("tests/foriter2.root")["foriter2"].iterator(1000):
+        for arrays in uproot.open("tests/foriter2.root")["foriter2"].iterate(1000):
             self.assertEqual(arrays[b"data"].tolist(), words)
 
         # size is equal to basket size (for most baskets)
         i = 0
-        for arrays in uproot.open("tests/foriter2.root")["foriter2"].iterator(6):
+        for arrays in uproot.open("tests/foriter2.root")["foriter2"].iterate(6):
             self.assertEqual(arrays[b"data"].tolist(), words[i:i + 6])
             i += 6
 
         # size is smaller
         i = 0
-        for arrays in uproot.open("tests/foriter2.root")["foriter2"].iterator(3):
+        for arrays in uproot.open("tests/foriter2.root")["foriter2"].iterate(3):
             self.assertEqual(arrays[b"data"].tolist(), words[i:i + 3])
             i += 3
         i = 0
-        for arrays in uproot.open("tests/foriter2.root")["foriter2"].iterator(4):
+        for arrays in uproot.open("tests/foriter2.root")["foriter2"].iterate(4):
             self.assertEqual(arrays[b"data"].tolist(), words[i:i + 4])
             i += 4
 
         # size is larger
         i = 0
-        for arrays in uproot.open("tests/foriter2.root")["foriter2"].iterator(12):
+        for arrays in uproot.open("tests/foriter2.root")["foriter2"].iterate(12):
             self.assertEqual(arrays[b"data"].tolist(), words[i:i + 12])
             i += 12
         i = 0
-        for arrays in uproot.open("tests/foriter2.root")["foriter2"].iterator(10):
+        for arrays in uproot.open("tests/foriter2.root")["foriter2"].iterate(10):
             self.assertEqual(arrays[b"data"].tolist(), words[i:i + 10])
             i += 10
 
         # singleton case
         i = 0
-        for arrays in uproot.open("tests/foriter2.root")["foriter2"].iterator(1):
+        for arrays in uproot.open("tests/foriter2.root")["foriter2"].iterate(1):
             self.assertEqual(arrays[b"data"].tolist(), words[i:i + 1])
             i += 1
 
     def test_tree_iterator3(self):
-        source = list(range(46)) + list(range(46))
+        source = list(range(46))
 
         # one big array
-        for arrays in uproot.iterator(1000, ["tests/foriter.root", "tests/foriter.root"], "foriter"):
+        for arrays in uproot.iterate(["tests/foriter.root", "tests/foriter.root"], "foriter", 1000):
             self.assertEqual(arrays[b"data"].tolist(), source)
 
         # size is equal to basket size (for most baskets)
         i = 0
-        for arrays in uproot.iterator(6, ["tests/foriter.root", "tests/foriter.root"], "foriter"):
-            self.assertEqual(arrays[b"data"].tolist(), source[i:min(i + 6, 46*2)])
+        for arrays in uproot.iterate(["tests/foriter.root", "tests/foriter.root"], "foriter", 6):
+            self.assertEqual(arrays[b"data"].tolist(), source[i : i + 6])
             i += 6
+            if i > 45: i = 0
 
         # size is smaller
         i = 0
-        for arrays in uproot.iterator(3, ["tests/foriter.root", "tests/foriter.root"], "foriter"):
-            self.assertEqual(arrays[b"data"].tolist(), source[i:min(i + 3, 46*2)])
+        for arrays in uproot.iterate(["tests/foriter.root", "tests/foriter.root"], "foriter", 3):
+            self.assertEqual(arrays[b"data"].tolist(), source[i : i + 3])
             i += 3
+            if i > 45: i = 0
         i = 0
-        for arrays in uproot.iterator(4, ["tests/foriter.root", "tests/foriter.root"], "foriter"):
-            self.assertEqual(arrays[b"data"].tolist(), source[i:min(i + 4, 46*2)])
+        for arrays in uproot.iterate(["tests/foriter.root", "tests/foriter.root"], "foriter", 4):
+            self.assertEqual(arrays[b"data"].tolist(), source[i : i + 4])
             i += 4
+            if i > 45: i = 0
 
         # size is larger
         i = 0
-        for arrays in uproot.iterator(12, ["tests/foriter.root", "tests/foriter.root"], "foriter"):
-            self.assertEqual(arrays[b"data"].tolist(), source[i:min(i + 12, 46*2)])
+        for arrays in uproot.iterate(["tests/foriter.root", "tests/foriter.root"], "foriter", 12):
+            self.assertEqual(arrays[b"data"].tolist(), source[i : i + 12])
             i += 12
+            if i > 45: i = 0
         i = 0
-        for arrays in uproot.iterator(10, ["tests/foriter.root", "tests/foriter.root"], "foriter"):
-            self.assertEqual(arrays[b"data"].tolist(), source[i:min(i + 10, 46*2)])
+        for arrays in uproot.iterate(["tests/foriter.root", "tests/foriter.root"], "foriter", 10):
+            self.assertEqual(arrays[b"data"].tolist(), source[i : i + 10])
             i += 10
+            if i > 45: i = 0
 
         # singleton case
         i = 0
-        for arrays in uproot.iterator(1, ["tests/foriter.root", "tests/foriter.root"], "foriter"):
-            self.assertEqual(arrays[b"data"].tolist(), source[i:min(i + 1, 46*2)])
+        for arrays in uproot.iterate(["tests/foriter.root", "tests/foriter.root"], "foriter", 1):
+            self.assertEqual(arrays[b"data"].tolist(), source[i : i + 1])
             i += 1
+            if i > 45: i = 0
 
     def test_tree_iterator4(self):
-        words2 = [b"zero", b"one", b"two", b"three", b"four", b"five", b"six", b"seven", b"eight", b"nine", b"ten", b"eleven", b"twelve", b"thirteen", b"fourteen", b"fifteen", b"sixteen", b"seventeen", b"eighteen", b"ninteen", b"twenty", b"twenty-one", b"twenty-two", b"twenty-three", b"twenty-four", b"twenty-five", b"twenty-six", b"twenty-seven", b"twenty-eight", b"twenty-nine", b"thirty"] * 2
+        words2 = [b"zero", b"one", b"two", b"three", b"four", b"five", b"six", b"seven", b"eight", b"nine", b"ten", b"eleven", b"twelve", b"thirteen", b"fourteen", b"fifteen", b"sixteen", b"seventeen", b"eighteen", b"ninteen", b"twenty", b"twenty-one", b"twenty-two", b"twenty-three", b"twenty-four", b"twenty-five", b"twenty-six", b"twenty-seven", b"twenty-eight", b"twenty-nine", b"thirty"]
 
         # one big array
-        for arrays in uproot.iterator(1000, ["tests/foriter2.root", "tests/foriter2.root"], "foriter2"):
+        for arrays in uproot.iterate(["tests/foriter2.root", "tests/foriter2.root"], "foriter2", 1000):
             self.assertEqual(arrays[b"data"].tolist(), words2)
 
         # size is equal to basket size (for most baskets)
         i = 0
-        for arrays in uproot.iterator(6, ["tests/foriter2.root", "tests/foriter2.root"], "foriter2"):
-            self.assertEqual(arrays[b"data"].tolist(), words2[i:i + 6])
+        for arrays in uproot.iterate(["tests/foriter2.root", "tests/foriter2.root"], "foriter2", 6):
+            self.assertEqual(arrays[b"data"].tolist(), words2[i : i + 6])
             i += 6
+            if i > 30: i = 0
 
         # size is smaller
         i = 0
-        for arrays in uproot.iterator(3, ["tests/foriter2.root", "tests/foriter2.root"], "foriter2"):
-            self.assertEqual(arrays[b"data"].tolist(), words2[i:i + 3])
+        for arrays in uproot.iterate(["tests/foriter2.root", "tests/foriter2.root"], "foriter2", 3):
+            self.assertEqual(arrays[b"data"].tolist(), words2[i : i + 3])
             i += 3
+            if i > 30: i = 0
         i = 0
-        for arrays in uproot.iterator(4, ["tests/foriter2.root", "tests/foriter2.root"], "foriter2"):
-            self.assertEqual(arrays[b"data"].tolist(), words2[i:i + 4])
+        for arrays in uproot.iterate(["tests/foriter2.root", "tests/foriter2.root"], "foriter2", 4):
+            self.assertEqual(arrays[b"data"].tolist(), words2[i : i + 4])
             i += 4
+            if i > 30: i = 0
 
         # size is larger
         i = 0
-        for arrays in uproot.iterator(12, ["tests/foriter2.root", "tests/foriter2.root"], "foriter2"):
-            self.assertEqual(arrays[b"data"].tolist(), words2[i:i + 12])
+        for arrays in uproot.iterate(["tests/foriter2.root", "tests/foriter2.root"], "foriter2", 12):
+            self.assertEqual(arrays[b"data"].tolist(), words2[i : i + 12])
             i += 12
+            if i > 30: i = 0
         i = 0
-        for arrays in uproot.iterator(10, ["tests/foriter2.root", "tests/foriter2.root"], "foriter2"):
-            self.assertEqual(arrays[b"data"].tolist(), words2[i:i + 10])
+        for arrays in uproot.iterate(["tests/foriter2.root", "tests/foriter2.root"], "foriter2", 10):
+            self.assertEqual(arrays[b"data"].tolist(), words2[i : i + 10])
             i += 10
+            if i > 30: i = 0
 
         # singleton case
         i = 0
-        for arrays in uproot.iterator(1, ["tests/foriter2.root", "tests/foriter2.root"], "foriter2"):
-            self.assertEqual(arrays[b"data"].tolist(), words2[i:i + 1])
+        for arrays in uproot.iterate(["tests/foriter2.root", "tests/foriter2.root"], "foriter2", 1):
+            self.assertEqual(arrays[b"data"].tolist(), words2[i : i + 1])
             i += 1
+            if i > 30: i = 0
 
     def test_directories(self):
         file = uproot.open("tests/nesteddirs.root")
-        self.assertEqual(file.contents, {b"one;1": b"TDirectory", b"three;1": b"TDirectory"})
-        self.assertEqual(file.allcontents, {b"one/two;1": b"TDirectory", b"one/two/tree;1": b"TTree", b"three/tree;1": b"TTree", b"one;1": b"TDirectory", b"one/tree;1": b"TTree", b"three;1": b"TDirectory"})
+
+        self.assertEqual(list(file.classes()), [(b"one;1", b"TDirectory"), (b"three;1", b"TDirectory")])
+        self.assertEqual(list(file.allclasses()), [(b"one;1", b"TDirectory"), (b"one;1/two;1", b"TDirectory"), (b"one;1/two;1/tree;1", b"TTree"), (b"one;1/tree;1", b"TTree"), (b"three;1", b"TDirectory"), (b"three;1/tree;1", b"TTree")])
 
         self.assertEqual(file["one"]["tree"].branchnames, [b"one", b"two", b"three"])
         self.assertEqual(file["one"].get("tree", 1).branchnames, [b"one", b"two", b"three"])
@@ -271,9 +447,9 @@ class TestTree(unittest.TestCase):
         self.assertEqual(one.shape, two.shape)
         self.assertTrue(numpy.array_equal(one, two))
 
-        for (one,) in tree.iterator(10000, "M", outputtype=tuple):
+        for (one,) in tree.iterate(10000, "M", outputtype=tuple):
             one = numpy.cast[numpy.int32](numpy.floor(one))
-        for (two,) in tree.iterator(10000, {"M": numpy.int32}, outputtype=tuple):
+        for (two,) in tree.iterate(10000, {"M": numpy.int32}, outputtype=tuple):
             pass
         self.assertEqual(one.dtype, two.dtype)
         self.assertEqual(one.shape, two.shape)
@@ -286,10 +462,10 @@ class TestTree(unittest.TestCase):
         tree.array("M", two)
         self.assertTrue(numpy.array_equal(one, two))
 
-        for (one,) in tree.iterator(10000, "M", outputtype=tuple):
+        for (one,) in tree.iterate(10000, "M", outputtype=tuple):
             one = numpy.cast[numpy.int32](numpy.floor(one))
             two = numpy.zeros(one.shape, dtype=one.dtype)
-            for (two,) in tree.iterator(10000, {"M": numpy.int32}, outputtype=tuple):
+            for (two,) in tree.iterate(10000, {"M": numpy.int32}, outputtype=tuple):
                 self.assertTrue(numpy.array_equal(one, two))
 
     def test_outputtype(self):
@@ -325,12 +501,6 @@ class TestTree(unittest.TestCase):
         self.assertEqual(arrays.one.tolist(), [1, 2, 3, 4])
         self.assertEqual(arrays.three.tolist(), [b"uno", b"dos", b"tres", b"quatro"])
 
-    def test_informational(self):
-        self.assertEqual(uproot.open("tests/simple.root")["tree"].branchnames, [b"one", b"two", b"three"])
-        self.assertEqual(uproot.open("tests/simple.root")["tree"].branchtypes, {b"two": numpy.dtype(">f4"), b"one": numpy.dtype(">i4"), b"three": numpy.dtype("O")})
-        self.assertEqual(uproot.open("tests/small-evnt-tree-fullsplit.root")["tree"].allbranchnames, [b"evt", b"Beg", b"I16", b"I32", b"I64", b"U16", b"U32", b"U64", b"F32", b"F64", b"Str", b"P3.Px", b"P3.Py", b"P3.Pz", b"ArrayI16[10]", b"ArrayI32[10]", b"ArrayI64[10]", b"ArrayU16[10]", b"ArrayU32[10]", b"ArrayU64[10]", b"ArrayF32[10]", b"ArrayF64[10]", b"N", b"SliceI16", b"SliceI32", b"SliceI64", b"SliceU16", b"SliceU32", b"SliceU64", b"SliceF32", b"SliceF64", b"End"])
-        self.assertEqual(uproot.open("tests/small-evnt-tree-fullsplit.root")["tree"].allbranchtypes, {b"Str": numpy.dtype("O"), b"P3.Px": numpy.dtype(">i4"), b"I64": numpy.dtype(">i8"), b"U64": numpy.dtype(">u8"), b"ArrayF32[10]": numpy.dtype(">f4"), b"SliceI16": numpy.dtype(">i2"), b"ArrayI64[10]": numpy.dtype(">i8"), b"evt": numpy.dtype(">i4"), b"SliceF64": numpy.dtype(">f8"), b"End": numpy.dtype("O"), b"U32": numpy.dtype(">u4"), b"Beg": numpy.dtype("O"), b"I32": numpy.dtype(">i4"), b"N": numpy.dtype(">i4"), b"SliceI32": numpy.dtype(">i4"), b"P3.Py": numpy.dtype(">f8"), b"U16": numpy.dtype(">u2"), b"SliceU32": numpy.dtype(">u4"), b"P3.Pz": numpy.dtype(">i4"), b"ArrayI32[10]": numpy.dtype(">i4"), b"ArrayF64[10]": numpy.dtype(">f8"), b"I16": numpy.dtype(">i2"), b"SliceU64": numpy.dtype(">u8"), b"F64": numpy.dtype(">f8"), b"ArrayI16[10]": numpy.dtype(">i2"), b"ArrayU16[10]": numpy.dtype(">u2"), b"ArrayU32[10]": numpy.dtype(">u4"), b"F32": numpy.dtype(">f4"), b"SliceF32": numpy.dtype(">f4"), b"ArrayU64[10]": numpy.dtype(">u8"), b"SliceU16": numpy.dtype(">u2"), b"SliceI64": numpy.dtype(">i8")})
-
     def test_tree_lazy(self):
         tree = uproot.open("tests/sample-5.30.00-uncompressed.root")["sample"]
 
@@ -350,5 +520,30 @@ class TestTree(unittest.TestCase):
                 self.assertEqual(lazy[i : i + 3].tolist(), strict[i : i + 3].tolist())
 
             lazy = tree[branchname].lazyarray()
+            for i in range(len(lazy), 0, -1):
+                self.assertEqual(lazy[i - 1 : i + 3].tolist(), strict[i - 1 : i + 3].tolist())
+
+    def test_tree_lazy_cached(self):
+        tree = uproot.open("tests/sample-5.30.00-uncompressed.root")["sample"]
+
+        keycache = {}
+        rawcache = {}
+
+        for branchname in b"u1", b"i8", b"Ai8", b"f4", b"af4":
+            strict = tree[branchname].array()
+
+            lazy = tree[branchname].lazyarray(keycache=keycache, rawcache=rawcache)
+            for i in range(len(lazy)):
+                self.assertEqual(lazy[i].tolist(), strict[i].tolist())
+
+            lazy = tree[branchname].lazyarray(keycache=keycache, rawcache=rawcache)
+            for i in range(len(lazy), 0, -1):
+                self.assertEqual(lazy[i - 1].tolist(), strict[i - 1].tolist())
+
+            lazy = tree[branchname].lazyarray(keycache=keycache, rawcache=rawcache)
+            for i in range(len(lazy)):
+                self.assertEqual(lazy[i : i + 3].tolist(), strict[i : i + 3].tolist())
+
+            lazy = tree[branchname].lazyarray(keycache=keycache, rawcache=rawcache)
             for i in range(len(lazy), 0, -1):
                 self.assertEqual(lazy[i - 1 : i + 3].tolist(), strict[i - 1 : i + 3].tolist())

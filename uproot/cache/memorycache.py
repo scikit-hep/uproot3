@@ -372,3 +372,71 @@ class ThreadSafeMemoryCache(MemoryCache):
                     return super(ThreadSafeMemoryCache, self).__lt__(self, other)
         else:
             raise TypeError("unorderable types: {0} < {1}".format(type(self), type(other)))
+
+class ThreadSafeDict(dict):
+    def __init__(self, items=(), **kwds):
+        self._lock = threading.RLock()
+        with self._lock:
+            super(ThreadSafeDict, self).__init__(items, **kwds)
+
+    def __getitem__(self, key):
+        with self._lock:
+            return super(ThreadSafeDict, self).__getitem__(key)
+
+    def __setitem__(self, key, value):
+        with self._lock:
+            return super(ThreadSafeDict, self).__setitem__(key, value)
+
+    def __delitem__(self, key):
+        with self._lock:
+            return super(ThreadSafeDict, self).__delitem__(key)
+
+    def keys(self):
+        with self._lock:
+            return list(super(ThreadSafeDict, self).keys())
+
+    def values(self):
+        with self._lock:
+            return list(super(ThreadSafeDict, self).values())
+
+    def items(self):
+        with self._lock:
+            return list(super(ThreadSafeDict, self).items())
+
+    @staticmethod
+    def fromkeys(keys, value=None):
+        return ThreadSafeDict([(key, value) for key in keys])
+
+    def copy(self):
+        return ThreadSafeDict(self.items())
+
+    def update(self, items=(), **kwds):
+        with self._lock:
+            return super(ThreadSafeDict, self).update(items, **kwds)
+
+    def popitem(self, **args):
+        with self._lock:
+            return super(ThreadSafeDict, self).popitem(**args)
+
+    def get(self, key, default=None):
+        with self._lock:
+            return super(ThreadSafeDict, self).get(key, default)
+
+    def setdefault(self, key, default=None):
+        with self._lock:
+            return super(ThreadSafeDict, self).setdefault(key, default)
+
+    def __eq__(self, other):
+        if not self.__class__ == other.__class__:
+            return False
+        with self._lock:
+            with other._lock:
+                return super(ThreadSafeDict, self).__eq__(self, other)
+
+    def __lt__(self, other):
+        if isinstance(other, ThreadLocalMemoryCache):
+            with self._lock:
+                with other._lock:
+                    return super(ThreadSafeDict, self).__lt__(self, other)
+        else:
+            raise TypeError("unorderable types: {0} < {1}".format(type(self), type(other)))

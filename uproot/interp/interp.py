@@ -28,23 +28,30 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import struct
+class Interpretation(object):
+    def empty(self):
+        raise NotImplementedError
 
-import numpy
+    def compatible(self, other):
+        raise NotImplementedError
 
-class Walker(object):
-    def __init__(self, *args, **kwds):
-        raise TypeError("Walker is an abstract class")
+    def numitems(self, numbytes, numentries):
+        raise NotImplementedError
 
-    @staticmethod
-    def size(format):
-        return struct.calcsize(format)
+    def source_numitems(self, source):
+        raise NotImplementedError
 
-    def _evaluate(self, parallel=False):
-        pass
+    def fromroot(self, data, offsets, local_entrystart, local_entrystop):
+        raise NotImplementedError
 
-    def _unevaluate(self):
-        pass
+    def destination(self, numitems, numentries):
+        raise NotImplementedError
 
-    def startcontext(self):
-        pass
+    def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
+        raise NotImplementedError
+
+    def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
+        raise NotImplementedError
+
+    def finalize(self, destination):
+        raise NotImplementedError

@@ -28,10 +28,40 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import re
+import os.path
 
-__version__ = "2.0.0"
-version = __version__
-version_info = tuple(re.split(r"[-\.]", __version__))
+import numpy
 
-del re
+import uproot.cache.memorycache
+import uproot.source.chunked
+
+class FileSource(uproot.source.chunked.ChunkedSource):
+    @staticmethod
+    def defaults(path):
+        return FileSource(path, chunkbytes=8*1024, limitbytes=1024**2)
+
+    def __init__(self, path, *args, **kwds):
+        super(FileSource, self).__init__(os.path.expanduser(path), *args, **kwds)
+
+    def threadlocal(self):
+        out = FileSource.__new__(self.__class__)
+        out.path = self.path
+        out._chunkbytes = self._chunkbytes
+        if isinstance(self._cache, (uproot.cache.memorycache.ThreadSafeMemoryCache, uproot.cache.memorycache.ThreadSafeDict)):
+            out._cache = self._cache
+        else:
+            out._cache = {}
+        out._source = None             # local file connections are *not shared* among threads (they're *not* thread-safe)
+        return out
+
+    def _open(self):
+        if self._source is None:
+            self._source = open(self.path, "rb")
+
+    def _read(self, chunkindex):
+        self._source.seek(chunkindex * self._chunkbytes)
+        return numpy.frombuffer(self._source.read(self._chunkbytes), dtype=numpy.uint8)
+    
+    def dismiss(self):
+        if self._source is not None:
+            self._source.close()       # local file connections are *not shared* among threads

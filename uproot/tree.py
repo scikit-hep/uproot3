@@ -28,147 +28,328 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from collections import namedtuple
-from functools import reduce
-import re
+import glob
+import inspect
+import numbers
+import os.path
+import struct
 import sys
+import threading
+from collections import namedtuple
+try:
+    from urlparse import urlparse
+except ImportError:
+    from urllib.parse import urlparse
+try:
+    from collections import OrderedDict
+except ImportError:
+    # simple OrderedDict implementation for Python 2.6
+    class OrderedDict(dict):
+        def __init__(self, items=(), **kwds):
+            items = list(items)
+            self._order = [k for k, v in items] + [k for k, v in kwds.items()]
+            super(OrderedDict, self).__init__(items)
+        def keys(self):
+            return self._order
+        def values(self):
+            return [self[k] for k in self._order]
+        def items(self):
+            return [(k, self[k]) for k in self._order]
+        def __setitem__(self, name, order):
+            if name not in self._order:
+                self._order.append(name)
+            super(OrderedDict, self).__setitem__(name, value)
+        def __delitem__(self, name):
+            if name in self._order:
+                self._order.remove(name)
+            super(OrderedDict, self).__delitem__(name)
+        def __repr__(self):
+            return "OrderedDict([{0}])".format(", ".join("({0}, {1})".format(repr(k), repr(v)) for k, v in self.items()))
 
 import numpy
-array_types = (numpy.ndarray,)
-toarray = lambda x: x
 
-try:
-    import pandas.core.series
-except ImportError:
-    pass
-else:
-    array_types = array_types + (pandas.core.series.Series,)
-    oldtoarray = toarray
-    def newtoarray(x):
-        if isinstance(x, pandas.core.series.Series):
-            return x.values
-        else:
-            return oldtoarray(x)
-    toarray = newtoarray
-
-import uproot.core
 import uproot.rootio
-import uproot._walker.arraywalker
-import uproot._walker.lazyarraywalker
+from uproot.rootio import _bytesid
+from uproot.source.cursor import Cursor
+from uproot.interp.auto import interpret
+from uproot.interp.numerical import asdtype
+from uproot.interp.jagged import asjagged
+from uproot.source.memmap import MemmapSource
+from uproot.source.xrootd import XRootDSource
 
-def _delayedraise(cls, err, trc):
-    if sys.version_info[0] <= 2:
-        exec("raise cls, err, trc")
+if sys.version_info[0] <= 2:
+    string_types = (unicode, str)
+else:
+    string_types = (str, bytes)
+
+def _delayedraise(excinfo):
+    if excinfo is not None:
+        cls, err, trc = excinfo
+        if sys.version_info[0] <= 2:
+            exec("raise cls, err, trc")
+        else:
+            raise err.with_traceback(trc)
+
+################################################################ high-level interface
+
+def iterate(path, treepath, entrystepsize, branches=None, outputtype=dict, reportentries=False, keycache=None, rawcache=None, cache=None, executor=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, **options):
+    if not isinstance(entrystepsize, numbers.Integral) or entrystepsize <= 0:
+        raise ValueError("'entrystepsize' must be a positive integer")
+
+    for tree, newbranches, globalentrystart in _iterate(path, treepath, branches, localsource, xrootdsource, **options):
+        for start, stop, arrays in tree.iterate(entrystepsize, branches=newbranches, outputtype=outputtype, reportentries=True, entrystart=0, entrystop=tree.numentries, keycache=keycache, rawcache=rawcache, cache=cache, executor=executor):
+            if reportentries:
+                yield globalentrystart + start, globalentrystart + stop, arrays
+            else:
+                yield arrays
+        
+def _iterate(path, treepath, branches, localsource, xrootdsource, **options):
+    def explode(x):
+        parsed = urlparse(x)
+        if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0:
+            return sorted(glob.glob(os.path.expanduser(parsed.netloc + parsed.path)))
+        else:
+            return [x]
+
+    if isinstance(path, string_types):
+        paths = explode(path)
     else:
-        raise err.with_traceback(trc)
-    
-class TTree(uproot.core.TNamed,
-            uproot.core.TAttLine,
-            uproot.core.TAttFill,
-            uproot.core.TAttMarker):
-    """Represents a TTree, a table of data (possibly a ragged table, as some types allow for multiple items per TTree entry).
+        paths = [y for x in path for y in explode(x)]
 
-    Reading data:
+    oldpath = None
+    oldbranches = None
+    holdover = None
+    holdoverentries = 0
+    outerstart = 0
+    globalentrystart = 0
+    for path in paths:
+        tree = uproot.rootio.open(path, localsource=localsource, xrootdsource=xrootdsource, **options)[treepath]
+        listbranches = list(tree._normalize_branches(branches))
 
-        * `tree.arrays(...)` gets all or selected branches as arrays. It has many options; see help(TTree.arrays).
-        * `tree.array(branch, ...)` gets a single branch as an array. It has many options; see help(TTree.array).
-        * `tree.iterator(numentries, ...)` iterates over a fixed number of numentries at a time. It has many options; see help(TTree.iterator).
+        newbranches = OrderedDict((branch.name, interpretation) for branch, interpretation in listbranches)
+        if oldbranches is not None:
+            for key in set(oldbranches.keys()).union(set(newbranches.keys())):
+                if key not in newbranches:
+                    raise ValueError("branch {0} cannot be found in {1}, but it was in {2}".format(repr(key), repr(path), repr(oldpath)))
+                if key not in oldbranches:
+                    del newbranches[key]
+                elif not newbranches[key].compatible(oldbranches[key]):
+                    raise ValueError("branch {0} interpreted as {1} in {2}, but as {3} in {4}".format(repr(key), newbranches[key], repr(path), oldbranches[key], repr(oldpath)))
 
-    Information about the tree:
+        oldpath = path
+        oldbranches = newbranches
 
-        * `tree.numentries` is the number of entries.
-        * `tree.branch(name)` gets a branch object by name.
-        * `tree.branches` are the TBranch objects directly attached to the TTree's root.
-        * `tree.allbranches` are all the TBranch objects, recursively following branches' branches.
-        * `tree.branchnames` are all the directly attached branch names.
-        * `tree.allbranchnames` are all the branch names, recursively following branches' branches.
-        * `tree.branchtypes` is a `{name: dtype}` dict of all the directly attached branch names.
-        * `tree.allbranchtypes` is a `{name: dtype}` dict of all the branch names, recursively following branches' branches.
-        * `tree.leaves` are all the TLeaf objects.
-        * `tree.counter` is a dict from branch names to Counter(branch, leaf) for branches that may have multiple items per TTree entry.
+        yield tree, newbranches, globalentrystart
+        globalentrystart += tree.numentries
 
-    `tree[name]` is a synonym for `tree.branch(name)`.
+################################################################ methods for TTree
 
-    TTree is not iterable, but `len(tree)` is a synonym for `tree.numentries`.
-    """
-    def __init__(self, filewalker, walker):
-        walker.startcontext()
-        start = walker.index
-        vers, bcnt = self._readversion(walker)
+class TTreeMethods(object):
+    _copycontext = True
 
-        uproot.core.TNamed.__init__(self, filewalker, walker)
-        uproot.core.TAttLine.__init__(self, filewalker, walker)
-        uproot.core.TAttFill.__init__(self, filewalker, walker)
-        uproot.core.TAttMarker.__init__(self, filewalker, walker)
+    def _postprocess(self, source, cursor, context):
+        context.treename = self.name
 
-        self.numentries, totbytes, zipbytes = walker.readfields("!qqq")
+    @property
+    def name(self):
+        return self.fName
 
-        if vers < 16:
-            raise NotImplementedError("TTree too old")
+    @property
+    def title(self):
+        return self.fTitle
 
-        if vers >= 16:
-            walker.skip("!q")  # fSavedBytes
+    @property
+    def numentries(self):
+        return self.fEntries
 
-        if vers >= 18:
-            walker.skip("!q")  # flushed bytes
+    @property
+    def branches(self):
+        return self.fBranches
 
-        walker.skip("!diii")   # fWeight, fTimerInterval, fScanField, fUpdate
+    @property
+    def allbranches(self):
+        out = []
+        for branch in self.branches:
+            out.append(branch)
+            out.extend(branch.allbranches)
+        return out
 
-        if vers >= 17:
-            walker.skip("!i")  # fDefaultEntryOffsetLen
+    @property
+    def branchnames(self):
+        return [branch.name for branch in self.branches]
 
-        if vers >= 19:
-            nclus = walker.readfield("!i")  # fNClusterRange
+    @property
+    def allbranchnames(self):
+        return [branch.name for branch in self.allbranches]
 
-        walker.skip("!qqqq")   # fMaxEntries, fMaxEntryLoop, fMaxVirtualSize, fAutoSave
+    def branch(self, name):
+        name = _bytesid(name)
+        for branch in self.branches:
+            if branch.name == name:
+                return branch
+            try:
+                return branch.branch(name)
+            except KeyError:
+                pass
+        raise KeyError("not found: {0}".format(repr(name)))
 
-        if vers >= 18:
-            walker.skip("!q")  # fAutoFlush
+    @property
+    def clusters(self):
+        # need to find an example of a file that has clusters!
+        # yield as a (start, stop) generator
+        raise NotImplementedError
 
-        walker.skip("!q")      # fEstimate
+    def array(self, branch, interpretation=None, entrystart=None, entrystop=None, keycache=None, rawcache=None, cache=None, executor=None, blocking=True):
+        return self.branch(branch).array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, keycache=keycache, rawcache=rawcache, cache=cache, executor=executor, blocking=blocking)
 
-        if vers >= 19:         # "FIXME" in go-hep
-            walker.skip(1)
-            walker.skip(nclus * 8)   # fClusterRangeEnd
-            walker.skip(1)
-            walker.skip(nclus * 8)   # fClusterSize
+    def lazyarray(self, branch, interpretation=None, keycache=None, rawcache=None, cache=None, executor=None):
+        return self.branch(branch).lazyarray(interpretation=interpretation, keycache=keycache, rawcache=rawcache, cache=cache, executor=executor)
 
-        self.branches = list(uproot.core.TObjArray(filewalker, walker))
-        self.leaves = list(uproot.core.TObjArray(filewalker, walker))
+    def arrays(self, branches=None, outputtype=dict, entrystart=None, entrystop=None, keycache=None, rawcache=None, cache=None, executor=None, blocking=True):
+        branches = list(self._normalize_branches(branches))
 
-        for i in range(7):
-            # fAliases, fIndexValues, fIndex, fTreeIndex, fFriends, fUserInfo, fBranchRef
-            uproot.rootio.Deserialized._deserialize(filewalker, walker)
+        if outputtype == namedtuple:
+            outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
 
-        self._checkbytecount(walker.index - start, bcnt)
+        futures = [(branch.name, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, keycache=keycache, rawcache=rawcache, cache=cache, executor=executor, blocking=False)) for branch, interpretation in branches]
 
-        leaves2branches = {}
-        def recurse(obj):
-            for branch in obj.branches:
-                branch.numentries = self.numentries
-                for leaf in branch.leaves:
-                    leaves2branches[leaf.name] = branch.name
-                recurse(branch)
-        recurse(self)
+        if issubclass(outputtype, dict):
+            def await():
+                return outputtype([(name, future()) for name, future in futures])
+        elif outputtype == tuple or outputtype == list:
+            def await():
+                return outputtype([future() for name, future in futures])
+        else:
+            def await():
+                return outputtype(*[future() for name, future in futures])
 
-        self.counter = {}
-        def recurse(obj):
-            for branch in obj.branches:
-                for leaf in branch.leaves:
-                    if leaf.counter is not None:
-                        leafname = leaf.counter.name
-                        branchname = leaves2branches[leafname]
-                        self.counter[branch.name] = self.Counter(branchname, leafname)
-                recurse(branch)
-        recurse(self)
+        if blocking:
+            return await()
+        else:
+            return await
+        
+    def lazyarrays(self, branches=None, outputtype=dict, keycache=None, rawcache=None, cache=None, executor=None):
+        branches = list(self._normalize_branches(branches))
 
-    Counter = namedtuple("Counter", ["branch", "leaf"])
+        if outputtype == namedtuple:
+            outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
 
-    def __del__(self):
-        del self.branches
+        lazyarrays = [(branch.name, branch.lazyarray(interpretation=interpretation, keycache=keycache, rawcache=rawcache, cache=cache, executor=executor)) for branch, interpretation in branches]
 
-    def __repr__(self):
-        return "<TTree {0} len={1} at 0x{2:012x}>".format(repr(self.name), self.numentries, id(self))
+        if issubclass(outputtype, dict):
+            return outputtype(lazyarrays)
+        elif outputtype == tuple or outputtype == list:
+            return outputtype([lazyarray for name, lazyarray in lazyarrays])
+        else:
+            return outputtype(*[lazyarray for name, lazyarray in lazyarrays])
+
+    def _iterate(self, startstop, branches, outputtype, reportentries, keycache, rawcache, cache, executor, finalize):
+        branches = list(self._normalize_branches(branches))
+
+        if outputtype == namedtuple:
+            outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
+
+        branchinfo = [(branch, interpretation, branch._basket_itemoffset(interpretation, 0, branch.numbaskets, keycache), branch._basket_entryoffset(0, branch.numbaskets)) for branch, interpretation in branches]
+
+        if keycache is None:
+            keycache = uproot.cache.memorycache.ThreadSafeDict()
+
+        if rawcache is None:
+            rawcache = uproot.cache.memorycache.ThreadSafeDict()
+            explicit_rawcache = False
+        else:
+            explicit_rawcache = True
+
+        if finalize:
+            finish = lambda interpretation, array: interpretation.finalize(array)
+        else:
+            finish = lambda interpretation, array: array
+                
+        for entrystart, entrystop in startstop:
+            futures = [(branch.name, interpretation, branch._step_array(interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, keycache, rawcache, cache, executor, explicit_rawcache)) for branch, interpretation, basket_itemoffset, basket_entryoffset in branchinfo]
+
+            if issubclass(outputtype, dict):
+                out = outputtype([(name, finish(interpretation, future())) for name, interpretation, future in futures])
+            elif outputtype == tuple or outputtype == list:
+                out = outputtype([finish(interpretation, future()) for name, interpretation, future in futures])
+            else:
+                out = outputtype(*[finish(interpretation, future()) for name, interpretation, future in futures])
+
+            if reportentries:
+                yield max(0, entrystart), min(entrystop, self.numentries), out
+            else:
+                yield out
+
+    def iterate(self, entrystepsize, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, keycache=None, rawcache=None, cache=None, executor=None):
+        if not isinstance(entrystepsize, numbers.Integral) or entrystepsize <= 0:
+            raise ValueError("'entrystepsize' must be a positive integer")
+
+        if entrystart is None:
+            entrystart = 0
+        if entrystop is None:
+            entrystop = self.numentries
+
+        def startstop():
+            start = entrystart
+            while start < entrystop and start < self.numentries:
+                stop = start + entrystepsize
+                yield start, stop
+                start = stop
+
+        return self._iterate(startstop(), branches, outputtype, reportentries, keycache, rawcache, cache, executor, True)
+
+    def iterate_clusters(self, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, executor=None):
+        return self._iterate(self.clusters, branches, outputtype, reportentries, keycache, rawcache, cache, executor, True)
+
+    def _normalize_branches(self, arg):
+        if arg is None:                                    # no specification; read all branches
+            for branch in self.allbranches:                # that have interpretations
+                interpretation = interpret(branch)
+                if interpretation is not None:
+                    yield branch, interpretation
+
+        elif callable(arg):
+            for branch in self.allbranches:
+                result = arg(branch)
+                if result is None:
+                    pass
+                elif result is True:                       # function is a filter
+                    interpretation = interpret(branch)
+                    if interpretation is not None:
+                        yield branch, interpretation
+                else:                                      # function is giving interpretations
+                    yield branch, branch._normalize_dtype(result)
+
+        elif isinstance(arg, dict):
+            for name, interpretation in arg.items():       # dict of branch-interpretation pairs
+                name = _bytesid(name)
+                branch = self.branch(name)
+                interpretation = branch._normalize_dtype(interpretation)
+                yield branch, interpretation
+
+        elif isinstance(arg, string_types):
+            name = _bytesid(arg)                           # one explicitly given branch name
+            branch = self.branch(name)
+            interpretation = interpret(branch)             # but no interpretation given
+            if interpretation is None:
+                raise ValueError("cannot interpret branch {0} as a Python type".format(repr(name)))
+            else:
+                yield branch, interpretation
+
+        else:
+            try:
+                names = iter(arg)                          # only way to check for iterable (in general)
+            except:
+                raise TypeError("'branches' argument not understood")
+            else:
+                for name in names:
+                    name = _bytesid(name)
+                    branch = self.branch(name)
+                    interpretation = interpret(branch)     # but no interpretation given
+                    if interpretation is None:
+                        raise ValueError("cannot interpret branch {0} as a Python type".format(repr(name)))
+                    else:
+                        yield branch, interpretation
 
     def __len__(self):
         return self.numentries
@@ -180,575 +361,52 @@ class TTree(uproot.core.TNamed,
         # prevent Python's attempt to interpret __len__ and __getitem__ as iteration
         raise TypeError("'TTree' object is not iterable")
 
-    def branch(self, name):
-        """Get a branch object by name.
-        """
-        if isinstance(name, str):
-            name = name.encode("ascii")
-
-        for branch in self.branches:
-            if branch.name == name:
-                return branch
-
-            if isinstance(branch, TBranchElement):
-                try:
-                    return branch.branch(name)
-                except KeyError:
-                    pass
-
-        raise KeyError("not found: {0}".format(repr(name)))
-
-    @property
-    def allbranches(self):
-        out = []
-        for branch in self.branches:
-            out.append(branch)
-            out.extend(branch.allbranches)
-        return out
-
-    @property
-    def branchnames(self):
-        return [branch.name for branch in self.branches if hasattr(branch, "dtype")]
-
-    @property
-    def allbranchnames(self):
-        return [branch.name for branch in self.allbranches if hasattr(branch, "dtype")]
-
-    @property
-    def branchtypes(self):
-        return dict((branch.name, branch.dtype) for branch in self.branches if hasattr(branch, "dtype"))
-
-    @property
-    def allbranchtypes(self):
-        return dict((branch.name, branch.dtype) for branch in self.allbranches if hasattr(branch, "dtype"))
-
-    @staticmethod
-    def _normalizeselection(branchdtypes, allbranches):
-        if callable(branchdtypes):
-            for branch in allbranches:
-                dtype = branchdtypes(branch)
-                if dtype is not None:
-                    if isinstance(dtype, array_types):
-                        dtype = dtype.reshape(reduce(lambda x, y: x*y, dtype.shape, 1))
-                    elif not isinstance(dtype, numpy.dtype):
-                        dtype = numpy.dtype(dtype)
-                    yield branch, dtype
-
-        elif isinstance(branchdtypes, dict):
-            allbranches = dict((x.name, x) for x in allbranches)
-            for name, dtype in branchdtypes.items():
-                if hasattr(name, "encode"):
-                    name = name.encode("ascii")
-                if name in allbranches:
-                    branch = allbranches[name]
-                    if hasattr(branch, "dtype"):
-                        if isinstance(dtype, array_types):
-                            dtype = dtype.reshape(reduce(lambda x, y: x*y, dtype.shape, 1))
-                        elif not isinstance(dtype, numpy.dtype):
-                            dtype = numpy.dtype(dtype)
-                        yield branch, dtype
-                    else:
-                        raise ValueError("cannot produce an array from branch {0}".format(repr(name)))
-                else:
-                    raise ValueError("cannot find branch {0}".format(repr(name)))
-
-        elif isinstance(branchdtypes, (str, bytes)):
-            if hasattr(branchdtypes, "encode"):
-                name = branchdtypes.encode("ascii")
-            else:
-                name = branchdtypes
-
-            branch = [x for x in allbranches if x.name == name]
-            if len(branch) == 1:
-                if hasattr(branch[0], "dtype"):
-                    yield branch[0], branch[0].dtype
-                else:
-                    raise ValueError("cannot produce an array from branch {0}".format(repr(name)))
-            else:
-                raise ValueError("cannot find branch {0}".format(repr(name)))
-
-        else:
-            try:
-                names = [x.encode("ascii") if hasattr(x, "encode") else x for x in branchdtypes]
-            except:
-                raise TypeError("branchdtypes argument not understood")
-            else:
-                allbranches = dict((x.name, x) for x in allbranches)
-                for name in names:
-                    if name in allbranches:
-                        branch = allbranches[name]
-                        if hasattr(branch, "dtype"):
-                            yield branch, branch.dtype
-                        else:
-                            raise ValueError("cannot produce an array from branch {0}".format(repr(name)))
-                    else:
-                        raise ValueError("cannot find branch {0}".format(repr(name)))
-
-    def iterator(self, entries, branchdtypes=lambda branch: getattr(branch, "dtype", None), executor=None, outputtype=dict, reportentries=False):
-        """Iterates over a fixed number of entries at a time.
-
-        Instead of loading all entries from a tree with `tree.arrays()`, load a manageable number that will fit in memory at once and apply a continuous process to it. Example use:
-
-            for px, py in tree.iterator(10000, ["px", "py"], outputtype=tuple):
-                do_something(sqrt(px**2 + py**2))
-
-        Arguments:
-
-            * `entries` *(required)*
-
-              If a positive integer, the number of entries to yield in each step of iteration.
-              Otherwise, `entries` is interpreted as an iterable over `(entrystart, entryend)` ranges, which must be strictly increasing.
-
-            * `branchdtypes` (same as in `TTree.arrays`)
-
-              If a single string, the string names the only branch to load.
-              If an iterable of strings, all of these are loaded (in the specified order).
-              If a dict of `{name: dtype}`, load the specified branch names and cast them into a given `dtype` (such as conversion to little endian).
-              If a function from branch names to `dtype` or `None`, load the branches into the given `dtypes` and don't load the branches mapped to `None`.
-
-              If any `dtypes` are actually arrays, rather than `dtype` objects, then those arrays will be filled instead of creating new ones (shape must match).
-
-            * `executor` (same as in `TTree.arrays`)
-
-              A `concurrent.futures.Executor` that would be used to parallelize the basket loading/decompression.
-              If `None`, the process is serial.
-
-            * `outputtype` (same as in `TTree.arrays`)
-
-              Constructor for the objects to yield in the iterator. Good choices include `dict`, `tuple`, `namedtuple`, `list`.
-
-            * `reportentries`
-
-              If `True`, yield `(entrystart, entryend, data)` instead of just `data`. Intended as a convenience or cross-check for analysis.
-        """
-        if isinstance(entries, int):
-            if entries < 1:
-                raise ValueError("number of entries per iteration must be at least 1")
-            if sys.version_info[0] <= 2:
-                ranges = ((x, x + entries) for x in xrange(0, self.numentries, entries))
-            else:
-                ranges = ((x, x + entries) for x in range(0, self.numentries, entries))
-        else:
-            ranges = entries
-        
-        toget = []
-        for branch, dtype in self._normalizeselection(branchdtypes, self.allbranches):
-            toget.append((branch, dtype, []))
-            if not hasattr(branch, "basketwalkers"):
-                branch._preparebaskets()
-
-        if outputtype == namedtuple:
-            outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, dtype, cache in toget])
-
-        lastentryend = None
-        for entrystart, entryend in ranges:
-            if lastentryend is not None and entrystart < lastentryend:
-                raise ValueError("entries expressed as (entrystart, entryend) pairs must always have entrystart[i+1] >= entryend[i], but entrystart[i+1] is {0} and entryend[i] is {1}".format(entrystart, lastentryend))
-            lastentryend = entryend
-
-            def dobranch(branchdtypecache):
-                branch, dtype, cache = branchdtypecache
-
-                # always addtocache before delfromcache so that it doesn't forget the last basketnumber (i)
-                branch._addtocache(cache, entrystart, entryend, executor is not None)
-                branch._delfromcache(cache, entrystart)
-
-                out = branch._getfromcache(cache, entrystart, entryend, dtype)
-
-                if issubclass(outputtype, dict):
-                    return branch.name, out
-                else:
-                    return out
-
-            if executor is None:
-                out = [dobranch(x) for x in toget]
-            else:
-                out = list(executor.map(dobranch, toget))
-
-            if issubclass(outputtype, dict) or outputtype == tuple or outputtype == list:
-                out = outputtype(out)
-            else:
-                out = outputtype(*out)
-
-            if reportentries:
-                yield entrystart, min(entryend, self.numentries), out
-            else:
-                yield out
-
-    def lazyarrays(self, branchdtypes=lambda branch: getattr(branch, "dtype", None), outputtype=dict):
-        """Creates a proxy for an array that gets data on demand.
-
-        Arguments:
-
-            * `branchdtypes` (same as in `TTree.iterator`)
-
-              If a single string, the string names the only branch to load.
-              If an iterable of strings, all of these are loaded (in the specified order).
-              If a dict of `{name: dtype}`, load the specified branch names and cast them into a given `dtype` (such as conversion to little endian).
-              If a function from branch names to `dtype` or `None`, load the branches into the given `dtypes` and don't load the branches mapped to `None`.
-
-              If any `dtypes` are actually arrays, rather than `dtype` objects, then those arrays will be filled instead of creating new ones (shape must match).
-
-            * `outputtype` (same as in `TTree.iterator`)
-
-              Constructor for the objects to yield in the iterator. Good choices include `dict`, `tuple`, `namedtuple`, `list`.
-        """
-        toget = []
-        for branch, dtype in self._normalizeselection(branchdtypes, self.allbranches):
-            toget.append((branch, dtype))
-
-        if outputtype == namedtuple:
-            outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, dtype in toget])
-
-        out = []
-        for branch, dtype in toget:
-            outi = branch.lazyarray(dtype)
-            if outputtype == dict:
-                out.append((branch.name, outi))
-            else:
-                out.append(outi)
-
-        if issubclass(outputtype, dict) or outputtype == tuple or outputtype == list:
-            return outputtype(out)
-        else:
-            return outputtype(*out)
-
-    def arrays(self, branchdtypes=lambda branch: getattr(branch, "dtype", None), executor=None, outputtype=dict, block=True):
-        """Extracts whole branches into Numpy arrays.
-
-        Individual branches from TTrees are typically small enough to fit into memory. If this is not your case, consider `tree.iterator(entries)` to load a given number of entries at a time.
-
-        Arguments:
-
-            * `branchdtypes` (same as in `TTree.iterator`)
-
-              If a single string, the string names the only branch to load.
-              If an iterable of strings, all of these are loaded (in the specified order).
-              If a dict of `{name: dtype}`, load the specified branch names and cast them into a given `dtype` (such as conversion to little endian).
-              If a function from branch names to `dtype` or `None`, load the branches into the given `dtypes` and don't load the branches mapped to `None`.
-
-              If any `dtypes` are actually arrays, rather than `dtype` objects, then those arrays will be filled instead of creating new ones (shape must match).
-
-            * `executor` (same as in `TTree.iterator`)
-
-              A `concurrent.futures.Executor` that would be used to parallelize the basket loading/decompression.
-              If `None`, the process is serial.
-
-            * `outputtype` (same as in `TTree.iterator`)
-
-              Constructor for the objects to yield in the iterator. Good choices include `dict`, `tuple`, `namedtuple`, `list`.
-
-            * `block`
-
-              If `True` and parallel processing with an `executor`, return `data, errors` instead of just `data`, where `errors` is a generator of exceptions raised by the parallel threads.
-              When you're ready to wait for all threads to finish, evaluate the `errors` generator.
-        """
-        toget = []
-        for branch, dtype in self._normalizeselection(branchdtypes, self.allbranches):
-            toget.append((branch, dtype))
-            if not hasattr(branch, "basketwalkers"):
-                branch._preparebaskets()
-
-        if outputtype == namedtuple:
-            outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, dtype in toget])
-
-        out = []
-        errorslist = []
-        for branch, dtype in toget:
-            outi, res = branch.array(dtype, executor, False)
-            if outputtype == dict:
-                out.append((branch.name, outi))
-            else:
-                out.append(outi)
-            errorslist.append(res)
-
-        if issubclass(outputtype, dict) or outputtype == tuple or outputtype == list:
-            out = outputtype(out)
-        else:
-            out = outputtype(*out)
-
-        if block:
-            for errors in errorslist:
-                for cls, err, trc in errors:
-                    if cls is not None:
-                        _delayedraise(cls, err, trc)
-            return out
-        else:
-            return out, (item for sublist in errorslist for item in sublist)
-
-    def lazyarray(self, branch, dtype=None):
-        """Creates a proxy for an array that gets data on demand.
-
-        Arguments:
-
-            * `branch` *(required)*
-
-               Branch name to extract.
-
-            * `dtype`
-
-               If not `None`, cast the array into a given `dtype` (such as conversion to little endian).
-        """
-        branch = branch.encode("ascii") if hasattr(branch, "encode") else branch
-        return self.branch(branch).lazyarray(dtype)
-
-    def array(self, branch, dtype=None, executor=None, block=True):
-        """Extracts a whole branch into a Numpy array.
-
-        Individual branches from TTrees are typically small enough to fit into memory. If this is not your case, consider `tree.iterator(entries)` to load a given number of entries at a time.
-
-        Arguments:
-
-            * `branch` *(required)*
-
-               Branch name to extract.
-
-            * `dtype`
-
-               If not `None`, cast the array into a given `dtype` (such as conversion to little endian).
-               If an array object, fill that array instead of creating a new one (shape must match).
-
-            * `executor` (same as in `TTree.arrays`)
-
-              A `concurrent.futures.Executor` that would be used to parallelize the basket loading/decompression.
-              If `None`, the process is serial.
-
-            * `block`
-
-              If `True` and parallel processing with an `executor`, return `data, errors` instead of just `data`, where `errors` is a generator of exceptions raised by the parallel threads.
-              When you're ready to wait for all threads to finish, evaluate the `errors` generator.
-        """
-        branch = branch.encode("ascii") if hasattr(branch, "encode") else branch
-
-        if dtype is None:
-            branchdtypes = branch
-        else:
-            branchdtypes = {branch: dtype}
-
-        if block:
-            out, = self.arrays(branchdtypes=branchdtypes, executor=executor, outputtype=tuple, block=block)
-            return out
-        else:
-            (out,), errors = self.arrays(branchdtypes=branchdtypes, executor=executor, outputtype=tuple, block=block)
-            return out, errors
-
     class _Connector(object): pass
 
     @property
-    def arrowed(self):
-        import uproot._connect.toarrowed
-        connector = self._Connector()
-
-        def schema(*args, **kwds):
-            return uproot._connect.toarrowed.schema(self, *args, **kwds)
-        connector.schema = schema
-
-        def proxy(schema=None):
-            return uproot._connect.toarrowed.proxy(self, schema)
-        connector.proxy = proxy
-
-        def run(*args, **kwds):
-            return uproot._connect.toarrowed.run(self, *args, **kwds)
-        connector.run = run
-
-        def compile(*args, **kwds):
-            return uproot._connect.toarrowed.compile(self, *args, **kwds)
-        connector.compile = compile
-
-        return connector
-
-    @property
     def pandas(self):
-        import pandas
+        import uproot._connect.to_pandas
         connector = self._Connector()
-
-        def df(branchdtypes=None, executor=None, block=True):
-            branchdtypes = branchdtypes or self.branchnames
-            toget = []
-            for branch, dtype in self._normalizeselection(branchdtypes, self.allbranches):
-                toget.append((branch, dtype))
-
-            size = None
-            oldname = None
-            data = {}
-            columns = []
-            for b, d in toget:
-                if size is None:
-                    size = b.numitems
-                elif size != b.numitems:
-                    raise ValueError("cannot construct a DataFrame because branch {0} has {1} items but branch {2} has {3} items".format(repr(oldname), size, repr(b.name), b.numitems))
-                oldname = b.name
-                data[b.name] = d.type(0)
-                columns.append(b.name)
-
-            df = pandas.DataFrame(data, columns=columns, index=numpy.arange(size))
-
-            errorslist = []
-            for b, d in toget:
-                arr, err = b.array(df[b.name], executor=executor, block=False)
-                errorslist.append(err)
-
-            if block:
-                for errors in errorslist:
-                    for cls, err, trc in errors:
-                        if cls is not None:
-                            _delayedraise(cls, err, trc)
-                return df
-            else:
-                return df, (item for sublist in errorslist for item in sublist)
-        connector.df = df
-
+        connector.df = uproot._connect.to_pandas.df
         return connector
 
-uproot.rootio.Deserialized.classes[b"TTree"] = TTree
+    @property
+    def oamap(self):
+        import uproot._connect.to_oamap
+        connector = self._Connector()
+        connector.schema  = uproot._connect.to_oamap.schema
+        connector.proxy   = uproot._connect.to_oamap.proxy
+        connector.run     = uproot._connect.to_oamap.run
+        connector.compile = uproot._connect.to_oamap.compile
+        return connector
 
-## TODO: this is a good candidate for acceleration with Numba...
-if sys.version_info[0] <= 2:
-    def _fixspeedbumps(array, outdata, offs):
-        outi = 0
-        for i in xrange(len(offs) - 1):
-            length = offs[i + 1] - offs[i] - 1
-            outdata[outi:outi + length] = array[offs[i] + 1:offs[i + 1]]
-            outi += length
-else:
-    def _fixspeedbumps(array, outdata, offs):
-        outi = 0
-        for i in range(len(offs) - 1):
-            length = offs[i + 1] - offs[i] - 1
-            outdata[outi:outi + length] = array[offs[i] + 1:offs[i + 1]]
-            outi += length
+uproot.rootio.methods["TTree"] = TTreeMethods
 
-class TBranch(uproot.core.TNamed,
-              uproot.core.TAttFill):
-    """Represents a TBranch, a single column of data in a TTree.
+################################################################ methods for TBranch
 
-    Reading data:
-
-        * `branch.array(...)` gets the branch as an array. It has many options; see help(TBranch.array).
-        * `tree.iterator(entries, ...)` iterates over a fixed number of entries at a time. It has many options; see help(TTree.iterator).
-
-    Information about the branch:
-
-        * `branch.itemdims` are the fixed (non-counter) dimensions of this branch, derived from its title.
-        * `branch.branch(name)` gets a subbranch object by name.
-        * `branch.branches` are the subbranches directly attached to this TBranch.
-        * `branch.allbranches` are all the subbranches, recursively following subbranches' branches.
-        * `branch.branchnames` are all the directly attached subbranch names.
-        * `branch.allbranchnames` are all the subbranch names, recursively following subbranches' branches.
-        * `branch.branchtypes` is a `{name: dtype}` dict of all the directly attached subbranch names.
-        * `branch.allbranchtypes` is a `{name: dtype}` dict of all the subbranch names, recursively following subbranches' branches.
-        * `branch.leaves` are all the TLeaf objects directly attached to this TBranch.
-        * `branch.numentries` is the number of entries in this branch (same as in the tree).
-        * `branch.numbaskets` is the number of baskets.
-        * `branch.numbytes` is the number of bytes used by data in this branch.
-        * `branch.numitems` is the number of items, such as integers, floating point values, or the number of characters in the strings in this branch.
-        * `branch.basketbytes(i)` is the number of bytes used by data in basket i.
-        * `branch.basketitems(i)` is the number of items, such as integers, floating point values, or the number of characters in the strings in basket i.
-        * `branch.basketentries(i)` is the number of entries in basket i.
-        * `branch.basketstart(i)` is the starting entry for basket i.
-
-    `branch[name]` is a synonym for `branch.branch(name)`.
-    """
-    def __init__(self, filewalker, walker):
-        walker.startcontext()
-        start = walker.index
-        vers, bcnt = self._readversion(walker)
-
-        if vers < 11:
-            raise NotImplementedError("TBranch version too old")
-
-        uproot.core.TNamed.__init__(self, filewalker, walker)
-        uproot.core.TAttFill.__init__(self, filewalker, walker)
-
-        compression, basketSize, entryOffsetLen, writeBasket, entryNumber, offset, maxBaskets, splitLevel, entries, firstEntry, totBytes, zipBytes = walker.readfields("!iiiiqiiiqqqq")
-        self.compression = uproot.rootio._interpret_compression(compression)
-
-        self.branches = list(uproot.core.TObjArray(filewalker, walker))
-        self.leaves = list(uproot.core.TObjArray(filewalker, walker))
-        self._skipbcnt(walker) # reading baskets is expensive and useless
-
-        # walker.skip(1)  # isArray
-        # self._basketBytes = walker.readarray(">i4", maxBaskets)[:writeBasket]
-        walker.skip(1 + 4*maxBaskets)
-        
-        walker.skip(1)  # isArray
-        self._basketEntry = walker.readarray(">i8", maxBaskets)[:writeBasket]
-
-        walker.skip(1)  # isArray
-        self._basketSeek = walker.readarray(">i8", maxBaskets)[:writeBasket]
-
-        fname = walker.readstring()
-
-        self._checkbytecount(walker.index - start, bcnt)
-
-        if len(self.leaves) == 1 and hasattr(self.leaves[0], "dtype"):
-            self.dtype = self.leaves[0].dtype
-            self._speedbumps = self.leaves[0]._speedbumps
-
-        self._filewalker = filewalker
-
-        self.itemdims = ()
-        if len(self.leaves) == 1:
-            m = self._titlehasdims.match(self.leaves[0].title)
-            if m is not None:
-                self.itemdims = tuple(int(x) for x in re.findall(self._itemdimpattern, self.leaves[0].title))
-
-    _titlehasdims = re.compile(br"^([^\[\]]+)(\[[^\[\]]+\])+")
-    _itemdimpattern = re.compile(br"\[([1-9][0-9]*)\]")
-
-    def __del__(self):
-        del self.branches
-        del self._filewalker
+class TBranchMethods(object):
+    def _postprocess(self, source, cursor, context):
+        self.fBasketBytes = self.fBasketBytes
+        self.fBasketEntry = self.fBasketEntry
+        self.fBasketSeek = self.fBasketSeek
+        self._source = source
+        self._context = context
 
     @property
-    def numbaskets(self):
-        return len(self._basketSeek)
+    def name(self):
+        return self.fName
 
     @property
-    def numbytes(self):
-        return sum(self.basketbytes(i) for i in range(len(self._basketSeek)))
+    def title(self):
+        return self.fTitle
 
     @property
-    def numitems(self):
-        if self.dtype == numpy.dtype(object):
-            return self.numbytes - self.numentries
-        else:
-            return self.numbytes // self.dtype.itemsize
+    def numentries(self):
+        return self.fEntryNumber
 
-    def basketbytes(self, i):
-        if not hasattr(self, "basketobjlens"):
-            self._minipreparebaskets()
-
-        if not 0 <= i < len(self._basketobjlens):
-            raise IndexError("index {0} out of range for branch with {1} baskets".format(i, len(self._basketobjlens)))
-        trial = self._basketobjlens[i]
-        entries = self.basketentries(i)
-
-        if self._speedbumps:
-            return trial - entries*4 - 8 - entries
-        elif self.dtype == numpy.dtype(object) or trial != entries * reduce(lambda x, y: x*y, self.itemdims, self.dtype.itemsize):
-            return trial - entries*4 - 8
-        else:
-            return trial
-
-    def basketitems(self, i):
-        if self.dtype == numpy.dtype(object):
-            return self.basketbytes(i) - self.basketentries(i)
-        else:
-            return self.basketbytes(i) // self.dtype.itemsize
-
-    def basketentries(self, i):
-        if not 0 <= i < len(self._basketEntry):
-            raise IndexError("index {0} out of range for branch with {1} baskets".format(i, len(self._basketEntry)))
-        if i + 1 == len(self._basketEntry):
-            return self.numentries - self._basketEntry[i]
-        else:
-            return self._basketEntry[i + 1] - self._basketEntry[i]
-
-    def basketstart(self, i):
-        if not 0 <= i < len(self._basketEntry):
-            raise IndexError("index {0} out of range for branch with {1} baskets".format(i, len(self._basketEntry)))
-        return self._basketEntry[i]
+    @property
+    def branches(self):
+        return self.fBranches
 
     @property
     def allbranches(self):
@@ -760,33 +418,170 @@ class TBranch(uproot.core.TNamed,
 
     @property
     def branchnames(self):
-        return [branch.name for branch in self.branches if hasattr(branch, "dtype")]
+        return [branch.name for branch in self.branches]
 
     @property
     def allbranchnames(self):
-        return [branch.name for branch in self.allbranches if hasattr(branch, "dtype")]
+        return [branch.name for branch in self.allbranches]
 
     @property
-    def branchtypes(self):
-        return dict((branch.name, branch.dtype) for branch in self.branches if hasattr(branch, "dtype"))
+    def numbaskets(self):
+        return self.fWriteBasket
 
     @property
-    def allbranchtypes(self):
-        return dict((branch.name, branch.dtype) for branch in self.allbranches if hasattr(branch, "dtype"))
+    def uncompressedbytes(self):
+        keysource = self._source.threadlocal()
+        try:
+            out = 0
+            for i in range(self.numbaskets):
+                key = self._basketkey(keysource, i, False)
+                out += key.fObjlen
+            return out
+        finally:
+            keysource.dismiss()
 
-    def __getitem__(self, name):
-        return self.branch(name)
+    @property
+    def compressedbytes(self):
+        keysource = self._source.threadlocal()
+        try:
+            out = 0
+            for i in range(self.numbaskets):
+                key = self._basketkey(keysource, i, False)
+                out += key.fNbytes - key.fKeylen
+            return out
+        finally:
+            keysource.dismiss()
 
-    def __iter__(self):
-        # prevent Python's attempt to interpret __getitem__ as iteration
-        raise TypeError("'TBranch' object is not iterable")
+    @property
+    def compressionratio(self):
+        keysource = self._source.threadlocal()
+        try:
+            numer, denom = 0, 0
+            for i in range(self.numbaskets):
+                key = self._basketkey(keysource, i, False)
+                numer += key.fObjlen
+                denom += key.fNbytes - key.fKeylen
+            return float(numer) / float(denom)
+        finally:
+            keysource.dismiss()
 
+    def _normalize_dtype(self, interpretation):
+        if inspect.isclass(interpretation) and issubclass(interpretation, numpy.generic):
+            return self._normalize_dtype(numpy.dtype(interpretation))
+
+        elif isinstance(interpretation, numpy.dtype):      # user specified a Numpy dtype
+            default = interpret(self)
+            if isinstance(default, (asdtype, asjagged)):
+                return default.to(interpretation)
+            else:
+                raise ValueError("cannot cast branch {0} (default interpretation {1}) as dtype {2}".format(repr(self.name), default, interpretation))
+
+        elif isinstance(interpretation, numpy.ndarray):    # user specified a Numpy array
+            default = interpret(self)
+            if isinstance(default, asdtype):
+                return default.toarray(interpretation)
+            else:
+                raise ValueError("cannot cast branch {0} (default interpretation {1}) as dtype {2}".format(repr(self.name), default, interpretation))
+
+        elif not isinstance(interpretation, uproot.interp.interp.Interpretation):
+            raise TypeError("branch interpretation must be an Interpretation, not {0} (type {1})".format(interpretation, type(interpretation)))
+
+        else:
+            return interpretation
+            
+    def _normalize_interpretation(self, interpretation):
+        if interpretation is None:
+            interpretation = interpret(self)
+        else:
+            interpretation = self._normalize_dtype(interpretation)
+
+        if interpretation is None:
+            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
+
+        return interpretation
+
+    def numitems(self, interpretation=None, keycache=None):
+        interpretation = self._normalize_interpretation(interpretation)
+
+        if keycache is not None and all(self._keycachekey(i) in keycache for i in range(self.numbaskets)):
+            out = 0
+            for i in range(self.numbaskets):
+                key = keycache[self._keycachekey(i)]
+                out += interpretation.numitems(key.border, self.basket_numentries(i))
+            return out
+
+        else:
+            keysource = self._source.threadlocal()
+            try:
+                out = 0
+                for i in range(self.numbaskets):
+                    if keycache is not None and self._keycachekey(i) in keycache:
+                        key = keycache[self._keycachekey(i)]
+                    else:
+                        key = self._basketkey(keysource, i, True)
+                    out += interpretation.numitems(key.border, self.basket_numentries(i))
+                    if keycache is not None:
+                        keycache[self._keycachekey(i)] = key
+                return out
+            finally:
+                keysource.dismiss()
+
+    @property
+    def compression(self):
+        return uproot.source.compressed.Compression(self.fCompress)
+
+    def basket_entrystart(self, i):
+        if not 0 <= i < self.numbaskets:
+            raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
+            return self.fBasketEntry[i]
+        else:
+            return self.fBasketEntry[i]
+
+    def basket_entrystop(self, i):
+        if not 0 <= i < self.numbaskets:
+            raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
+        if i + 1 < len(self.fBasketEntry):
+            return self.fBasketEntry[i + 1]
+        else:
+            return self.fEntryNumber
+
+    def basket_numentries(self, i):
+        return self.basket_entrystop(i) - self.basket_entrystart(i)
+
+    def basket_uncompressedbytes(self, i):
+        keysource = self._source.threadlocal()
+        try:
+            key = self._basketkey(keysource, i, False)
+            return key.fObjlen
+        finally:
+            keysource.dismiss()
+
+    def basket_compressedbytes(self, i):
+        keysource = self._source.threadlocal()
+        try:
+            key = self._basketkey(keysource, i, False)
+            return key.fNbytes - key.fKeylen
+        finally:
+            keysource.dismiss()
+
+    def basket_numitems(self, i, interpretation=None, keycache=None):
+        interpretation = self._normalize_interpretation(interpretation)
+
+        if keycache is not None and self._keycachekey(i) in keycache:
+            return keycache[self._keycachekey(i)]
+
+        else:
+            keysource = self._source.threadlocal()
+            try:
+                key = self._basketkey(keysource, i, True)
+                if keycache is not None:
+                    keycache[self._keycachekey(i)] = key
+                return interpretation.numitems(key.border, self.basket_numentries(i))
+            finally:
+                keysource.dismiss()
+            
     def branch(self, name):
-        """Get a subbranch object by name.
-        """
-        if isinstance(name, str):
-            name = name.encode("ascii")
-
+        name = _bytesid(name)
         for branch in self.branches:
             if branch.name == name:
                 return branch
@@ -794,471 +589,415 @@ class TBranch(uproot.core.TNamed,
                 return branch.branch(name)
             except KeyError:
                 pass
-
         raise KeyError("not found: {0}".format(repr(name)))
 
-    def _minipreparebaskets(self):
-        self._filewalker.startcontext()
+    def _normalize_entrystartstop(self, entrystart, entrystop):
+        if entrystart is None:
+            entrystart = 0
+        if entrystop is None:
+            entrystop = self.numentries
+        if entrystop < entrystart:
+            raise IndexError("entrystop must be greater than or equal to entrystart")
+        return entrystart, entrystop
 
-        self._basketobjlens = []
-        self._basketkeylens = []
-        for seek in self._basketSeek:
-            basketwalker = self._filewalker.copy(seek)
-            basketwalker.startcontext()
-
-            bytes, version, objlen, datetime, keylen, cycle = basketwalker.readfields("!ihiIhh")
+    def _localentries(self, i, entrystart, entrystop):
+        local_entrystart = max(0, entrystart - self.basket_entrystart(i))
+        local_entrystop  = max(0, min(entrystop - self.basket_entrystart(i), self.basket_entrystop(i) - self.basket_entrystart(i)))
+        return local_entrystart, local_entrystop
         
-            self._basketobjlens.append(objlen)
-            self._basketkeylens.append(keylen)
+    def _keycachekey(self, i):
+        return "{0};{1};{2};{3};key".format(self._context.sourcepath, self._context.treename, self.name, i)
 
-    def _preparebaskets(self):
-        self._filewalker.startcontext()
+    def _rawcachekey(self, i):
+        return "{0};{1};{2};{3};raw".format(self._context.sourcepath, self._context.treename, self.name, i)
 
-        self._basketobjlens = []
-        self._basketkeylens = []
-        self._basketborders = []
-        self._basketlengths = []
-        self._basketwalkers = []
-        for seek in self._basketSeek:
-            basketwalker = self._filewalker.copy(seek)
-            basketwalker.startcontext()
-
-            bytes, version, objlen, datetime, keylen, cycle = basketwalker.readfields("!ihiIhh")
-            if version > 1000:
-                seekkey, seekpdir = basketwalker.readfields("!qq")
-            else:
-                seekkey, seekpdir = basketwalker.readfields("!ii")
-
-            self._basketobjlens.append(objlen)
-            self._basketkeylens.append(keylen)
-
-            classname = basketwalker.readstring()
-            name = basketwalker.readstring()
-            title = basketwalker.readstring()
-            vers, bufsize, nevsize, nevbuf, last, flag = basketwalker.readfields("!HiiiiB")
-            border = last - keylen
-
-            self._basketborders.append(border)
-            if self._speedbumps:
-                self._basketlengths.append(border - (objlen - border - 8) // 4)
-            else:
-                self._basketlengths.append(border)
-
-            #  object size != compressed size means it's compressed
-            if objlen != bytes - keylen:
-                function = uproot.rootio._decompressfcn(self.compression, objlen)
-                self._basketwalkers.append(uproot._walker.lazyarraywalker.LazyArrayWalker(self._filewalker.copy(seekkey + keylen), function, bytes - keylen))
-
-            # otherwise, it's uncompressed
-            else:
-                self._basketwalkers.append(self._filewalker.copy(seek + keylen))
-
-    def _basket(self, i, offsets=False, parallel=False):
-        self._basketwalkers[i]._evaluate(parallel)
-        self._basketwalkers[i].startcontext()
-        start = self._basketwalkers[i].index
-
-        try:
-            if self.dtype == numpy.dtype(object) or self._speedbumps:
-                array = self._basketwalkers[i].readarray(numpy.uint8, self._basketobjlens[i])
-            else:
-                array = self._basketwalkers[i].readarray(self.dtype, self._basketobjlens[i] // self.dtype.itemsize)
-        finally:
-            self._basketwalkers[i]._unevaluate()
-            self._basketwalkers[i].index = start
-
-        if self._speedbumps:
-            offs = array[self._basketborders[i] + 4:].view(">i4") - self._basketkeylens[i]
-            offs[-1] = self._basketborders[i]
-
-            outdata = numpy.empty(self._basketborders[i] - (len(offs) - 1), dtype=numpy.uint8)
-            _fixspeedbumps(array, outdata, offs)
-
-            if offsets:
-                return outdata.view(self.dtype), None
-            else:
-                return outdata.view(self.dtype)
-
-        if self.dtype == numpy.dtype(object):
-            dataend = self._basketborders[i]
-        else:
-            dataend = self._basketborders[i] // self.dtype.itemsize
-                
-        if offsets:
-            if dataend == len(array):
-                return array, None
-            else:
-                outdata = array[:dataend]
-                outoff = array.view(numpy.uint8)[self._basketborders[i] + 4 : -4].view(">i4") - self._basketkeylens[i]
-                return outdata, outoff
-
-        elif dataend < len(array):
-            return array[:dataend]
-
-        else:
-            return array
-
-    def _adddimensions(self, array):
-        if self.itemdims == () or len(array.shape) != 1:
-            return array
-        else:
-            product = reduce(lambda x, y: x*y, self.itemdims, 1)
-            if len(array) % product != 0:
-                raise IOError("data shape of {0} is misaligned ({1} elements can't be reshaped as {2})".format(repr(self.name), len(array), self.itemdims))
-            else:
-                newlen = len(array) // product
-                return array.reshape((newlen,) + self.itemdims)
-
-    def _addtocache(self, cache, entrystart, entryend, parallel=False):
-        if len(cache) == 0:
-            i = 0
-        else:
-            i = cache[-1][0] + 1
-
-        while i < len(self._basketEntry) and entryend > self._basketEntry[i]:
-            if i + 1 >= len(self._basketEntry) or self._basketEntry[i + 1] > entrystart:
-                data, off = self._basket(i, offsets=True, parallel=parallel)
-                cache.append((i, data, off))
-            i += 1
-
-    def _delfromcache(self, cache, entrystart):
-        firsttokeep = 0
-        for i, data, off in cache:
-            if i + 1 < len(self._basketEntry) and self._basketEntry[i + 1] <= entrystart:
-                firsttokeep += 1
-            else:
-                break
-        del cache[:firsttokeep]
-
-    def _getfromcache(self, cache, entrystart, entryend, dtype):
-        if len(cache) == 0:
-            if isinstance(dtype, array_types):
-                out = dtype.reshape(reduce(lambda x, y: x*y, dtype.shape, 1))
-                dtype = out.dtype
-                if out.shape != (0,):
-                    raise ValueError("provided array does not have the right number of elements: {0}".format(0))
-                return self._adddimensions(out)
-            else:
-                return self._adddimensions(numpy.array([], dtype=dtype))
-
-        entrywidth = reduce(lambda x, y: x*y, self.itemdims, 1)
-        strings = (dtype == numpy.dtype(object))
-        if strings:
-            selfitemsize = 1
-        else:
-            selfitemsize = self.dtype.itemsize
-
-        i, firstdata, firstoff = cache[0]
-        if firstoff is None:
-            istart = (entrystart - self._basketEntry[i]) * entrywidth
-        else:
-            istartoff = entrystart - self._basketEntry[i]
-            istart = firstoff[istartoff] // selfitemsize
-
-        i, lastdata, lastoff = cache[-1]
-        iendoff = entryend - self._basketEntry[i]
-        if lastoff is None:
-            iend = min((entryend - self._basketEntry[i]) * entrywidth, len(lastdata))
-        elif iendoff < len(lastoff):
-            iendoff = min(iendoff, len(lastoff))
-            iend = lastoff[iendoff] // selfitemsize
-        else:
-            iendoff = min(iendoff, len(lastoff))
-            iend = len(lastdata)
-
-        if len(cache) == 1:
-            outdata = firstdata[istart:iend]
-            if not strings:
-                if isinstance(dtype, array_types):
-                    out = toarray(dtype)
-                    dtype = out.dtype
-                    expected = len(firstdata)
-                    if out.shape != (expected,):
-                        raise ValueError("provided array does not have the right number of elements: {0}".format(expected))
-                    out[:] = outdata
-                    outdata = out
-                else:
-                    outdata = numpy.array(outdata, dtype=dtype)
-            else:
-                outoff = firstoff[istartoff:iendoff] - istart
-
-        else:
-            middle = cache[1:-1]
-            size = (len(firstdata) - istart) + sum(len(mdata) for mi, mdata, moff in middle) + (iend)
-
-            if isinstance(dtype, array_types):
-                outdata = toarray(dtype)
-                dtype = outdata.dtype
-                if outdata.shape != (size,):
-                    raise ValueError("provided array does not have the right number of elements: {0}".format(size))
-            else:
-                outdata = numpy.empty(size, dtype=numpy.uint8 if strings else dtype)
-
-            if strings:
-                outoff = numpy.empty((len(firstoff) - istartoff) + sum(len(moff) for mi, mdata, moff in middle) + (iendoff), dtype=firstoff.dtype)
-
-            i = len(firstdata) - istart
-            outdata[:i] = firstdata[istart:]
-            if strings:
-                ioff = len(firstoff) - istartoff
-                outoff[:ioff] = firstoff[istartoff:] - istart
-                correction = i
-
-            for mi, mdata, moff in middle:
-                outdata[i:i + len(mdata)] = mdata
-                i += len(mdata)
-                if strings:
-                    outoff[ioff:ioff + len(moff)] = moff + correction
-                    ioff += len(moff)
-                    correction += len(mdata)
-
-            outdata[i:] = lastdata[:iend]
-            if strings:
-                outoff[ioff:] = lastoff[:iendoff] + correction
-
-        if strings:
-            out = numpy.empty(len(outoff), dtype=numpy.dtype(object))
-            for j, offset in enumerate(outoff):
-                size = outdata[offset]
-                out[j] = outdata[offset + 1:offset + 1 + size].tostring()
-            return self._adddimensions(out)
-        else:
-            return self._adddimensions(outdata)
-
-    def baskets(self, callback=None, offsets=False, reportentries=False, executor=None):
-        """Extracts all baskets from the branch as separate Numpy arrays.
-
-        This provides access to the data in the most raw form: zero-copy views. If your ROOT file is uncompressed and you opened it as a memory map (the default), the Numpy arrays returned from this function will be views into the operating system's own page cache.
+    def _cachekey(self, i, local_entrystart, local_entrystop):
+        return "{0};{1};{2};{3};{4}-{5}".format(self._context.sourcepath, self._context.treename, self.name, i, local_entrystart, local_entrystop)
         
-        This method does not have a `dtype` argument because data are not copied, so the user has no choice about its contents. (The `callback` or subsequent processing may change its `dtype`.)
+    def _basket(self, i, interpretation, local_entrystart, local_entrystop, keycache, rawcache, cache):
+        source = None
+        if cache is not None:
+            cachekey = self._cachekey(i, local_entrystart, local_entrystop)
+            source = cache.get(cachekey, None)
 
-        Arguments:
+        if source is None:
+            basketdata = None
+            if rawcache is not None:
+                rawcachekey = self._rawcachekey(i)
+                basketdata = rawcache.get(rawcachekey, None)
 
-            * `callback`
+            if keycache is not None and self._keycachekey(i) in keycache:
+                key = keycache[self._keycachekey(i)]
+            else:
+                keysource = self._source.threadlocal()
+                try:
+                    key = self._basketkey(keysource, i, True)
+                finally:
+                    keysource.dismiss()
 
-              If `None`, this method returns an iterator over arrays, one basket at a time.
-              If a callable, this method applies `callback` to each basket array as it becomes available, returning the return values of the `callback` as an iterator.
+            if basketdata is None:
+                datasource = key.source.threadlocal()
+                try:
+                    basketdata = key.cursor.copied().bytes(datasource, key.fObjlen)
+                finally:
+                    datasource.dismiss()
 
-            * `offsets`
+            if rawcache is not None:
+                rawcache[rawcachekey] = basketdata
 
-              If `True`, the iterator yields an `offset` array, specifying the starting index of each entry in the basket, or an `offset` array is given as the second argument to the `callback` (after `array`, the first argument).
+            if key.fObjlen == key.border:
+                data, offsets = basketdata, None
+            else:
+                data = basketdata[:key.border]
+                offsets = numpy.empty((key.fObjlen - key.border - 4) // 4, dtype=numpy.int32)  # native endian
+                offsets[:-1] = basketdata[key.border + 4 : -4].view(">i4")                     # read as big-endian and convert
+                offsets[-1] = key.fLast
+                numpy.subtract(offsets, key.fKeylen, offsets)
 
-            * `reportentries`
+            source = interpretation.fromroot(data, offsets, local_entrystart, local_entrystop)
 
-              If `True`, the iterator yields `entrystart` and `entryend`, specifying the first and last-plus-one entry in the basket, as the last two items in the yielded tuple or the last two arguments to the `callback`.
+        if cache is not None:
+            cache[cachekey] = source
 
-              Different branches are not guaranteed to begin and end baskets at the same entry boundaries, though they often do align by happenstance, especially for flat ntuples.
+        return source
 
-            * `executor` (same as in `TTree.array`)
+    def basket(self, i, interpretation=None, entrystart=None, entrystop=None, keycache=None, rawcache=None, cache=None):
+        if not 0 <= i < self.numbaskets:
+            raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
-              If `None`, this method reads baskets serially, loading and/or decompressing one basket after the previous has been yielded or the previous `callback` has finished running.
-              If a `concurrent.futures.Executor`, this `executor` is used to do basket loading, decompression, and `callback` execution in parallel. The return result is an iterator over arrays, `callback` results, or exceptions raised as sys.exc_info() 3-tuples, all in basket order.
-        """
+        interpretation = self._normalize_interpretation(interpretation)
+        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+        local_entrystart, local_entrystop = self._localentries(i, entrystart, entrystop)
+        numentries = local_entrystop - local_entrystart
 
-        if not hasattr(self, "basketwalkers"):
-            self._preparebaskets()
+        source = self._basket(i, interpretation, local_entrystart, local_entrystop, keycache, rawcache, cache)
+        numitems = interpretation.source_numitems(source)
 
-        entrywidth = reduce(lambda x, y: x*y, self.itemdims, 1)
+        destination = interpretation.destination(numitems, numentries)
+        interpretation.fill(source, destination, 0, numitems, 0, numentries)
+        return interpretation.finalize(destination)
 
-        if executor is None:
-            for i in range(len(self._basketwalkers)):
-                if offsets:
-                    array, offs = self._basket(i, offsets=offsets, parallel=False)
+    def _basketstartstop(self, entrystart, entrystop):
+        basketstart, basketstop = None, None
+        for i in range(self.numbaskets):
+            if basketstart is None:
+                if entrystart < self.basket_entrystop(i) and self.basket_entrystart(i) < entrystop:
+                    basketstart = i
+                    basketstop = i
+            else:
+                if self.basket_entrystart(i) < entrystop:
+                    basketstop = i
 
-                    if offs is None:
-                        offs = numpy.linspace(0, (self.basketentries(i) - 1) * entrywidth, self.basketentries(i), dtype=">i4")
-                    else:
-                        offs = offs // self.dtype.itemsize
+        if basketstop is not None:
+            basketstop += 1    # stop is exclusive
 
-                    out = (array, offs)
+        return basketstart, basketstop
 
-                else:
-                    out = (self._adddimensions(self._basket(i, offsets=offsets, parallel=False)),)
-                
+    def baskets(self, interpretation=None, entrystart=None, entrystop=None, keycache=None, rawcache=None, cache=None, reportentries=False, executor=None, blocking=True):
+        interpretation = self._normalize_interpretation(interpretation)
+        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+        basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
+
+        if basketstart is None:
+            if blocking:
+                return []
+            else:
+                def await():
+                    return []
+                return await
+
+        out = [None] * (basketstop - basketstart)
+
+        def fill(j):
+            try:
+                basket = self.basket(j + basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, keycache=keycache, rawcache=rawcache, cache=cache)
                 if reportentries:
-                    entrystart = self._basketEntry[i]
-                    entryend = self._basketEntry[i + 1] if i + 1 < len(self._basketEntry) else self.numentries
-                    out = out + (entrystart, entryend)
+                    local_entrystart, local_entrystop = self._localentries(j + basketstart, entrystart, entrystop)
+                    basket = (local_entrystart + self.basket_entrystart(j + basketstart),
+                              local_entrystop + self.basket_entrystart(j + basketstart),
+                              basket)
+            except:
+                return sys.exc_info()
+            else:
+                out[j] = basket
+                return None
 
-                if callback is None:
-                    yield out
-                else:
-                    yield callback(*out)
-
+        if executor is None:
+            for j in range(basketstop - basketstart):
+                _delayedraise(fill(j))
+            excinfos = ()
         else:
-            def fill(i):
-                try:
-                    if offsets:
-                        array, offs = self._basket(i, offsets=offsets, parallel=False)
+            excinfos = executor.map(fill, range(basketstop - basketstart))
 
-                        if offs is None:
-                            offs = numpy.linspace(0, (self.basketentries(i) - 1) * entrywidth, self.basketentries(i), dtype=">i4")
-                        else:
-                            offs = offs // self.dtype.itemsize
+        if blocking:
+            for excinfo in excinfos:
+                _delayedraise(excinfo)
+            return out
+        else:
+            def await():
+                for excinfo in excinfos:
+                    _delayedraise(excinfo)
+                return out
+            return await
 
-                        out = (array, offs)
+    def iterate_baskets(self, interpretation=None, entrystart=None, entrystop=None, keycache=None, rawcache=None, cache=None, reportentries=False):
+        interpretation = self._normalize_interpretation(interpretation)
+        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
 
-                    else:
-                        out = (self._adddimensions(self._basket(i, offsets=offsets, parallel=False)),)
+        for i in range(self.numbaskets):
+            if entrystart < self.basket_entrystop(i) and self.basket_entrystart(i) < entrystop:
+                local_entrystart, local_entrystop = self._localentries(i, entrystart, entrystop)
 
+                if local_entrystop > local_entrystart:
                     if reportentries:
-                        entrystart = self._basketEntry[i]
-                        entryend = self._basketEntry[i + 1] if i + 1 < len(self._basketEntry) else self.numentries
-                        out = out + (entrystart, entryend)
-
-                    if callback is None:
-                        return out
+                        yield (local_entrystart + self.basket_entrystart(i),
+                               local_entrystop + self.basket_entrystart(i),
+                               self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, keycache=keycache, rawcache=rawcache, cache=cache))
                     else:
-                        return callback(*out)
+                        yield self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, keycache=keycache, rawcache=rawcache, cache=cache)
 
-                except:
-                    return sys.exc_info()
-
-            for result in executor.map(fill, range(len(self._basketwalkers))):
-                yield result
-
-    def array(self, dtype=None, executor=None, block=True):
-        """Extracts the whole branch into a Numpy array.
-
-        Individual branches are typically small enough to fit into memory. If this is not your case, consider `tree.iterator(entries)` to load a given number of entries at a time.
-
-        Arguments:
-
-            * `dtype`
-
-               If not `None`, cast the array into a given `dtype` (such as conversion to little endian).
-               If an array object, fill that array instead of creating a new one (shape must match).
-
-            * `executor` (same as in `TTree.array`)
-
-              A `concurrent.futures.Executor` that would be used to parallelize the basket loading/decompression.
-              If `None`, the process is serial.
-
-            * `block`
-
-              If `True` and parallel processing with an `executor`, return `data, errors` instead of just `data`, where `errors` is a generator of exceptions raised by the parallel threads.
-              When you're ready to wait for all threads to finish, evaluate the `errors` generator.
-        """
-
-        if not hasattr(self, "basketwalkers"):
-            self._preparebaskets()
-
-        if self.dtype == numpy.dtype(object):
-            selfitemsize = 1
-        else:
-            selfitemsize = self.dtype.itemsize
-
-        if isinstance(dtype, array_types):
-            out = toarray(dtype).reshape(reduce(lambda x, y: x*y, dtype.shape, 1))
-            dtype = out.dtype
-
-            if isinstance(out, numpy.ndarray) and dtype == numpy.dtype(object):
-                expected = self.numentries
-            else:
-                expected = sum(self._basketlengths) // selfitemsize
-
-            if out.shape != (expected,):
-                raise ValueError("provided array does not have the right number of elements: {0}".format(expected))
+    def _basket_itemoffset(self, interpretation, basketstart, basketstop, keycache):
+        if keycache is not None and all(self._keycachekey(i) in keycache for i in range(basketstart, basketstop)):
+            basket_itemoffset = [0]
+            for i in range(basketstart, basketstop):
+                key = keycache[self._keycachekey(i)]
+                numitems = interpretation.numitems(key.border, self.basket_numentries(i))
+                basket_itemoffset.append(basket_itemoffset[-1] + numitems)
+            return basket_itemoffset
 
         else:
-            if dtype is None:
-                dtype = self.dtype
+            basket_itemoffset = [0]
+            keysource = self._source.threadlocal()
+            try:
+                for i in range(basketstart, basketstop):
+                    if keycache is not None and self._keycachekey(i) in keycache:
+                        key = keycache[self._keycachekey(i)]
+                    else:
+                        key = self._basketkey(keysource, i, True)
+                    numitems = interpretation.numitems(key.border, self.basket_numentries(i))
+                    basket_itemoffset.append(basket_itemoffset[-1] + numitems)
+                    if keycache is not None:
+                        keycache[self._keycachekey(i)] = key
+            finally:
+                keysource.dismiss()
+            return basket_itemoffset
 
-            if not isinstance(dtype, numpy.dtype):
-                dtype = numpy.dtype(dtype)
+    def _basket_entryoffset(self, basketstart, basketstop):
+        basket_entryoffset = [0]
+        for i in range(basketstart, basketstop):
+            basket_entryoffset.append(basket_entryoffset[-1] + self.basket_numentries(i))
+        return basket_entryoffset
 
-            if dtype == numpy.dtype(object):
-                out = numpy.empty(self.numentries, dtype=numpy.dtype(object))
+    def array(self, interpretation=None, entrystart=None, entrystop=None, keycache=None, rawcache=None, cache=None, executor=None, blocking=True):
+        interpretation = self._normalize_interpretation(interpretation)
+        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+        basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
+
+        if basketstart is None:
+            if blocking:
+                return interpretation.empty()
             else:
-                out = numpy.empty(sum(self._basketlengths) // selfitemsize, dtype=dtype)
+                def await():
+                    return interpretation.empty()
+                return await
 
-        if dtype == numpy.dtype(object):
-            return self._adddimensions(self._strings(out, executor, block))
+        if keycache is None:
+            keycache = uproot.cache.memorycache.ThreadSafeDict()
+
+        basket_itemoffset = self._basket_itemoffset(interpretation, basketstart, basketstop, keycache)
+        basket_entryoffset = self._basket_entryoffset(basketstart, basketstop)
+
+        destination = interpretation.destination(basket_itemoffset[-1], basket_entryoffset[-1])
+
+        def fill(j):
+            try:
+                i = j + basketstart
+                local_entrystart, local_entrystop = self._localentries(i, entrystart, entrystop)
+                source = self._basket(i, interpretation, local_entrystart, local_entrystop, keycache, rawcache, cache)
+
+                expecteditems = basket_itemoffset[j + 1] - basket_itemoffset[j]
+                source_numitems = interpretation.source_numitems(source)
+
+                expectedentries = basket_entryoffset[j + 1] - basket_entryoffset[j]
+                source_numentries = local_entrystop - local_entrystart 
+
+                if j + 1 == basketstop - basketstart:
+                    if expecteditems > source_numitems:
+                        basket_itemoffset[j + 1] -= expecteditems - source_numitems
+                    if expectedentries > source_numentries:
+                        basket_entryoffset[j + 1] -= expectedentries - source_numentries
+
+                elif j == 0:
+                    if expecteditems > source_numitems:
+                        basket_itemoffset[j] += expecteditems - source_numitems
+                    if expectedentries > source_numentries:
+                        basket_entryoffset[j] += expectedentries - source_numentries
+
+                interpretation.fill(source,
+                                    destination,
+                                    basket_itemoffset[j],
+                                    basket_itemoffset[j + 1],
+                                    basket_entryoffset[j],
+                                    basket_entryoffset[j + 1])
+
+            except:
+                return sys.exc_info()
 
         if executor is None:
-            start = 0
-            for i in range(len(self._basketwalkers)):
-                end = start + self._basketlengths[i] // selfitemsize
-                out[start:end] = self._basket(i, parallel=False)
-                start = end
-
-            if block:
-                return self._adddimensions(out)
-            else:
-                return self._adddimensions(out), ()
-
+            for j in range(basketstop - basketstart):
+                _delayedraise(fill(j))
+            excinfos = ()
         else:
-            ends = (numpy.cumsum(self._basketlengths) // selfitemsize).tolist()
-            starts = [0] + ends[:-1]
+            excinfos = executor.map(fill, range(basketstop - basketstart))
 
-            def fill(i):
-                try:
-                    out[starts[i]:ends[i]] = self._basket(i, parallel=True)
-                except:
-                    return sys.exc_info()
-                else:
-                    return None, None, None
+        if blocking:
+            for excinfo in excinfos:
+                _delayedraise(excinfo)
+            clipped = interpretation.clip(destination,
+                                          basket_itemoffset[0],
+                                          basket_itemoffset[-1],
+                                          basket_entryoffset[0],
+                                          basket_entryoffset[-1])
+            return interpretation.finalize(clipped)
+        else:
+            def await():
+                for excinfo in excinfos:
+                    _delayedraise(excinfo)
+                clipped = interpretation.clip(destination,
+                                              basket_itemoffset[0],
+                                              basket_itemoffset[-1],
+                                              basket_entryoffset[0],
+                                              basket_entryoffset[-1])
+                return interpretation.finalize(clipped)
+            return await
 
-            errors = executor.map(fill, range(len(self._basketwalkers)))
-            if block:
-                for cls, err, trc in errors:
-                    if cls is not None:
-                        _delayedraise(cls, err, trc)
-                return self._adddimensions(out)
-            else:
-                return self._adddimensions(out), errors
+    def _step_array(self, interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, keycache, rawcache, cache, executor, explicit_rawcache):
+        basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
 
-    def _strings(self, out, executor, block):
+        if basketstart is None:
+            return lambda: interpretation.empty()
+
+        basket_itemoffset = basket_itemoffset[basketstart : basketstop + 1]
+        basket_itemoffset = [x - basket_itemoffset[0] for x in basket_itemoffset]
+
+        basket_entryoffset = basket_entryoffset[basketstart : basketstop + 1]
+        basket_entryoffset = [x - basket_entryoffset[0] for x in basket_entryoffset]
+
+        destination = interpretation.destination(basket_itemoffset[-1], basket_entryoffset[-1])
+
+        def fill(j):
+            try:
+                i = j + basketstart
+                local_entrystart, local_entrystop = self._localentries(i, entrystart, entrystop)
+                source = self._basket(i, interpretation, local_entrystart, local_entrystop, keycache, rawcache, cache)
+
+                expecteditems = basket_itemoffset[j + 1] - basket_itemoffset[j]
+                source_numitems = interpretation.source_numitems(source)
+
+                expectedentries = basket_entryoffset[j + 1] - basket_entryoffset[j]
+                source_numentries = local_entrystop - local_entrystart
+
+                if j + 1 == basketstop - basketstart:
+                    if expecteditems > source_numitems:
+                        basket_itemoffset[j + 1] -= expecteditems - source_numitems
+                    if expectedentries > source_numentries:
+                        basket_entryoffset[j + 1] -= expectedentries - source_numentries
+
+                elif j == 0:
+                    if expecteditems > source_numitems:
+                        basket_itemoffset[j] += expecteditems - source_numitems
+                    if expectedentries > source_numentries:
+                        basket_entryoffset[j] += expectedentries - source_numentries
+
+                interpretation.fill(source,
+                                    destination,
+                                    basket_itemoffset[j],
+                                    basket_itemoffset[j + 1],
+                                    basket_entryoffset[j],
+                                    basket_entryoffset[j + 1])
+
+            except:
+                return sys.exc_info()
+
         if executor is None:
-            for i in range(len(self._basketwalkers)):
-                data, offsets = self._basket(i, offsets=True, parallel=False)
-                for j, offset in enumerate(offsets):
-                    size = data[offset]
-                    out[self._basketEntry[i] + j] = data[offset + 1:offset + 1 + size].tostring()
-
-            if block:
-                return out
-            else:
-                return out, ()
-
+            for j in range(basketstop - basketstart):
+                _delayedraise(fill(j))
+            excinfos = ()
         else:
-            def fill(i):
-                try:
-                    data, offsets = self._basket(i, offsets=True, parallel=True)
-                    for j, offset in enumerate(offsets):
-                        size = data[offset]
-                        out[self._basketEntry[i] + j] = data[offset + 1:offset + 1 + size].tostring()
-                except:
-                    return sys.exc_info()
-                else:
-                    return None, None, None
+            excinfos = executor.map(fill, range(basketstop - basketstart))
 
-            errors = executor.map(fill, range(len(self._basketwalkers)))
-            if block:
-                for cls, err, trc in errors:
-                    if cls is not None:
-                        _delayedraise(cls, err, trc)
-                return out
-            else:
-                return out, errors
+        def await():
+            for excinfo in excinfos:
+                _delayedraise(excinfo)
 
-    class LazyArray(object):
-        def __init__(self, branch, dtype):
-            if dtype == numpy.dtype(object):
-                raise NotImplementedError
+            if not explicit_rawcache:
+                for i in range(basketstop - 1):  # not including the last real basket
+                    try:
+                        del rawcache[self._rawcachekey(i)]
+                    except KeyError:
+                        pass
+
+            return interpretation.clip(destination,
+                                       basket_itemoffset[0],
+                                       basket_itemoffset[-1],
+                                       basket_entryoffset[0],
+                                       basket_entryoffset[-1])
+
+        return await
+
+    def lazyarray(self, interpretation=None, keycache=None, rawcache=None, cache=None, executor=None):
+        interpretation = self._normalize_interpretation(interpretation)
+        return self._LazyArray(self, interpretation, keycache, rawcache, cache, executor)
+
+    class _LazyArray(object):
+        def __init__(self, branch, interpretation, keycache, rawcache, cache, executor):
+            if keycache is None:
+                keycache = uproot.cache.memorycache.ThreadSafeDict()
+
             self._branch = branch
-            self.dtype = dtype
+            self._interpretation = interpretation
+            self._keycache = keycache
+            self._rawcache = rawcache
+            self._cache = cache
+            self._executor = executor
 
-        @property
-        def shape(self):
-            newlen = self._branch.numitems // reduce(lambda x, y: x*y, self._branch.itemdims, 1)
-            return (newlen,) + self._branch.itemdims
+            self._len = self._branch.numentries
+
+            if hasattr(self._interpretation, "todtype"):
+                self.dtype = self._interpretation.todtype
+
+            if hasattr(self._interpretation, "todims"):
+                self.shape = (len(self),) + self._interpretation.todims
 
         def __len__(self):
-            return self.shape[0]
-            
-        # interpret negative indexes as starting at the end of the dataset
-        def __normalize(self, i, clip, step):
+            return self._len
+
+        def __getitem__(self, index):
+            if isinstance(index, slice):
+                start, stop, step = self._normalize_slice(index)
+                if (start >= stop and step > 0) or (stop >= start and step < 0):
+                    return self._interpretation.empty()
+                else:
+                    array = self._array(min(start, stop), max(start, stop))
+                    if step == 1:
+                        return array
+                    else:
+                        return array[::step]
+            else:
+                index = self._normalize_index(index, False, 1)
+                array = self._array(index, index + 1)
+                return array[0]
+
+        def __getslice__(self, start, end):
+            return self.__getitem__(slice(start, end))
+
+        def cumsum(self, axis=None, dtype=None, out=None):
+            return self._array(self._basket_entryoffset[0], self._basket_entryoffset[-1]).cumsum(axis=axis, dtype=dtype, out=out)
+
+        def _array(self, entrystart, entrystop):
+            return self._branch.array(interpretation=self._interpretation, entrystart=entrystart, entrystop=entrystop, keycache=self._keycache, rawcache=self._rawcache, cache=self._cache, executor=self._executor, blocking=True)
+
+        def _normalize_index(self, i, clip, step):
             lenself = len(self)
             if i < 0:
                 j = lenself + i
@@ -1276,7 +1015,7 @@ class TBranch(uproot.core.TNamed,
             else:
                 raise IndexError("index out of range: {0} for length {1}".format(i, lenself))
 
-        def __normalizeslice(self, s):
+        def _normalize_slice(self, s):
             lenself = len(self)
             if s.step is None:
                 step = 1
@@ -1290,226 +1029,59 @@ class TBranch(uproot.core.TNamed,
                 else:
                     start = lenself - 1
             else:
-                start = self.__normalize(s.start, True, step)
+                start = self._normalize_index(s.start, True, step)
             if s.stop is None:
                 if step > 0:
                     stop = lenself
                 else:
                     stop = -1
             else:
-                stop = self.__normalize(s.stop, True, step)
+                stop = self._normalize_index(s.stop, True, step)
 
             return start, stop, step
 
-        def __startfill(self):
-            if not hasattr(self._branch, "basketwalkers"):
-                self._branch._preparebaskets()
-                self._baskets = [None] * len(self._branch._basketwalkers)
-                self._ends = (numpy.cumsum(self._branch._basketlengths) // self._branch.dtype.itemsize).tolist()
-                self._starts = [0] + self._ends[:-1]
+    class _BasketKey(object):
+        def __init__(self, source, cursor, compression, complete):
+            start = cursor.index
+            self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir = cursor.fields(source, TBranchMethods._BasketKey._format_small)
 
-        def __ensurefilled(self, basketindex):
-            if self._baskets[basketindex] is None:
-                self._baskets[basketindex] = self._branch._adddimensions(self._branch._basket(basketindex))
-                if self._baskets[basketindex].dtype != self.dtype:
-                    self._baskets[basketindex] = numpy.array(self._baskets[basketindex], dtype=self.dtype)
+            if self.fVersion > 1000:
+                cursor.index = start
+                self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir = cursor.fields(source, TBranchMethods._BasketKey._format_big)
 
-        def cumsum(self, axis=None, dtype=None, out=None):
-            self.__startfill()            
-            for i in range(len(self._baskets)):
-                self.__ensurefilled(i)
-            array = numpy.concatenate(self._baskets)
-            return array.cumsum(axis, dtype, out)
+            if complete:
+                cursor.skipstring(source)
+                cursor.skipstring(source)
+                cursor.skipstring(source)
 
-        def __getitem__(self, index):
-            self.__startfill()
+                self.fVersion, self.fBufferSize, self.fNevBufSize, self.fNevBuf, self.fLast = cursor.fields(source, TBranchMethods._BasketKey._format_complete)
 
-            product = reduce(lambda x, y: x*y, self._branch.itemdims, 1)
+                self.border = self.fLast - self.fKeylen
 
-            if isinstance(index, slice):
-                start, stop, step = self.__normalizeslice(index)
-                if start == stop:
-                    return self._branch._adddimensions(numpy.empty(0, dtype=self._branch.dtype))
+                if self.fObjlen != self.fNbytes - self.fKeylen:
+                    self.source = uproot.source.compressed.CompressedSource(compression, source, Cursor(self.fSeekKey + self.fKeylen), self.fNbytes - self.fKeylen, self.fObjlen)
+                    self.cursor = Cursor(0)
+                else:
+                    self.source = source
+                    self.cursor = Cursor(self.fSeekKey + self.fKeylen)
 
-                flatstart = start * product
-                flatstop = stop * product
-                firststart = None
-                firstindex = None
-                lastindex = None
+        _format_small = struct.Struct(">ihiIhhii")
+        _format_big = struct.Struct(">ihiIhhqq")
+        _format_complete = struct.Struct(">Hiiii")
 
-                for basketindex, start in enumerate(self._starts):
-                    if start <= flatstart and firststart is None:
-                        firststart = start
-                    if start >= flatstop:
-                        break
-                    self.__ensurefilled(basketindex)
-                    if firstindex is None:
-                        firstindex = basketindex
-                    lastindex = basketindex
-
-                return numpy.concatenate(self._baskets[firstindex:lastindex + 1])[(flatstart - firststart) // product : (flatstop - firststart) // product : step]
-                
-            else:
-                flatindex = self.__normalize(index, False, 1) * product
-                for basketindex, start in enumerate(self._starts):
-                    if start <= flatindex < self._ends[basketindex]:
-                        self.__ensurefilled(basketindex)
-                        break
-                return self._baskets[basketindex][(flatindex - start) // product]
-
-    def lazyarray(self, dtype=None):
-        """Creates a proxy for an array that gets data on demand.
-
-        Arguments:
-
-            * `dtype` If not `None`, cast the array into a given `dtype` (such as conversion to little endian).
-        """
-        if dtype is None:
-            dtype = self.dtype
-        return self.LazyArray(self, dtype)
-
-uproot.rootio.Deserialized.classes[b"TBranch"] = TBranch
-
-class TBranchElement(TBranch):
-    """Represents a TBranchElement, a column of data represented an object that has been split.
-
-    All methods and members are the same as TBranch.
-    """
-    def __init__(self, filewalker, walker):
-        walker.startcontext()
-        start = walker.index
-        vers, bcnt = self._readversion(walker)
-
-        if vers < 9:
-            raise NotImplementedError("TBranchElement version too old")
-
-        TBranch.__init__(self, filewalker, walker)
-
-        self.classname = walker.readstring()
-        parent = walker.readstring()
-        clones = walker.readstring()
-
-        checksum = walker.readfield("!I")
-        if vers >= 10:
-            classversion = walker.readfield("!H")
-        else:
-            classversion = walker.readfield("!I")
-        identifier, btype, stype, themax = walker.readfields("!iiii")
-            
-        bcount1 = uproot.rootio.Deserialized._deserialize(filewalker, walker)
-        bcount2 = uproot.rootio.Deserialized._deserialize(filewalker, walker)
-
-        self._checkbytecount(walker.index - start, bcnt)
-
-    def array(self, dtype=None, executor=None, block=True):
-        """Extracts the whole branch into a Numpy array.
-
-        Individual branches are typically small enough to fit into memory. If this is not your case, consider `tree.iterator(entries)` to load a given number of entries at a time.
-
-        Arguments:
-
-            * `dtype`
-
-               If not `None`, cast the array into a given `dtype` (such as conversion to little endian).
-               If an array object, fill that array instead of creating a new one (shape must match).
-
-            * `executor` (same as in `TTree.array`)
-
-              A `concurrent.futures.Executor` that would be used to parallelize the basket loading/decompression.
-              If `None`, the process is serial.
-
-            * `block`
-
-              If `True` and parallel processing with an `executor`, return `data, errors` instead of just `data`, where `errors` is a generator of exceptions raised by the parallel threads.
-              When you're ready to wait for all threads to finish, evaluate the `errors` generator.
-        """
-        if hasattr(self, "dtype"):
-            return TBranch.array(self, dtype, executor, block)
-        else:
-            raise NotImplementedError
-
-uproot.rootio.Deserialized.classes[b"TBranchElement"] = TBranchElement
-
-class TLeaf(uproot.core.TNamed):
-    """Represents a TLeaf object, which is only used for type and dimensionality information.
-    """
-    def __init__(self, filewalker, walker):
-        walker.startcontext()
-        start = walker.index
-        vers, bcnt = self._readversion(walker)
-
-        uproot.core.TNamed.__init__(self, filewalker, walker)
-
-        len, etype, offset, hasrange, self.unsigned = walker.readfields("!iii??")
-        self.counter = uproot.rootio.Deserialized._deserialize(filewalker, walker)
-
-        self._checkbytecount(walker.index - start, bcnt)
-
-uproot.rootio.Deserialized.classes[b"TLeaf"] = TLeaf
-
-for classname, format, dtype1, dtype2 in [
-    ("TLeafO", "!??", "bool", "bool"),
-    ("TLeafB", "!bb", "i1", "u1"),
-    ("TLeafS", "!hh", ">i2", ">u2"),
-    ("TLeafI", "!ii", ">i4", ">u4"),
-    ("TLeafL", "!qq", ">i8", ">u8"),
-    ("TLeafF", "!ff", ">f4", ">f4"),
-    ("TLeafD", "!dd", ">f8", ">f8"),
-    ("TLeafC", "!ii", "object", "object"),
-    ("TLeafObject", "!ii", "object", "object"),
-    ]:
-    exec("""
-class {0}(TLeaf):
-    "Represents a {0} object, which is only used for type and dimensionality information."
-    def __init__(self, filewalker, walker):
-        walker.startcontext()
-        start = walker.index
-        vers, bcnt = self._readversion(walker)
-
-        TLeaf.__init__(self, filewalker, walker)
-
-        min, max = walker.readfields("{1}")
-        if self.unsigned:
-            self.dtype = numpy.dtype("{3}")
-        else:
-            self.dtype = numpy.dtype("{2}")
-        self._speedbumps = False
+    def _basketkey(self, source, i, complete):
+        if not 0 <= i < self.numbaskets:
+            raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
+        return self._BasketKey(source.parent(), Cursor(self.fBasketSeek[i]), uproot.source.compressed.Compression(self.fCompress), complete)
         
-        self._checkbytecount(walker.index - start, bcnt)
+    def __len__(self):
+        return self.numentries
 
-uproot.rootio.Deserialized.classes[b"{0}"] = {0}
-""".format(classname, format, dtype1, dtype2), globals())
+    def __getitem__(self, name):
+        return self.branch(name)
 
-class TLeafElement(TLeaf):
-    """Represents a TLeafElement object, which is only used for type and dimensionality information.
-    """
-    def __init__(self, filewalker, walker):
-        walker.startcontext()
-        start = walker.index
-        vers, bcnt = self._readversion(walker)
+    def __iter__(self):
+        # prevent Python's attempt to interpret __len__ and __getitem__ as iteration
+        raise TypeError("'TBranch' object is not iterable")
 
-        TLeaf.__init__(self, filewalker, walker)
-
-        identifier, ltype = walker.readfields("!ii")
-
-        if ltype == 65:
-            self.dtype = numpy.dtype(object)
-
-        elif ltype > 0 and ltype % 20 not in (0, 9, 10, 19):
-            # typename = [
-            #     "", "Char_t",  "Short_t",  "Int_t",  "Long_t",  "Float_t", "Int_t",    "char*",     "Double_t", "Double32_t",
-            #     "", "UChar_t", "UShort_t", "UInt_t", "ULong_t", "UInt_t",  "Long64_t", "ULong64_t", "Bool_t",   "Float16_t"
-            #     ][ltype % 20]
-            self.dtype = numpy.dtype([
-                None, "i1", ">i2", ">i4", ">i8", ">f4", ">i4", "u1",  ">f8",  None,
-                None, "u1", ">u2", ">u4", ">u8", ">u4", ">i8", ">u8", "bool", None
-                ][ltype % 20])
-
-        elif ltype == -1:  # counter
-            self.dtype = numpy.dtype(">i4")
-
-        self._speedbumps = 40 <= ltype < 60
-
-        self._checkbytecount(walker.index - start, bcnt)
-
-uproot.rootio.Deserialized.classes[b"TLeafElement"] = TLeafElement
+uproot.rootio.methods["TBranch"] = TBranchMethods

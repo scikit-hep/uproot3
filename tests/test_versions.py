@@ -91,8 +91,7 @@ class TestVersions(unittest.TestCase):
     def compare(self, arrays):
         self.assertEqual(set(arrays.keys()), set(self.sample.keys()))
         for name in arrays.keys():
-            expect = [y for x in self.sample[name] for y in x] if name.startswith(b"A") else self.sample[name]
-            self.assertEqual(arrays[name].tolist(), expect)
+            self.assertEqual(arrays[name].tolist(), self.sample[name])
 
     def test_5_23_02(self):
         # 2009-02-26, TTree version 16

@@ -27,11 +27,43 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+    
+import os.path
 
-import re
+import numpy
 
-__version__ = "2.0.0"
-version = __version__
-version_info = tuple(re.split(r"[-\.]", __version__))
+class MemmapSource(object):
+    @staticmethod
+    def defaults(path):
+        return MemmapSource(path)
 
-del re
+    def __init__(self, path):
+        self.path = os.path.expanduser(path)
+        self._source = numpy.memmap(self.path, dtype=numpy.uint8, mode="r")
+
+    def parent(self):
+        return self
+
+    def threadlocal(self):
+        return self
+
+    def dismiss(self):
+        pass
+
+    def data(self, start, stop, dtype=numpy.dtype(numpy.uint8)):
+        if not isinstance(dtype, numpy.dtype):
+            dtype = numpy.dtype(dtype)
+
+        assert start >= 0
+        assert stop >= 0
+        assert stop >= start
+        if start == stop:
+            return numpy.empty(0, dtype=dtype)
+
+        if stop > len(self._source):
+            raise IndexError("indexes {0}:{1} are beyond the end of data source {2}".format(len(self._source), stop, repr(self.path)))
+
+        if dtype == numpy.dtype(numpy.uint8):
+            return self._source[start:stop]
+        else:
+            return self._source[start:stop].view(dtype)
