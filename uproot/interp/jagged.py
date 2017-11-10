@@ -58,6 +58,9 @@ class asjagged(Interpretation):
     def __repr__(self):
         return "asjagged(" + repr(self.asdtype) + ")"
 
+    def to(self, todtype=None, todims=None):
+        return asjagged(self.asdtype.to(todtype, todims))
+
     def empty(self):
         return JaggedArray(self.asdtype.empty(), numpy.empty(0, dtype=numpy.int64))
 

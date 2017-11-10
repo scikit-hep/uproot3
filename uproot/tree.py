@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import glob
+import inspect
 import numbers
 import os.path
 import struct
@@ -71,6 +72,8 @@ import uproot.rootio
 from uproot.rootio import _bytesid
 from uproot.source.cursor import Cursor
 from uproot.interp.auto import interpret
+from uproot.interp.numerical import asdtype
+from uproot.interp.jagged import asjagged
 from uproot.source.memmap import MemmapSource
 from uproot.source.xrootd import XRootDSource
 
@@ -315,17 +318,14 @@ class TTreeMethods(object):
                     if interpretation is not None:
                         yield branch, interpretation
                 else:                                      # function is giving interpretations
-                    yield branch, result
+                    yield branch, branch._normalize_dtype(result)
 
         elif isinstance(arg, dict):
             for name, interpretation in arg.items():       # dict of branch-interpretation pairs
                 name = _bytesid(name)
                 branch = self.branch(name)
-                interpretation = interpret(branch)         # but no interpretation given
-                if interpretation is None:
-                    raise ValueError("cannot interpret branch {0} as a Python type".format(repr(name)))
-                else:
-                    yield branch, interpretation
+                interpretation = branch._normalize_dtype(interpretation)
+                yield branch, interpretation
 
         elif isinstance(arg, string_types):
             name = _bytesid(arg)                           # one explicitly given branch name
@@ -465,11 +465,39 @@ class TBranchMethods(object):
         finally:
             keysource.dismiss()
 
+    def _normalize_dtype(self, interpretation):
+        if inspect.isclass(interpretation) and issubclass(interpretation, numpy.generic):
+            return self._normalize_dtype(numpy.dtype(interpretation))
+
+        elif isinstance(interpretation, numpy.dtype):      # user specified a Numpy dtype
+            default = interpret(self)
+            if isinstance(default, (asdtype, asjagged)):
+                return default.to(interpretation)
+            else:
+                raise ValueError("cannot cast branch {0} (default interpretation {1}) as dtype {2}".format(repr(self.name), default, interpretation))
+
+        elif isinstance(interpretation, numpy.array):      # user specified a Numpy array
+            default = interpret(self)
+            if isinstance(default, asdtype):
+                return default.to(interpretation)
+            else:
+                raise ValueError("cannot cast branch {0} (default interpretation {1}) as dtype {2}".format(repr(self.name), default, interpretation))
+
+        elif not isinstance(interpretation, uproot.interp.interp.Interpretation):
+            raise TypeError("branch interpretation must be an Interpretation, not {0} (type {1})".format(interpretation, type(interpretation)))
+
+        else:
+            return interpretation
+            
     def _normalize_interpretation(self, interpretation):
         if interpretation is None:
             interpretation = interpret(self)
+        else:
+            interpretation = self._normalize_dtype(interpretation)
+
         if interpretation is None:
             raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
+
         return interpretation
 
     def numitems(self, interpretation=None, keycache=None):

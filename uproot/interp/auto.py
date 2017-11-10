@@ -32,6 +32,7 @@ import re
 
 import numpy
 
+import uproot.const
 from uproot.interp.numerical import asdtype
 from uproot.interp.numerical import asarray
 from uproot.interp.jagged import asjagged
@@ -45,32 +46,70 @@ def interpret(branch, classes=None, swapbytes=True):
 
     def leaf2dtype(leaf):
         classname = leaf.__class__.__name__
+
         if classname == "TLeafO":
             return numpy.dtype(numpy.bool)
+
         elif classname == "TLeafB":
             if leaf.fIsUnsigned:
                 return numpy.dtype(numpy.uint8)
             else:
                 return numpy.dtype(numpy.int8)
+
         elif classname == "TLeafS":
             if leaf.fIsUnsigned:
                 return numpy.dtype(numpy.uint16)
             else:
                 return numpy.dtype(numpy.int16)
+
         elif classname == "TLeafI":
             if leaf.fIsUnsigned:
                 return numpy.dtype(numpy.uint32)
             else:
                 return numpy.dtype(numpy.int32)
+
         elif classname == "TLeafL":
             if leaf.fIsUnsigned:
                 return numpy.dtype(numpy.uint64)
             else:
                 return numpy.dtype(numpy.int64)
+
         elif classname == "TLeafF":
             return numpy.dtype(numpy.float32)
+
         elif classname == "TLeafD":
             return numpy.dtype(numpy.float64)
+
+        elif classname == "TLeafElement":
+            if leaf.fType == uproot.const.kBool:
+                return numpy.dtype(numpy.bool_)
+            elif leaf.fType == uproot.const.kChar:
+                return numpy.dtype("i1")
+            elif leaf.fType == uproot.const.kUChar:
+                return numpy.dtype("u1")
+            elif leaf.fType == uproot.const.kShort:
+                return numpy.dtype(">i2")
+            elif leaf.fType == uproot.const.kUShort:
+                return numpy.dtype(">u2")
+            elif leaf.fType == uproot.const.kInt:
+                return numpy.dtype(">i4")
+            elif leaf.fType in (uproot.const.kBits, uproot.const.kUInt, uproot.const.kCounter):
+                return numpy.dtype(">u4")
+            elif leaf.fType == uproot.const.kLong:
+                return numpy.dtype(numpy.long).newbyteorder(">")
+            elif leaf.fType == uproot.const.kULong:
+                return numpy.dtype(">u" + repr(numpy.dtype(numpy.long).itemsize))
+            elif leaf.fType == uproot.const.kLong64:
+                return numpy.dtype(">i8")
+            elif leaf.fType == uproot.const.kULong64:
+                return numpy.dtype(">u8")
+            elif leaf.fType in (uproot.const.kFloat, uproot.const.kFloat16):
+                return numpy.dtype(">f4")
+            elif leaf.fType in (uproot.const.kDouble, uproot.const.kDouble32):
+                return numpy.dtype(">f8")
+            else:
+                raise NotNumerical
+
         else:
             raise NotNumerical
 

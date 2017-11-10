@@ -427,7 +427,7 @@ class TestTree(unittest.TestCase):
 
         self.assertEqual(dict((name, array.tolist()) for name, array in file["one/tree"].arrays(["one", "two", "three"]).items()), {b"one": [1, 2, 3, 4], b"two": [1.100000023841858, 2.200000047683716, 3.299999952316284, 4.400000095367432], b"three": [b"uno", b"dos", b"tres", b"quatro"]})
         self.assertEqual(file["one/two/tree"].array("Int32").shape, (100,))
-        # self.assertEqual(file["three/tree"].array("I32").shape, (100,))
+        self.assertEqual(file["three/tree"].array("I32").shape, (100,))
 
         file = uproot.open("tests/nesteddirs.root")
 
@@ -437,25 +437,23 @@ class TestTree(unittest.TestCase):
 
         self.assertEqual(dict((name, array.tolist()) for name, array in file["one/tree;1"].arrays(["one", "two", "three"]).items()), {b"one": [1, 2, 3, 4], b"two": [1.100000023841858, 2.200000047683716, 3.299999952316284, 4.400000095367432], b"three": [b"uno", b"dos", b"tres", b"quatro"]})
         self.assertEqual(file["one/two/tree;1"].array("Int32").shape, (100,))
-        # self.assertEqual(file["three/tree;1"].array("I32").shape, (100,))
+        self.assertEqual(file["three/tree;1"].array("I32").shape, (100,))
 
+    def test_cast(self):
+        tree = uproot.open("tests/Zmumu.root")["events"]
+        one = numpy.cast[numpy.int32](numpy.floor(tree.array("M")))
+        two = tree.array("M", numpy.int32)
+        self.assertEqual(one.dtype, two.dtype)
+        self.assertEqual(one.shape, two.shape)
+        self.assertTrue(numpy.array_equal(one, two))
 
-
-    # def test_cast(self):
-    #     tree = uproot.open("tests/Zmumu.root")["events"]
-    #     one = numpy.cast[numpy.int32](numpy.floor(tree.array("M")))
-    #     two = tree.array("M", numpy.int32)
-    #     self.assertEqual(one.dtype, two.dtype)
-    #     self.assertEqual(one.shape, two.shape)
-    #     self.assertTrue(numpy.array_equal(one, two))
-
-    #     for (one,) in tree.iterator(10000, "M", outputtype=tuple):
-    #         one = numpy.cast[numpy.int32](numpy.floor(one))
-    #     for (two,) in tree.iterator(10000, {"M": numpy.int32}, outputtype=tuple):
-    #         pass
-    #     self.assertEqual(one.dtype, two.dtype)
-    #     self.assertEqual(one.shape, two.shape)
-    #     self.assertTrue(numpy.array_equal(one, two))
+        for (one,) in tree.iterate(10000, "M", outputtype=tuple):
+            one = numpy.cast[numpy.int32](numpy.floor(one))
+        for (two,) in tree.iterate(10000, {"M": numpy.int32}, outputtype=tuple):
+            pass
+        self.assertEqual(one.dtype, two.dtype)
+        self.assertEqual(one.shape, two.shape)
+        self.assertTrue(numpy.array_equal(one, two))
 
     # def test_pass_array(self):
     #     tree = uproot.open("tests/Zmumu.root")["events"]
