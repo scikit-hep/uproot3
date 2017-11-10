@@ -83,13 +83,14 @@ class TestCompression(unittest.TestCase):
         self.assertEqual(uproot.open("tests/HZZ-lzma.root")["events"].branchnames, branches)
         self.assertEqual(uproot.open("tests/HZZ-lz4.root")["events"].branchnames, branches)
 
-    # def test_compression_content(self):    
-    #     for name, array in uproot.open("tests/Zmumu-uncompressed.root")["events"].arrays().items():
-    #         self.assertTrue(numpy.array_equal(uproot.open("tests/Zmumu-zlib.root")["events"].array(name), array))
-    #         self.assertTrue(numpy.array_equal(uproot.open("tests/Zmumu-lzma.root")["events"].array(name), array))
-    #         self.assertTrue(numpy.array_equal(uproot.open("tests/Zmumu-lz4.root")["events"].array(name), array))
+    def test_compression_content1(self):
+        for name, array in uproot.open("tests/Zmumu-uncompressed.root")["events"].arrays(["Type", "Event", "E1", "px1", "Q1", "M"]).items():
+            self.assertTrue(numpy.array_equal(uproot.open("tests/Zmumu-zlib.root")["events"].array(name), array))
+            self.assertTrue(numpy.array_equal(uproot.open("tests/Zmumu-lzma.root")["events"].array(name), array))
+            self.assertTrue(numpy.array_equal(uproot.open("tests/Zmumu-lz4.root")["events"].array(name), array))
 
-    #     array = uproot.open("tests/HZZ-uncompressed.root")["events"].array("Electron_Px")
-    #     self.assertTrue(numpy.array_equal(uproot.open("tests/HZZ-zlib.root")["events"].array("Electron_Px"), array))
-    #     self.assertTrue(numpy.array_equal(uproot.open("tests/HZZ-lzma.root")["events"].array("Electron_Px"), array))
-    #     self.assertTrue(numpy.array_equal(uproot.open("tests/HZZ-lz4.root")["events"].array("Electron_Px"), array))
+    def test_compression_content2(self):
+        array = uproot.open("tests/HZZ-uncompressed.root")["events"].array("Electron_Px").tolist()
+        self.assertEqual(uproot.open("tests/HZZ-zlib.root")["events"].array("Electron_Px").tolist(), array)
+        self.assertEqual(uproot.open("tests/HZZ-lzma.root")["events"].array("Electron_Px").tolist(), array)
+        self.assertEqual(uproot.open("tests/HZZ-lz4.root")["events"].array("Electron_Px").tolist(), array)
