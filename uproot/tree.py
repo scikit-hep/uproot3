@@ -199,8 +199,8 @@ class TTreeMethods(object):
     def array(self, branch, interpretation=None, entrystart=None, entrystop=None, keycache=None, rawcache=None, cache=None, executor=None, blocking=True):
         return self.branch(branch).array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, keycache=keycache, rawcache=rawcache, cache=cache, executor=executor, blocking=blocking)
 
-    def lazyarray(self, branch, interpretation=None):
-        return self.branch(branch).lazyarray(interpretation=interpretation)
+    def lazyarray(self, branch, interpretation=None, keycache=None, rawcache=None, cache=None, executor=None):
+        return self.branch(branch).lazyarray(interpretation=interpretation, keycache=keycache, rawcache=rawcache, cache=cache, executor=executor)
 
     def arrays(self, branches=None, outputtype=dict, entrystart=None, entrystop=None, keycache=None, rawcache=None, cache=None, executor=None, blocking=True):
         branches = list(self._normalize_branches(branches))
@@ -225,13 +225,13 @@ class TTreeMethods(object):
         else:
             return await
         
-    def lazyarrays(self, branches=None, outputtype=dict):
+    def lazyarrays(self, branches=None, outputtype=dict, keycache=None, rawcache=None, cache=None, executor=None):
         branches = list(self._normalize_branches(branches))
 
         if outputtype == namedtuple:
             outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
 
-        lazyarrays = [(branch.name, branch.lazyarray(interpretation=interpretation)) for branch, interpretation in branches]
+        lazyarrays = [(branch.name, branch.lazyarray(interpretation=interpretation, keycache=keycache, rawcache=rawcache, cache=cache, executor=executor)) for branch, interpretation in branches]
 
         if issubclass(outputtype, dict):
             return outputtype(lazyarrays)
@@ -247,6 +247,9 @@ class TTreeMethods(object):
             outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
 
         branchinfo = [(branch, interpretation, {}, branch._basket_itemoffset(interpretation, 0, branch.numbaskets, keycache), branch._basket_entryoffset(0, branch.numbaskets)) for branch, interpretation in branches]
+
+        if keycache is None:
+            keycache = uproot.cache.memorycache.ThreadSafeDict()
 
         if rawcache is None:
             rawcache = uproot.cache.memorycache.ThreadSafeDict()
@@ -766,6 +769,9 @@ class TBranchMethods(object):
                     return interpretation.empty()
                 return await
 
+        if keycache is None:
+            keycache = uproot.cache.memorycache.ThreadSafeDict()
+
         basket_itemoffset = self._basket_itemoffset(interpretation, basketstart, basketstop, keycache)
         basket_entryoffset = self._basket_entryoffset(basketstart, basketstop)
 
@@ -915,11 +921,20 @@ class TBranchMethods(object):
         def await():
             for excinfo in excinfos:
                 _delayedraise(excinfo)
+
+            if not explicit_rawcache:
+                for i in range(basketstop - 1):  # not including the last real basket
+                    try:
+                        del rawcache[self._rawcachekey(i)]
+                    except KeyError:
+                        pass
+
             return interpretation.clip(destination,
                                        basket_itemoffset[0],
                                        basket_itemoffset[-1],
                                        basket_entryoffset[0],
                                        basket_entryoffset[-1])
+
         return await
 
     def lazyarray(self, interpretation=None, keycache=None, rawcache=None, cache=None, executor=None):
@@ -928,6 +943,9 @@ class TBranchMethods(object):
 
     class _LazyArray(object):
         def __init__(self, branch, interpretation, keycache, rawcache, cache, executor):
+            if keycache is None:
+                keycache = uproot.cache.memorycache.ThreadSafeDict()
+
             self._branch = branch
             self._interpretation = interpretation
             self._keycache = keycache
