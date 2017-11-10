@@ -831,7 +831,8 @@ class TBranchMethods(object):
             def await():
                 for excinfo in excinfos:
                     _delayedraise(excinfo)
-                clipped = interpretation.clip(basket_itemoffset[0],
+                clipped = interpretation.clip(destination,
+                                              basket_itemoffset[0],
                                               basket_itemoffset[-1],
                                               basket_entryoffset[0],
                                               basket_entryoffset[-1])
