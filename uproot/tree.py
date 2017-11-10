@@ -276,7 +276,7 @@ class TTreeMethods(object):
         if outputtype == namedtuple:
             outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
 
-        branchinfo = [(branch, interpretation, {}, branch._basket_itemoffset(interpretation, 0, branch.numbaskets)) for branch, interpretation in branches]
+        branchinfo = [(branch, interpretation, {}, branch._basket_itemoffset(interpretation, 0, branch.numbaskets), branch._basket_entryoffset(basketstart, basketstop)) for branch, interpretation in branches]
 
         if rawcache is None:
             rawcache = uproot.cache.memorycache.ThreadSafeDict()
@@ -289,8 +289,8 @@ class TTreeMethods(object):
         else:
             finish = lambda interpretation, array: array
                 
-        for start, stop in startstop:
-            futures = [(branch.name, finish(interpretation, branch._step_array(interpretation, baskets, basket_itemoffset, start, stop, rawcache, cache, executor, explicit_rawcache))) for branch, interpretation, baskets, basket_itemoffset in branchinfo]
+        for entrystart, entrystop in startstop:
+            futures = [(branch.name, finish(interpretation, branch._step_array(interpretation, basket_sources, basket_itemoffset, basket_entryoffset, entrystart, entrystop, rawcache, cache, executor, explicit_rawcache))) for branch, interpretation, basket_sources, basket_itemoffset, basket_entryoffset in branchinfo]
 
             if issubclass(outputtype, dict):
                 out = outputtype([(name, future()) for name, future in futures])
@@ -300,7 +300,7 @@ class TTreeMethods(object):
                 out = outputtype(*[future() for name, future in futures])
 
             if reportentries:
-                yield max(0, start), min(stop, self.numentries), out
+                yield max(0, entrystart), min(entrystop, self.numentries), out
             else:
                 yield out
 
@@ -818,16 +818,16 @@ class TBranchMethods(object):
                 return interpretation.finalize(clipped)
             return await
 
-    def _step_array(self, interpretation, baskets, basket_itemoffset, entrystart, entrystop, rawcache, cache, executor, explicit_rawcache):
+    def _step_array(self, interpretation, basket_sources, basket_itemoffset, basket_entryoffset, entrystart, entrystop, rawcache, cache, executor, explicit_rawcache):
         basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
 
         if basketstart is None:
             return lambda: numpy.empty(0, dtype=interpretation.todtype)
 
-        for key in list(baskets):
+        for key in list(basket_sources):
             i, _, _ = key
             if i < basketstart:
-                del baskets[key]
+                del basket_sources[key]
             if not explicit_rawcache:
                 try:
                     del rawcache[self._rawcachekey(i)]
@@ -835,24 +835,24 @@ class TBranchMethods(object):
                     pass
 
         basket_itemoffset = basket_itemoffset[basketstart : basketstop + 1]
+        basket_entryoffset = basket_entryoffset[basketstart : basketstop + 1]
 
-        nocopy = interpretation.nocopy()
-        destination = interpretation.destination(basket_itemoffset[-1], None)
+        destination = interpretation.destination(basket_itemoffset[-1], basket_entryoffset[-1])
         lock = threading.Lock()
         
         def fill(j):
             try:
+                local_entrystart, local_entrystop = self._localentries(j + basketstart, entrystart, entrystop)
                 key = (j + basketstart, entrystart, entrystop)
 
                 with lock:
-                    basket = baskets.get(key, None)
-                if basket is None:
-                    basket = self.basket(j + basketstart, interpretation=nocopy, entrystart=entrystart, entrystop=entrystop, rawcache=rawcache, cache=cache)
+                    source = basket_sources.get(key, None)
+                if source is None:
+                    source = self._basket(j + basketstart, interpretation, local_entrystart, local_entrystop, rawcache, cache)
                     with lock:
-                        baskets[key] = basket
+                        basket_sources[key] = source
 
                 if not explicit_rawcache:
-                    local_entrystart, local_entrystop = self._localentries(j + basketstart, entrystart, entrystop)
                     if local_entrystart == 0 and local_entrystop == self.basket_numentries(j + basketstart):
                         try:
                             del rawcache[self._rawcachekey(j + basketstart)]
@@ -860,14 +860,29 @@ class TBranchMethods(object):
                             pass
 
                 expecteditems = basket_itemoffset[j + 1] - basket_itemoffset[j]
+                source_numitems = interpretation.source_numitems(source)
 
-                if j + 1 == basketstop - basketstart and expecteditems > len(basket):
-                    basket_itemoffset[j + 1] -= expecteditems - len(basket)
+                expectedentries = basket_entryoffset[j + 1] - basket_entryoffset[j]
+                source_numentries = local_entrystop - local_entrystart
 
-                elif j == 0 and expecteditems > len(basket):
-                    basket_itemoffset[j] += expecteditems - len(basket)
+                if j + 1 == basketstop - basketstart:
+                    if expecteditems > source_numitems:
+                        basket_itemoffset[j + 1] -= expecteditems - source_numitems
+                    if expectedentries > source_numentries:
+                        basket_entryoffset[j + 1] -= expectedentries - source_numentries
 
-                interpretation.fill(basket, destination, basket_itemoffset[j], basket_itemoffset[j + 1])
+                elif j == 0:
+                    if expecteditems > source_numitems:
+                        basket_itemoffset[j] += expecteditems - source_numitems
+                    if expectedentries > source_numentries:
+                        basket_entryoffset[j] += expectedentries - source_numentries
+
+                interpretation.fill(source,
+                                    destination,
+                                    basket_itemoffset[j],
+                                    basket_itemoffset[j + 1],
+                                    basket_entryoffset[j],
+                                    basket_entryoffset[j + 1])
 
             except:
                 return sys.exc_info()
@@ -882,7 +897,11 @@ class TBranchMethods(object):
         def await():
             for excinfo in excinfos:
                 _delayedraise(excinfo)
-            return destination[basket_itemoffset[0] : basket_itemoffset[-1]]
+            return interpretation.clip(destination,
+                                       basket_itemoffset[0],
+                                       basket_itemoffset[-1],
+                                       basket_entryoffset[0],
+                                       basket_entryoffset[-1])
         return await
 
     def lazyarray(self, interpretation=None):
