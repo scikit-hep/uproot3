@@ -35,12 +35,13 @@ import numpy
 from uproot.interp.numerical import asdtype
 from uproot.interp.numerical import asarray
 from uproot.interp.jagged import asjagged
+from uproot.interp.strings import asstrings
 
 def interpret(branch, classes=None, swapbytes=True):
     if classes is None:
         classes = branch._context.classes
 
-    class NotNumpy(Exception): pass
+    class NotNumerical(Exception): pass
 
     def leaf2dtype(leaf):
         classname = leaf.__class__.__name__
@@ -71,7 +72,7 @@ def interpret(branch, classes=None, swapbytes=True):
         elif classname == "TLeafD":
             return numpy.dtype(numpy.float64)
         else:
-            raise NotNumpy
+            raise NotNumerical
 
     dims = ()
     if len(branch.fLeaves) == 1:
@@ -109,15 +110,13 @@ def interpret(branch, classes=None, swapbytes=True):
             else:
                 return None
 
-    except NotNumpy:
+    except NotNumerical:
         if len(branch.fLeaves) == 1:
             if branch.fLeaves[0].__class__.__name__ == "TLeafC":
-                raise NotImplementedError("point this at the new Strings class!")
+                return asstrings
 
             elif branch.fLeaves[0].__class__.__name__ == "TLeafElement":
-                classname = None
-                if classname in classes:
-                    raise NotImplementedError("point this at a class generated from streamers!")
+                pass   # FIXME
 
         return None
 

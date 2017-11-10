@@ -44,7 +44,9 @@ class TestTree(unittest.TestCase):
     def runTest(self):
         pass
 
-    def test_branch_flat_basket(self):
+    ###################################################### basket
+
+    def test_flat_basket(self):
         branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["i8"]
         interpretation = branch._normalize_interpretation(None)
         entrystart, entrystop = branch._normalize_entrystartstop(None, None)
@@ -64,7 +66,7 @@ class TestTree(unittest.TestCase):
         self.assertTrue(numpy.array_equal(four, numpy.array([-15, -14, -13], dtype=">i8")))
         self.assertTrue(basest(four) is buf)
 
-    def test_branch_regular_basket(self):
+    def test_regular_basket(self):
         branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["ai8"]
         interpretation = branch._normalize_interpretation(None)
         entrystart, entrystop = branch._normalize_entrystartstop(None, None)
@@ -90,7 +92,7 @@ class TestTree(unittest.TestCase):
         self.assertTrue(numpy.array_equal(four, numpy.array([-14, -13, -12], dtype=">i8")))
         self.assertTrue(basest(four) is buf)
 
-    def test_branch_irregular_basket(self):
+    def test_irregular_basket(self):
         branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["Ai8"]
         interpretation = branch._normalize_interpretation(None)
         entrystart, entrystop = branch._normalize_entrystartstop(None, None)
@@ -106,66 +108,104 @@ class TestTree(unittest.TestCase):
         self.assertTrue(numpy.array_equal(three[0], numpy.array([], dtype=">i8")))
         self.assertTrue(numpy.array_equal(three[1], numpy.array([-15], dtype=">i8")))
 
-    def test_branch_flat_baskets(self):
+    def test_strings_basket(self):
+        branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["str"]
+        interpretation = branch._normalize_interpretation(None)
+        entrystart, entrystop = branch._normalize_entrystartstop(None, None)
+        local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
+
+        one = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None, None)
+        two = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None, None)
+        self.assertTrue(one.tolist() == ["hey-0", "hey-1", "hey-2", "hey-3", "hey-4", "hey-5"])
+        self.assertFalse(basest(one.jaggedarray.contents) is basest(two.jaggedarray.contents))
+
+        three = branch.basket(0)
+        self.assertTrue(three.tolist() == ["hey-0", "hey-1", "hey-2", "hey-3", "hey-4", "hey-5"])
+
+    ###################################################### baskets
+
+    def test_flat_baskets(self):
         branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["i8"]
         expectation = [[-15, -14, -13], [-12, -11, -10], [-9, -8, -7], [-6, -5, -4], [-3, -2, -1], [0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14]]
         self.assertEqual([x.tolist() for x in branch.baskets()], expectation)
         self.assertEqual([x.tolist() for x in branch.iterate_baskets()], expectation)
 
-    def test_branch_regular_basket(self):
+    def test_regular_baskets(self):
         branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["ai8"]
         expectation = [[[-14, -13, -12]], [[-13, -12, -11]], [[-12, -11, -10]], [[-11, -10, -9]], [[-10, -9, -8]], [[-9, -8, -7]], [[-8, -7, -6]], [[-7, -6, -5]], [[-6, -5, -4]], [[-5, -4, -3]], [[-4, -3, -2]], [[-3, -2, -1]], [[-2, -1, 0]], [[-1, 0, 1]], [[0, 1, 2]], [[1, 2, 3]], [[2, 3, 4]], [[3, 4, 5]], [[4, 5, 6]], [[5, 6, 7]], [[6, 7, 8]], [[7, 8, 9]], [[8, 9, 10]], [[9, 10, 11]], [[10, 11, 12]], [[11, 12, 13]], [[12, 13, 14]], [[13, 14, 15]], [[14, 15, 16]], [[15, 16, 17]]]
         self.assertEqual([x.tolist() for x in branch.baskets()], expectation)
         self.assertEqual([x.tolist() for x in branch.iterate_baskets()], expectation)
 
-    def test_branch_irregular_basket(self):
+    def test_irregular_baskets(self):
         branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["Ai8"]
         expectation = [[[], [-15]], [[-15, -13]], [[-15, -13, -11]], [[-15, -13, -11, -9]], [[], [-10]], [[-10, -8]], [[-10, -8, -6]], [[-10, -8, -6, -4]], [[], [-5]], [[-5, -3]], [[-5, -3, -1]], [[-5, -3, -1, 1]], [[], [0]], [[0, 2]], [[0, 2, 4]], [[0, 2, 4, 6]], [[], [5]], [[5, 7]], [[5, 7, 9]], [[5, 7, 9, 11]], [[], [10]], [[10, 12]], [[10, 12, 14]], [[10, 12, 14, 16]]]
         self.assertEqual([len(y) for x in expectation for y in x], [0, 1, 2, 3, 4] * 6)
         self.assertEqual([x.tolist() for x in branch.baskets()], expectation)
         self.assertEqual([x.tolist() for x in branch.iterate_baskets()], expectation)
 
-    def test_branch_flat_array(self):
+    def test_strings_baskets(self):
+        branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["str"]
+        expectation = [["hey-0", "hey-1", "hey-2", "hey-3", "hey-4", "hey-5"], ["hey-6", "hey-7", "hey-8", "hey-9", "hey-10"], ["hey-11", "hey-12", "hey-13", "hey-14", "hey-15"], ["hey-16", "hey-17", "hey-18", "hey-19", "hey-20"], ["hey-21", "hey-22", "hey-23", "hey-24", "hey-25"], ["hey-26", "hey-27", "hey-28", "hey-29"]]
+        self.assertEqual([x.tolist() for x in branch.baskets()], expectation)
+        self.assertEqual([x.tolist() for x in branch.iterate_baskets()], expectation)
+
+    ###################################################### array
+
+    def test_flat_array(self):
         branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["i8"]
         expectation = [-15, -14, -13, -12, -11, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
         for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
             self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop).tolist(), expectation[entrystart:entrystop])
 
-    def test_branch_regular_array(self):
+    def test_regular_array(self):
         branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["ai8"]
         expectation = [[-14, -13, -12], [-13, -12, -11], [-12, -11, -10], [-11, -10, -9], [-10, -9, -8], [-9, -8, -7], [-8, -7, -6], [-7, -6, -5], [-6, -5, -4], [-5, -4, -3], [-4, -3, -2], [-3, -2, -1], [-2, -1, 0], [-1, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, 4], [3, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, 8], [7, 8, 9], [8, 9, 10], [9, 10, 11], [10, 11, 12], [11, 12, 13], [12, 13, 14], [13, 14, 15], [14, 15, 16], [15, 16, 17]]
         for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
             self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop).tolist(), expectation[entrystart:entrystop])
 
-    def test_branch_irregular_array(self):
+    def test_irregular_array(self):
         branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["Ai8"]
         expectation = [[], [-15], [-15, -13], [-15, -13, -11], [-15, -13, -11, -9], [], [-10], [-10, -8], [-10, -8, -6], [-10, -8, -6, -4], [], [-5], [-5, -3], [-5, -3, -1], [-5, -3, -1, 1], [], [0], [0, 2], [0, 2, 4], [0, 2, 4, 6], [], [5], [5, 7], [5, 7, 9], [5, 7, 9, 11], [], [10], [10, 12], [10, 12, 14], [10, 12, 14, 16]]
         self.assertEqual([len(x) for x in expectation], [0, 1, 2, 3, 4] * 6)
         for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
             self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop).tolist(), expectation[entrystart:entrystop])
 
-    def test_tree_flat_iterate(self):
+    def test_strings_array(self):
+        branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["str"]
+        expectation = ["hey-0", "hey-1", "hey-2", "hey-3", "hey-4", "hey-5", "hey-6", "hey-7", "hey-8", "hey-9", "hey-10", "hey-11", "hey-12", "hey-13", "hey-14", "hey-15", "hey-16", "hey-17", "hey-18", "hey-19", "hey-20", "hey-21", "hey-22", "hey-23", "hey-24", "hey-25", "hey-26", "hey-27", "hey-28", "hey-29"]
+        for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
+            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop).tolist(), expectation[entrystart:entrystop])
+
+    ###################################################### iterate
+
+    def test_flat_iterate(self):
         tree = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]
         expectation = [-15, -14, -13, -12, -11, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
         for n in 1000, 5, 6, 7:
             self.assertEqual([x.tolist() for (x,) in tree.iterate(n, "i8", outputtype=tuple)], [expectation[x : x + n] for x in range(0, len(expectation), n)])
 
-    def test_tree_regular_iterate(self):
+    def test_regular_iterate(self):
         tree = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]
         expectation = [[-14, -13, -12], [-13, -12, -11], [-12, -11, -10], [-11, -10, -9], [-10, -9, -8], [-9, -8, -7], [-8, -7, -6], [-7, -6, -5], [-6, -5, -4], [-5, -4, -3], [-4, -3, -2], [-3, -2, -1], [-2, -1, 0], [-1, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, 4], [3, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, 8], [7, 8, 9], [8, 9, 10], [9, 10, 11], [10, 11, 12], [11, 12, 13], [12, 13, 14], [13, 14, 15], [14, 15, 16], [15, 16, 17]]
-        for n in 1000,:
+        for n in 1000, 5, 6, 7:
             self.assertEqual([x.tolist() for (x,) in tree.iterate(n, "ai8", outputtype=tuple)], [expectation[x : x + n] for x in range(0, len(expectation), n)])
 
-    def test_tree_irregular_iterate(self):
+    def test_irregular_iterate(self):
         tree = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]
         expectation = [[], [-15], [-15, -13], [-15, -13, -11], [-15, -13, -11, -9], [], [-10], [-10, -8], [-10, -8, -6], [-10, -8, -6, -4], [], [-5], [-5, -3], [-5, -3, -1], [-5, -3, -1, 1], [], [0], [0, 2], [0, 2, 4], [0, 2, 4, 6], [], [5], [5, 7], [5, 7, 9], [5, 7, 9, 11], [], [10], [10, 12], [10, 12, 14], [10, 12, 14, 16]]
-        for n in 1000,:
+        for n in 1000, 5, 6, 7:
             self.assertEqual([x.tolist() for (x,) in tree.iterate(n, "Ai8", outputtype=tuple)], [expectation[x : x + n] for x in range(0, len(expectation), n)])
-        
+
+    def test_strings_iterate(self):
+        tree = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]
+        expectation = ["hey-0", "hey-1", "hey-2", "hey-3", "hey-4", "hey-5", "hey-6", "hey-7", "hey-8", "hey-9", "hey-10", "hey-11", "hey-12", "hey-13", "hey-14", "hey-15", "hey-16", "hey-17", "hey-18", "hey-19", "hey-20", "hey-21", "hey-22", "hey-23", "hey-24", "hey-25", "hey-26", "hey-27", "hey-28", "hey-29"]
+        for n in 1000, 5, 6, 7:
+            self.assertEqual([x.tolist() for (x,) in tree.iterate(n, "str", outputtype=tuple)], [expectation[x : x + n] for x in range(0, len(expectation), n)])
+
+    ###################################################### 
 
 
 
-    # ALSO: verify that we're not needlessly uncompressing baskets when we scan over keys.
 
 
     

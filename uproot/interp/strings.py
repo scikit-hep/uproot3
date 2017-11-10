@@ -28,6 +28,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import numbers
 from types import MethodType
 
 import numpy
@@ -37,15 +38,12 @@ try:
 except ImportError:
     numba = None
 
-from uproot.interp.jagged import JaggedArray
 from uproot.interp.interp import Interpretation
+from uproot.interp.jagged import JaggedArray
+from uproot.interp.jagged import stops2sizes
+from uproot.interp.jagged import sizes2stops
 
 CHARTYPE = numpy.dtype(numpy.uint8)
-
-asstrings = Interpretation("asstrings")
-asstrings.compatible = MethodType(lambda self, other: self is other, asstrings, Interpretation)
-asstrings.nocopy = MethodType(lambda self: self, asstrings, Interpretation)
-asstrings.numitems = lambda numbytes, numentries, flattened: numentries
 
 def _asstrings_fromroot(data, offsets, local_entrystart, local_entrystop):
     if local_entrystart < 0 or local_entrystop >= len(offsets) or local_entrystart > local_entrystop:
@@ -75,33 +73,43 @@ def _asstrings_fromroot(data, offsets, local_entrystart, local_entrystop):
 if numba is not None:
     _asstrings_fromroot = numba.njit(_asstrings_fromroot)
 
-asstrings.fromroot = lambda data, offsets, local_entrystart, local_entrystop: Strings(JaggedArray(*_asstrings_fromroot(data, offsets, local_entrystart, local_entrystop)))
+class _asstrings(Interpretation):
+    def empty(self):
+        return Strings(JaggedArray(numpy.empty(0, dtype=CHARTYPE), numpy.empty(0, dtype=numpy.int64)))
 
-def _asstrings_destination(numitems, source):
-    if source is not None and numitems <= len(source):
-        return Strings(JaggedArray())
-    else:
-        return 
+    def compatible(self, other):
+        return self is other
 
-    
-# class asstrings(Interpretation):
-#     def fromroot(self, data, offsets, local_entrystart, local_entrystop):
+    def numitems(self, numbytes, numentries):
+        return numbytes - numentries  # an overestimate if there are any individual strings with > 255 bytes
 
-#     def destination(self, numitems, source):
+    def source_numitems(self, source):
+        return len(source.jaggedarray.contents)
 
-#     def fill(self, source, destination, itemstart, itemstop):
+    def fromroot(self, data, offsets, local_entrystart, local_entrystop):
+        return Strings(JaggedArray(*_asstrings_fromroot(data, offsets, local_entrystart, local_entrystop)))
 
-#     # interpretation interface:
+    def destination(self, numitems, numentries):
+        contents = numpy.empty(numitems, dtype=CHARTYPE)
+        sizes = numpy.empty(numentries, dtype=numpy.int64)
+        return JaggedArray._Prep(contents, sizes)
 
-#     @staticmethod
-#     def fromroot(data, offsets, local_entrystart, local_entrystop):
-#         contents = numpy.empty(len(data) - (len(offsets) - 1), dtype=CHARTYPE)
-#         stops = numpy.empty(len(offsets) - 1, dtype=offsets.dtype)
-#         _strings_flatten(data, offsets, contents, stops)
-#         return Strings(uproot.types.jagged.JaggedArray(contents, stops))
+    def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
+        destination.contents[itemstart:itemstop] = source.jaggedarray.contents
+        destination.sizes[entrystart:entrystop] = stops2sizes(source.jaggedarray.stops)
+        
+    def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
+        destination.contents = destination.contents[itemstart:itemstop]
+        destination.sizes = destination.sizes[entrystart:entrystop]
+        return destination
 
-#     # HERE!
+    def finalize(self, destination):
+        contents = destination.contents
+        stops = sizes2stops(destination.sizes)
+        return Strings(JaggedArray(contents, stops))
 
+asstrings = _asstrings()
+del _asstrings
 
 class Strings(object):
     @staticmethod
@@ -139,7 +147,14 @@ class Strings(object):
         return len(self.jaggedarray)
 
     def __getitem__(self, index):
-        return self.jaggedarray[index].tostring()
+        if isinstance(index, numbers.Integral):
+            return self.jaggedarray[index].tostring()
+
+        elif isinstance(index, slice):
+            return Strings(self.jaggedarray[slice])
+
+        else:
+            raise TypeError("Strings index must be an integer or a slice")
 
     def __iter__(self):
         for x in self.jaggedarray:
@@ -153,6 +168,9 @@ class Strings(object):
             return "[{0} ... {1}]".format(" ".join(repr(self[i]) for i in range(3)), " ".join(repr(self[i]) for i in range(-3, 0)))
         else:
             return "[{0}]".format(" ".join(repr(x) for x in self))
+
+    def tolist(self):
+        return list(self)
 
 if numba is not None:
     class StringsType(numba.types.Type):

@@ -29,15 +29,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class Interpretation(object):
-    def __init__(self, repr):
-        self._repr = repr
-
-    def __repr__(self):
-        if hasattr(self, "_repr"):
-            return self._repr
-        else:
-            return "<Interpretation at 0x{0:012x}>".format(id(self))
-
     def empty(self):
         raise NotImplementedError
 

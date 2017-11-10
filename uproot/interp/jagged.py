@@ -192,6 +192,9 @@ class JaggedArray(object):
             else:
                 return JaggedArray(self.contents, self.stops[slice])
 
+        else:
+            raise TypeError("JaggedArray index must be an integer or a slice")
+
     def __iter__(self):
         for i, stop in enumerate(self.stops):
             if i == 0:
