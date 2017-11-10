@@ -8,6 +8,8 @@ It is important to note that uproot is _not_ maintained by the [ROOT project tea
 
 _Post bug reports in the [issues tab here](https://github.com/scikit-hep/uproot/issues), not on the ROOT forum!_
 
+**Note:** if you `git clone` this repository, you'll get the latest 2.x version. All of the documentation below was for 1.x. The "Releases" tab and PyPI (`pip install`) have 1.x versions. Within a coupld of weeks, we will fully transition to 2.x.
+
 ## Installation
 
 uproot requires only Python and Numpy. Install it with
