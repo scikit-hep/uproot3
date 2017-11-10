@@ -92,6 +92,9 @@ class asdtype(Interpretation):
 
         return "asdtype(" + ", ".join(args) + ")"
 
+    def empty(self):
+        return numpy.empty((0,) + self.todims, dtype=self.todtype)
+
     def compatible(self, other):
         return isinstance(other, (asdtype, asarray)) and self.todtype == other.todtype and self.todims == other.todims
 

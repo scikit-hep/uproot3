@@ -575,6 +575,8 @@ class TBranchMethods(object):
             entrystart = 0
         if entrystop is None:
             entrystop = self.numentries
+        if entrystop < entrystart:
+            raise IndexError("entrystop must be greater than or equal to entrystart")
         return entrystart, entrystop
 
     def _localentries(self, i, entrystart, entrystop):
@@ -747,10 +749,10 @@ class TBranchMethods(object):
 
         if basketstart is None:
             if blocking:
-                return numpy.empty(0, dtype=interpretation.todtype)
+                return interpretation.empty()
             else:
                 def await():
-                    return numpy.empty(0, dtype=interpretation.todtype)
+                    return interpretation.empty()
                 return await
 
         basket_itemoffset = self._basket_itemoffset(interpretation, basketstart, basketstop)
@@ -760,8 +762,9 @@ class TBranchMethods(object):
 
         def fill(j):
             try:
-                local_entrystart, local_entrystop = self._localentries(j + basketstart, entrystart, entrystop)
-                source = self._basket(j + basketstart, interpretation, local_entrystart, local_entrystop, rawcache, cache)
+                i = j + basketstart
+                local_entrystart, local_entrystop = self._localentries(i, entrystart, entrystop)
+                source = self._basket(i, interpretation, local_entrystart, local_entrystop, rawcache, cache)
 
                 expecteditems = basket_itemoffset[j + 1] - basket_itemoffset[j]
                 source_numitems = interpretation.source_numitems(source)
@@ -822,7 +825,7 @@ class TBranchMethods(object):
         basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
 
         if basketstart is None:
-            return lambda: numpy.empty(0, dtype=interpretation.todtype)
+            return lambda: interpretation.empty()
 
         for key in list(basket_sources):
             i, _, _ = key
@@ -845,20 +848,21 @@ class TBranchMethods(object):
         
         def fill(j):
             try:
-                local_entrystart, local_entrystop = self._localentries(j + basketstart, entrystart, entrystop)
-                key = (j + basketstart, entrystart, entrystop)
+                i = j + basketstart
+                local_entrystart, local_entrystop = self._localentries(i, entrystart, entrystop)
+                key = (i, entrystart, entrystop)
 
                 with lock:
                     source = basket_sources.get(key, None)
                 if source is None:
-                    source = self._basket(j + basketstart, interpretation, local_entrystart, local_entrystop, rawcache, cache)
+                    source = self._basket(i, interpretation, local_entrystart, local_entrystop, rawcache, cache)
                     with lock:
                         basket_sources[key] = source
 
                 if not explicit_rawcache:
-                    if local_entrystart == 0 and local_entrystop == self.basket_numentries(j + basketstart):
+                    if local_entrystart == 0 and local_entrystop == self.basket_numentries(i):
                         try:
-                            del rawcache[self._rawcachekey(j + basketstart)]
+                            del rawcache[self._rawcachekey(i)]
                         except KeyError:
                             pass
 
@@ -907,40 +911,40 @@ class TBranchMethods(object):
                                        basket_entryoffset[-1])
         return await
 
-    def lazyarray(self, interpretation=None):
+    def lazyarray(self, interpretation=None, rawcache=None, cache=None, executor=None):
         interpretation = self._normalize_interpretation(interpretation)
-        return self._LazyArray(self, interpretation)
+        return self._LazyArray(self, interpretation, rawcache, cache, executor)
 
     class _LazyArray(object):
-        def __init__(self, branch, interpretation):
+        def __init__(self, branch, interpretation, rawcache, cache, executor):
             self._branch = branch
             self._interpretation = interpretation
-            self._basket_itemoffset = self._branch._basket_itemoffset(self._interpretation, 0, self._branch.numbaskets)
-            self._baskets = [None] * self._branch.numbaskets
+            self._rawcache = rawcache
+            self._cache = cache
+            self._executor = executor
 
-        @property
-        def dtype(self):
-            return self._interpretation.todtype
+            self._len = self._basket.numitems(self._interpretation)
 
-        @property
-        def shape(self):
-            return (len(self),) + self._interpretation.todims
+            if hasattr(self._interpretation, "todtype"):
+                self.dtype = self._interpretation.todtype
 
-        def cumsum(self, axis=None, dtype=None, out=None):
-            return self._array(self._basket_itemoffset[0], self._basket_itemoffset[-1]).cumsum(axis=axis, dtype=dtype, out=out)
+            if hasattr(self._interpretation, "todims"):
+                self.shape = (len(self),) + self._interpretation.todims
 
         def __len__(self):
-            return self._basket_itemoffset[-1]
+            return self._len
 
         def __getitem__(self, index):
             if isinstance(index, slice):
                 start, stop, step = self._normalize_slice(index)
-                array = self._array(start, stop)
-                if step == 1:
-                    return array
+                if (start >= stop and step > 0) or (stop >= start and step < 0):
+                    return self._interpretation.empty()
                 else:
-                    return array[::step]
-
+                    array = self._array(min(start, stop), max(start, stop))
+                    if step == 1:
+                        return array
+                    else:
+                        return array[::step]
             else:
                 index = self._normalize_index(index, False, 1)
                 array = self._array(index, index + 1)
@@ -949,45 +953,11 @@ class TBranchMethods(object):
         def __getslice__(self, start, end):
             return self.__getitem__(slice(start, end))
 
-        def _array(self, itemstart=None, itemstop=None):
-            if itemstart is None:
-                itemstart = 0
-            if itemstop is None:
-                itemstop = self._branch.numitems(self._interpretation)
+        def cumsum(self, axis=None, dtype=None, out=None):
+            return self._array(self._basket_entryoffset[0], self._basket_entryoffset[-1]).cumsum(axis=axis, dtype=dtype, out=out)
 
-            basketstart, basketstop = None, None
-            numitems = 0
-            for i in range(self._branch.numbaskets):
-                if basketstart is None:
-                    if itemstart < self._basket_itemoffset[i + 1] and self._basket_itemoffset[i] < itemstop:
-                        basketstart = i
-
-                if basketstart is not None and self._basket_itemoffset[i] < itemstop:
-                    basketstop = i
-                    numitems += (self._basket_itemoffset[i + 1] - self._basket_itemoffset[i]
-                                 - max(0, itemstart - self._basket_itemoffset[i])
-                                 - max(0, self._basket_itemoffset[i + 1] - itemstop))
-
-            if basketstop is not None:
-                basketstop += 1    # stop is exclusive
-
-            if basketstart is None:
-                return numpy.empty(0, self._interpretation.todtype)
-
-            nocopy = self._interpretation.nocopy()
-            destination = self._interpretation.destination(numitems, None)
-            desti = 0
-            for i in range(basketstart, basketstop):
-                if self._baskets[i] is None:
-                    self._baskets[i] = self._branch.basket(i, nocopy)
-
-                start = max(0, itemstart - self._basket_itemoffset[i])
-                stop = self._basket_itemoffset[i + 1] - self._basket_itemoffset[i] - max(0, self._basket_itemoffset[i + 1] - itemstop)
-
-                self._interpretation.fill(self._baskets[i][start:stop], destination, desti, desti + (stop - start))
-                desti += stop - start
-
-            return destination
+        def _array(self, entrystart, entrystop):
+            return self._branch.array(self._interpretation, entrystart, entrystop, self._rawcache, self._cache, self._executor, blocking=True)
 
         def _normalize_index(self, i, clip, step):
             lenself = len(self)

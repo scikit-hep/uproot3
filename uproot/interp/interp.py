@@ -38,6 +38,9 @@ class Interpretation(object):
         else:
             return "<Interpretation at 0x{0:012x}>".format(id(self))
 
+    def empty(self):
+        raise NotImplementedError
+
     def compatible(self, other):
         raise NotImplementedError
 

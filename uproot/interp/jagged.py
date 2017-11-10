@@ -28,6 +28,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import numbers
+
 import numpy
 try:
     import numba
@@ -55,6 +57,9 @@ class asjagged(Interpretation):
 
     def __repr__(self):
         return "asjagged(" + repr(self.asdtype) + ")"
+
+    def empty(self):
+        return JaggedArray(self.asdtype.empty(), numpy.empty(0, dtype=numpy.int64))
 
     def compatible(self, other):
         return isinstance(other, asjagged) and self.asdtype.compatible(other.asdtype)
@@ -178,7 +183,14 @@ class JaggedArray(object):
         return len(self.stops)
 
     def __getitem__(self, index):
-        return _jaggedarray_getitem(self, index)
+        if isinstance(index, numbers.Integral):
+            return _jaggedarray_getitem(self, index)
+
+        elif isinstance(index, slice):
+            if slice.step is not None and slice.step != 1:
+                raise NotImplementedError("cannot slice a JaggedArray with step != 1")  # we'd need stops AND starts to do this
+            else:
+                return JaggedArray(self.contents, self.stops[slice])
 
     def __iter__(self):
         for i, stop in enumerate(self.stops):

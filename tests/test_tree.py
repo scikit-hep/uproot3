@@ -165,7 +165,7 @@ class TestTree(unittest.TestCase):
 
 
 
-    # TODO: next is iteration over arrays (_step_array) and lazyarrays (_LazyArray._array)
+    # TODO: next is lazyarrays (_LazyArray._array) and multi-file iteration
     # ALSO: verify that we're not needlessly uncompressing baskets when we scan over keys.
 
 
