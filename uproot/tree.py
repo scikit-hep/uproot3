@@ -249,7 +249,7 @@ class TTreeMethods(object):
         if outputtype == namedtuple:
             outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
 
-        branchinfo = [(branch, interpretation, {}, branch._basket_itemoffset(interpretation, 0, branch.numbaskets, keycache), branch._basket_entryoffset(0, branch.numbaskets)) for branch, interpretation in branches]
+        branchinfo = [(branch, interpretation, branch._basket_itemoffset(interpretation, 0, branch.numbaskets, keycache), branch._basket_entryoffset(0, branch.numbaskets)) for branch, interpretation in branches]
 
         if keycache is None:
             keycache = uproot.cache.memorycache.ThreadSafeDict()
@@ -266,7 +266,7 @@ class TTreeMethods(object):
             finish = lambda interpretation, array: array
                 
         for entrystart, entrystop in startstop:
-            futures = [(branch.name, interpretation, branch._step_array(interpretation, basket_sources, basket_itemoffset, basket_entryoffset, entrystart, entrystop, keycache, rawcache, cache, executor, explicit_rawcache)) for branch, interpretation, basket_sources, basket_itemoffset, basket_entryoffset in branchinfo]
+            futures = [(branch.name, interpretation, branch._step_array(interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, keycache, rawcache, cache, executor, explicit_rawcache)) for branch, interpretation, basket_itemoffset, basket_entryoffset in branchinfo]
 
             if issubclass(outputtype, dict):
                 out = outputtype([(name, finish(interpretation, future())) for name, interpretation, future in futures])
@@ -871,21 +871,11 @@ class TBranchMethods(object):
                 return interpretation.finalize(clipped)
             return await
 
-    def _step_array(self, interpretation, basket_sources, basket_itemoffset, basket_entryoffset, entrystart, entrystop, keycache, rawcache, cache, executor, explicit_rawcache):
+    def _step_array(self, interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, keycache, rawcache, cache, executor, explicit_rawcache):
         basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
 
         if basketstart is None:
             return lambda: interpretation.empty()
-
-        for key in list(basket_sources):
-            i, _, _ = key
-            if i < basketstart:
-                del basket_sources[key]
-            if not explicit_rawcache:
-                try:
-                    del rawcache[self._rawcachekey(i)]
-                except KeyError:
-                    pass
 
         basket_itemoffset = basket_itemoffset[basketstart : basketstop + 1]
         basket_itemoffset = [x - basket_itemoffset[0] for x in basket_itemoffset]
@@ -894,27 +884,12 @@ class TBranchMethods(object):
         basket_entryoffset = [x - basket_entryoffset[0] for x in basket_entryoffset]
 
         destination = interpretation.destination(basket_itemoffset[-1], basket_entryoffset[-1])
-        lock = threading.Lock()   # branch-level lock on basket_sources, rather than global
-        
+
         def fill(j):
             try:
                 i = j + basketstart
                 local_entrystart, local_entrystop = self._localentries(i, entrystart, entrystop)
-                key = (i, entrystart, entrystop)
-
-                with lock:
-                    source = basket_sources.get(key, None)
-                if source is None:
-                    source = self._basket(i, interpretation, local_entrystart, local_entrystop, keycache, rawcache, cache)
-                    with lock:
-                        basket_sources[key] = source
-
-                if not explicit_rawcache:
-                    if local_entrystart == 0 and local_entrystop == self.basket_numentries(i):
-                        try:
-                            del rawcache[self._rawcachekey(i)]
-                        except KeyError:
-                            pass
+                source = self._basket(i, interpretation, local_entrystart, local_entrystop, keycache, rawcache, cache)
 
                 expecteditems = basket_itemoffset[j + 1] - basket_itemoffset[j]
                 source_numitems = interpretation.source_numitems(source)
