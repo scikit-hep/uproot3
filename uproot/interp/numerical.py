@@ -132,7 +132,10 @@ class asdtype(Interpretation):
         flattened_destination[itemstart:itemstop] = flattened_source
 
     def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
-        return destination[itemstart:itemstop]
+        product = _dimsprod(self.todims)
+        assert itemstart % product == 0
+        assert itemstop % product == 0
+        return destination[itemstart // product : itemstop // product]
 
     def finalize(self, destination):
         return destination

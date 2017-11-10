@@ -82,10 +82,10 @@ class _asstrings(Interpretation):
         return self is other
 
     def numitems(self, numbytes, numentries):
-        return numbytes - numentries  # an overestimate if there are any individual strings with > 255 bytes
+        return numbytes - numentries              # an overestimate if there are any individual strings with > 255 bytes
 
     def source_numitems(self, source):
-        return len(source.jaggedarray.contents)
+        return len(source.jaggedarray.contents)   # not an overestimate; refines the above after opening the data
 
     def fromroot(self, data, offsets, local_entrystart, local_entrystop):
         return Strings(JaggedArray(*_asstrings_fromroot(data, offsets, local_entrystart, local_entrystop)))
