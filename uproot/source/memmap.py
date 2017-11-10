@@ -33,6 +33,10 @@ import os.path
 import numpy
 
 class MemmapSource(object):
+    @staticmethod
+    def defaults(path):
+        return MemmapSource(path)
+
     def __init__(self, path):
         self.path = os.path.expanduser(path)
         self._source = numpy.memmap(self.path, dtype=numpy.uint8, mode="r")

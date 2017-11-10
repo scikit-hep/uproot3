@@ -40,10 +40,9 @@ except ImportError:
 import numpy
 
 import uproot.const
-import uproot.source.chunkedfile
-import uproot.source.chunkedxrootd
 import uproot.source.compressed
-import uproot.source.memmap
+from uproot.source.memmap import MemmapSource
+from uproot.source.xrootd import XRootDSource
 from uproot.source.cursor import Cursor
 
 ################################################################ register mixins for user-facing ROOT classes
@@ -52,23 +51,20 @@ methods = {}
 
 ################################################################ high-level interface
 
-def open(path, memmap=True, chunkbytes=8*1024, limitbytes=1024**2, **options):
+def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, **options):
     parsed = urlparse(path)
     if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0:
         path = parsed.netloc + parsed.path
-        if memmap:
-            return ROOTDirectory.read(uproot.source.memmap.MemmapSource(path), **options)
-        else:
-            return ROOTDirectory.read(uproot.source.chunkedfile.ChunkedFile(path, chunkbytes, limitbytes), **options)
+        return ROOTDirectory.read(localsource(path), **options)
 
     elif _bytesid(parsed.scheme) == b"root":
-        return xrootd(path, chunkbytes=chunkbytes, limitbytes=limitbytes)
+        return xrootd(path, xrootdsource)
 
     else:
         raise ValueError("URI scheme not recognized: {0}".format(path))
 
-def xrootd(path, chunkbytes=8*1024, limitbytes=1024**2, **options):
-    return ROOTDirectory.read(uproot.source.chunkedxrootd.ChunkedXRootD(path, chunkbytes, limitbytes), **options)
+def xrootd(path, xrootdsource=XRootDSource.defaults, **options):
+    return ROOTDirectory.read(xrootdsource(path), **options)
 
 ################################################################ ROOTDirectory
 

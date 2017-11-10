@@ -35,12 +35,16 @@ import numpy
 import uproot.cache.memorycache
 import uproot.source.chunked
 
-class ChunkedFile(uproot.source.chunked.ChunkedSource):
+class FileSource(uproot.source.chunked.ChunkedSource):
+    @staticmethod
+    def defaults(path):
+        return FileSource(path, chunkbytes=8*1024, limitbytes=1024**2)
+
     def __init__(self, path, *args, **kwds):
-        super(ChunkedFile, self).__init__(os.path.expanduser(path), *args, **kwds)
+        super(FileSource, self).__init__(os.path.expanduser(path), *args, **kwds)
 
     def threadlocal(self):
-        out = ChunkedFile.__new__(self.__class__)
+        out = FileSource.__new__(self.__class__)
         out.path = self.path
         out._chunkbytes = self._chunkbytes
         if isinstance(self._cache, (uproot.cache.memorycache.ThreadSafeMemoryCache, uproot.cache.memorycache.ThreadSafeDict)):

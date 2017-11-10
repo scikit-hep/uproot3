@@ -71,6 +71,8 @@ import uproot.rootio
 from uproot.rootio import _bytesid
 from uproot.source.cursor import Cursor
 from uproot.interp.auto import interpret
+from uproot.source.memmap import MemmapSource
+from uproot.source.xrootd import XRootDSource
 
 if sys.version_info[0] <= 2:
     string_types = (unicode, str)
@@ -87,7 +89,18 @@ def _delayedraise(excinfo):
 
 ################################################################ high-level interface
 
-def iterate(path, treepath, entrystepsize, branches=None, outputtype=dict, reportentries=False, rawcache=None, cache=None, executor=None, memmap=True, chunkbytes=8*1024, limitbytes=1024**2):
+def iterate(path, treepath, entrystepsize, branches=None, outputtype=dict, reportentries=False, rawcache=None, cache=None, executor=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, **options):
+    if not isinstance(entrystepsize, numbers.Integral) or entrystepsize <= 0:
+        raise ValueError("'entrystepsize' must be a positive integer")
+
+    for tree, newbranches, globalentrystart in _iterate(path, treepath, branches, outputtype, rawcache, cache, executor, localsource, xrootdsource, **options):
+        for start, stop, arrays in tree.iterate(entrystepsize, branches=newbranches, outputtype=outputtype, reportentries=True, entrystart=0, entrystop=tree.numentries, rawcache=rawcache, cache=cache, executor=executor):
+            if reportentries:
+                yield globalentrystart + start, globalentrystart + stop, arrays
+            else:
+                yield arrays
+        
+def _iterate(path, treepath, branches, outputtype, rawcache, cache, executor, localsource, xrootdsource, **options):
     def explode(x):
         parsed = urlparse(x)
         if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0:
@@ -100,16 +113,14 @@ def iterate(path, treepath, entrystepsize, branches=None, outputtype=dict, repor
     else:
         paths = [y for x in path for y in explode(x)]
 
-    if not isinstance(entrystepsize, numbers.Integral) or entrystepsize <= 0:
-        raise ValueError("'entrystepsize' must be a positive integer")
-
     oldpath = None
     oldbranches = None
     holdover = None
     holdoverentries = 0
     outerstart = 0
+    globalentrystart = 0
     for path in paths:
-        tree = uproot.rootio.open(path, memmap=memmap, chunkbytes=chunkbytes, limitbytes=limitbytes)[treepath]
+        tree = uproot.rootio.open(path, localsource=localsource, xrootdsource=xrootdsource, **options)[treepath]
         listbranches = list(tree._normalize_branches(branches))
 
         newbranches = OrderedDict((branch.name, interpretation) for branch, interpretation in listbranches)
@@ -125,49 +136,8 @@ def iterate(path, treepath, entrystepsize, branches=None, outputtype=dict, repor
         oldpath = path
         oldbranches = newbranches
 
-        if outputtype == namedtuple:
-            outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in listbranches])
-
-        def output(arrays, outerstart, outerstop):
-            if issubclass(outputtype, dict):
-                out = outputtype((n, newbranches[n].finalize(a)) for n, a in arrays.items())
-            elif outputtype == tuple or outputtype == list:
-                out = outputtype(newbranches[n].finalize(a) for n, a in arrays.items())
-            else:
-                out = outputtype(*[newbranches[n].finalize(a) for n, a in arrays.values()])
-            if reportentries:
-                return outerstart, outerstop, out
-            else:
-                return out
-
-        def startstop():
-            start = 0
-            while start < tree.numentries:
-                if start == 0 and holdoverentries != 0:
-                    stop = start + (entrystepsize - holdoverentries)
-                else:
-                    stop = start + entrystepsize
-                yield start, stop
-                start = stop
-
-        for innerstart, innerstop, arrays in tree._iterate(startstop(), newbranches, OrderedDict, True, rawcache, cache, executor, False):
-            numentries = innerstop - innerstart
-
-            if holdover is not None:
-                arrays = OrderedDict((name, numpy.concatenate((oldarray, arrays[name]))) for name, oldarray in holdover.items())
-                numentries += holdoverentries
-                holdover = None
-                holdoverentries = 0
-
-            if numentries < entrystepsize:
-                holdover = arrays
-                holdoverentries = numentries
-            else:
-                yield output(arrays, outerstart, outerstart + numentries)
-                outerstart += numentries
-
-    if holdover is not None:
-        yield output(arrays, outerstart, outerstart + numentries)
+        yield tree, newbranches, globalentrystart
+        globalentrystart += tree.numentries
 
 ################################################################ methods for TTree
 
@@ -315,11 +285,10 @@ class TTreeMethods(object):
 
         def startstop():
             start = entrystart
-            stop = start + entrystepsize
             while start < entrystop and start < self.numentries:
+                stop = start + entrystepsize
                 yield start, stop
                 start = stop
-                stop = start + entrystepsize
 
         return self._iterate(startstop(), branches, outputtype, reportentries, rawcache, cache, executor, True)
 

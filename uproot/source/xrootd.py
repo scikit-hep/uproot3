@@ -34,7 +34,11 @@ import numpy
 
 import uproot.source.chunked
 
-class ChunkedXRootD(uproot.source.chunked.ChunkedSource):
+class XRootDSource(uproot.source.chunked.ChunkedSource):
+    @staticmethod
+    def defaults(path):
+        return XRootDSource(path, chunkbytes=8*1024, limitbytes=1024**2)
+
     def _open(self):
         try:
             import pyxrootd.client
@@ -48,7 +52,7 @@ class ChunkedXRootD(uproot.source.chunked.ChunkedSource):
                 raise OSError(status["message"])
 
     def threadlocal(self):
-        out = ChunkedXRootD.__new__(self.__class__)
+        out = XRootDSource.__new__(self.__class__)
         out.path = self.path
         out._chunkbytes = self._chunkbytes
         if isinstance(self._cache, (uproot.cache.memorycache.ThreadSafeMemoryCache, uproot.cache.memorycache.ThreadSafeDict)):
