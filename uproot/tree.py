@@ -246,7 +246,7 @@ class TTreeMethods(object):
         if outputtype == namedtuple:
             outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
 
-        branchinfo = [(branch, interpretation, {}, branch._basket_itemoffset(interpretation, 0, branch.numbaskets), branch._basket_entryoffset(0, branch.numbaskets)) for branch, interpretation in branches]
+        branchinfo = [(branch, interpretation, {}, branch._basket_itemoffset(interpretation, 0, branch.numbaskets, keycache), branch._basket_entryoffset(0, branch.numbaskets)) for branch, interpretation in branches]
 
         if rawcache is None:
             rawcache = uproot.cache.memorycache.ThreadSafeDict()
@@ -469,17 +469,31 @@ class TBranchMethods(object):
             raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         return interpretation
 
-    def numitems(self, interpretation=None):
+    def numitems(self, interpretation=None, keycache=None):
         interpretation = self._normalize_interpretation(interpretation)
-        keysource = self._source.threadlocal()
-        try:
+
+        if keycache is not None and all(self._keycachekey(i) in keycache for i in range(self.numbaskets)):
             out = 0
             for i in range(self.numbaskets):
-                key = self._basketkey(keysource, i, True)
+                key = keycache[self._keycachekey(i)]
                 out += interpretation.numitems(key.border, self.basket_numentries(i))
             return out
-        finally:
-            keysource.dismiss()
+
+        else:
+            keysource = self._source.threadlocal()
+            try:
+                out = 0
+                for i in range(self.numbaskets):
+                    if keycache is not None and self._keycachekey(i) in keycache:
+                        key = keycache[self._keycachekey(i)]
+                    else:
+                        key = self._basketkey(keysource, i, True)
+                    out += interpretation.numitems(key.border, self.basket_numentries(i))
+                    if keycache is not None:
+                        keycache[self._keycachekey(i)] = key
+                return out
+            finally:
+                keysource.dismiss()
 
     @property
     def compression(self):
@@ -519,14 +533,21 @@ class TBranchMethods(object):
         finally:
             keysource.dismiss()
 
-    def basket_numitems(self, i, interpretation=None):
+    def basket_numitems(self, i, interpretation=None, keycache=None):
         interpretation = self._normalize_interpretation(interpretation)
-        keysource = self._source.threadlocal()
-        try:
-            key = self._basketkey(keysource, i, True)
-            return interpretation.numitems(key.border, self.basket_numentries(i))
-        finally:
-            keysource.dismiss()
+
+        if keycache is not None and self._keycachekey(i) in keycache:
+            return keycache[self._keycachekey(i)]
+
+        else:
+            keysource = self._source.threadlocal()
+            try:
+                key = self._basketkey(keysource, i, True)
+                if keycache is not None:
+                    keycache[self._keycachekey(i)] = key
+                return interpretation.numitems(key.border, self.basket_numentries(i))
+            finally:
+                keysource.dismiss()
             
     def branch(self, name):
         name = _bytesid(name)
@@ -574,13 +595,17 @@ class TBranchMethods(object):
                 rawcachekey = self._rawcachekey(i)
                 basketdata = rawcache.get(rawcachekey, None)
 
-            keysource = self._source.threadlocal()
-            try:
-                key = self._basketkey(keysource, i, True)
-                if basketdata is None:
-                    basketdata = key.cursor.bytes(key.source, key.fObjlen)
-            finally:
-                keysource.dismiss()
+            if keycache is not None and self._keycachekey(i) in keycache:
+                key = keycache[self._keycachekey(i)]
+            else:
+                keysource = self._source.threadlocal()
+                try:
+                    key = self._basketkey(keysource, i, True)
+                finally:
+                    keysource.dismiss()
+
+            if basketdata is None:
+                basketdata = key.cursor.bytes(key.source, key.fObjlen)
 
             if rawcache is not None:
                 rawcache[rawcachekey] = basketdata
@@ -696,17 +721,31 @@ class TBranchMethods(object):
                     else:
                         yield self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, keycache=keycache, rawcache=rawcache, cache=cache)
 
-    def _basket_itemoffset(self, interpretation, basketstart, basketstop):
-        basket_itemoffset = [0]
-        keysource = self._source.threadlocal()
-        try:
+    def _basket_itemoffset(self, interpretation, basketstart, basketstop, keycache):
+        if keycache is not None and all(self._keycachekey(i) in keycache for i in range(basketstart, basketstop)):
+            basket_itemoffset = [0]
             for i in range(basketstart, basketstop):
-                key = self._basketkey(keysource, i, True)
+                key = keycache[self._keycachekey(i)]
                 numitems = interpretation.numitems(key.border, self.basket_numentries(i))
                 basket_itemoffset.append(basket_itemoffset[-1] + numitems)
-        finally:
-            keysource.dismiss()
-        return basket_itemoffset
+            return basket_itemoffset
+
+        else:
+            basket_itemoffset = [0]
+            keysource = self._source.threadlocal()
+            try:
+                for i in range(basketstart, basketstop):
+                    if keycache is not None and self._keycachekey(i) in keycache:
+                        key = keycache[self._keycachekey(i)]
+                    else:
+                        key = self._basketkey(keysource, i, True)
+                    numitems = interpretation.numitems(key.border, self.basket_numentries(i))
+                    basket_itemoffset.append(basket_itemoffset[-1] + numitems)
+                    if keycache is not None:
+                        keycache[self._keycachekey(i)] = key
+            finally:
+                keysource.dismiss()
+            return basket_itemoffset
 
     def _basket_entryoffset(self, basketstart, basketstop):
         basket_entryoffset = [0]
@@ -727,7 +766,7 @@ class TBranchMethods(object):
                     return interpretation.empty()
                 return await
 
-        basket_itemoffset = self._basket_itemoffset(interpretation, basketstart, basketstop)
+        basket_itemoffset = self._basket_itemoffset(interpretation, basketstart, basketstop, keycache)
         basket_entryoffset = self._basket_entryoffset(basketstart, basketstop)
 
         destination = interpretation.destination(basket_itemoffset[-1], basket_entryoffset[-1])
@@ -896,7 +935,7 @@ class TBranchMethods(object):
             self._cache = cache
             self._executor = executor
 
-            self._len = self._basket.numitems(self._interpretation)
+            self._len = self._basket.numitems(self._interpretation, self._keycache)
 
             if hasattr(self._interpretation, "todtype"):
                 self.dtype = self._interpretation.todtype
