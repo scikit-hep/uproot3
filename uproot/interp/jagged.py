@@ -162,7 +162,7 @@ class JaggedArray(object):
         for i, x in enumerate(lists):
             contents[starts[i]:stops[i]] = x
 
-        return JaggedArray(contents, stops)
+        return JaggedArray(contents, starts, stops)
 
     def __init__(self, contents, starts, stops):
         assert isinstance(contents, numpy.ndarray)
