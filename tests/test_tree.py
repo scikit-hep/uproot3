@@ -116,11 +116,11 @@ class TestTree(unittest.TestCase):
 
         one = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None, None)
         two = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None, None)
-        self.assertTrue(one.tolist() == ["hey-0", "hey-1", "hey-2", "hey-3", "hey-4", "hey-5"])
+        self.assertTrue(one.tolist() == [b"hey-0", b"hey-1", b"hey-2", b"hey-3", b"hey-4", b"hey-5"])
         self.assertFalse(basest(one.jaggedarray.contents) is basest(two.jaggedarray.contents))
 
         three = branch.basket(0)
-        self.assertTrue(three.tolist() == ["hey-0", "hey-1", "hey-2", "hey-3", "hey-4", "hey-5"])
+        self.assertTrue(three.tolist() == [b"hey-0", b"hey-1", b"hey-2", b"hey-3", b"hey-4", b"hey-5"])
 
     ###################################################### baskets
 
@@ -145,7 +145,7 @@ class TestTree(unittest.TestCase):
 
     def test_strings_baskets(self):
         branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["str"]
-        expectation = [["hey-0", "hey-1", "hey-2", "hey-3", "hey-4", "hey-5"], ["hey-6", "hey-7", "hey-8", "hey-9", "hey-10"], ["hey-11", "hey-12", "hey-13", "hey-14", "hey-15"], ["hey-16", "hey-17", "hey-18", "hey-19", "hey-20"], ["hey-21", "hey-22", "hey-23", "hey-24", "hey-25"], ["hey-26", "hey-27", "hey-28", "hey-29"]]
+        expectation = [[b"hey-0", b"hey-1", b"hey-2", b"hey-3", b"hey-4", b"hey-5"], [b"hey-6", b"hey-7", b"hey-8", b"hey-9", b"hey-10"], [b"hey-11", b"hey-12", b"hey-13", b"hey-14", b"hey-15"], [b"hey-16", b"hey-17", b"hey-18", b"hey-19", b"hey-20"], [b"hey-21", b"hey-22", b"hey-23", b"hey-24", b"hey-25"], [b"hey-26", b"hey-27", b"hey-28", b"hey-29"]]
         self.assertEqual([x.tolist() for x in branch.baskets()], expectation)
         self.assertEqual([x.tolist() for x in branch.iterate_baskets()], expectation)
 
@@ -172,7 +172,7 @@ class TestTree(unittest.TestCase):
 
     def test_strings_array(self):
         branch = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]["str"]
-        expectation = ["hey-0", "hey-1", "hey-2", "hey-3", "hey-4", "hey-5", "hey-6", "hey-7", "hey-8", "hey-9", "hey-10", "hey-11", "hey-12", "hey-13", "hey-14", "hey-15", "hey-16", "hey-17", "hey-18", "hey-19", "hey-20", "hey-21", "hey-22", "hey-23", "hey-24", "hey-25", "hey-26", "hey-27", "hey-28", "hey-29"]
+        expectation = [b"hey-0", b"hey-1", b"hey-2", b"hey-3", b"hey-4", b"hey-5", b"hey-6", b"hey-7", b"hey-8", b"hey-9", b"hey-10", b"hey-11", b"hey-12", b"hey-13", b"hey-14", b"hey-15", b"hey-16", b"hey-17", b"hey-18", b"hey-19", b"hey-20", b"hey-21", b"hey-22", b"hey-23", b"hey-24", b"hey-25", b"hey-26", b"hey-27", b"hey-28", b"hey-29"]
         for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
             self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop).tolist(), expectation[entrystart:entrystop])
 
@@ -198,17 +198,12 @@ class TestTree(unittest.TestCase):
 
     def test_strings_iterate(self):
         tree = uproot.open("tests/sample-6.10.05-uncompressed.root")["sample"]
-        expectation = ["hey-0", "hey-1", "hey-2", "hey-3", "hey-4", "hey-5", "hey-6", "hey-7", "hey-8", "hey-9", "hey-10", "hey-11", "hey-12", "hey-13", "hey-14", "hey-15", "hey-16", "hey-17", "hey-18", "hey-19", "hey-20", "hey-21", "hey-22", "hey-23", "hey-24", "hey-25", "hey-26", "hey-27", "hey-28", "hey-29"]
+        expectation = [b"hey-0", b"hey-1", b"hey-2", b"hey-3", b"hey-4", b"hey-5", b"hey-6", b"hey-7", b"hey-8", b"hey-9", b"hey-10", b"hey-11", b"hey-12", b"hey-13", b"hey-14", b"hey-15", b"hey-16", b"hey-17", b"hey-18", b"hey-19", b"hey-20", b"hey-21", b"hey-22", b"hey-23", b"hey-24", b"hey-25", b"hey-26", b"hey-27", b"hey-28", b"hey-29"]
         for n in 1000, 5, 6, 7:
             self.assertEqual([x.tolist() for (x,) in tree.iterate(n, "str", outputtype=tuple)], [expectation[x : x + n] for x in range(0, len(expectation), n)])
 
-    ###################################################### 
+    ###################################################### old tests
 
-
-
-
-
-    
     # def test_branch_array(self):
     #     file = uproot.open("tests/simple.root")
     #     repr(file)
