@@ -93,6 +93,9 @@ def _delayedraise(excinfo):
 ################################################################ high-level interface
 
 def iterate(path, treepath, entrystepsize, branches=None, outputtype=dict, reportentries=False, cache=None, rawcache=None, keycache=None, executor=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, **options):
+    u"""Stub documentation.
+    """
+
     if not isinstance(entrystepsize, numbers.Integral) or entrystepsize <= 0:
         raise ValueError("'entrystepsize' must be a positive integer")
 

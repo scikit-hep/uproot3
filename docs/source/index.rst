@@ -12,7 +12,7 @@ Documentation
    :maxdepth: 2
 
    installation
-   entry-points
+   opening-files
 
 .. include:: ../../README.rst
   :start-after: inclusion-marker-do-not-remove
