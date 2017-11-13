@@ -31,6 +31,7 @@
 import numpy
 
 import uproot.const
+import uproot.source.source
 
 class Compression(object):
     def __init__(self, fCompress):
@@ -100,7 +101,7 @@ class Compression(object):
         else:
             raise ValueError("unrecognized compression algorithm: {0}".format(self.algo))
 
-class CompressedSource(object):
+class CompressedSource(uproot.source.source.Source):
     def __init__(self, compression, source, cursor, compressedbytes, uncompressedbytes):
         self.compression = compression
         self._compressed = source

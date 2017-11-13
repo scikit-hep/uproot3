@@ -31,8 +31,9 @@
 import numpy
 
 import uproot.cache.memorycache
+import uproot.source.source
 
-class ChunkedSource(object):
+class ChunkedSource(uproot.source.source.Source):
     def __init__(self, path, chunkbytes, limitbytes):
         self.path = path
         self._chunkbytes = chunkbytes

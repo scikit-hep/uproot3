@@ -12,6 +12,7 @@ Documentation
    :maxdepth: 2
 
    installation
+   entry-points
 
 .. include:: ../../README.rst
   :start-after: inclusion-marker-do-not-remove

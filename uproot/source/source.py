@@ -27,45 +27,18 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-    
-import os.path
 
 import numpy
 
-import uproot.source.source
-
-class MemmapSource(uproot.source.source.Source):
-    @staticmethod
-    def defaults(path):
-        return MemmapSource(path)
-
-    def __init__(self, path):
-        self.path = os.path.expanduser(path)
-        self._source = numpy.memmap(self.path, dtype=numpy.uint8, mode="r")
-
+class Source(object):
     def parent(self):
-        return self
+        raise NotImplementedError
 
     def threadlocal(self):
-        return self
+        raise NotImplementedError
 
     def dismiss(self):
-        pass
+        raise NotImplementedError
 
     def data(self, start, stop, dtype=numpy.dtype(numpy.uint8)):
-        if not isinstance(dtype, numpy.dtype):
-            dtype = numpy.dtype(dtype)
-
-        assert start >= 0
-        assert stop >= 0
-        assert stop >= start
-        if start == stop:
-            return numpy.empty(0, dtype=dtype)
-
-        if stop > len(self._source):
-            raise IndexError("indexes {0}:{1} are beyond the end of data source {2}".format(len(self._source), stop, repr(self.path)))
-
-        if dtype == numpy.dtype(numpy.uint8):
-            return self._source[start:stop]
-        else:
-            return self._source[start:stop].view(dtype)
+        raise NotImplementedError
