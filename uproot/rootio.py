@@ -52,13 +52,13 @@ methods = {}
 ################################################################ high-level interface
 
 def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, **options):
-    u"""Opens a ROOT file, specified by file path.
+    u"""Opens a ROOT file (local or remote), specified by file path.
 
     :param path: local file path or URL specifying the location of a file (note: not a Python file object!). If the URL schema is "root://", :py:func:`uproot.xrootd` will be called.
     :type path: str
-    :param localsource: function that will be applied to the path to produce an uproot :py:class:`uproot.source.source.Source` object if the path is a local file.
+    :param localsource: function that will be applied to the path to produce an uproot :py:class:`uproot.source.source.Source` object if the path is a local file. Default is :py:meth:`uproot.source.memmap.MemmapSource.defaults` for memory-mapped files.
     :type localsource: path \u21d2 :py:class:`uproot.source.source.Source`
-    :param xrootdsource: function that will be applied to the path to produce an uproot :py:class:`uproot.source.source.Source` object if the path is an XRootD URL.
+    :param xrootdsource: function that will be applied to the path to produce an uproot :py:class:`uproot.source.source.Source` object if the path is an XRootD URL. Default is :py:meth:`uproot.source.xrootd.XRootDSource.defaults` for XRootD with default chunk size/caching. (See :py:class:`uproot.source.xrootd.XRootDSource` constructor for details.)
     :type xrootdsource: path \u21d2 :py:class:`uproot.source.source.Source`
     :param options: passed to :py:class:`uproot.rootio.ROOTDirectory` constructor.
 
@@ -89,7 +89,7 @@ def xrootd(path, xrootdsource=XRootDSource.defaults, **options):
 
     :param path: URL specifying the location of a file.
     :type path: str
-    :param xrootdsource: function that will be applied to the path to produce an uproot :py:class:`uproot.source.source.Source` object if the path is an XRootD URL.
+    :param xrootdsource: function that will be applied to the path to produce an uproot :py:class:`uproot.source.source.Source` object if the path is an XRootD URL. Default is :py:meth:`uproot.source.xrootd.XRootDSource.defaults` for XRootD with default chunk size/caching. (See :py:class:`uproot.source.xrootd.XRootDSource` constructor for details.)
     :type xrootdsource: path \u21d2 :py:class:`uproot.source.source.Source`
     :param options: passed to :py:class:`uproot.rootio.ROOTDirectory` constructor.
 

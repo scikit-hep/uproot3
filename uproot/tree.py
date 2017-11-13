@@ -93,7 +93,39 @@ def _delayedraise(excinfo):
 ################################################################ high-level interface
 
 def iterate(path, treepath, entrystepsize, branches=None, outputtype=dict, reportentries=False, cache=None, rawcache=None, keycache=None, executor=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, **options):
-    u"""Stub documentation.
+    u"""Opens a series of ROOT files (local or remote), iterating over events in chunks of ``entrystepsize``.
+
+    All but the first two parameters are identical to :py:meth:`uproot.tree.TreeMethods.iterate`.
+
+    :param path: glob pattern(s) for local file paths (POSIX wildcards like ``*``) or URLs specifying the locations of the files. A list of filenames are processed in the given order, but glob patterns get pre-sorted to ensure a predictable order.
+    :type path: str or list of str
+    :param treepath: path within each ROOT file to find the TTree (may include ``/`` for subdirectories or ``;`` for cycle numbers).
+    :type treepath: str
+    :param entrystepsize: number of entries to provide in each step of iteration except the last in each file (unless it exactly divides the number of entries in the file).
+    :type entrystepsize: positive int
+    :param branches:
+        - if ``None`` *(default)*, select all *interpretable* branches;
+        - if a function :py:class:`uproot.tree.TBranchMethods` \u21d2 ``None`` or :py:class:`uproot.interp.interp.Interpretation`, select branches for which the function does not return ``None`` and use the interpretation it returns otherwise;
+        - if a dict of str \u2192 :py:class:`uproot.interp.interp.Interpretation`, select branches named by keys and use interpretations from the associated values;
+        - if a list of str, select branches by name
+        - if a single str, select a single branch
+    :param outputtype: constructor for the desired yield type, such as dict *(default)*, OrderedDict, tuple, namedtuple, custom user class, etc.
+    :type outputtype: type
+    :param reportentries: if ``False`` *(default)*, yield only arrays (as ``outputtype``); otherwise, yield 3-tuple: *(entry start, entry stop, arrays)*, where *entry start* is inclusive and *entry stop* is exclusive.
+    :type reportentries: bool
+    :param cache: if not ``None`` *(default)*, chunks of fully interpreted data (at most basket size) will be saved in the dict-like object for later use. If arrays are later accessed with a different interpretation, the output may be wrong.
+    :type cache: ``None`` or dict-like object
+    :param rawcache: if not ``None`` *(default)*, chunks of raw basket data (exactly basket size) will be saved in the dict-like object for later use. Arrays may be later accessed with a different interpretation because raw data must be reinterpreted each time.
+    :type rawcache: ``None`` or dict-like object
+    :param keycache: if not ``None`` *(default)*, basket TKeys will be saved in the dict-like object for later use. TKeys are small, but require file access, so caching them can speed up repeated access.
+    :type keycache: ``None`` or dict-like object
+    :param executor: if not ``None`` *(default)*, parallelize basket-reading and decompression by scheduling tasks on the executor. Assumes caches are thread-safe.
+    :type executor: ``concurrent.futures.Executor``
+    :param localsource: function that will be applied to the path to produce an uproot :py:class:`uproot.source.source.Source` object if the path is a local file. Default is :py:meth:`uproot.source.memmap.MemmapSource.defaults` for memory-mapped files.
+    :type localsource: path \u21d2 :py:class:`uproot.source.source.Source`
+    :param xrootdsource: function that will be applied to the path to produce an uproot :py:class:`uproot.source.source.Source` object if the path is an XRootD URL. Default is :py:meth:`uproot.source.xrootd.XRootDSource.defaults` for XRootD with default chunk size/caching. (See :py:class:`uproot.source.xrootd.XRootDSource` constructor for details.)
+    :type xrootdsource: path \u21d2 :py:class:`uproot.source.source.Source`
+    :param options: passed to :py:class:`uproot.rootio.ROOTDirectory` constructor.
     """
 
     if not isinstance(entrystepsize, numbers.Integral) or entrystepsize <= 0:
