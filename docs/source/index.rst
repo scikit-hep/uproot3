@@ -5,13 +5,20 @@ uproot
 
 .. include:: ../long_description.txt
 
-Documentation
--------------
+Tutorials
+---------
 
 .. toctree::
    :maxdepth: 4
 
    installation
+
+References
+----------
+
+.. toctree::
+   :maxdepth: 4
+
    opening-files
 
 .. include:: ../../README.rst
