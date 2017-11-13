@@ -11,4 +11,5 @@ Documentation
 .. toctree::
    :maxdepth: 2
 
-.. include:: ../readme.txt
+.. include:: ../../README.rst
+  :start-after: inclusion-marker-do-not-remove
