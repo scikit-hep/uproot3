@@ -14,7 +14,7 @@ Documentation
 
 See `uproot.readthedocs.io <http://uproot.readthedocs.io/en/latest/>`_ for the latest documentation. To install, simply
 
-.. highlight:: sh
+.. code-block:: bash
 
     pip install uproot --user
 
