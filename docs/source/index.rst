@@ -1,22 +1,14 @@
-.. uproot documentation master file, created by
-   sphinx-quickstart on Mon Nov 13 11:16:21 2017.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-Welcome to uproot's documentation!
+uproot
 ==================================
 
-Contents:
+**Minimalist ROOT I/O in pure Python and Numpy.**
 
-.. toctree::
-   :maxdepth: 2
+uproot (or μproot, for "micro-Python ROOT") is a demonstration of how little is needed to read data from a ROOT file. Only about a thousand lines of Python code can convert ROOT TTrees into Numpy arrays.
 
+It is important to note that uproot is *not* maintained by the `ROOT project team <https://root.cern/>`_ and it is *not* a fully featured ROOT replacement. Think of it as a file format library, analogous to h5py, parquet-python, or PyFITS. It just reads (and someday writes) files.
 
+..
+   Contents:
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
+   .. toctree::
+      :maxdepth: 2
