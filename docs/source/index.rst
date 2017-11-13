@@ -1,5 +1,5 @@
 uproot
-==================================
+======
 
 .. include:: ../description.txt
 
@@ -10,6 +10,8 @@ Documentation
 
 .. toctree::
    :maxdepth: 2
+
+   installation
 
 .. include:: ../../README.rst
   :start-after: inclusion-marker-do-not-remove

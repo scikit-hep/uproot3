@@ -9,6 +9,15 @@ uproot (originally μproot, for "micro-Python ROOT") is a reader and (someday) a
 
 It is important to note that uproot is *not* maintained by the ROOT project team, so post bug reports as `uproot GitHub issues <https://github.com/scikit-hep/uproot/issues>`_, not on any ROOT forum.
 
+Documentation
+-------------
+
+See `uproot.readthedocs.io <http://uproot.readthedocs.io/en/latest/>`_ for the latest documentation. To install, simply
+
+.. code-block:: bash
+
+    pip install uproot --user
+
 .. inclusion-marker-do-not-remove
 
 Capabilities
