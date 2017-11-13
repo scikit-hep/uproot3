@@ -62,6 +62,8 @@ exclude_patterns = []
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
 
+add_function_parentheses = False
+
 # -- Options for HTML output ----------------------------------------------
 
 # html_theme = "alabaster"

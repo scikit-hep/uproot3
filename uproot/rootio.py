@@ -54,16 +54,16 @@ methods = {}
 def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, **options):
     u"""Opens a ROOT file, specified by file path.
 
-    :param path: local file path or URL specifying the location of a file (note: not a Python file object!). If the URL schema is "root://", uproot.xrootd will be called.
+    :param path: local file path or URL specifying the location of a file (note: not a Python file object!). If the URL schema is "root://", :py:func:`uproot.xrootd` will be called.
     :type path: str
-    :param localsource: function that will be applied to the path to produce an uproot :doc:`Source <uproot.source.source.Source>` object if the path is a local file.
-    :type localsource: path \u21d2 :doc:`Source <uproot.source.source.Source>`
-    :param xrootdsource: function that will be applied to the path to produce an uproot :doc:`Source <uproot.source.source.Source>` object if the path is an XRootD URL.
-    :type xrootdsource: path \u21d2 :doc:`Source <uproot.source.source.Source>`
-    :param options: passed to :doc:`ROOTDirectory <uproot.rootio.ROOTDirectory>` constructor.
+    :param localsource: function that will be applied to the path to produce an uproot :py:class:`uproot.source.source.Source` object if the path is a local file.
+    :type localsource: path \u21d2 :py:class:`uproot.source.source.Source`
+    :param xrootdsource: function that will be applied to the path to produce an uproot :py:class:`uproot.source.source.Source` object if the path is an XRootD URL.
+    :type xrootdsource: path \u21d2 :py:class:`uproot.source.source.Source`
+    :param options: passed to :py:class:`uproot.rootio.ROOTDirectory` constructor.
 
     :return: the top-level directory of the ROOT file.
-    :rtype: :doc:`ROOTDirectory <uproot.rootio.ROOTDirectory>`
+    :rtype: :py:class:`uproot.rootio.ROOTDirectory`
 
     Note that the ROOTDirectory returned by this function is not necessarily an open file. File handles are managed internally by Source objects to permit parallel reading. Although this function can be used in a "with" construct (which protects against unclosed files), it has no meaning when applied to this function.
 
@@ -89,12 +89,12 @@ def xrootd(path, xrootdsource=XRootDSource.defaults, **options):
 
     :param path: URL specifying the location of a file.
     :type path: str
-    :param xrootdsource: function that will be applied to the path to produce an uproot :doc:`Source <uproot.source.source.Source>` object if the path is an XRootD URL.
-    :type xrootdsource: path \u21d2 :doc:`Source <uproot.source.source.Source>`
-    :param options: passed to :doc:`ROOTDirectory <uproot.rootio.ROOTDirectory>` constructor.
+    :param xrootdsource: function that will be applied to the path to produce an uproot :py:class:`uproot.source.source.Source` object if the path is an XRootD URL.
+    :type xrootdsource: path \u21d2 :py:class:`uproot.source.source.Source`
+    :param options: passed to :py:class:`uproot.rootio.ROOTDirectory` constructor.
 
     :return: the top-level directory of the ROOT file.
-    :rtype: :doc:`ROOTDirectory <uproot.rootio.ROOTDirectory>`
+    :rtype: :py:class:`uproot.rootio.ROOTDirectory`
 
     :Example:
 
