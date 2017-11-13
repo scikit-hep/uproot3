@@ -45,11 +45,11 @@ Dependencies
 
 For basic use, only **Python 2.6, 2.7, or 3.4+** and **Numpy 1.4+** are required. The following unlock extra features:
 
-- **Numba** (`pip <https://pypi.python.org/pypi/numba/0.35.0>`_, `conda <https://anaconda.org/numba/numba>`_) accelerates the reading of some data types. Since it is a Python compiler, you can also use it to speed up your analysis code. All data read out of TTrees is Numba-aware and can be used in Numba-accelerated functions.
-- **python-lzma** (`pip <https://pypi.python.org/pypi/backports.lzma>`_, `conda <https://anaconda.org/conda-forge/backports.lzma>`_) decompresses LZMA, one of the three algorithms used to encode ROOT data. This library is only needed for Python 2 (it's part of Python 3's standard library).
+- **Numba** (`pip <https://pypi.python.org/pypi/numba/0.35.0>`_, `conda <https://anaconda.org/numba/numba>`_) accelerates the reading of some data types. Since Numba is a Python compiler, you can also use it to speed up your analysis code. All data read out of TTrees is Numba-aware and can be used in Numba-accelerated functions.
+- **python-lzma** (`pip <https://pypi.python.org/pypi/backports.lzma>`_, `conda <https://anaconda.org/conda-forge/backports.lzma>`_) decompresses LZMA, one of the three algorithms used to encode ROOT data. This library is only needed for Python 2 because it is part of Python 3's standard library (like zlib, the most common compression algorithm used in ROOT).
 - **python-lz4** (`pip <https://pypi.python.org/pypi/lz4>`_, `conda <https://anaconda.org/anaconda/lz4>`_) decompresses LZ4, another algorithm used to compress some ROOT data.
 - **python-futures** (`pip <https://pypi.python.org/pypi/futures>`_, `conda <https://anaconda.org/anaconda/futures>`_) is a backport of the Python 3 parallelization interface. You only need this for Python 2.
-- **pyxrootd** (no pip, `conda <https://anaconda.org/search?q=xrootd>`_, `source <http://xrootd.org/dload.html>`_) if you want to access files with XRootD (``root://``) protocol. (Hint: if you install from source, you may have to set ``PYTHONPATH`` and ``LD_LIBRARY_PATH``.)
+- **pyxrootd** (no pip, `conda <https://anaconda.org/search?q=xrootd>`_, `source <http://xrootd.org/dload.html>`_) accesses files using the XRootD (``root://``) protocol. (Hint: if you install XRootD from source, you may have to set ``PYTHONPATH`` and ``LD_LIBRARY_PATH``. XRootD's Python library is part of the C++ installation; avoid the external Python wrapper, which was XRootD 3 and below.)
 
 *Reminder: you do not need C++ ROOT to run uproot.*
 
