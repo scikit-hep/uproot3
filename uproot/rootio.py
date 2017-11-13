@@ -67,7 +67,7 @@ def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defa
 
     Note that the ROOTDirectory returned by this function is not necessarily an open file. File handles are managed internally by Source objects to permit parallel reading. Although this function can be used in a "with" construct (which protects against unclosed files), it has no meaning when applied to this function.
 
-    :Example:
+    :Example::
 
         import uproot
         tfile = uproot.open("/my/root/file.root")
@@ -96,7 +96,7 @@ def xrootd(path, xrootdsource=XRootDSource.defaults, **options):
     :return: the top-level directory of the ROOT file.
     :rtype: :py:class:`uproot.rootio.ROOTDirectory`
 
-    :Example:
+    :Example::
 
         import uproot
         tfile = uproot.open("root://eos-server.cern/store/file.root")
