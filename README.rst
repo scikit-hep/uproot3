@@ -65,10 +65,9 @@ Since these libraries are executed as or generate native bytecode, the usual Pyt
 Why not PyROOT?
 ---------------
 
-`PyROOT <https://root.cern.ch/pyroot>`_ is a part of C++ ROOT that generates Python bindings on the fly. It requires C++ ROOT to be installed and provides the full power of ROOT, not just I/O. It is, by nature of its design, very slow.
+`PyROOT <https://root.cern.ch/pyroot>`_ is a part of C++ ROOT that generates Python bindings on the fly. It requires C++ ROOT to be installed and provides the full power of ROOT, not just I/O. By nature of its design, however, it is very slow: type-checking, bounds checking, etc. are performed in real time. Also, Python's memory management does not perfectly mirror ROOT's ownership policies, leading to some surprising behavior.
 
 Why not root_numpy?
 -------------------
 
 `root_numpy <http://scikit-hep.org/root_numpy/index.html>`_ is a Cython project built on top of C++ ROOT. Unlike uproot, it requires C++ ROOT to be installed, but like uproot it copies data between TTrees and Numpy arrays. Although root_numpy is a little faster than ``TTree::Draw`` (because it uses a similar mechanism), uproot is much faster, particularly for jagged arrays (``vector<double>``).
-
