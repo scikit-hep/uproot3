@@ -18,14 +18,14 @@ uproot is primarily intended for moving data between `ROOT TTrees <https://root.
 
 In brief, uproot
 
-  * reads TTree data as flat Numpy arrays, `jagged arrays <https://en.wikipedia.org/wiki/Jagged_array>`_ for data like ``vector<double>``, or `namedtuples <https://pymotw.com/2/collections/namedtuple.html>`_ for arbitrary classes.
-  * reads any kind of object (such as histograms or fit functions) from a ROOT file, generating Python classes with the appropriate data members.
-  * creates new arrays or fills user-provided arrays, if desired.
-  * iterates over collections of files, similar to ROOT's TChain but as a loop over aligned sets of arrays.
-  * parallelizes read operations using Python's `executor interface <https://www.blog.pythonlibrary.org/2016/08/03/python-3-concurrency-the-concurrent-futures-module/>`_ (reading and decompressing are both performed in parallel).
-  * provides hooks to cache repeated reads.
-  * has low-level access to ROOT's basket structure. Basket-reading from uncompressed, memory-mapped files incurs zero copies.
-  * memory-mapped file reading by default; `XRootD for remote file servers <http://xrootd.org/>`_.
+- reads TTree data as flat Numpy arrays, `jagged arrays <https://en.wikipedia.org/wiki/Jagged_array>`_ for data like ``vector<double>``, or `namedtuples <https://pymotw.com/2/collections/namedtuple.html>`_ for arbitrary classes.
+- reads any kind of object (such as histograms or fit functions) from a ROOT file, generating Python classes with the appropriate data members.
+- creates new arrays or fills user-provided arrays, if desired.
+- iterates over collections of files, similar to ROOT's TChain but as a loop over aligned sets of arrays.
+- parallelizes read operations using Python's `executor interface <https://www.blog.pythonlibrary.org/2016/08/03/python-3-concurrency-the-concurrent-futures-module/>`_ (reading and decompressing are both performed in parallel).
+- provides hooks to cache repeated reads.
+- has low-level access to ROOT's basket structure. Basket-reading from uncompressed, memory-mapped files incurs zero copies.
+- memory-mapped file reading by default; `XRootD for remote file servers <http://xrootd.org/>`_.
 
 The objects read from a ROOT file into Python are only data containers, lacking methods and bound functions written in C++. However, uproot recognizes some objects (most notably TTree) and imbues them with relevant Python methods. The collection of recognized methods will grow as needed and you can add your own.
 
@@ -36,11 +36,11 @@ Dependencies
 
 For basic use, only **Python 2.6, 2.7, or 3.4+** and **Numpy 1.4+** are required. The following unlock extra features:
 
-   * **Numba** (`pip <https://pypi.python.org/pypi/numba/0.35.0>`_, `conda <https://anaconda.org/numba/numba>`_) accelerates the reading of some data types. Since it is a Python compiler, you can also use it to speed up your analysis code. All data read out of TTrees is Numba-aware and can be used in Numba-accelerated functions.
-   * **python-lzma** (`pip <https://pypi.python.org/pypi/backports.lzma>`_, `conda <https://anaconda.org/conda-forge/backports.lzma>`_) decompresses LZMA, one of the three algorithms used to encode ROOT data. This library is only needed for Python 2 (it's part of Python 3's standard library).
-   * **python-lz4** (`pip <https://pypi.python.org/pypi/lz4>`_, `conda <https://anaconda.org/anaconda/lz4>`_) decompresses LZ4, another algorithm used to compress some ROOT data.
-   * **python-futures** (`pip <https://pypi.python.org/pypi/futures>`_, `conda <https://anaconda.org/anaconda/futures>`_) is a backport of the Python 3 parallelization interface. You only need this for Python 2.
-   * **pyxrootd** (no pip, `conda <https://anaconda.org/search?q=xrootd>`_, `source <http://xrootd.org/dload.html>`_) if you want to access files with XRootD (``root://``) protocol. (Hint: if you install from source, you may have to set ``PYTHONPATH`` and ``LD_LIBRARY_PATH``.)
+- **Numba** (`pip <https://pypi.python.org/pypi/numba/0.35.0>`_, `conda <https://anaconda.org/numba/numba>`_) accelerates the reading of some data types. Since it is a Python compiler, you can also use it to speed up your analysis code. All data read out of TTrees is Numba-aware and can be used in Numba-accelerated functions.
+- **python-lzma** (`pip <https://pypi.python.org/pypi/backports.lzma>`_, `conda <https://anaconda.org/conda-forge/backports.lzma>`_) decompresses LZMA, one of the three algorithms used to encode ROOT data. This library is only needed for Python 2 (it's part of Python 3's standard library).
+- **python-lz4** (`pip <https://pypi.python.org/pypi/lz4>`_, `conda <https://anaconda.org/anaconda/lz4>`_) decompresses LZ4, another algorithm used to compress some ROOT data.
+- **python-futures** (`pip <https://pypi.python.org/pypi/futures>`_, `conda <https://anaconda.org/anaconda/futures>`_) is a backport of the Python 3 parallelization interface. You only need this for Python 2.
+- **pyxrootd** (no pip, `conda <https://anaconda.org/search?q=xrootd>`_, `source <http://xrootd.org/dload.html>`_) if you want to access files with XRootD (``root://``) protocol. (Hint: if you install from source, you may have to set ``PYTHONPATH`` and ``LD_LIBRARY_PATH``.)
 
 *Reminder: you do not need C++ ROOT to run uproot.*
 
