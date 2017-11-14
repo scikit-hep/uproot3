@@ -9,7 +9,7 @@ Tutorials and walk-throughs
 ---------------------------
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 1
 
    installation
    reading-flat-ntuples
@@ -25,15 +25,14 @@ Reference documentation
 -----------------------
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 3
 
    opening-files
    root-io
    ttree-handling
    interpretation
    caches
-   sources
-   cursor
+   parallel-io
 
 .. include:: ../../README.rst
   :start-after: inclusion-marker-do-not-remove

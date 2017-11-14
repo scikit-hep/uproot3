@@ -1,5 +1,8 @@
-Sources
-=======
+Parallel I/O
+============
+
+uproot.source.cursor.Cursor
+---------------------------
 
 uproot.source.source.Source
 ---------------------------
