@@ -12,6 +12,14 @@ Tutorials and walk-throughs
    :maxdepth: 4
 
    installation
+   reading-flat-ntuples
+   reading-complex-objects
+   parallelization
+   caching
+   lazy-arrays
+   partitioning
+   numba-integration
+   pandas-integration
 
 Reference documentation
 -----------------------
@@ -26,7 +34,6 @@ Reference documentation
    caches
    sources
    cursor
-   partitioning
 
 .. include:: ../../README.rst
   :start-after: inclusion-marker-do-not-remove
