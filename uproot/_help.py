@@ -78,7 +78,7 @@ u"""Opens a ROOT file (local or remote), specified by file path.
         tfile = uproot.open("/my/root/file.root")
     """.format(**fragments)
 
-# uproot.rootio.xrootd.__doc__ = \
+uproot.rootio.xrootd.__doc__ = \
 u"""Opens a remote ROOT file with XRootD (if installed).
 
     Parameters
@@ -103,7 +103,7 @@ u"""Opens a remote ROOT file with XRootD (if installed).
         tfile = uproot.open("root://eos-server.cern/store/file.root")
     """.format(**fragments)
 
-uproot.tree.iterate.__doc__ = \
+# uproot.tree.iterate.__doc__ = \
 u"""
 
     """.format(**fragments)
