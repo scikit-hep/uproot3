@@ -145,10 +145,10 @@ u"""Opens a series of ROOT files (local or remote), iterating over events in chu
     Parameters
     ----------
     path : str or list of str
-        glob pattern(s) for local file paths (POSIX wildcards like ``*``) or URLs specifying the locations of the files. A list of filenames are processed in the given order, but glob patterns get pre-sorted to ensure a predictable order.
+        glob pattern(s) for local file paths (POSIX wildcards like "``*``") or URLs specifying the locations of the files. A list of filenames are processed in the given order, but glob patterns get pre-sorted to ensure a predictable order.
 
     treepath : str
-        path within each ROOT file to find the TTree (may include ``/`` for subdirectories or ``;`` for cycle numbers).
+        path within each ROOT file to find the TTree (may include "``/``" for subdirectories or "``;``" for cycle numbers).
 
     {entrystepsize}
 
