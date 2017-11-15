@@ -22,6 +22,6 @@ uproot.iterate
 
 With a :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>`, you can dig into a file and extract objects, subdirectories, or TTree data, but sometimes you know exactly where to find a TTree and have a collection of identically-typed files to iterate through.
 
-The :py:func:`iterate <uproot.iterate>` function gives you an iterator over groups of arrays just like :py:meth:`TreeMethods.iterate <uproot.tree.TreeMethods.iterate>`, except that it iterates over a large set of files (and verifies the selected TTree branches are compatible). This serves essentially the same function as ROOT's TChain, allowing you to use TTrees in a set of files the same way you would use a single TTree.
+The :py:func:`iterate <uproot.iterate>` function gives you an iterator over groups of arrays just like :py:meth:`TreeMethods.iterate <uproot.tree.TreeMethods.iterate>`, except that it iterates over a large set of files (and verifies that the selected TTree branches are compatible). This serves essentially the same function as ROOT's TChain, allowing you to use TTrees in a set of files the same way you would use a single TTree.
 
 .. autofunction:: uproot.iterate
