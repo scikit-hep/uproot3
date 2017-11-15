@@ -52,27 +52,6 @@ methods = {}
 ################################################################ high-level interface
 
 def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, **options):
-    u"""Opens a ROOT file (local or remote), specified by file path.
-
-    :param path: local file path or URL specifying the location of a file (note: not a Python file object!). If the URL schema is "root://", :py:func:`uproot.xrootd` will be called.
-    :type path: str
-    :param localsource: function that will be applied to the path to produce an uproot :py:class:`uproot.source.source.Source` object if the path is a local file. Default is :py:meth:`uproot.source.memmap.MemmapSource.defaults` for memory-mapped files.
-    :type localsource: path \u21d2 :py:class:`uproot.source.source.Source`
-    :param xrootdsource: function that will be applied to the path to produce an uproot :py:class:`uproot.source.source.Source` object if the path is an XRootD URL. Default is :py:meth:`uproot.source.xrootd.XRootDSource.defaults` for XRootD with default chunk size/caching. (See :py:class:`uproot.source.xrootd.XRootDSource` constructor for details.)
-    :type xrootdsource: path \u21d2 :py:class:`uproot.source.source.Source`
-    :param options: passed to :py:class:`uproot.rootio.ROOTDirectory` constructor.
-
-    :return: the top-level directory of the ROOT file.
-    :rtype: :py:class:`uproot.rootio.ROOTDirectory`
-
-    Note that the ROOTDirectory returned by this function is not necessarily an open file. File handles are managed internally by Source objects to permit parallel reading. Although this function can be used in a "with" construct (which protects against unclosed files), it has no meaning when applied to this function.
-
-    **Example**::
-
-        import uproot
-        tfile = uproot.open("/my/root/file.root")
-    """
-
     parsed = urlparse(path)
     if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0:
         path = parsed.netloc + parsed.path
@@ -85,23 +64,6 @@ def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defa
         raise ValueError("URI scheme not recognized: {0}".format(path))
 
 def xrootd(path, xrootdsource=XRootDSource.defaults, **options):
-    u"""Opens a remote ROOT file with XRootD (if installed).
-
-    :param path: URL specifying the location of a file.
-    :type path: str
-    :param xrootdsource: function that will be applied to the path to produce an uproot :py:class:`uproot.source.source.Source` object if the path is an XRootD URL. Default is :py:meth:`uproot.source.xrootd.XRootDSource.defaults` for XRootD with default chunk size/caching. (See :py:class:`uproot.source.xrootd.XRootDSource` constructor for details.)
-    :type xrootdsource: path \u21d2 :py:class:`uproot.source.source.Source`
-    :param options: passed to :py:class:`uproot.rootio.ROOTDirectory` constructor.
-
-    :return: the top-level directory of the ROOT file.
-    :rtype: :py:class:`uproot.rootio.ROOTDirectory`
-
-    **Example**::
-
-        import uproot
-        tfile = uproot.open("root://eos-server.cern/store/file.root")
-    """
-
     return ROOTDirectory.read(xrootdsource(path), **options)
 
 ################################################################ ROOTDirectory
