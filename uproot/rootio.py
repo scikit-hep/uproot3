@@ -69,32 +69,6 @@ def xrootd(path, xrootdsource=XRootDSource.defaults, **options):
 ################################################################ ROOTDirectory
 
 class ROOTDirectory(object):
-    """Represents a ROOT file or subdirectory; use to extract objects.
-
-    Do not create it directly; use uproot.open or uproot.iterator to open files.
-
-        * `dir[name]` or `dir.get(name, cycle=None)` to extract an object (aware of '/' and ';' notations).
-        * `dir.name` is the name of the directory or file (as written in the file itself).
-        * `dir.compression` (with `algo`, `level` and `algoname` attributes) describes the compression.
-
-    The following have arguments `recursive=False, filtername=lambda name: True, filterclass=lambda name: True`:
-
-        * `dir.keys()` iterates over key names (bytes objects) in this directory.
-        * `dir.values()` iterates over the contents (ROOT objects) in this directory.
-        * `dir.items()` iterates over key-value pairs in this directory.
-        * `dir.classes()` iterates over key-classname pairs (both bytes objects) in this directory.
-
-    Filters allow you to exclude names (bytes objects) or class names (bytes objects) from the search.
-    Eliminating a directory does not eliminate its contents.
-
-    The following are shortcuts for recursive=True:
-
-        * `dir.allkeys()`
-        * `dir.allvalues()` 
-        * `dir.allitems()` 
-        * `dir.allclasses()` 
-    """
-
     class _FileContext(object):
         def __init__(self, sourcepath, streamerinfos, classes, compression, uuid):
             self.sourcepath, self.streamerinfos, self.classes, self.compression, self.uuid = sourcepath, streamerinfos, classes, compression, uuid

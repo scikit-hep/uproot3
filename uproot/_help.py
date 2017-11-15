@@ -51,29 +51,29 @@ fragments = {
     "branches": u"""branches
         - if ``None`` *(default)*, select all *interpretable* branches;
         - if a function :py:class:`TBranchMethods <uproot.tree.TBranchMethods>` \u21d2 ``None`` or :py:class:`Interpretation <uproot.interp.interp.Interpretation>`, select branches for which the function does not return ``None`` and use the interpretation it returns otherwise;
-        - if a dict of str \u2192 :py:class:`Interpretation <uproot.interp.interp.Interpretation>`, select branches named by keys and use interpretations from the associated values;
+        - if a ``dict`` of str \u2192 :py:class:`Interpretation <uproot.interp.interp.Interpretation>`, select branches named by keys and use interpretations from the associated values;
         - if a list of str, select branches by name
         - if a single str, select a single branch""",
 
     # outputtype
     "outputtype": u"""outputtype : type
-        constructor for the desired yield type, such as dict *(default)*, OrderedDict, tuple, namedtuple, custom user class, etc.""",
+        constructor for the desired yield type, such as ``dict`` *(default)*, ``OrderedDict``, ``tuple``, ``namedtuple``, custom user class, etc.""",
 
     # reportentries
     "reportentries": u"""reportentries : bool
         if ``False`` *(default)*, yield only arrays (as ``outputtype``); otherwise, yield 3-tuple: *(entry start, entry stop, arrays)*, where *entry start* is inclusive and *entry stop* is exclusive.""",
 
     # cache
-    "cache": u"""cache : ``None`` or dict-like object
-        if not ``None`` *(default)*, chunks of fully interpreted data (at most basket size) will be saved in the dict-like object for later use. If arrays are later accessed with a different interpretation, the output may be wrong.""",
+    "cache": u"""cache : ``None`` or ``dict``-like object
+        if not ``None`` *(default)*, chunks of fully interpreted data (at most basket size) will be saved in the ``dict``-like object for later use. If arrays are later accessed with a different interpretation, the output may be wrong.""",
 
     # rawcache
-    "rawcache": u"""rawcache : ``None`` or dict-like object
-        if not ``None`` *(default)*, chunks of raw basket data (exactly basket size) will be saved in the dict-like object for later use. Arrays may be later accessed with a different interpretation because raw data must be reinterpreted each time.""",
+    "rawcache": u"""rawcache : ``None`` or ``dict``-like object
+        if not ``None`` *(default)*, chunks of raw basket data (exactly basket size) will be saved in the ``dict``-like object for later use. Arrays may be later accessed with a different interpretation because raw data must be reinterpreted each time.""",
 
     # keycache
-    "keycache": u"""keycache : ``None`` or dict-like object
-        if not ``None`` *(default)*, basket TKeys will be saved in the dict-like object for later use. TKeys are small, but require file access, so caching them can speed up repeated access.""",
+    "keycache": u"""keycache : ``None`` or ``dict``-like object
+        if not ``None`` *(default)*, basket TKeys will be saved in the ``dict``-like object for later use. TKeys are small, but require file access, so caching them can speed up repeated access.""",
 
     # executor
     "executor": u"""executor : `concurrent.futures.Executor <https://docs.python.org/3/library/concurrent.futures.html>`_
@@ -179,12 +179,63 @@ u"""Opens a series of ROOT files (local or remote), iterating over events in chu
         import uproot
 
         iterator = uproot.iterate(
-            "data*.root", "ParticleTree", 10000,
+            "/my/data*.root", "ParticleTree", 10000,
             ["pt", "eta", "phi"], outputtype=tuple)
 
         px = numpy.empty(10000)
 
         for pt, eta, phi in iterator:
-            px[:10000] = pt * sinh(eta) * cos(phi)
-            print(px[:10000])
+            px[:len(pt)] = pt * sinh(eta) * cos(phi)
+            print(px[:len(pt)])
     """.format(**fragments)
+
+# uproot.rootio.ROOTDirectory.__doc__ = \
+u"""Represents a ROOT file or directory, an entry point for extracting objects.
+
+    Although this class has a constructor that could be called by a user, objects are usually created from ROOT files through :func:`open <uproot.rootio.open>` or :func:`xrootd <uproot.rootio.xrootd>`.
+
+    :class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` objects may be accessed as Python containers:
+
+    - square brackets (``__getitem__``) extract objects by key name (see :meth:`get <uproot.rootio.ROOTDirectory.get>`)
+    - the ``len`` function (``__len__``) returns the number of keys.
+    - iteration (``__iter__``) iterates over the *names* of the keys only (like a ``dict``, see :meth:`keys <uproot.rootio.ROOTDirectory.keys>`).
+
+    Attributes
+    ----------
+    name : str
+        name of the file or directory *as read from the ROOT file*. (ROOT files may be imprinted with a different name than they have in the file system.)
+
+    compression : `Compression <uproot.source.compressed.Compression>`
+        the compression algorithm and level specified in the file header. (Some objects, including TTree branches, may have different compression settings than the global file settings.)
+
+    Methods
+    -------
+    :meth:`get <uproot.rootio.ROOTDirectory.get>`
+        extract an object from the ROOT file or directory
+
+    :meth:`keys <uproot.rootio.ROOTDirectory.keys>`
+        iterate over key names
+
+    :meth:`values <uproot.rootio.ROOTDirectory.values>`
+        iterate over objects contained in the file or directory
+
+    :meth:`items <uproot.rootio.ROOTDirectory.items>`
+        iterate over key-value pairs, like a ``dict``
+
+    :meth:`classes <uproot.rootio.ROOTDirectory.classes>`
+        iterate over key-class name pairs without extracting the objects
+
+    :meth:`allkeys <uproot.rootio.ROOTDirectory.allkeys>`
+        iterate over keys at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`keys <uproot.rootio.ROOTDirectory.keys>`)
+
+    :meth:`allvalues <uproot.rootio.ROOTDirectory.allvalues>`
+        iterate over values at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`values <uproot.rootio.ROOTDirectory.values>`)
+
+    :meth:`allitems <uproot.rootio.ROOTDirectory.allitems>`
+        iterate over key-value pairs at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`items <uproot.rootio.ROOTDirectory.items>`)
+
+    :meth:`allclasses <uproot.rootio.ROOTDirectory.allclasses>`
+        iterate over key-class name pairs at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`classes <uproot.rootio.ROOTDirectory.classes>`)
+""".format(**fragments)
+
+
