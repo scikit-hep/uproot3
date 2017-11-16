@@ -81,7 +81,7 @@ fragments = {
     
     }
 
-uproot.rootio.open = \
+uproot.rootio.open.__doc__ = \
 u"""Opens a ROOT file (local or remote), specified by file path.
 
     Parameters
