@@ -10,6 +10,14 @@ uproot.rootio.ROOTDirectory
 
 .. autofunction:: uproot.rootio.ROOTDirectory
 
+.. automethod:: uproot.rootio.ROOTDirectory.get
+
+.. automethod:: uproot.rootio.ROOTDirectory.keys
+
+.. automethod:: uproot.rootio.ROOTDirectory.values
+
+.. automethod:: uproot.rootio.ROOTDirectory.items
+
 uproot.rootio.ROOTObject
 ------------------------
 
