@@ -178,7 +178,7 @@ u"""Extract an object from the ROOT file or directory by name.
 uproot.rootio.ROOTDirectory.keys.__func__.__doc__ = \
 u"""Iterate over the key names of this ROOT file or directory.
 
-    This function does not read the objects from disk.
+    This method does not read the objects from disk.
 
     Parameters
     ----------
@@ -221,7 +221,7 @@ u"""Iterate over key-value pairs from this ROOT file or directory, like a ``dict
 uproot.rootio.ROOTDirectory.classes.__func__.__doc__ = \
 u"""Iterate over key name, class name pairs from this ROOT file or directory.
 
-    This function does not read the objects from disk.
+    This method does not read the objects from disk.
 
     Parameters
     ----------
@@ -235,7 +235,7 @@ u"""Iterate over key name, class name pairs from this ROOT file or directory.
 uproot.rootio.ROOTDirectory.allkeys.__func__.__doc__ = \
 u"""Iterate over the key names of in this directory and all nested directories (a shortcut for :meth:`keys <uproot.rootio.ROOTDirectory.keys>` with ``recursive=True``).
 
-    This function does not read the objects from disk.
+    This method does not read the objects from disk.
 
     Parameters
     ----------
@@ -266,6 +266,8 @@ u"""Iterate over key-value pairs from this directory and all nested directories 
 
 uproot.rootio.ROOTDirectory.allclasses.__func__.__doc__ = \
 u"""Iterate over key name, class name pairs from this directory and all nested directories (a shortcut for :meth:`classes <uproot.rootio.ROOTDirectory.classes>` with ``recursive=True``).
+
+    This method does not read the objects from disk.
 
     Parameters
     ----------
