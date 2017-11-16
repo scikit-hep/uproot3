@@ -69,6 +69,9 @@ def xrootd(path, xrootdsource=XRootDSource.defaults, **options):
 ################################################################ ROOTDirectory
 
 class ROOTDirectory(object):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (type,), {})
+
     class _FileContext(object):
         def __init__(self, sourcepath, streamerinfos, classes, compression, uuid):
             self.sourcepath, self.streamerinfos, self.classes, self.compression, self.uuid = sourcepath, streamerinfos, classes, compression, uuid

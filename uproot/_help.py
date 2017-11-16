@@ -81,7 +81,7 @@ fragments = {
     
     }
 
-uproot.rootio.open.__doc__ = \
+uproot.rootio.open = \
 u"""Opens a ROOT file (local or remote), specified by file path.
 
     Parameters
@@ -189,7 +189,7 @@ u"""Opens a series of ROOT files (local or remote), iterating over events in chu
             print(px[:len(pt)])
     """.format(**fragments)
 
-# uproot.rootio.ROOTDirectory.__doc__ = \
+uproot.rootio.ROOTDirectory.__doc__ = \
 u"""Represents a ROOT file or directory, an entry point for extracting objects.
 
     Although this class has a constructor that could be called by a user, objects are usually created from ROOT files through :func:`open <uproot.rootio.open>` or :func:`xrootd <uproot.rootio.xrootd>`.
@@ -237,5 +237,3 @@ u"""Represents a ROOT file or directory, an entry point for extracting objects.
     :meth:`allclasses <uproot.rootio.ROOTDirectory.allclasses>`
         iterate over key-class name pairs at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`classes <uproot.rootio.ROOTDirectory.classes>`)
 """.format(**fragments)
-
-
