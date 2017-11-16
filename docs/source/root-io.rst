@@ -1,12 +1,16 @@
 ROOT I/O
 ========
 
-The :module:`uproot.rootio` module contains everything needed to navigate through a ROOT file and extract inert, data-only objects. Methods for those objects are defined in other modules. The :func:`uproot.open <uproot.rootio.open>` function returns a :class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` object, which is a handle into the file, from which all other data can be accessed.
+The :py:mod:`uproot.rootio` module contains everything needed to navigate through a ROOT file and extract inert, data-only objects. Methods for those objects are defined in other modules. The :func:`uproot.open <uproot.rootio.open>` function returns a :class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` object, which is a handle into the file, from which all other data can be accessed.
 
-The :module:`uproot.rootio` module contains many classes not documented here because they are considered internal details. (Most of these are concerned with the ROOT file's *streamer info,* which describe the layout of the classes we extract.) In fact, three of the classes described below--- :class:`ROOTObject <uproot.rootio.ROOTObject>`, :class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`, and :class:`TKey <uproot.rootio.TKey>`--- will probably never be accessed directly by the user, but the first two are relevant as superclasses and the third is so important for the operation of ROOT file seeking that we document it anyway.
+This module has many more classes than those documented here, but all but a few are considered internal details. The classes documented below represent the public API. In fact, only :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` has useful attributes and methods for a typical user. The other two, :class:`ROOTObject <uproot.rootio.ROOTObject>` and :class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`, are documented because they are superclasses of all objects that could be extracted from a ROOT file, and may be useful in ``isinstance`` checks.
 
 uproot.rootio.ROOTDirectory
 ---------------------------
+
+Although :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` resembles ROOT's TFile, TDirectory, and TFileDirectory to some degree, it does not have a direct relationship to any of them. (This is because we adopted a different model for representing the contents of a ROOT file: purely acyclic with continuation passing.) As a result, :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` is not a :py:class:`ROOTObject <uproot.rootio.ROOTObject>` and isn't named "TFile."
+
+A :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` may represent a whole ROOT file or a single TDirectory within that file--- after reading, there is no difference.
 
 .. autofunction:: uproot.rootio.ROOTDirectory
 
@@ -18,11 +22,18 @@ uproot.rootio.ROOTDirectory
 
 .. automethod:: uproot.rootio.ROOTDirectory.items
 
+.. automethod:: uproot.rootio.ROOTDirectory.classes
+
+.. automethod:: uproot.rootio.ROOTDirectory.allkeys
+
+.. automethod:: uproot.rootio.ROOTDirectory.allvalues
+
+.. automethod:: uproot.rootio.ROOTDirectory.allitems
+
+.. automethod:: uproot.rootio.ROOTDirectory.allclasses
+
 uproot.rootio.ROOTObject
 ------------------------
 
 uproot.rootio.ROOTStreamedObject
 --------------------------------
-
-uproot.rootio.TKey
-------------------

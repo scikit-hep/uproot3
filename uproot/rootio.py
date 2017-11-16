@@ -73,8 +73,8 @@ class ROOTDirectory(object):
     __metaclass__ = type.__new__(type, "type", (type,), {})
 
     class _FileContext(object):
-        def __init__(self, sourcepath, streamerinfos, classes, compression, uuid):
-            self.sourcepath, self.streamerinfos, self.classes, self.compression, self.uuid = sourcepath, streamerinfos, classes, compression, uuid
+        def __init__(self, sourcepath, streamerinfos, classes, compression, tfile):
+            self.sourcepath, self.streamerinfos, self.classes, self.compression, self.tfile = sourcepath, streamerinfos, classes, compression, tfile
 
         def copy(self):
             out = ROOTDirectory._FileContext.__new__(ROOTDirectory._FileContext)
@@ -102,6 +102,8 @@ class ROOTDirectory(object):
                 else:
                     fBEGIN, fEND, fSeekFree, fNbytesFree, nfree, fNbytesName, fUnits, fCompress, fSeekInfo, fNbytesInfo, fUUID = cursor.fields(source, ROOTDirectory._format2_big)
 
+                tfile = {"fVersion": fVersion, "fBEGIN": fBEGIN, "fEND": fEND, "fSeekFree": fSeekFree, "fNbytesFree": fNbytesFree, "nfree": nfree, "fNbytesName": fNbytesName, "fUnits": fUnits, "fCompress": fCompress, "fSeekInfo": fSeekInfo, "fNbytesInfo": fNbytesInfo, "fUUID": fUUID}
+
                 # classes requried to read streamers (bootstrap)
                 streamerclasses = {"TStreamerInfo":             TStreamerInfo,
                                    "TStreamerElement":          TStreamerElement,
@@ -122,14 +124,14 @@ class ROOTDirectory(object):
                                    "TObjString":                TObjString}
 
                 if readstreamers:
-                    streamercontext = ROOTDirectory._FileContext(source.path, None, streamerclasses, uproot.source.compressed.Compression(fCompress), fUUID)
+                    streamercontext = ROOTDirectory._FileContext(source.path, None, streamerclasses, uproot.source.compressed.Compression(fCompress), tfile)
                     streamerkey = TKey.read(source, Cursor(fSeekInfo), streamercontext)
                     streamerinfos, streamerrules = _readstreamers(streamerkey._source, streamerkey._cursor, streamercontext)
                 else:
                     streamerinfos, streamerrules = [], []
 
                 classes = _defineclasses(streamerinfos)
-                context = ROOTDirectory._FileContext(source.path, streamerinfos, classes, uproot.source.compressed.Compression(fCompress), fUUID)
+                context = ROOTDirectory._FileContext(source.path, streamerinfos, classes, uproot.source.compressed.Compression(fCompress), tfile)
 
                 keycursor = Cursor(fBEGIN)
                 mykey = TKey.read(source, keycursor, context)
@@ -227,14 +229,6 @@ class ROOTDirectory(object):
                     yield "{0}/{1}".format(self._withcycle(key).decode("ascii"), name.decode("ascii")).encode("ascii"), value
 
     def classes(self, recursive=False, filtername=lambda name: True, filterclass=lambda classname: True):
-        """Iterates over key-classname pairs (both bytes objects) in this directory.
-
-            * `recursive` if `True`, descend into subdirectories; if `False` (the default), do not.
-            * `filtername` must be callable; results are returned only if `filtername(key name)` returns `True`.
-            * `filterclass` must be callable; results are returned only if `filterclass(class name)` returns `True`.
-
-        When iterating recursively, eliminating a directory does not eliminate its contents.
-        """
         for key in self._keys:
             if filtername(key.fName) and filterclass(key.fClassName):
                 yield self._withcycle(key), key.fClassName
@@ -244,43 +238,15 @@ class ROOTDirectory(object):
                     yield "{0}/{1}".format(self._withcycle(key).decode("ascii"), name.decode("ascii")).encode("ascii"), classname
 
     def allkeys(self, filtername=lambda name: True, filterclass=lambda classname: True):
-        """Recursively iterates over key names (bytes objects) in this directory.
-
-            * `filtername` must be callable; results are returned only if `filtername(key name)` returns `True`.
-            * `filterclass` must be callable; results are returned only if `filterclass(class name)` returns `True`.
-
-        When iterating recursively, eliminating a directory does not eliminate its contents.
-        """
         return self.keys(True, filtername, filterclass)
 
     def allvalues(self, filtername=lambda name: True, filterclass=lambda classname: True):
-        """Recursively iterates over the contents (ROOT objects) in this directory.
-
-            * `filtername` must be callable; results are returned only if `filtername(key name)` returns `True`.
-            * `filterclass` must be callable; results are returned only if `filterclass(class name)` returns `True`.
-
-        When iterating recursively, eliminating a directory does not eliminate its contents.
-        """
         return self.values(True, filtername, filterclass)
 
     def allitems(self, filtername=lambda name: True, filterclass=lambda classname: True):
-        """Recursively iterates over key-value pairs in this directory.
-
-            * `filtername` must be callable; results are returned only if `filtername(key name)` returns `True`.
-            * `filterclass` must be callable; results are returned only if `filterclass(class name)` returns `True`.
-
-        When iterating recursively, eliminating a directory does not eliminate its contents.
-        """
         return self.items(True, filtername, filterclass)
 
     def allclasses(self, filtername=lambda name: True, filterclass=lambda classname: True):
-        """Recursively iterates over key-classname pairs (both bytes objects) in this directory.
-
-            * `filtername` must be callable; results are returned only if `filtername(key name)` returns `True`.
-            * `filterclass` must be callable; results are returned only if `filterclass(class name)` returns `True`.
-
-        When iterating recursively, eliminating a directory does not eliminate its contents.
-        """
         return self.classes(True, filtername, filterclass)
 
     def get(self, name, cycle=None):
@@ -725,13 +691,6 @@ class ROOTObject(object):
             return "<{0} at 0x{1:012x}>".format(self.__class__.__name__, id(self))
 
 class TKey(ROOTObject):
-    """Represents a key; for seeking to an object in a ROOT file.
-
-        * `key.get(dismiss=True)` to extract an object (initiates file-reading and possibly decompression).
-
-    See `https://root.cern/doc/master/classTKey.html` for field definitions.
-    """
-
     @classmethod
     def _readinto(cls, self, source, cursor, context):
         start = cursor.index

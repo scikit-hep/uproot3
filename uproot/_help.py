@@ -58,8 +58,6 @@ rootdirectory_fragments = {
     # filterclass
     "filterclass": u"""filterclass : function: str \u21d2 bool
         only keys for which filterclass(class name) returns ``True`` are yielded by the iterator (does not eliminate subdirectories if ``recursive=True``). Default returns ``True`` for all input.""",
-
-
     }
 
 ################################################################ uproot.rootio.open
@@ -215,19 +213,61 @@ u"""Iterate over key-value pairs from this ROOT file or directory, like a ``dict
     {filterclass}
 """.format(**rootdirectory_fragments)
 
+uproot.rootio.ROOTDirectory.classes.__func__.__doc__ = \
+u"""Iterate over key name, class name pairs from this ROOT file or directory.
 
+    This function does not read the objects from disk.
 
+    Parameters
+    ----------
+    {recursive}
 
-    # - :meth:`classes <uproot.rootio.ROOTDirectory.classes>` iterate over key-class name pairs without extracting the objects.
+    {filtername}
 
-    # - :meth:`allkeys <uproot.rootio.ROOTDirectory.allkeys>` iterate over keys at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`keys <uproot.rootio.ROOTDirectory.keys>`).
+    {filterclass}
+""".format(**rootdirectory_fragments)
 
-    # - :meth:`allvalues <uproot.rootio.ROOTDirectory.allvalues>` iterate over values at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`values <uproot.rootio.ROOTDirectory.values>`).
+uproot.rootio.ROOTDirectory.allkeys.__func__.__doc__ = \
+u"""Iterate over the key names of in this directory and all nested directories (a shortcut for `keys <uproot.rootio.ROOTDirectory.keys>` with ``recursive=True``).
 
-    # - :meth:`allitems <uproot.rootio.ROOTDirectory.allitems>` iterate over key-value pairs at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`items <uproot.rootio.ROOTDirectory.items>`).
+    This function does not read the objects from disk.
 
-    # - :meth:`allclasses <uproot.rootio.ROOTDirectory.allclasses>` iterate over key-class name pairs at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`classes <uproot.rootio.ROOTDirectory.classes>`).
+    Parameters
+    ----------
+    {filtername}
 
+    {filterclass}
+""".format(**rootdirectory_fragments)
+    
+uproot.rootio.ROOTDirectory.allvalues.__func__.__doc__ = \
+u"""Iterate over objects contained in this directory and all nested directories (a shortcut for `values <uproot.rootio.ROOTDirectory.values>` with ``recursive=True``).
+
+    Parameters
+    ----------
+    {filtername}
+
+    {filterclass}
+""".format(**rootdirectory_fragments)
+
+uproot.rootio.ROOTDirectory.allitems.__func__.__doc__ = \
+u"""Iterate over key-value pairs from this directory and all nested directories (a shortcut for `items <uproot.rootio.ROOTDirectory.items>` with ``recursive=True``).
+
+    Parameters
+    ----------
+    {filtername}
+
+    {filterclass}
+""".format(**rootdirectory_fragments)
+
+uproot.rootio.ROOTDirectory.allclasses.__func__.__doc__ = \
+u"""Iterate over key name, class name pairs from this directory and all nested directories (a shortcut for `classes <uproot.rootio.ROOTDirectory.classes>` with ``recursive=True``).
+
+    Parameters
+    ----------
+    {filtername}
+
+    {filterclass}
+""".format(**rootdirectory_fragments)
 
 ################################################################ uproot.tree fragments
 
