@@ -12,7 +12,7 @@ Although :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` resembles ROOT'
 
 A :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` may represent a whole ROOT file or a single TDirectory within that file--- after reading, there is no difference.
 
-.. autofunction:: uproot.rootio.ROOTDirectory
+.. autoclass:: uproot.rootio.ROOTDirectory
 
 .. automethod:: uproot.rootio.ROOTDirectory.get
 
@@ -35,5 +35,9 @@ A :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` may represent a whole 
 uproot.rootio.ROOTObject
 ------------------------
 
+.. autoclass:: uproot.rootio.ROOTObject
+
 uproot.rootio.ROOTStreamedObject
 --------------------------------
+
+.. autoclass:: uproot.rootio.ROOTStreamedObject

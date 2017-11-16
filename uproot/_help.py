@@ -228,7 +228,7 @@ u"""Iterate over key name, class name pairs from this ROOT file or directory.
 """.format(**rootdirectory_fragments)
 
 uproot.rootio.ROOTDirectory.allkeys.__func__.__doc__ = \
-u"""Iterate over the key names of in this directory and all nested directories (a shortcut for `keys <uproot.rootio.ROOTDirectory.keys>` with ``recursive=True``).
+u"""Iterate over the key names of in this directory and all nested directories (a shortcut for :meth:`keys <uproot.rootio.ROOTDirectory.keys>` with ``recursive=True``).
 
     This function does not read the objects from disk.
 
@@ -240,7 +240,7 @@ u"""Iterate over the key names of in this directory and all nested directories (
 """.format(**rootdirectory_fragments)
     
 uproot.rootio.ROOTDirectory.allvalues.__func__.__doc__ = \
-u"""Iterate over objects contained in this directory and all nested directories (a shortcut for `values <uproot.rootio.ROOTDirectory.values>` with ``recursive=True``).
+u"""Iterate over objects contained in this directory and all nested directories (a shortcut for :meth:`values <uproot.rootio.ROOTDirectory.values>` with ``recursive=True``).
 
     Parameters
     ----------
@@ -250,7 +250,7 @@ u"""Iterate over objects contained in this directory and all nested directories 
 """.format(**rootdirectory_fragments)
 
 uproot.rootio.ROOTDirectory.allitems.__func__.__doc__ = \
-u"""Iterate over key-value pairs from this directory and all nested directories (a shortcut for `items <uproot.rootio.ROOTDirectory.items>` with ``recursive=True``).
+u"""Iterate over key-value pairs from this directory and all nested directories (a shortcut for :meth:`items <uproot.rootio.ROOTDirectory.items>` with ``recursive=True``).
 
     Parameters
     ----------
@@ -260,7 +260,7 @@ u"""Iterate over key-value pairs from this directory and all nested directories 
 """.format(**rootdirectory_fragments)
 
 uproot.rootio.ROOTDirectory.allclasses.__func__.__doc__ = \
-u"""Iterate over key name, class name pairs from this directory and all nested directories (a shortcut for `classes <uproot.rootio.ROOTDirectory.classes>` with ``recursive=True``).
+u"""Iterate over key name, class name pairs from this directory and all nested directories (a shortcut for :meth:`classes <uproot.rootio.ROOTDirectory.classes>` with ``recursive=True``).
 
     Parameters
     ----------
@@ -268,6 +268,20 @@ u"""Iterate over key name, class name pairs from this directory and all nested d
 
     {filterclass}
 """.format(**rootdirectory_fragments)
+
+################################################################ uproot.rootio.ROOTObject and uproot.rootio.ROOTStreamedObject
+
+uproot.rootio.ROOTObject.__doc__ = \
+u"""Superclass of all objects read out of a ROOT file (except :class:`ROOTDirectory <uproot.rootio.ROOTDirectory>`).
+
+    If a :class:`ROOTObject <uproot.rootio.ROOTObject>` is not a :class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`, then its class definition is hard-coded, not derived from the file's *streamer info*.
+"""
+
+uproot.rootio.ROOTStreamedObject.__doc__ = \
+u"""Superclass of all objects read out of a ROOT file with an automatically generated class, derived from the file's *streamer info*.
+    
+    Each subclass of a :class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>` has a ``version`` attribute, corresponding to the class version in the *streamer info*, and each object has a ``version`` attribute, read from the serialized object. If these versions do not match, an error is raised during the read.
+"""
 
 ################################################################ uproot.tree fragments
 

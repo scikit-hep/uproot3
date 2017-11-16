@@ -666,6 +666,9 @@ def _makeclass(classname, id, codestr, classes):
 ################################################################ built-in ROOT objects for bootstrapping up to streamed classes
 
 class ROOTObject(object):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (type,), {})
+
     _copycontext = False
 
     @classmethod
