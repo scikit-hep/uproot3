@@ -172,7 +172,7 @@ u"""Extract an object from the ROOT file or directory by name.
     Notes
     -----
 
-    This method, without the ``cycle`` argument, can be called directly through square brackets (``__getitem__``) on the :class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` object.
+    This method, without the ``cycle`` argument, can be accessed more directly through square brackets (``__getitem__``) on the :class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` object.
 """.format(**rootdirectory_fragments)
 
 uproot.rootio.ROOTDirectory.keys.__func__.__doc__ = \
@@ -187,6 +187,11 @@ u"""Iterate over the key names of this ROOT file or directory.
     {filtername}
 
     {filterclass}
+
+    Notes
+    -----
+
+    This method can be accessed more directly by simply iterating over a :class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` object.
 """.format(**rootdirectory_fragments)
     
 uproot.rootio.ROOTDirectory.values.__func__.__doc__ = \
