@@ -30,6 +30,12 @@
 
 import uproot
 
+def _method(x):
+    if hasattr(x, "__func__"):
+        return x.__func__
+    else:
+        return x
+
 ################################################################ uproot.rootio fragments
 
 open_fragments = {
@@ -158,7 +164,7 @@ u"""Represents a ROOT file or directory, an entry point for extracting objects.
     - :meth:`allclasses <uproot.rootio.ROOTDirectory.allclasses>` iterate over key-class name pairs at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`classes <uproot.rootio.ROOTDirectory.classes>`).
 """.format(**rootdirectory_fragments)
 
-uproot.rootio.ROOTDirectory.get.__func__.__doc__ = \
+_method(uproot.rootio.ROOTDirectory.get).__doc__ = \
 u"""Extract an object from the ROOT file or directory by name.
 
     Parameters
@@ -175,7 +181,7 @@ u"""Extract an object from the ROOT file or directory by name.
     This method, without the ``cycle`` argument, can be accessed more directly through square brackets (``__getitem__``) on the :class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` object.
 """.format(**rootdirectory_fragments)
 
-uproot.rootio.ROOTDirectory.keys.__func__.__doc__ = \
+_method(uproot.rootio.ROOTDirectory.keys).__doc__ = \
 u"""Iterate over the key names of this ROOT file or directory.
 
     This method does not read the objects from disk.
@@ -194,7 +200,7 @@ u"""Iterate over the key names of this ROOT file or directory.
     This method can be accessed more directly by simply iterating over a :class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` object.
 """.format(**rootdirectory_fragments)
     
-uproot.rootio.ROOTDirectory.values.__func__.__doc__ = \
+_method(uproot.rootio.ROOTDirectory.values).__doc__ = \
 u"""Iterate over objects contained in this ROOT file or directory.
 
     Parameters
@@ -206,7 +212,7 @@ u"""Iterate over objects contained in this ROOT file or directory.
     {filterclass}
 """.format(**rootdirectory_fragments)
 
-uproot.rootio.ROOTDirectory.items.__func__.__doc__ = \
+_method(uproot.rootio.ROOTDirectory.items).__doc__ = \
 u"""Iterate over key-value pairs from this ROOT file or directory, like a ``dict``.
 
     Parameters
@@ -218,7 +224,7 @@ u"""Iterate over key-value pairs from this ROOT file or directory, like a ``dict
     {filterclass}
 """.format(**rootdirectory_fragments)
 
-uproot.rootio.ROOTDirectory.classes.__func__.__doc__ = \
+_method(uproot.rootio.ROOTDirectory.classes).__doc__ = \
 u"""Iterate over key name, class name pairs from this ROOT file or directory.
 
     This method does not read the objects from disk.
@@ -232,7 +238,7 @@ u"""Iterate over key name, class name pairs from this ROOT file or directory.
     {filterclass}
 """.format(**rootdirectory_fragments)
 
-uproot.rootio.ROOTDirectory.allkeys.__func__.__doc__ = \
+_method(uproot.rootio.ROOTDirectory.allkeys).__doc__ = \
 u"""Iterate over the key names of in this directory and all nested directories (a shortcut for :meth:`keys <uproot.rootio.ROOTDirectory.keys>` with ``recursive=True``).
 
     This method does not read the objects from disk.
@@ -244,7 +250,7 @@ u"""Iterate over the key names of in this directory and all nested directories (
     {filterclass}
 """.format(**rootdirectory_fragments)
     
-uproot.rootio.ROOTDirectory.allvalues.__func__.__doc__ = \
+_method(uproot.rootio.ROOTDirectory.allvalues).__doc__ = \
 u"""Iterate over objects contained in this directory and all nested directories (a shortcut for :meth:`values <uproot.rootio.ROOTDirectory.values>` with ``recursive=True``).
 
     Parameters
@@ -254,7 +260,7 @@ u"""Iterate over objects contained in this directory and all nested directories 
     {filterclass}
 """.format(**rootdirectory_fragments)
 
-uproot.rootio.ROOTDirectory.allitems.__func__.__doc__ = \
+_method(uproot.rootio.ROOTDirectory.allitems).__doc__ = \
 u"""Iterate over key-value pairs from this directory and all nested directories (a shortcut for :meth:`items <uproot.rootio.ROOTDirectory.items>` with ``recursive=True``).
 
     Parameters
@@ -264,7 +270,7 @@ u"""Iterate over key-value pairs from this directory and all nested directories 
     {filterclass}
 """.format(**rootdirectory_fragments)
 
-uproot.rootio.ROOTDirectory.allclasses.__func__.__doc__ = \
+_method(uproot.rootio.ROOTDirectory.allclasses).__doc__ = \
 u"""Iterate over key name, class name pairs from this directory and all nested directories (a shortcut for :meth:`classes <uproot.rootio.ROOTDirectory.classes>` with ``recursive=True``).
 
     This method does not read the objects from disk.
