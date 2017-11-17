@@ -247,33 +247,18 @@ if numba is not None:
 
             @numba.extending.lower_getattr(JaggedArrayType, "contents")
             def jaggedarray_getattr_contents_impl(context, builder, typ, val):
-                @numba.njit([typ.contents(typ.tupletype())])
-                def _jaggedarray_getfield(astuple):
-                    return astuple[0]
-                cres = _jaggedarray_getfield.overloads.values()[0]
-                getfield_imp = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
-                del cres.target_context._defns[cres.entry_point]
-                return getfield_imp(context, builder, cres.signature, (val,))
+                res = builder.extract_value(val, 0)
+                return numba.targets.imputils.impl_ret_borrowed(context, builder, typ.contents, res)
 
             @numba.extending.lower_getattr(JaggedArrayType, "starts")
             def jaggedarray_getattr_starts_impl(context, builder, typ, val):
-                @numba.njit([typ.starts(typ.tupletype())])
-                def _jaggedarray_getfield(astuple):
-                    return astuple[1]
-                cres = _jaggedarray_getfield.overloads.values()[0]
-                getfield_imp = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
-                del cres.target_context._defns[cres.entry_point]
-                return getfield_imp(context, builder, cres.signature, (val,))
+                res = builder.extract_value(val, 1)
+                return numba.targets.imputils.impl_ret_borrowed(context, builder, typ.starts, res)
 
             @numba.extending.lower_getattr(JaggedArrayType, "stops")
             def jaggedarray_getattr_stops_impl(context, builder, typ, val):
-                @numba.njit([typ.stops(typ.tupletype())])
-                def _jaggedarray_getfield(astuple):
-                    return astuple[2]
-                cres = _jaggedarray_getfield.overloads.values()[0]
-                getfield_imp = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
-                del cres.target_context._defns[cres.entry_point]
-                return getfield_imp(context, builder, cres.signature, (val,))
+                res = builder.extract_value(val, 2)
+                return numba.targets.imputils.impl_ret_borrowed(context, builder, typ.stops, res)
 
         @staticmethod
         def get(contents, starts, stops):
