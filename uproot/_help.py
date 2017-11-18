@@ -135,7 +135,7 @@ u"""Represents a ROOT file or directory, an entry point for extracting objects.
 
     :class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` objects may be accessed as Python containers:
 
-    - square brackets (``__getitem__``) extract objects by key name (see :meth:`get <uproot.rootio.ROOTDirectory.get>`)
+    - square brackets (``__getitem__``) extract objects by key name (see :meth:`get <uproot.rootio.ROOTDirectory.get>`).
     - the ``len`` function (``__len__``) returns the number of keys.
     - iteration (``__iter__``) iterates over the *names* of the keys only (like a ``dict``, see :meth:`keys <uproot.rootio.ROOTDirectory.keys>`).
 
@@ -390,3 +390,43 @@ u"""Opens a series of ROOT files (local or remote), iterating over events in chu
             px[:len(pt)] = pt * sinh(eta) * cos(phi)
             print(px[:len(pt)])
     """.format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
+
+################################################################ uproot.tree.TTreeMethods
+
+# uproot.tree.TTreeMethods.__doc__ = \
+# u"""Adds array extraction methods to TTree objects that have been streamed from a ROOT file.
+
+#     - square brackets (``__getitem__``) return branches by key name (see :meth:`get <uproot.tree.TTreeMethods.branch>`).
+#     - the ``len`` function (``__len__``) returns the number of entries (same as ``numentries``).
+#     - iteration (``__iter__``) is not implemented (see :meth:`keys <uproot.tree.TTreeMethods.iterate>`).
+
+#     **Attributes, properties, and methods:**
+
+#     - **name** (*bytes*) 
+
+#     - :meth:`get <>`.
+
+
+
+# """.format()
+
+# **name** (*bytes*) name of the TTree.
+# **title** (*bytes*) title of the TTree.
+# **numentries** (*int*) number of entries in the TTree.
+# **clusters** (*iterator over (int, int)*) *(not implemented)*
+# **pandas** *(not implemented)*
+# **numba** *(not implemented)*
+# **oamap** *(not implemented)*
+
+# branch
+# branches
+# allbranches
+# branchnames
+# allbranchnames
+
+# array
+# lazyarray
+# arrays
+# lazyarrays
+# iterate
+# iterate_clusters

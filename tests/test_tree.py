@@ -419,11 +419,11 @@ class TestTree(unittest.TestCase):
         self.assertEqual(list(file.classes()), [(b"one;1", b"TDirectory"), (b"three;1", b"TDirectory")])
         self.assertEqual(list(file.allclasses()), [(b"one;1", b"TDirectory"), (b"one;1/two;1", b"TDirectory"), (b"one;1/two;1/tree;1", b"TTree"), (b"one;1/tree;1", b"TTree"), (b"three;1", b"TDirectory"), (b"three;1/tree;1", b"TTree")])
 
-        self.assertEqual(file["one"]["tree"].branchnames, [b"one", b"two", b"three"])
-        self.assertEqual(file["one"].get("tree", 1).branchnames, [b"one", b"two", b"three"])
-        self.assertEqual(file["one/tree;1"].branchnames, [b"one", b"two", b"three"])
-        self.assertEqual(file["one/two/tree;1"].branchnames, [b"Int32", b"Int64", b"UInt32", b"UInt64", b"Float32", b"Float64", b"Str", b"ArrayInt32", b"ArrayInt64", b"ArrayUInt32", b"ArrayUInt64", b"ArrayFloat32", b"ArrayFloat64", b"N", b"SliceInt32", b"SliceInt64", b"SliceUInt32", b"SliceUInt64", b"SliceFloat32", b"SliceFloat64"])
-        self.assertEqual(file["three/tree;1"].branchnames, [b"evt"])
+        self.assertEqual(list(file["one"]["tree"].branchnames()), [b"one", b"two", b"three"])
+        self.assertEqual(list(file["one"].get("tree", 1).branchnames()), [b"one", b"two", b"three"])
+        self.assertEqual(list(file["one/tree;1"].branchnames()), [b"one", b"two", b"three"])
+        self.assertEqual(list(file["one/two/tree;1"].branchnames()), [b"Int32", b"Int64", b"UInt32", b"UInt64", b"Float32", b"Float64", b"Str", b"ArrayInt32", b"ArrayInt64", b"ArrayUInt32", b"ArrayUInt64", b"ArrayFloat32", b"ArrayFloat64", b"N", b"SliceInt32", b"SliceInt64", b"SliceUInt32", b"SliceUInt64", b"SliceFloat32", b"SliceFloat64"])
+        self.assertEqual(list(file["three/tree;1"].branchnames()), [b"evt"])
 
         self.assertEqual(dict((name, array.tolist()) for name, array in file["one/tree"].arrays(["one", "two", "three"]).items()), {b"one": [1, 2, 3, 4], b"two": [1.100000023841858, 2.200000047683716, 3.299999952316284, 4.400000095367432], b"three": [b"uno", b"dos", b"tres", b"quatro"]})
         self.assertEqual(file["one/two/tree"].array("Int32").shape, (100,))
@@ -431,9 +431,9 @@ class TestTree(unittest.TestCase):
 
         file = uproot.open("tests/nesteddirs.root")
 
-        self.assertEqual(file["one/tree"].branchnames, [b"one", b"two", b"three"])
-        self.assertEqual(file["one/two/tree"].branchnames, [b"Int32", b"Int64", b"UInt32", b"UInt64", b"Float32", b"Float64", b"Str", b"ArrayInt32", b"ArrayInt64", b"ArrayUInt32", b"ArrayUInt64", b"ArrayFloat32", b"ArrayFloat64", b"N", b"SliceInt32", b"SliceInt64", b"SliceUInt32", b"SliceUInt64", b"SliceFloat32", b"SliceFloat64"])
-        self.assertEqual(file["three/tree"].branchnames, [b"evt"])
+        self.assertEqual(list(file["one/tree"].branchnames()), [b"one", b"two", b"three"])
+        self.assertEqual(list(file["one/two/tree"].branchnames()), [b"Int32", b"Int64", b"UInt32", b"UInt64", b"Float32", b"Float64", b"Str", b"ArrayInt32", b"ArrayInt64", b"ArrayUInt32", b"ArrayUInt64", b"ArrayFloat32", b"ArrayFloat64", b"N", b"SliceInt32", b"SliceInt64", b"SliceUInt32", b"SliceUInt64", b"SliceFloat32", b"SliceFloat64"])
+        self.assertEqual(list(file["three/tree"].branchnames()), [b"evt"])
 
         self.assertEqual(dict((name, array.tolist()) for name, array in file["one/tree;1"].arrays(["one", "two", "three"]).items()), {b"one": [1, 2, 3, 4], b"two": [1.100000023841858, 2.200000047683716, 3.299999952316284, 4.400000095367432], b"three": [b"uno", b"dos", b"tres", b"quatro"]})
         self.assertEqual(file["one/two/tree;1"].array("Int32").shape, (100,))

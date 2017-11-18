@@ -162,29 +162,27 @@ class TTreeMethods(object):
     def numentries(self):
         return self.fEntries
 
-    @property
-    def branches(self):
-        return self.fBranches
+    def branches(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
+        for branch in self.fBranches:
+            if filtername(branch.name) and filtertitle(branch.title):
+                yield branch
+            if recursive:
+                for x in branch.branches(recursive, filtername, filtertitle):
+                    yield x
 
-    @property
-    def allbranches(self):
-        out = []
-        for branch in self.branches:
-            out.append(branch)
-            out.extend(branch.allbranches)
-        return out
+    def allbranches(self, filtername=lambda name: True, filtertitle=lambda title: True):
+        return self.branches(True, filtername, filtertitle)
 
-    @property
-    def branchnames(self):
-        return [branch.name for branch in self.branches]
+    def branchnames(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
+        for branch in self.branches(recursive, filtername, filtertitle):
+            yield branch.name
 
-    @property
-    def allbranchnames(self):
-        return [branch.name for branch in self.allbranches]
+    def allbranchnames(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
+        return self.branchnames(True, filtername, filtertitle)
 
     def branch(self, name):
         name = _bytesid(name)
-        for branch in self.branches:
+        for branch in self.branches():
             if branch.name == name:
                 return branch
             try:
@@ -303,13 +301,13 @@ class TTreeMethods(object):
 
     def _normalize_branches(self, arg):
         if arg is None:                                    # no specification; read all branches
-            for branch in self.allbranches:                # that have interpretations
+            for branch in self.allbranches():              # that have interpretations
                 interpretation = interpret(branch)
                 if interpretation is not None:
                     yield branch, interpretation
 
         elif callable(arg):
-            for branch in self.allbranches:
+            for branch in self.allbranches():
                 result = arg(branch)
                 if result is None:
                     pass
@@ -371,6 +369,17 @@ class TTreeMethods(object):
         return connector
 
     @property
+    def numba(self):
+        import uproot._connect.to_numba
+        connector = self._Connector()
+        connector.run       = uproot._connect.to_numba.run
+        connector.foreach   = uproot._connect.to_numba.foreach
+        connector.map       = uproot._connect.to_numba.map
+        connector.filter    = uproot._connect.to_numba.filter
+        connector.aggregate = uproot._connect.to_numba.aggregate
+        return connector
+
+    @property
     def oamap(self):
         import uproot._connect.to_oamap
         connector = self._Connector()
@@ -404,25 +413,23 @@ class TBranchMethods(object):
     def numentries(self):
         return self.fEntryNumber
 
-    @property
-    def branches(self):
-        return self.fBranches
+    def branches(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
+        for branch in self.fBranches:
+            if filtername(branch.name) and filtertitle(branch.title):
+                yield branch
+            if recursive:
+                for x in branch.branches(recursive, filtername, filtertitle):
+                    yield x
 
-    @property
-    def allbranches(self):
-        out = []
-        for branch in self.branches:
-            out.append(branch)
-            out.extend(branch.allbranches)
-        return out
+    def allbranches(self, filtername=lambda name: True, filtertitle=lambda title: True):
+        return self.branches(True, filtername, filtertitle)
 
-    @property
-    def branchnames(self):
-        return [branch.name for branch in self.branches]
+    def branchnames(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
+        for branch in self.branches(recursive, filtername, filtertitle):
+            yield branch.name
 
-    @property
-    def allbranchnames(self):
-        return [branch.name for branch in self.allbranches]
+    def allbranchnames(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
+        return self.branchnames(True, filtername, filtertitle)
 
     @property
     def numbaskets(self):
@@ -582,7 +589,7 @@ class TBranchMethods(object):
             
     def branch(self, name):
         name = _bytesid(name)
-        for branch in self.branches:
+        for branch in self.branches():
             if branch.name == name:
                 return branch
             try:
