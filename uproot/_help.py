@@ -169,12 +169,17 @@ u"""Read an object from the ROOT file or directory by name.
 
     Parameters
     ----------
-    name : str (unicode or bytes)
+    name : str (str)
         name of the object. Any text before a "``/``" is interpreted as a subdirectory, and subdirectories of any depth may be searched. A number after a "``;``" indicates a `TKey <uproot.rootio.TKey>` cycle.
 
     cycle : ``None`` or int
         `TKey <uproot.rootio.TKey>` cycle number to disambiguate keys of the same name. This argument overrides a number after a "``;``".
 
+    Returns
+    -------
+    :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`
+        a freshly read object from the ROOT file.
+    
     Notes
     -----
 
@@ -194,6 +199,11 @@ u"""Iterate over key names in this directory.
 
     {filterclass}
 
+    Returns
+    -------
+    *iterator over bytes*
+        names of objects and subdirectories in the file.
+
     Notes
     -----
 
@@ -210,6 +220,11 @@ u"""Iterate over objects in this directory.
     {filtername}
 
     {filterclass}
+
+    Returns
+    -------
+    *iterator over* :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`
+        freshly read objects from the ROOT file.
 """.format(**rootdirectory_fragments)
 
 _method(uproot.rootio.ROOTDirectory.items).__doc__ = \
@@ -222,6 +237,11 @@ u"""Iterate over *(key name, object)* pairs in this directory, like a ``dict``.
     {filtername}
 
     {filterclass}
+
+    Returns
+    -------
+    *iterator over (bytes,* :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`*)*
+        name-object pairs from the file.
 """.format(**rootdirectory_fragments)
 
 _method(uproot.rootio.ROOTDirectory.classes).__doc__ = \
@@ -236,6 +256,11 @@ u"""Iterate over *(key name, class name)* pairs in this directory.
     {filtername}
 
     {filterclass}
+
+    Returns
+    -------
+    *iterator over *(bytes, bytes)*
+        name-class name pairs from the file.
 """.format(**rootdirectory_fragments)
 
 _method(uproot.rootio.ROOTDirectory.allkeys).__doc__ = \
@@ -248,6 +273,11 @@ u"""Iterate over keys at all levels of depth (shortcut for passing ``recursive=T
     {filtername}
 
     {filterclass}
+
+    Returns
+    -------
+    *iterator over bytes*
+        names of objects and subdirectories in the file.
 """.format(**rootdirectory_fragments)
     
 _method(uproot.rootio.ROOTDirectory.allvalues).__doc__ = \
@@ -258,6 +288,11 @@ u"""Iterate over objects at all levels of depth (shortcut for passing ``recursiv
     {filtername}
 
     {filterclass}
+
+    Returns
+    -------
+    *iterator over* :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`
+        freshly read objects from the ROOT file.
 """.format(**rootdirectory_fragments)
 
 _method(uproot.rootio.ROOTDirectory.allitems).__doc__ = \
@@ -268,6 +303,11 @@ u"""Iterate over *(key name, object)* pairs at all levels of depth (shortcut for
     {filtername}
 
     {filterclass}
+
+    Returns
+    -------
+    *iterator over (bytes,* :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`*)*
+        name-object pairs from the file.
 """.format(**rootdirectory_fragments)
 
 _method(uproot.rootio.ROOTDirectory.allclasses).__doc__ = \
@@ -280,6 +320,11 @@ u"""Iterate over *(key name, class name)* pairs at all levels of depth (shortcut
     {filtername}
 
     {filterclass}
+
+    Returns
+    -------
+    *iterator over *(bytes, bytes)*
+        name-class name pairs from the file.
 """.format(**rootdirectory_fragments)
 
 ################################################################ uproot.rootio.ROOTObject and uproot.rootio.ROOTStreamedObject
@@ -367,6 +412,9 @@ tree_fragments = {
     "filtertitle": u"""filtertitle : function: str \u21d2 bool
         only branches for which filtertitle(title) returns ``True`` are yielded by the iterator. Default returns ``True`` for all input.""",
 
+    # i
+    "i": u"""i : non-negative int
+        basket number (must be greater than or equal to zero and strictly less than *numbaskets*)."""
     }
 
 ################################################################ uproot.tree.iterate
@@ -403,6 +451,11 @@ u"""Opens a series of ROOT files (local or remote), iterating over events in chu
     {xrootdsource}
 
     {options}
+
+    Returns
+    -------
+    *iterator over *(int, int, outputtype)* (if *reportentries*) or *outputtype*
+        aligned array segments from the files.
 
     Examples
     --------
@@ -467,6 +520,11 @@ u"""Return a branch by name (at any level of depth).
     ----------
     name : str
         name of the branch to return.
+
+    Returns
+    -------
+    :py:class:`TBranch <upoot.tree.TBranchMethods>`
+        selected branch.
 """
 
 _method(uproot.tree.TTreeMethods.keys).__doc__ = \
@@ -479,6 +537,11 @@ u"""Iterate over branch names.
     {filtername}
 
     {filtertitle}
+
+    Returns
+    -------
+    *iterator over bytes*
+        names of branches.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.values).__doc__ = \
@@ -491,6 +554,11 @@ u"""Iterate over branches.
     {filtername}
 
     {filtertitle}
+
+    Returns
+    -------
+    *iterator over* :py:class:`TBranch <uproot.tree.TBranchMethods>`
+        branches.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.items).__doc__ = \
@@ -503,6 +571,11 @@ u"""Iterate over *(branch name, branch)* pairs.
     {filtername}
 
     {filtertitle}
+
+    Returns
+    -------
+    *iterator over (bytes,* :py:class:`TBranch <uproot.tree.TBranchMethods>`*)*
+        name-branch pairs.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.allkeys).__doc__ = \
@@ -513,6 +586,11 @@ u"""Iterate over branch names at all levels of depth (shortcut for passing ``rec
     {filtername}
 
     {filtertitle}
+
+    Returns
+    -------
+    *iterator over bytes*
+        names of branches.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.allvalues).__doc__ = \
@@ -523,6 +601,11 @@ u"""Iterate over branches at all levels of depth (shortcut for passing ``recursi
     {filtername}
 
     {filtertitle}
+
+    Returns
+    -------
+    *iterator over* :py:class:`TBranch <uproot.tree.TBranchMethods>`
+        branches.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.allitems).__doc__ = \
@@ -533,12 +616,22 @@ u"""Iterate over *(branch name, branch)* pairs at all levels of depth (shortcut 
     {filtername}
 
     {filtertitle}
+
+    Returns
+    -------
+    *iterator over (bytes,* :py:class:`TBranch <uproot.tree.TBranchMethods>`
+        name-branch pairs.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.clusters).__doc__ = \
 u"""Iterate over *(int, int)* pairs representing cluster entry starts and stops in this TTree.
 
     ..todo:: Not implemented.
+
+    Returns
+    -------
+    *iterator over (int, int)*
+        start (inclusive) and stop (exclusive) pairs for each cluster.
 """
 
 _method(uproot.tree.TTreeMethods.array).__doc__ = \
@@ -563,6 +656,10 @@ u"""Read one branch into an array (or other object if provided an alternate *int
     {executor}
 
     {blocking}
+
+    Returns
+    -------
+    array or other object, depending on *interpretation*.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.lazyarray).__doc__ = \
@@ -581,6 +678,10 @@ u"""Create a lazy array that would read the branch as needed.
     {keycache}
 
     {executor}
+
+    Returns
+    -------
+    lazy array.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.arrays).__doc__ = \
@@ -605,6 +706,10 @@ u"""read many branches into arrays (or other objects if provided alternate *inte
     {executor}
 
     {blocking}
+
+    Returns
+    -------
+    outputtype of arrays or other objects, depending on *interpretation*.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.lazyarrays).__doc__ = \
@@ -623,6 +728,10 @@ u"""Create many lazy arrays.
     {keycache}
 
     {executor}
+
+    Returns
+    -------
+    outputtype of lazy arrays.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.iterate).__doc__ = \
@@ -649,6 +758,11 @@ u"""Iterate over many arrays at once, yielding a fixed number of entries at a ti
     {keycache}
 
     {executor}
+
+    Returns
+    -------
+    *iterator over *(int, int, outputtype)* (if *reportentries*) or *outputtype*
+        aligned array segments from the TTree.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.iterate_clusters).__doc__ = \
@@ -675,6 +789,11 @@ u"""Iterate at cluster boundaries, which are more efficient but not necessarily 
     {keycache}
 
     {executor}
+
+    Returns
+    -------
+    *iterator over *(int, int, outputtype)* (if *reportentries*) or *outputtype*
+        aligned array segments from the TTree.
 """.format(**tree_fragments)
 
 ################################################################ uproot.tree.TBranchMethods
@@ -727,89 +846,378 @@ u"""Adds array reading methods to TBranch objects that have been streamed from a
 """
 
 _method(uproot.tree.TBranchMethods.get).__doc__ = \
-u"""
+u"""Return a subbranch by name (at any level of depth).
+
+    Parameters
+    ----------
+    name : str
+        name of the subbranch to return.
+
+    Returns
+    -------
+    :py:class:`TBranch <upoot.tree.TBranchMethods>`
+        selected branch.
 """
 
 _method(uproot.tree.TBranchMethods.keys).__doc__ = \
-u"""
-"""
+u"""Iterate over subbranch names.
+
+    Parameters
+    ----------
+    {recursive}
+
+    {filtername}
+
+    {filtertitle}
+
+    Returns
+    -------
+    *iterator over bytes*
+        names of branches.
+""".format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.values).__doc__ = \
-u"""
-"""
+u"""Iterate over subbranches.
+
+    Parameters
+    ----------
+    {recursive}
+
+    {filtername}
+
+    {filtertitle}
+
+    Returns
+    -------
+    *iterator over* :py:class:`TBranch <uproot.tree.TBranchMethods>`
+        branches.
+""".format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.items).__doc__ = \
-u"""
-"""
+u"""Iterate over *(subbranch name, subbranch)* pairs.
+
+    Parameters
+    ----------
+    {recursive}
+
+    {filtername}
+
+    {filtertitle}
+
+    Returns
+    -------
+    *iterator over (bytes,* :py:class:`TBranch <uproot.tree.TBranchMethods>`*)*
+        name-branch pairs.
+""".format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.allkeys).__doc__ = \
-u"""
-"""
+u"""Iterate over subbranch names at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`keys <uproot.tree.TBranchMethods.keys>`).
+
+    Parameters
+    ----------
+    {filtername}
+
+    {filtertitle}
+
+    Returns
+    -------
+    *iterator over bytes*
+        names of branches.
+""".format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.allvalues).__doc__ = \
-u"""
-"""
+u"""Iterate over subbranches at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`values <uproot.tree.TBranchMethods.values>`).
+
+    Parameters
+    ----------
+    {filtername}
+
+    {filtertitle}
+
+    Returns
+    -------
+    *iterator over* :py:class:`TBranch <uproot.tree.TBranchMethods>`
+        branches.
+""".format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.allitems).__doc__ = \
-u"""
-"""
+u"""Iterate over *(subbranch name, subbranch)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`items <uproot.tree.TBranchMethods.items>`).
+
+    Parameters
+    ----------
+    {filtername}
+
+    {filtertitle}
+
+    Returns
+    -------
+    *iterator over (bytes,* :py:class:`TBranch <uproot.tree.TBranchMethods>`
+        name-branch pairs.
+""".format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.uncompressedbytes).__doc__ = \
-u"""
-"""
+u"""The number of bytes contained in the TBranch (data and offsets; not including any key headers) *after* decompression, if applicable.
+
+    Parameters
+    ----------
+    {keycache}
+
+    Returns
+    -------
+    *int*
+        uncompressed bytes.
+""".format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.compressedbytes).__doc__ = \
-u"""
-"""
+u"""The number of bytes contained in the TBranch (data and offsets; not including any key headers) *before* decompression, if applicable.
+
+    Parameters
+    ----------
+    {keycache}
+
+    Returns
+    -------
+    *int*
+        compressed bytes.
+""".format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.compressionratio).__doc__ = \
-u"""
-"""
+u"""The uncompressed bytes divided by compressed bytes (greater than or equal to 1).
+
+    Parameters
+    ----------
+    {keycache}
+
+    Returns
+    -------
+    *float*
+        compression ratio.
+""".format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.numitems).__doc__ = \
-u"""
-"""
+u"""The number of items in the TBranch, under a given interpretation.
+
+    Parameters
+    ----------
+    {interpretation}
+
+    {keycache}
+
+    Returns
+    -------
+    *int*
+        number of items.
+""".format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.basket_entrystart).__doc__ = \
-u"""
-"""
+u"""The starting entry for a given basket (inclusive).
+
+    Parameters
+    ----------
+    {i}
+
+    Returns
+    -------
+    *int*
+        starting entry.
+""".format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.basket_entrystop).__doc__ = \
-u"""
-"""
+u"""The stopping entry for a given basket (exclusive).
+
+    Parameters
+    ----------
+    {i}
+
+    Returns
+    -------
+    *int*
+        stopping entry.
+""".format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.basket_numentries).__doc__ = \
-u"""
-"""
+u"""The number of entries in a given basket.
+
+    Parameters
+    ----------
+    {i}
+
+    Returns
+    -------
+    *int*
+        number of entries.
+""".format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.basket_uncompressedbytes).__doc__ = \
-u"""
-"""
+u"""The number of bytes contained in the basket (data and offsets; not including any key headers) *after* decompression, if applicable.
+
+    Parameters
+    ----------
+    {i}
+
+    {keycache}
+
+    Returns
+    -------
+    *int*
+        number of uncompressed bytes.    
+""".format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.basket_compressedbytes).__doc__ = \
-u"""
-"""
+u"""The number of bytes contained in the basket (data and offsets; not including any key headers) *before* decompression, if applicable.
+
+    Parameters
+    ----------
+    {i}
+
+    {keycache}
+
+    Returns
+    -------
+    *int*
+        number of compressed bytes.
+""".format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.basket_numitems).__doc__ = \
-u"""
-"""
+u"""The number of items in the basket, under a given interpretation.
+
+    Parameters
+    ----------
+    {i}
+
+    {interpretation}
+
+    {keycache}
+
+    Returns
+    -------
+    *int*
+        number of items.
+""".format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.array).__doc__ = \
-u"""
+u"""Read the branch into an array (or other object if provided an alternate *interpretation*).
+
+    Parameters
+    ----------
+    {interpretation}
+
+    {entrystart}
+
+    {entrystop}
+
+    {cache}
+
+    {rawcache}
+
+    {keycache}
+
+    {executor}
+
+    {blocking}
+
+    Returns
+    -------
+    array or other object, depending on *interpretation*
+        branch data.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.lazyarray).__doc__ = \
-u"""
+u"""Create a lazy array that would read the branch as needed.
+
+    Parameters
+    ----------
+    {interpretation}
+
+    {cache}
+
+    {rawcache}
+
+    {keycache}
+
+    {executor}
+
+    Returns
+    -------
+    lazy array
+        branch data.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.basket).__doc__ = \
-u"""
+u"""Read a single basket into an array.
+
+    Parameters
+    ----------
+    {i}
+
+    {interpretation}
+
+    {entrystart}
+
+    {entrystop}
+
+    {cache}
+
+    {rawcache}
+
+    {keycache}
+
+    Returns
+    -------
+    array or other object, depending on *interpretation*.
+        branch data.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.baskets).__doc__ = \
-u"""
+u"""Read baskets into a list of arrays.
+
+    Parameters
+    ----------
+    {interpretation}
+
+    {entrystart}
+
+    {entrystop}
+
+    {cache}
+
+    {rawcache}
+
+    {keycache}
+
+    {reportentries}
+
+    {executor}
+
+    {blocking}
+
+    Returns
+    -------
+    list of arrays or other objects, depending on *interpretation*.
+        basket data.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.iterate_baskets).__doc__ = \
-u"""
+u"""Iterate over baskets.
+
+    Parameters
+    ----------
+    {interpretation}
+
+    {entrystart}
+
+    {entrystop}
+
+    {cache}
+
+    {rawcache}
+
+    {keycache}
+
+    {reportentries}
+
+    Returns
+    -------
+    iterator over arrays or other objects, depending on *interpretation*
+        basket data.
 """.format(**tree_fragments)
