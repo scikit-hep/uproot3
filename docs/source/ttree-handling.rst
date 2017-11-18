@@ -6,8 +6,8 @@ uproot.tree.TTreeMethods
 
 .. autoclass:: uproot.tree.TTreeMethods
 
-basic information
-^^^^^^^^^^^^^^^^^
+branch accessors
+^^^^^^^^^^^^^^^^
 
 .. automethod:: uproot.tree.TTreeMethods.get
 
@@ -68,20 +68,72 @@ oamap
 uproot.tree.TBranchMethods
 --------------------------
 
-basic information
-^^^^^^^^^^^^^^^^^
+.. autoclass:: uproot.tree.TBranchMethods
 
-basket
-^^^^^^
+branch accessors
+^^^^^^^^^^^^^^^^
 
-baskets
-^^^^^^^
+.. automethod:: uproot.tree.TBranchMethods.get
 
-iterate_baskets
-^^^^^^^^^^^^^^^
+.. automethod:: uproot.tree.TBranchMethods.keys
+
+.. automethod:: uproot.tree.TBranchMethods.values
+
+.. automethod:: uproot.tree.TBranchMethods.items
+
+.. automethod:: uproot.tree.TBranchMethods.allkeys
+
+.. automethod:: uproot.tree.TBranchMethods.allvalues
+
+.. automethod:: uproot.tree.TBranchMethods.allitems
+
+branch information
+^^^^^^^^^^^^^^^^^^
+
+.. automethod:: uproot.tree.TBranchMethods.uncompressedbytes
+
+.. automethod:: uproot.tree.TBranchMethods.compressedbytes
+
+.. automethod:: uproot.tree.TBranchMethods.compressionratio
+
+.. automethod:: uproot.tree.TBranchMethods.numitems
+
+basket information
+^^^^^^^^^^^^^^^^^^
+
+.. automethod:: uproot.tree.TBranchMethods.basket_entrystart
+
+.. automethod:: uproot.tree.TBranchMethods.basket_entrystop
+
+.. automethod:: uproot.tree.TBranchMethods.basket_numentries
+
+.. automethod:: uproot.tree.TBranchMethods.basket_uncompressedbytes
+
+.. automethod:: uproot.tree.TBranchMethods.basket_compressedbytes
+
+.. automethod:: uproot.tree.TBranchMethods.basket_numitems
 
 array
 ^^^^^
 
+.. automethod:: uproot.tree.TBranchMethods.array
+
 lazyarray
 ^^^^^^^^^
+
+.. automethod:: uproot.tree.TBranchMethods.lazyarray
+
+basket
+^^^^^^
+
+.. automethod:: uproot.tree.TBranchMethods.basket
+
+baskets
+^^^^^^^
+
+.. automethod:: uproot.tree.TBranchMethods.baskets
+
+iterate_baskets
+^^^^^^^^^^^^^^^
+
+.. automethod:: uproot.tree.TBranchMethods.iterate_baskets

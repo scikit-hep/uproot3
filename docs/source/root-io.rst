@@ -1,9 +1,9 @@
 ROOT I/O
 ========
 
-The :py:mod:`uproot.rootio` module contains everything needed to navigate through a ROOT file and extract inert, data-only objects. Methods for those objects are defined in other modules. The :func:`uproot.open <uproot.rootio.open>` function returns a :class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` object, which is a handle into the file, from which all other data can be accessed.
+The :py:mod:`uproot.rootio` module contains everything needed to navigate through a ROOT file and extract inert, data-only objects. Methods for those objects are defined in other modules. The :py:func:`uproot.open <uproot.rootio.open>` function returns a :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` object, which is a handle into the file, from which all other data can be accessed.
 
-This module has many more classes than those documented here, but all but a few are considered internal details. The classes documented below represent the public API. In fact, only :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` has useful attributes and methods for a typical user. The other two, :class:`ROOTObject <uproot.rootio.ROOTObject>` and :class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`, are documented because they are superclasses of all objects that could be extracted from a ROOT file, and may be useful in ``isinstance`` checks.
+This module has many more classes than those documented here, but all but a few are considered internal details. The classes documented below represent the public API. In fact, only :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` has useful attributes and methods for a typical user. The other two, :py:class:`ROOTObject <uproot.rootio.ROOTObject>` and :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`, are documented because they are superclasses of all objects that could be extracted from a ROOT file, and may be useful in ``isinstance`` checks.
 
 uproot.rootio.ROOTDirectory
 ---------------------------

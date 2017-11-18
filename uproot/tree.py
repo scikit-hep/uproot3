@@ -309,7 +309,7 @@ class TTreeMethods(object):
 
         return self._iterate(startstop(), branches, outputtype, reportentries, cache, rawcache, keycache, executor, True)
 
-    def iterate_clusters(self, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, executor=None):
+    def iterate_clusters(self, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, cache=None, rawcache=None, keycache=None, executor=None):
         return self._iterate(self.clusters(), branches, outputtype, reportentries, cache, rawcache, keycache, executor, True)
 
     def _normalize_branches(self, arg):
@@ -462,42 +462,79 @@ class TBranchMethods(object):
     def numbaskets(self):
         return self.fWriteBasket
 
-    @property
-    def uncompressedbytes(self):
-        keysource = self._source.threadlocal()
-        try:
+    def uncompressedbytes(self, keycache=None):
+        if keycache is not None and all(self._keycachekey(i) in keycache for i in range(self.numbaskets)):
             out = 0
             for i in range(self.numbaskets):
-                key = self._basketkey(keysource, i, False)
+                key = keycache[self._keycachekey(i)]
                 out += key.fObjlen
             return out
-        finally:
-            keysource.dismiss()
 
-    @property
-    def compressedbytes(self):
-        keysource = self._source.threadlocal()
-        try:
+        else:
+            keysource = self._source.threadlocal()
+            try:
+                out = 0
+                for i in range(self.numbaskets):
+                    if keycache is not None and self._keycachekey(i) in keycache:
+                        key = keycache[self._keycachekey(i)]
+                    else:
+                        key = self._basketkey(keysource, i, False)
+                    out += key.fObjlen
+                    if keycache is not None:
+                        keycache[self._keycachekey(i)] = key
+                return out
+            finally:
+                keysource.dismiss()
+
+    def compressedbytes(self, keycache=None):
+        if keycache is not None and all(self._keycachekey(i) in keycache for i in range(self.numbaskets)):
             out = 0
             for i in range(self.numbaskets):
-                key = self._basketkey(keysource, i, False)
+                key = keycache[self._keycachekey(i)]
                 out += key.fNbytes - key.fKeylen
             return out
-        finally:
-            keysource.dismiss()
 
-    @property
-    def compressionratio(self):
-        keysource = self._source.threadlocal()
-        try:
+        else:
+            keysource = self._source.threadlocal()
+            try:
+                out = 0
+                for i in range(self.numbaskets):
+                    if keycache is not None and self._keycachekey(i) in keycache:
+                        key = keycache[self._keycachekey(i)]
+                    else:
+                        key = self._basketkey(keysource, i, False)
+                    out += key.fNbytes - key.fKeylen
+                    if keycache is not None:
+                        keycache[self._keycachekey(i)] = key
+                return out
+            finally:
+                keysource.dismiss()
+
+    def compressionratio(self, keycache=None):
+        if keycache is not None and all(self._keycachekey(i) in keycache for i in range(self.numbaskets)):
             numer, denom = 0, 0
             for i in range(self.numbaskets):
-                key = self._basketkey(keysource, i, False)
+                key = keycache[self._keycachekey(i)]
                 numer += key.fObjlen
                 denom += key.fNbytes - key.fKeylen
             return float(numer) / float(denom)
-        finally:
-            keysource.dismiss()
+
+        else:
+            keysource = self._source.threadlocal()
+            try:
+                numer, denom = 0, 0
+                for i in range(self.numbaskets):
+                    if keycache is not None and self._keycachekey(i) in keycache:
+                        key = keycache[self._keycachekey(i)]
+                    else:
+                        key = self._basketkey(keysource, i, False)
+                    numer += key.fObjlen
+                    denom += key.fNbytes - key.fKeylen
+                    if keycache is not None:
+                        keycache[self._keycachekey(i)] = key
+                return float(numer) / float(denom)
+            finally:
+                keysource.dismiss()
 
     def _normalize_dtype(self, interpretation):
         if inspect.isclass(interpretation) and issubclass(interpretation, numpy.generic):
@@ -582,21 +619,31 @@ class TBranchMethods(object):
     def basket_numentries(self, i):
         return self.basket_entrystop(i) - self.basket_entrystart(i)
 
-    def basket_uncompressedbytes(self, i):
-        keysource = self._source.threadlocal()
-        try:
-            key = self._basketkey(keysource, i, False)
-            return key.fObjlen
-        finally:
-            keysource.dismiss()
+    def basket_uncompressedbytes(self, i, keycache=None):
+        if keycache is not None and self._keycachekey(i) in keycache:
+            key = keycache[self._keycachekey(i)]
+        else:
+            keysource = self._source.threadlocal()
+            try:
+                key = self._basketkey(keysource, i, False)
+                if keycache is not None:
+                    keycache[self._keycachekey(i)] = key
+            finally:
+                keysource.dismiss()
+        return key.fObjlen
 
     def basket_compressedbytes(self, i):
-        keysource = self._source.threadlocal()
-        try:
-            key = self._basketkey(keysource, i, False)
-            return key.fNbytes - key.fKeylen
-        finally:
-            keysource.dismiss()
+        if keycache is not None and self._keycachekey(i) in keycache:
+            key = keycache[self._keycachekey(i)]
+        else:
+            keysource = self._source.threadlocal()
+            try:
+                key = self._basketkey(keysource, i, False)
+                if keycache is not None:
+                    keycache[self._keycachekey(i)] = key
+            finally:
+                keysource.dismiss()
+        return key.fNbytes - key.fKeylen
 
     def basket_numitems(self, i, interpretation=None, keycache=None):
         interpretation = self._normalize_interpretation(interpretation)
