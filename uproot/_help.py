@@ -393,37 +393,37 @@ u"""Opens a series of ROOT files (local or remote), iterating over events in chu
 
 ################################################################ uproot.tree.TTreeMethods
 
-uproot.tree.TTreeMethods.__doc__ = \
-u"""Adds array reading methods to TTree objects that have been streamed from a ROOT file.
+# uproot.tree.TTreeMethods.__doc__ = \
+# u"""Adds array reading methods to TTree objects that have been streamed from a ROOT file.
 
-    - square brackets (``__getitem__``) returns a branch by name (see :meth:`get <uproot.tree.TTreeMethods.get>`).
-    - the ``len`` function (``__len__``) returns the number of entries (same as ``numentries``).
-    - iteration (``__iter__``) has no implementation. This is to avoid confusion between iterating over all branches (probably not what you want, but fitting the pattern set by :class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` and ``dict``) and iterating over the data. Also, iteration over data requires a user-provided ``entrystepsize``, so it must be started with a function (see :meth:`iterate <uproot.tree.TTreeMethods.iterate>`).
+#     - square brackets (``__getitem__``) returns a branch by name (see :meth:`get <uproot.tree.TTreeMethods.get>`).
+#     - the ``len`` function (``__len__``) returns the number of entries (same as ``numentries``).
+#     - iteration (``__iter__``) has no implementation. This is to avoid confusion between iterating over all branches (probably not what you want, but fitting the pattern set by :class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` and ``dict``) and iterating over the data. Also, iteration over data requires a user-provided ``entrystepsize``, so it must be started with a function (see :meth:`iterate <uproot.tree.TTreeMethods.iterate>`).
 
-    **Attributes, properties, and methods:**
+#     **Attributes, properties, and methods:**
 
-    - **name** (*bytes*) name of the TTree.
-    - **title** (*bytes*) title of the TTree.
-    - **numentries** (*int*) number of entries in the TTree (same as ``len``).
-    - **pandas** connector to `Pandas <http://pandas.pydata.org/>`_ functions *(not implemented)*.
-    - **numba** connector to `Numba <http://numba.pydata.org/>`_ functions *(not implemented)*.
-    - **oamap** connector to `OAMap <https://github.com/diana-hep/oamap>`_ functions *(not implemented)*.
+#     - **name** (*bytes*) name of the TTree.
+#     - **title** (*bytes*) title of the TTree.
+#     - **numentries** (*int*) number of entries in the TTree (same as ``len``).
+#     - **pandas** connector to `Pandas <http://pandas.pydata.org/>`_ functions *(not implemented)*.
+#     - **numba** connector to `Numba <http://numba.pydata.org/>`_ functions *(not implemented)*.
+#     - **oamap** connector to `OAMap <https://github.com/diana-hep/oamap>`_ functions *(not implemented)*.
 
-    - :meth:`get <uproot.tree.TTreeMethods.get>` return a branch by name (at any level of depth).
-    - :meth:`keys <uproot.tree.TTreeMethods.keys>` iterate over branch names.
-    - :meth:`values <uproot.tree.TTreeMethods.values>` iterate over branches.
-    - :meth:`items <uproot.tree.TTreeMethods.items>` iterate over branch name, branch pairs.
-    - :meth:`allkeys <uproot.tree.TTreeMethods.allkeys>` iterate over branch names at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`keys <uproot.tree.TTreeMethods.keys>`).
-    - :meth:`allvalues <uproot.tree.TTreeMethods.allvalues>` iterate over branches at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`values <uproot.tree.TTreeMethods.values>`).
-    - :meth:`allitems <uproot.tree.TTreeMethods.allitems>` iterate over branch name, branch pairs at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`items <uproot.tree.TTreeMethods.items>`).
-    - :meth:`clusters <uproot.tree.TTreeMethods.clusters>` iterate over clusters in this TTree *(not implemented)*.
+#     - :meth:`get <uproot.tree.TTreeMethods.get>` return a branch by name (at any level of depth).
+#     - :meth:`keys <uproot.tree.TTreeMethods.keys>` iterate over branch names.
+#     - :meth:`values <uproot.tree.TTreeMethods.values>` iterate over branches.
+#     - :meth:`items <uproot.tree.TTreeMethods.items>` iterate over branch name, branch pairs.
+#     - :meth:`allkeys <uproot.tree.TTreeMethods.allkeys>` iterate over branch names at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`keys <uproot.tree.TTreeMethods.keys>`).
+#     - :meth:`allvalues <uproot.tree.TTreeMethods.allvalues>` iterate over branches at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`values <uproot.tree.TTreeMethods.values>`).
+#     - :meth:`allitems <uproot.tree.TTreeMethods.allitems>` iterate over branch name, branch pairs at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`items <uproot.tree.TTreeMethods.items>`).
+#     - :meth:`clusters <uproot.tree.TTreeMethods.clusters>` iterate over clusters in this TTree *(not implemented)*.
 
-    **Methods for reading array data:**
+#     **Methods for reading array data:**
 
-    - :meth:`array <uproot.tree.TTreeMethods.array>` read one branch into an array.
-    - :meth:`lazyarray <uproot.tree.TTreeMethods.lazyarray>` create a lazy array that would read the branch as needed.
-    - :meth:`arrays <uproot.tree.TTreeMethods.arrays>` read potentially many branches into arrays.
-    - :meth:`lazyarrays <uproot.tree.TTreeMethods.lazyarrays>` create potentially many lazy arrays.
-    - :meth:`iterate <uproot.tree.TTreeMethods.iterate>` iterate over potentially many arrays at once, yielding a fixed number of entries at a time in all the arrays.
-    - :meth:`iterate_clusters <uproot.tree.TTreeMethods.iterate_clusters>` iterate at cluster boundaries, which are more efficient but not necessarily a fixed number of entries *(not implemented)*.
-""".format()
+#     - :meth:`array <uproot.tree.TTreeMethods.array>` read one branch into an array.
+#     - :meth:`lazyarray <uproot.tree.TTreeMethods.lazyarray>` create a lazy array that would read the branch as needed.
+#     - :meth:`arrays <uproot.tree.TTreeMethods.arrays>` read potentially many branches into arrays.
+#     - :meth:`lazyarrays <uproot.tree.TTreeMethods.lazyarrays>` create potentially many lazy arrays.
+#     - :meth:`iterate <uproot.tree.TTreeMethods.iterate>` iterate over potentially many arrays at once, yielding a fixed number of entries at a time in all the arrays.
+#     - :meth:`iterate_clusters <uproot.tree.TTreeMethods.iterate_clusters>` iterate at cluster boundaries, which are more efficient but not necessarily a fixed number of entries *(not implemented)*.
+# """.format()

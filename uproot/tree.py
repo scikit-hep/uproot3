@@ -145,8 +145,8 @@ def _iterate(path, treepath, branches, localsource, xrootdsource, **options):
 ################################################################ methods for TTree
 
 class TTreeMethods(object):
-    # makes __doc__ attribute mutable before Python 3.3
-    __metaclass__ = type.__new__(type, "type", (type,), {})
+    # # makes __doc__ attribute mutable before Python 3.3
+    # __metaclass__ = type.__new__(type, "type", (type,), {})
 
     _copycontext = True
 
@@ -407,8 +407,8 @@ uproot.rootio.methods["TTree"] = TTreeMethods
 ################################################################ methods for TBranch
 
 class TBranchMethods(object):
-    # makes __doc__ attribute mutable before Python 3.3
-    __metaclass__ = type.__new__(type, "type", (type,), {})
+    # # makes __doc__ attribute mutable before Python 3.3
+    # __metaclass__ = type.__new__(type, "type", (type,), {})
 
     def _postprocess(self, source, cursor, context):
         self.fBasketBytes = self.fBasketBytes
