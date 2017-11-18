@@ -4,8 +4,7 @@ TTree Handling
 uproot.tree.TTreeMethods
 ------------------------
 
-properties
-^^^^^^^^^^
+.. autoclass:: uproot.tree.TTreeMethods
 
 array
 ^^^^^
@@ -30,12 +29,6 @@ pandas
 
 uproot.tree.TBranchMethods
 --------------------------
-
-properties
-^^^^^^^^^^
-
-basket properties
-^^^^^^^^^^^^^^^^^
 
 basket
 ^^^^^^

@@ -141,7 +141,7 @@ u"""Represents a ROOT file or directory, an entry point for extracting objects.
 
     **Attributes, properties, and methods:**
 
-    - **name** (*str*) name of the file or directory *as read from the ROOT file*. (ROOT files may be imprinted with a different name than they have in the file system.)
+    - **name** (*bytes*) name of the file or directory *as read from the ROOT file*. (ROOT files may be imprinted with a different name than they have in the file system.)
 
     - **compression** (:class:`Compression <uproot.source.compressed.Compression>`) the compression algorithm and level specified in the file header. (Some objects, including TTree branches, may have different compression settings than the global file settings.)
 
@@ -334,6 +334,7 @@ tree_fragments = {
     # executor
     "executor": u"""executor : `concurrent.futures.Executor <https://docs.python.org/3/library/concurrent.futures.html>`_
         if not ``None`` *(default)*, parallelize basket-reading and decompression by scheduling tasks on the executor. Assumes caches are thread-safe.""",
+
     }
 
 ################################################################ uproot.tree.iterate
