@@ -129,13 +129,13 @@ u"""Opens a remote ROOT file with XRootD (if installed).
 ################################################################ uproot.rootio.ROOTDirectory
 
 uproot.rootio.ROOTDirectory.__doc__ = \
-u"""Represents a ROOT file or directory, an entry point for extracting objects.
+u"""Represents a ROOT file or directory, an entry point for reading objects.
 
     Although this class has a constructor that could be called by a user, objects are usually created from ROOT files through :func:`open <uproot.rootio.open>` or :func:`xrootd <uproot.rootio.xrootd>`.
 
     :class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` objects may be accessed as Python containers:
 
-    - square brackets (``__getitem__``) extract objects by key name (see :meth:`get <uproot.rootio.ROOTDirectory.get>`).
+    - square brackets (``__getitem__``) read objects from the file by key name (see :meth:`get <uproot.rootio.ROOTDirectory.get>`).
     - the ``len`` function (``__len__``) returns the number of keys.
     - iteration (``__iter__``) iterates over the *names* of the keys only (like a ``dict``, see :meth:`keys <uproot.rootio.ROOTDirectory.keys>`).
 
@@ -145,19 +145,19 @@ u"""Represents a ROOT file or directory, an entry point for extracting objects.
 
     - **compression** (:class:`Compression <uproot.source.compressed.Compression>`) the compression algorithm and level specified in the file header. (Some objects, including TTree branches, may have different compression settings than the global file settings.)
 
-    - :meth:`get <uproot.rootio.ROOTDirectory.get>` extract an object by name.
+    - :meth:`get <uproot.rootio.ROOTDirectory.get>` read an object from the file, selected by name.
 
-    - :meth:`keys <uproot.rootio.ROOTDirectory.keys>` iterate over key names.
+    - :meth:`keys <uproot.rootio.ROOTDirectory.keys>` iterate over key names in this directory.
 
-    - :meth:`values <uproot.rootio.ROOTDirectory.values>` iterate over objects contained in the file or directory.
+    - :meth:`values <uproot.rootio.ROOTDirectory.values>` iterate over objects in this directory.
 
-    - :meth:`items <uproot.rootio.ROOTDirectory.items>` iterate over key-value pairs, like a ``dict``.
+    - :meth:`items <uproot.rootio.ROOTDirectory.items>` iterate over key-value pairs in this directory, like a ``dict``.
 
-    - :meth:`classes <uproot.rootio.ROOTDirectory.classes>` iterate over key-class name pairs without extracting the objects.
+    - :meth:`classes <uproot.rootio.ROOTDirectory.classes>` iterate over key-class name pairs in this directory.
 
     - :meth:`allkeys <uproot.rootio.ROOTDirectory.allkeys>` iterate over keys at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`keys <uproot.rootio.ROOTDirectory.keys>`).
 
-    - :meth:`allvalues <uproot.rootio.ROOTDirectory.allvalues>` iterate over values at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`values <uproot.rootio.ROOTDirectory.values>`).
+    - :meth:`allvalues <uproot.rootio.ROOTDirectory.allvalues>` iterate over objects at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`values <uproot.rootio.ROOTDirectory.values>`).
 
     - :meth:`allitems <uproot.rootio.ROOTDirectory.allitems>` iterate over key-value pairs at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`items <uproot.rootio.ROOTDirectory.items>`).
 
@@ -165,7 +165,7 @@ u"""Represents a ROOT file or directory, an entry point for extracting objects.
 """.format(**rootdirectory_fragments)
 
 _method(uproot.rootio.ROOTDirectory.get).__doc__ = \
-u"""Extract an object from the ROOT file or directory by name.
+u"""Read an object from the ROOT file or directory by name.
 
     Parameters
     ----------
@@ -182,9 +182,9 @@ u"""Extract an object from the ROOT file or directory by name.
 """.format(**rootdirectory_fragments)
 
 _method(uproot.rootio.ROOTDirectory.keys).__doc__ = \
-u"""Iterate over the key names of this ROOT file or directory.
+u"""Iterate over key names in this directory.
 
-    This method does not read the objects from disk.
+    This method does not read objects.
 
     Parameters
     ----------
@@ -201,7 +201,7 @@ u"""Iterate over the key names of this ROOT file or directory.
 """.format(**rootdirectory_fragments)
     
 _method(uproot.rootio.ROOTDirectory.values).__doc__ = \
-u"""Iterate over objects contained in this ROOT file or directory.
+u"""Iterate over objects in this directory.
 
     Parameters
     ----------
@@ -213,7 +213,7 @@ u"""Iterate over objects contained in this ROOT file or directory.
 """.format(**rootdirectory_fragments)
 
 _method(uproot.rootio.ROOTDirectory.items).__doc__ = \
-u"""Iterate over key-value pairs from this ROOT file or directory, like a ``dict``.
+u"""Iterate over key-value pairs in this directory, like a ``dict``.
 
     Parameters
     ----------
@@ -225,9 +225,9 @@ u"""Iterate over key-value pairs from this ROOT file or directory, like a ``dict
 """.format(**rootdirectory_fragments)
 
 _method(uproot.rootio.ROOTDirectory.classes).__doc__ = \
-u"""Iterate over key name, class name pairs from this ROOT file or directory.
+u"""Iterate over key-class name pairs in this directory.
 
-    This method does not read the objects from disk.
+    This method does not read objects.
 
     Parameters
     ----------
@@ -239,9 +239,9 @@ u"""Iterate over key name, class name pairs from this ROOT file or directory.
 """.format(**rootdirectory_fragments)
 
 _method(uproot.rootio.ROOTDirectory.allkeys).__doc__ = \
-u"""Iterate over the key names of in this directory and all nested directories (a shortcut for :meth:`keys <uproot.rootio.ROOTDirectory.keys>` with ``recursive=True``).
+u"""Iterate over keys at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`keys <uproot.rootio.ROOTDirectory.keys>`).
 
-    This method does not read the objects from disk.
+    This method does not read objects.
 
     Parameters
     ----------
@@ -251,7 +251,7 @@ u"""Iterate over the key names of in this directory and all nested directories (
 """.format(**rootdirectory_fragments)
     
 _method(uproot.rootio.ROOTDirectory.allvalues).__doc__ = \
-u"""Iterate over objects contained in this directory and all nested directories (a shortcut for :meth:`values <uproot.rootio.ROOTDirectory.values>` with ``recursive=True``).
+u"""Iterate over objects at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`values <uproot.rootio.ROOTDirectory.values>`).
 
     Parameters
     ----------
@@ -261,7 +261,7 @@ u"""Iterate over objects contained in this directory and all nested directories 
 """.format(**rootdirectory_fragments)
 
 _method(uproot.rootio.ROOTDirectory.allitems).__doc__ = \
-u"""Iterate over key-value pairs from this directory and all nested directories (a shortcut for :meth:`items <uproot.rootio.ROOTDirectory.items>` with ``recursive=True``).
+u"""Iterate over key-value pairs at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`items <uproot.rootio.ROOTDirectory.items>`).
 
     Parameters
     ----------
@@ -271,9 +271,9 @@ u"""Iterate over key-value pairs from this directory and all nested directories 
 """.format(**rootdirectory_fragments)
 
 _method(uproot.rootio.ROOTDirectory.allclasses).__doc__ = \
-u"""Iterate over key name, class name pairs from this directory and all nested directories (a shortcut for :meth:`classes <uproot.rootio.ROOTDirectory.classes>` with ``recursive=True``).
+u"""Iterate over key-class name pairs at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`classes <uproot.rootio.ROOTDirectory.classes>`).
 
-    This method does not read the objects from disk.
+    This method does not read objects.
 
     Parameters
     ----------
@@ -393,42 +393,37 @@ u"""Opens a series of ROOT files (local or remote), iterating over events in chu
 
 ################################################################ uproot.tree.TTreeMethods
 
-# uproot.tree.TTreeMethods.__doc__ = \
-# u"""Adds array extraction methods to TTree objects that have been streamed from a ROOT file.
+uproot.tree.TTreeMethods.__doc__ = \
+u"""Adds array reading methods to TTree objects that have been streamed from a ROOT file.
 
-#     - square brackets (``__getitem__``) return branches by key name (see :meth:`get <uproot.tree.TTreeMethods.branch>`).
-#     - the ``len`` function (``__len__``) returns the number of entries (same as ``numentries``).
-#     - iteration (``__iter__``) is not implemented (see :meth:`keys <uproot.tree.TTreeMethods.iterate>`).
+    - square brackets (``__getitem__``) returns a branch by name (see :meth:`get <uproot.tree.TTreeMethods.get>`).
+    - the ``len`` function (``__len__``) returns the number of entries (same as ``numentries``).
+    - iteration (``__iter__``) has no implementation. This is to avoid confusion between iterating over all branches (probably not what you want, but fitting the pattern set by :class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` and ``dict``) and iterating over the data. Also, iteration over data requires a user-provided ``entrystepsize``, so it must be started with a function (see :meth:`iterate <uproot.tree.TTreeMethods.iterate>`).
 
-#     **Attributes, properties, and methods:**
+    **Attributes, properties, and methods:**
 
-#     - **name** (*bytes*) 
+    - **name** (*bytes*) name of the TTree.
+    - **title** (*bytes*) title of the TTree.
+    - **numentries** (*int*) number of entries in the TTree (same as ``len``).
+    - **pandas** connector to `Pandas <http://pandas.pydata.org/>`_ functions *(not implemented)*.
+    - **numba** connector to `Numba <http://numba.pydata.org/>`_ functions *(not implemented)*.
+    - **oamap** connector to `OAMap <https://github.com/diana-hep/oamap>`_ functions *(not implemented)*.
 
-#     - :meth:`get <>`.
+    - :meth:`get <uproot.tree.TTreeMethods.get>` return a branch by name (at any level of depth).
+    - :meth:`keys <uproot.tree.TTreeMethods.keys>` iterate over branch names.
+    - :meth:`values <uproot.tree.TTreeMethods.values>` iterate over branches.
+    - :meth:`items <uproot.tree.TTreeMethods.items>` iterate over branch name, branch pairs.
+    - :meth:`allkeys <uproot.tree.TTreeMethods.allkeys>` iterate over branch names at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`keys <uproot.tree.TTreeMethods.keys>`).
+    - :meth:`allvalues <uproot.tree.TTreeMethods.allvalues>` iterate over branches at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`values <uproot.tree.TTreeMethods.values>`).
+    - :meth:`allitems <uproot.tree.TTreeMethods.allitems>` iterate over branch name, branch pairs at all levels of depth (shortcut for passing ``recursive=True`` to :meth:`items <uproot.tree.TTreeMethods.items>`).
+    - :meth:`clusters <uproot.tree.TTreeMethods.clusters>` iterate over clusters in this TTree *(not implemented)*.
 
+    **Methods for reading array data:**
 
-
-# """.format()
-
-# **name** (*bytes*) name of the TTree.
-# **title** (*bytes*) title of the TTree.
-# **numentries** (*int*) number of entries in the TTree.
-# **clusters** (*iterator over (int, int)*) *(not implemented)*
-# **pandas** *(not implemented)*
-# **numba** *(not implemented)*
-# **oamap** *(not implemented)*
-
-# get
-# keys
-# allkeys
-# values
-# allvalues
-# items
-# allitems
-
-# array
-# lazyarray
-# arrays
-# lazyarrays
-# iterate
-# iterate_clusters
+    - :meth:`array <uproot.tree.TTreeMethods.array>` read one branch into an array.
+    - :meth:`lazyarray <uproot.tree.TTreeMethods.lazyarray>` create a lazy array that would read the branch as needed.
+    - :meth:`arrays <uproot.tree.TTreeMethods.arrays>` read potentially many branches into arrays.
+    - :meth:`lazyarrays <uproot.tree.TTreeMethods.lazyarrays>` create potentially many lazy arrays.
+    - :meth:`iterate <uproot.tree.TTreeMethods.iterate>` iterate over potentially many arrays at once, yielding a fixed number of entries at a time in all the arrays.
+    - :meth:`iterate_clusters <uproot.tree.TTreeMethods.iterate_clusters>` iterate at cluster boundaries, which are more efficient but not necessarily a fixed number of entries *(not implemented)*.
+""".format()

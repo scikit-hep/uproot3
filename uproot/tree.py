@@ -145,6 +145,9 @@ def _iterate(path, treepath, branches, localsource, xrootdsource, **options):
 ################################################################ methods for TTree
 
 class TTreeMethods(object):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (type,), {})
+
     _copycontext = True
 
     def _postprocess(self, source, cursor, context):
@@ -202,7 +205,6 @@ class TTreeMethods(object):
                 pass
         raise KeyError("not found: {0}".format(repr(name)))
 
-    @property
     def clusters(self):
         # need to find an example of a file that has clusters!
         # yield as a (start, stop) generator
@@ -308,7 +310,7 @@ class TTreeMethods(object):
         return self._iterate(startstop(), branches, outputtype, reportentries, cache, rawcache, keycache, executor, True)
 
     def iterate_clusters(self, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, executor=None):
-        return self._iterate(self.clusters, branches, outputtype, reportentries, cache, rawcache, keycache, executor, True)
+        return self._iterate(self.clusters(), branches, outputtype, reportentries, cache, rawcache, keycache, executor, True)
 
     def _normalize_branches(self, arg):
         if arg is None:                                    # no specification; read all branches
@@ -405,6 +407,9 @@ uproot.rootio.methods["TTree"] = TTreeMethods
 ################################################################ methods for TBranch
 
 class TBranchMethods(object):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (type,), {})
+
     def _postprocess(self, source, cursor, context):
         self.fBasketBytes = self.fBasketBytes
         self.fBasketEntry = self.fBasketEntry
