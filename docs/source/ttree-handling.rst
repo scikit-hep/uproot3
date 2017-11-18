@@ -21,11 +21,14 @@ lazyarrays
 iterate
 ^^^^^^^
 
+pandas
+^^^^^^
+
 numba
 ^^^^^
 
-pandas
-^^^^^^
+oamap
+^^^^^
 
 uproot.tree.TBranchMethods
 --------------------------

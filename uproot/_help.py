@@ -418,11 +418,13 @@ u"""Opens a series of ROOT files (local or remote), iterating over events in chu
 # **numba** *(not implemented)*
 # **oamap** *(not implemented)*
 
-# branch
-# branches
-# allbranches
-# branchnames
-# allbranchnames
+# get
+# keys
+# allkeys
+# values
+# allvalues
+# items
+# allitems
 
 # array
 # lazyarray

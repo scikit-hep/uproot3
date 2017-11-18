@@ -162,31 +162,42 @@ class TTreeMethods(object):
     def numentries(self):
         return self.fEntries
 
-    def branches(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
+    def keys(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
+        for branch in self.values(recursive, filtername, filtertitle):
+            yield branch.name
+
+    def allkeys(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
+        return self.keys(True, filtername, filtertitle)
+
+    def values(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
         for branch in self.fBranches:
             if filtername(branch.name) and filtertitle(branch.title):
                 yield branch
             if recursive:
-                for x in branch.branches(recursive, filtername, filtertitle):
+                for x in branch.values(recursive, filtername, filtertitle):
                     yield x
 
-    def allbranches(self, filtername=lambda name: True, filtertitle=lambda title: True):
-        return self.branches(True, filtername, filtertitle)
+    def allvalues(self, filtername=lambda name: True, filtertitle=lambda title: True):
+        return self.values(True, filtername, filtertitle)
 
-    def branchnames(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
-        for branch in self.branches(recursive, filtername, filtertitle):
-            yield branch.name
+    def items(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
+        for branch in self.fBranches:
+            if filtername(branch.name) and filtertitle(branch.title):
+                yield branch.name, branch
+            if recursive:
+                for x in branch.items(recursive, filtername, filtertitle):
+                    yield x
 
-    def allbranchnames(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
-        return self.branchnames(True, filtername, filtertitle)
+    def allitems(self, filtername=lambda name: True, filtertitle=lambda title: True):
+        return self.items(True, filtername, filtertitle)
 
-    def branch(self, name):
+    def get(self, name):
         name = _bytesid(name)
-        for branch in self.branches():
+        for branch in self.values():
             if branch.name == name:
                 return branch
             try:
-                return branch.branch(name)
+                return branch.get(name)
             except KeyError:
                 pass
         raise KeyError("not found: {0}".format(repr(name)))
@@ -198,10 +209,10 @@ class TTreeMethods(object):
         raise NotImplementedError
 
     def array(self, branch, interpretation=None, entrystart=None, entrystop=None, cache=None, rawcache=None, keycache=None, executor=None, blocking=True):
-        return self.branch(branch).array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, cache=cache, rawcache=rawcache, keycache=keycache, executor=executor, blocking=blocking)
+        return self.get(branch).array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, cache=cache, rawcache=rawcache, keycache=keycache, executor=executor, blocking=blocking)
 
     def lazyarray(self, branch, interpretation=None, cache=None, rawcache=None, keycache=None, executor=None):
-        return self.branch(branch).lazyarray(interpretation=interpretation, cache=cache, rawcache=rawcache, keycache=keycache, executor=executor)
+        return self.get(branch).lazyarray(interpretation=interpretation, cache=cache, rawcache=rawcache, keycache=keycache, executor=executor)
 
     def arrays(self, branches=None, outputtype=dict, entrystart=None, entrystop=None, cache=None, rawcache=None, keycache=None, executor=None, blocking=True):
         branches = list(self._normalize_branches(branches))
@@ -301,13 +312,13 @@ class TTreeMethods(object):
 
     def _normalize_branches(self, arg):
         if arg is None:                                    # no specification; read all branches
-            for branch in self.allbranches():              # that have interpretations
+            for branch in self.allvalues():                # that have interpretations
                 interpretation = interpret(branch)
                 if interpretation is not None:
                     yield branch, interpretation
 
         elif callable(arg):
-            for branch in self.allbranches():
+            for branch in self.allvalues():
                 result = arg(branch)
                 if result is None:
                     pass
@@ -321,13 +332,13 @@ class TTreeMethods(object):
         elif isinstance(arg, dict):
             for name, interpretation in arg.items():       # dict of branch-interpretation pairs
                 name = _bytesid(name)
-                branch = self.branch(name)
+                branch = self.get(name)
                 interpretation = branch._normalize_dtype(interpretation)
                 yield branch, interpretation
 
         elif isinstance(arg, string_types):
             name = _bytesid(arg)                           # one explicitly given branch name
-            branch = self.branch(name)
+            branch = self.get(name)
             interpretation = interpret(branch)             # but no interpretation given
             if interpretation is None:
                 raise ValueError("cannot interpret branch {0} as a Python type".format(repr(name)))
@@ -342,7 +353,7 @@ class TTreeMethods(object):
             else:
                 for name in names:
                     name = _bytesid(name)
-                    branch = self.branch(name)
+                    branch = self.get(name)
                     interpretation = interpret(branch)     # but no interpretation given
                     if interpretation is None:
                         raise ValueError("cannot interpret branch {0} as a Python type".format(repr(name)))
@@ -353,7 +364,7 @@ class TTreeMethods(object):
         return self.numentries
 
     def __getitem__(self, name):
-        return self.branch(name)
+        return self.get(name)
 
     def __iter__(self):
         # prevent Python's attempt to interpret __len__ and __getitem__ as iteration
@@ -413,23 +424,34 @@ class TBranchMethods(object):
     def numentries(self):
         return self.fEntryNumber
 
-    def branches(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
+    def keys(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
+        for branch in self.values(recursive, filtername, filtertitle):
+            yield branch.name
+
+    def allkeys(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
+        return self.keys(True, filtername, filtertitle)
+
+    def values(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
         for branch in self.fBranches:
             if filtername(branch.name) and filtertitle(branch.title):
                 yield branch
             if recursive:
-                for x in branch.branches(recursive, filtername, filtertitle):
+                for x in branch.values(recursive, filtername, filtertitle):
                     yield x
 
-    def allbranches(self, filtername=lambda name: True, filtertitle=lambda title: True):
-        return self.branches(True, filtername, filtertitle)
+    def allvalues(self, filtername=lambda name: True, filtertitle=lambda title: True):
+        return self.values(True, filtername, filtertitle)
 
-    def branchnames(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
-        for branch in self.branches(recursive, filtername, filtertitle):
-            yield branch.name
+    def items(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
+        for branch in self.fBranches:
+            if filtername(branch.name) and filtertitle(branch.title):
+                yield branch.name, branch
+            if recursive:
+                for x in branch.items(recursive, filtername, filtertitle):
+                    yield x
 
-    def allbranchnames(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
-        return self.branchnames(True, filtername, filtertitle)
+    def allitems(self, filtername=lambda name: True, filtertitle=lambda title: True):
+        return self.items(True, filtername, filtertitle)
 
     @property
     def numbaskets(self):
@@ -587,13 +609,13 @@ class TBranchMethods(object):
             finally:
                 keysource.dismiss()
             
-    def branch(self, name):
+    def get(self, name):
         name = _bytesid(name)
-        for branch in self.branches():
+        for branch in self.values():
             if branch.name == name:
                 return branch
             try:
-                return branch.branch(name)
+                return branch.get(name)
             except KeyError:
                 pass
         raise KeyError("not found: {0}".format(repr(name)))
@@ -1085,7 +1107,7 @@ class TBranchMethods(object):
         return self.numentries
 
     def __getitem__(self, name):
-        return self.branch(name)
+        return self.get(name)
 
     def __iter__(self):
         # prevent Python's attempt to interpret __len__ and __getitem__ as iteration

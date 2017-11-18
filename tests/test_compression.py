@@ -73,15 +73,15 @@ class TestCompression(unittest.TestCase):
         self.assertEqual(list(uproot.open("tests/HZZ-lz4.root").allclasses()), keys)
 
     def test_compression_branches(self):
-        branches = list(uproot.open("tests/Zmumu-uncompressed.root")["events"].branchnames())
-        self.assertEqual(list(uproot.open("tests/Zmumu-zlib.root")["events"].branchnames()), branches)
-        self.assertEqual(list(uproot.open("tests/Zmumu-lzma.root")["events"].branchnames()), branches)
-        self.assertEqual(list(uproot.open("tests/Zmumu-lz4.root")["events"].branchnames()), branches)
+        branches = list(uproot.open("tests/Zmumu-uncompressed.root")["events"].keys())
+        self.assertEqual(list(uproot.open("tests/Zmumu-zlib.root")["events"].keys()), branches)
+        self.assertEqual(list(uproot.open("tests/Zmumu-lzma.root")["events"].keys()), branches)
+        self.assertEqual(list(uproot.open("tests/Zmumu-lz4.root")["events"].keys()), branches)
 
-        branches = list(uproot.open("tests/HZZ-uncompressed.root")["events"].branchnames())
-        self.assertEqual(list(uproot.open("tests/HZZ-zlib.root")["events"].branchnames()), branches)
-        self.assertEqual(list(uproot.open("tests/HZZ-lzma.root")["events"].branchnames()), branches)
-        self.assertEqual(list(uproot.open("tests/HZZ-lz4.root")["events"].branchnames()), branches)
+        branches = list(uproot.open("tests/HZZ-uncompressed.root")["events"].keys())
+        self.assertEqual(list(uproot.open("tests/HZZ-zlib.root")["events"].keys()), branches)
+        self.assertEqual(list(uproot.open("tests/HZZ-lzma.root")["events"].keys()), branches)
+        self.assertEqual(list(uproot.open("tests/HZZ-lz4.root")["events"].keys()), branches)
 
     def test_compression_content1(self):
         for name, array in uproot.open("tests/Zmumu-uncompressed.root")["events"].arrays(["Type", "Event", "E1", "px1", "Q1", "M"]).items():
