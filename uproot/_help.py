@@ -1244,7 +1244,7 @@ u"""Interface for interpretations.
 
     Arrays and other collections are filled from ROOT in two stages: raw bytes from each basket are interpreted as a "source" and sources are copied into a branch-wide collection called the "destination" (often swapping bytes from big-endian to native-endian in the process). Public functions return a finalized destination.
 
-    Interpretations must implement the following methods:
+    Interpretations must implement the following methods.
 
     ``empty(self)``
         return a zero-entry container (for special cases that can skip complex logic by returning an empty set).
