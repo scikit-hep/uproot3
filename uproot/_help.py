@@ -201,7 +201,7 @@ u"""Iterate over key names in this directory.
 
     Returns
     -------
-    *iterator over bytes*
+    iterator over bytes
         names of objects and subdirectories in the file.
 
     Notes
@@ -223,7 +223,7 @@ u"""Iterate over objects in this directory.
 
     Returns
     -------
-    *iterator over* :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`
+    iterator over :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`
         freshly read objects from the ROOT file.
 """.format(**rootdirectory_fragments)
 
@@ -240,7 +240,7 @@ u"""Iterate over *(key name, object)* pairs in this directory, like a ``dict``.
 
     Returns
     -------
-    *iterator over (bytes,* :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`*)*
+    iterator over (bytes, :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`)
         name-object pairs from the file.
 """.format(**rootdirectory_fragments)
 
@@ -259,7 +259,7 @@ u"""Iterate over *(key name, class name)* pairs in this directory.
 
     Returns
     -------
-    *iterator over *(bytes, bytes)*
+    iterator over (bytes, bytes)
         name-class name pairs from the file.
 """.format(**rootdirectory_fragments)
 
@@ -276,7 +276,7 @@ u"""Iterate over keys at all levels of depth (shortcut for passing ``recursive=T
 
     Returns
     -------
-    *iterator over bytes*
+    iterator over bytes
         names of objects and subdirectories in the file.
 """.format(**rootdirectory_fragments)
     
@@ -291,7 +291,7 @@ u"""Iterate over objects at all levels of depth (shortcut for passing ``recursiv
 
     Returns
     -------
-    *iterator over* :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`
+    iterator over :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`
         freshly read objects from the ROOT file.
 """.format(**rootdirectory_fragments)
 
@@ -306,7 +306,7 @@ u"""Iterate over *(key name, object)* pairs at all levels of depth (shortcut for
 
     Returns
     -------
-    *iterator over (bytes,* :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`*)*
+    iterator over (bytes, :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`)
         name-object pairs from the file.
 """.format(**rootdirectory_fragments)
 
@@ -323,7 +323,7 @@ u"""Iterate over *(key name, class name)* pairs at all levels of depth (shortcut
 
     Returns
     -------
-    *iterator over *(bytes, bytes)*
+    iterator over (bytes, bytes)
         name-class name pairs from the file.
 """.format(**rootdirectory_fragments)
 
@@ -454,7 +454,7 @@ u"""Opens a series of ROOT files (local or remote), iterating over events in chu
 
     Returns
     -------
-    *iterator over *(int, int, outputtype)* (if *reportentries*) or *outputtype*
+    iterator over (int, int, outputtype) (if *reportentries*) or just *outputtype* (otherwise)
         aligned array segments from the files.
 
     Examples
@@ -525,6 +525,11 @@ u"""Return a branch by name (at any level of depth).
     -------
     :py:class:`TBranch <upoot.tree.TBranchMethods>`
         selected branch.
+
+    Notes
+    -----
+
+    This method can be accessed more directly through square brackets (``__getitem__``) on the :py:class:`TTree <uproot.tree.TTreeMethods>` object.
 """
 
 _method(uproot.tree.TTreeMethods.keys).__doc__ = \
@@ -540,7 +545,7 @@ u"""Iterate over branch names.
 
     Returns
     -------
-    *iterator over bytes*
+    iterator over bytes
         names of branches.
 """.format(**tree_fragments)
 
@@ -557,7 +562,7 @@ u"""Iterate over branches.
 
     Returns
     -------
-    *iterator over* :py:class:`TBranch <uproot.tree.TBranchMethods>`
+    iterator over :py:class:`TBranch <uproot.tree.TBranchMethods>`
         branches.
 """.format(**tree_fragments)
 
@@ -574,7 +579,7 @@ u"""Iterate over *(branch name, branch)* pairs.
 
     Returns
     -------
-    *iterator over (bytes,* :py:class:`TBranch <uproot.tree.TBranchMethods>`*)*
+    iterator over (bytes, :py:class:`TBranch <uproot.tree.TBranchMethods>`)
         name-branch pairs.
 """.format(**tree_fragments)
 
@@ -589,7 +594,7 @@ u"""Iterate over branch names at all levels of depth (shortcut for passing ``rec
 
     Returns
     -------
-    *iterator over bytes*
+    iterator over bytes
         names of branches.
 """.format(**tree_fragments)
 
@@ -604,7 +609,7 @@ u"""Iterate over branches at all levels of depth (shortcut for passing ``recursi
 
     Returns
     -------
-    *iterator over* :py:class:`TBranch <uproot.tree.TBranchMethods>`
+    iterator over :py:class:`TBranch <uproot.tree.TBranchMethods>`
         branches.
 """.format(**tree_fragments)
 
@@ -619,7 +624,7 @@ u"""Iterate over *(branch name, branch)* pairs at all levels of depth (shortcut 
 
     Returns
     -------
-    *iterator over (bytes,* :py:class:`TBranch <uproot.tree.TBranchMethods>`
+    iterator over (bytes, :py:class:`TBranch <uproot.tree.TBranchMethods>`
         name-branch pairs.
 """.format(**tree_fragments)
 
@@ -630,7 +635,7 @@ u"""Iterate over *(int, int)* pairs representing cluster entry starts and stops 
 
     Returns
     -------
-    *iterator over (int, int)*
+    iterator over (int, int)
         start (inclusive) and stop (exclusive) pairs for each cluster.
 """
 
