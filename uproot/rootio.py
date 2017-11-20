@@ -66,6 +66,8 @@ def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defa
 def xrootd(path, xrootdsource=XRootDSource.defaults, **options):
     return ROOTDirectory.read(xrootdsource(path), **options)
 
+def nofilter(x): return True
+
 ################################################################ ROOTDirectory
 
 class ROOTDirectory(object):
@@ -202,7 +204,7 @@ class ROOTDirectory(object):
     def _withcycle(key):
         return "{0};{1}".format(key.fName.decode("ascii"), key.fCycle).encode("ascii")
 
-    def keys(self, recursive=False, filtername=lambda name: True, filterclass=lambda classname: True):
+    def keys(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         for key in self._keys:
             if filtername(key.fName) and filterclass(key.fClassName):
                 yield self._withcycle(key)
@@ -211,7 +213,7 @@ class ROOTDirectory(object):
                 for name in key.get().keys(recursive, filtername, filterclass):
                     yield "{0}/{1}".format(self._withcycle(key).decode("ascii"), name.decode("ascii")).encode("ascii")
 
-    def values(self, recursive=False, filtername=lambda name: True, filterclass=lambda classname: True):
+    def values(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         for key in self._keys:
             if filtername(key.fName) and filterclass(key.fClassName):
                 yield key.get()
@@ -220,7 +222,7 @@ class ROOTDirectory(object):
                 for value in key.get().values(recursive, filtername, filterclass):
                     yield value
 
-    def items(self, recursive=False, filtername=lambda name: True, filterclass=lambda classname: True):
+    def items(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         for key in self._keys:
             if filtername(key.fName) and filterclass(key.fClassName):
                 yield self._withcycle(key), key.get()
@@ -229,7 +231,7 @@ class ROOTDirectory(object):
                 for name, value in key.get().items(recursive, filtername, filterclass):
                     yield "{0}/{1}".format(self._withcycle(key).decode("ascii"), name.decode("ascii")).encode("ascii"), value
 
-    def classes(self, recursive=False, filtername=lambda name: True, filterclass=lambda classname: True):
+    def classes(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         for key in self._keys:
             if filtername(key.fName) and filterclass(key.fClassName):
                 yield self._withcycle(key), key.fClassName
@@ -238,16 +240,16 @@ class ROOTDirectory(object):
                 for name, classname in key.get().classes(recursive, filtername, filterclass):
                     yield "{0}/{1}".format(self._withcycle(key).decode("ascii"), name.decode("ascii")).encode("ascii"), classname
 
-    def allkeys(self, filtername=lambda name: True, filterclass=lambda classname: True):
+    def allkeys(self, filtername=nofilter, filterclass=nofilter):
         return self.keys(True, filtername, filterclass)
 
-    def allvalues(self, filtername=lambda name: True, filterclass=lambda classname: True):
+    def allvalues(self, filtername=nofilter, filterclass=nofilter):
         return self.values(True, filtername, filterclass)
 
-    def allitems(self, filtername=lambda name: True, filterclass=lambda classname: True):
+    def allitems(self, filtername=nofilter, filterclass=nofilter):
         return self.items(True, filtername, filterclass)
 
-    def allclasses(self, filtername=lambda name: True, filterclass=lambda classname: True):
+    def allclasses(self, filtername=nofilter, filterclass=nofilter):
         return self.classes(True, filtername, filterclass)
 
     def get(self, name, cycle=None):

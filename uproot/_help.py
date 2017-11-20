@@ -454,7 +454,7 @@ u"""Opens a series of ROOT files (local or remote), iterating over events in chu
 
     Returns
     -------
-    iterator over (int, int, outputtype) (if *reportentries*) or just *outputtype* (otherwise)
+    iterator over (int, int, outputtype) (if *reportentries*) or just outputtype (otherwise)
         aligned array segments from the files.
 
     Examples
@@ -631,7 +631,7 @@ u"""Iterate over *(branch name, branch)* pairs at all levels of depth (shortcut 
 _method(uproot.tree.TTreeMethods.clusters).__doc__ = \
 u"""Iterate over *(int, int)* pairs representing cluster entry starts and stops in this TTree.
 
-    ..todo:: Not implemented.
+    .. todo:: Not implemented.
 
     Returns
     -------
@@ -686,7 +686,8 @@ u"""Create a lazy array that would read the branch as needed.
 
     Returns
     -------
-    lazy array.
+    lazy array (square brackets initiate data reading)
+        lazy version of the array.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.arrays).__doc__ = \
@@ -714,7 +715,8 @@ u"""read many branches into arrays (or other objects if provided alternate *inte
 
     Returns
     -------
-    outputtype of arrays or other objects, depending on *interpretation*.
+    outputtype of arrays or other objects, depending on *interpretation*
+        branch data.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.lazyarrays).__doc__ = \
@@ -736,7 +738,8 @@ u"""Create many lazy arrays.
 
     Returns
     -------
-    outputtype of lazy arrays.
+    outputtype of lazy arrays (square brackets initiate data reading)
+        lazy branch data.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.iterate).__doc__ = \
@@ -766,14 +769,14 @@ u"""Iterate over many arrays at once, yielding a fixed number of entries at a ti
 
     Returns
     -------
-    *iterator over *(int, int, outputtype)* (if *reportentries*) or *outputtype*
+    iterator over (int, int, outputtype) (if *reportentries*) or just outputtype (otherwise)
         aligned array segments from the TTree.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.iterate_clusters).__doc__ = \
 u"""Iterate at cluster boundaries, which are more efficient but not necessarily a fixed number of entries.
 
-    ..todo:: Not implemented.
+    .. todo:: Not implemented.
 
     Parameters
     ----------
@@ -797,7 +800,7 @@ u"""Iterate at cluster boundaries, which are more efficient but not necessarily 
 
     Returns
     -------
-    *iterator over *(int, int, outputtype)* (if *reportentries*) or *outputtype*
+    iterator over (int, int, outputtype) (if *reportentries*) or just outputtype (otherwise)
         aligned array segments from the TTree.
 """.format(**tree_fragments)
 
@@ -861,7 +864,12 @@ u"""Return a subbranch by name (at any level of depth).
     Returns
     -------
     :py:class:`TBranch <upoot.tree.TBranchMethods>`
-        selected branch.
+        branch object.
+
+    Notes
+    -----
+
+    This method can be accessed more directly through square brackets (``__getitem__``) on the :py:class:`TBranch <uproot.tree.TBranchMethods>` object.
 """
 
 _method(uproot.tree.TBranchMethods.keys).__doc__ = \
@@ -877,8 +885,8 @@ u"""Iterate over subbranch names.
 
     Returns
     -------
-    *iterator over bytes*
-        names of branches.
+    iterator over bytes
+        subbranch names.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.values).__doc__ = \
@@ -894,8 +902,8 @@ u"""Iterate over subbranches.
 
     Returns
     -------
-    *iterator over* :py:class:`TBranch <uproot.tree.TBranchMethods>`
-        branches.
+    iterator over :py:class:`TBranch <uproot.tree.TBranchMethods>`
+        subbranches.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.items).__doc__ = \
@@ -911,8 +919,8 @@ u"""Iterate over *(subbranch name, subbranch)* pairs.
 
     Returns
     -------
-    *iterator over (bytes,* :py:class:`TBranch <uproot.tree.TBranchMethods>`*)*
-        name-branch pairs.
+    iterator over (bytes, :py:class:`TBranch <uproot.tree.TBranchMethods>`)
+        *(subbranch name, subbranch)* pairs.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.allkeys).__doc__ = \
@@ -926,8 +934,8 @@ u"""Iterate over subbranch names at all levels of depth (shortcut for passing ``
 
     Returns
     -------
-    *iterator over bytes*
-        names of branches.
+    iterator over bytes
+        subbranch names.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.allvalues).__doc__ = \
@@ -941,8 +949,8 @@ u"""Iterate over subbranches at all levels of depth (shortcut for passing ``recu
 
     Returns
     -------
-    *iterator over* :py:class:`TBranch <uproot.tree.TBranchMethods>`
-        branches.
+    iterator over :py:class:`TBranch <uproot.tree.TBranchMethods>`
+        subbranches.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.allitems).__doc__ = \
@@ -956,8 +964,8 @@ u"""Iterate over *(subbranch name, subbranch)* pairs at all levels of depth (sho
 
     Returns
     -------
-    *iterator over (bytes,* :py:class:`TBranch <uproot.tree.TBranchMethods>`
-        name-branch pairs.
+    iterator over (bytes, :py:class:`TBranch <uproot.tree.TBranchMethods>`
+        (subbranch name, subbranch)* pairs.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.uncompressedbytes).__doc__ = \
@@ -969,7 +977,7 @@ u"""The number of bytes contained in the TBranch (data and offsets; not includin
 
     Returns
     -------
-    *int*
+    int
         uncompressed bytes.
 """.format(**tree_fragments)
 
@@ -982,7 +990,7 @@ u"""The number of bytes contained in the TBranch (data and offsets; not includin
 
     Returns
     -------
-    *int*
+    int
         compressed bytes.
 """.format(**tree_fragments)
 
@@ -995,7 +1003,7 @@ u"""The uncompressed bytes divided by compressed bytes (greater than or equal to
 
     Returns
     -------
-    *float*
+    float
         compression ratio.
 """.format(**tree_fragments)
 
@@ -1010,7 +1018,7 @@ u"""The number of items in the TBranch, under a given interpretation.
 
     Returns
     -------
-    *int*
+    int
         number of items.
 """.format(**tree_fragments)
 
@@ -1023,7 +1031,7 @@ u"""The starting entry for a given basket (inclusive).
 
     Returns
     -------
-    *int*
+    int
         starting entry.
 """.format(**tree_fragments)
 
@@ -1036,7 +1044,7 @@ u"""The stopping entry for a given basket (exclusive).
 
     Returns
     -------
-    *int*
+    int
         stopping entry.
 """.format(**tree_fragments)
 
@@ -1049,7 +1057,7 @@ u"""The number of entries in a given basket.
 
     Returns
     -------
-    *int*
+    int
         number of entries.
 """.format(**tree_fragments)
 
@@ -1064,7 +1072,7 @@ u"""The number of bytes contained in the basket (data and offsets; not including
 
     Returns
     -------
-    *int*
+    int
         number of uncompressed bytes.    
 """.format(**tree_fragments)
 
@@ -1079,7 +1087,7 @@ u"""The number of bytes contained in the basket (data and offsets; not including
 
     Returns
     -------
-    *int*
+    int
         number of compressed bytes.
 """.format(**tree_fragments)
 
@@ -1096,7 +1104,7 @@ u"""The number of items in the basket, under a given interpretation.
 
     Returns
     -------
-    *int*
+    int
         number of items.
 """.format(**tree_fragments)
 
@@ -1144,8 +1152,8 @@ u"""Create a lazy array that would read the branch as needed.
 
     Returns
     -------
-    lazy array
-        branch data.
+    lazy array (square brackets initiate data reading)
+        lazy version of branch data.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.basket).__doc__ = \
@@ -1169,8 +1177,8 @@ u"""Read a single basket into an array.
 
     Returns
     -------
-    array or other object, depending on *interpretation*.
-        branch data.
+    array or other object, depending on *interpretation*
+        basket data.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.baskets).__doc__ = \
@@ -1198,7 +1206,7 @@ u"""Read baskets into a list of arrays.
 
     Returns
     -------
-    list of arrays or other objects, depending on *interpretation*.
+    list of arrays or other objects, depending on *interpretation*
         basket data.
 """.format(**tree_fragments)
 

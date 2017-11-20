@@ -70,10 +70,11 @@ import numpy
 
 import uproot.rootio
 from uproot.rootio import _bytesid
-from uproot.source.cursor import Cursor
+from uproot.rootio import nofilter
 from uproot.interp.auto import interpret
-from uproot.interp.numerical import asdtype
 from uproot.interp.jagged import asjagged
+from uproot.interp.numerical import asdtype
+from uproot.source.cursor import Cursor
 from uproot.source.memmap import MemmapSource
 from uproot.source.xrootd import XRootDSource
 
@@ -165,14 +166,14 @@ class TTreeMethods(object):
     def numentries(self):
         return self.fEntries
 
-    def keys(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
+    def keys(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
         for branch in self.values(recursive, filtername, filtertitle):
             yield branch.name
 
-    def allkeys(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
+    def allkeys(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
         return self.keys(True, filtername, filtertitle)
 
-    def values(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
+    def values(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
         for branch in self.fBranches:
             if filtername(branch.name) and filtertitle(branch.title):
                 yield branch
@@ -180,10 +181,10 @@ class TTreeMethods(object):
                 for x in branch.values(recursive, filtername, filtertitle):
                     yield x
 
-    def allvalues(self, filtername=lambda name: True, filtertitle=lambda title: True):
+    def allvalues(self, filtername=nofilter, filtertitle=nofilter):
         return self.values(True, filtername, filtertitle)
 
-    def items(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
+    def items(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
         for branch in self.fBranches:
             if filtername(branch.name) and filtertitle(branch.title):
                 yield branch.name, branch
@@ -191,7 +192,7 @@ class TTreeMethods(object):
                 for x in branch.items(recursive, filtername, filtertitle):
                     yield x
 
-    def allitems(self, filtername=lambda name: True, filtertitle=lambda title: True):
+    def allitems(self, filtername=nofilter, filtertitle=nofilter):
         return self.items(True, filtername, filtertitle)
 
     def get(self, name):
@@ -429,14 +430,14 @@ class TBranchMethods(object):
     def numentries(self):
         return self.fEntryNumber
 
-    def keys(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
+    def keys(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
         for branch in self.values(recursive, filtername, filtertitle):
             yield branch.name
 
-    def allkeys(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
+    def allkeys(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
         return self.keys(True, filtername, filtertitle)
 
-    def values(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
+    def values(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
         for branch in self.fBranches:
             if filtername(branch.name) and filtertitle(branch.title):
                 yield branch
@@ -444,10 +445,10 @@ class TBranchMethods(object):
                 for x in branch.values(recursive, filtername, filtertitle):
                     yield x
 
-    def allvalues(self, filtername=lambda name: True, filtertitle=lambda title: True):
+    def allvalues(self, filtername=nofilter, filtertitle=nofilter):
         return self.values(True, filtername, filtertitle)
 
-    def items(self, recursive=False, filtername=lambda name: True, filtertitle=lambda title: True):
+    def items(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
         for branch in self.fBranches:
             if filtername(branch.name) and filtertitle(branch.title):
                 yield branch.name, branch
@@ -455,7 +456,7 @@ class TBranchMethods(object):
                 for x in branch.items(recursive, filtername, filtertitle):
                     yield x
 
-    def allitems(self, filtername=lambda name: True, filtertitle=lambda title: True):
+    def allitems(self, filtername=nofilter, filtertitle=nofilter):
         return self.items(True, filtername, filtertitle)
 
     @property
