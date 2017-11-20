@@ -59,11 +59,11 @@ rootdirectory_fragments = {
 
     # filtername
     "filtername": u"""filtername : function: str \u21d2 bool
-        only keys for which filtername(name) returns ``True`` are yielded by the iterator (does not eliminate subdirectories if ``recursive=True``). Default returns ``True`` for all input.""",
+        only keys for which ``filtername(name)`` returns ``True`` are yielded by the iterator (does not eliminate subdirectories if ``recursive=True``). Default returns ``True`` for all input.""",
 
     # filterclass
     "filterclass": u"""filterclass : function: str \u21d2 bool
-        only keys for which filterclass(class name) returns ``True`` are yielded by the iterator (does not eliminate subdirectories if ``recursive=True``). Default returns ``True`` for all input.""",
+        only keys for which ``filterclass(class name)`` returns ``True`` are yielded by the iterator (does not eliminate subdirectories if ``recursive=True``). Default returns ``True`` for all input.""",
     }
 
 ################################################################ uproot.rootio.open
@@ -406,11 +406,11 @@ tree_fragments = {
 
     # filtername
     "filtername": u"""filtername : function: str \u21d2 bool
-        only branches for which filtername(name) returns ``True`` are yielded by the iterator. Default returns ``True`` for all input.""",
+        only branches for which ``filtername(name)`` returns ``True`` are yielded by the iterator. Default returns ``True`` for all input.""",
 
     # filtertitle
     "filtertitle": u"""filtertitle : function: str \u21d2 bool
-        only branches for which filtertitle(title) returns ``True`` are yielded by the iterator. Default returns ``True`` for all input.""",
+        only branches for which ``filtertitle(title)`` returns ``True`` are yielded by the iterator. Default returns ``True`` for all input.""",
 
     # i
     "i": u"""i : non-negative int
