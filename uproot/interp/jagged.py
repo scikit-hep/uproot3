@@ -46,6 +46,9 @@ def sizes2offsets(sizes):
     return out
 
 class asjagged(Interpretation):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (Interpretation.__metaclass__,), {})
+
     def __init__(self, asdtype):
         self.asdtype = asdtype
 
@@ -107,6 +110,9 @@ def _jaggedarray_getitem(jaggedarray, index):
         raise IndexError("index out of range for JaggedArray")
 
 class JaggedArray(object):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (type,), {})
+
     class _Prep(object):
         def __init__(self, contents, sizes):
             self.contents = contents

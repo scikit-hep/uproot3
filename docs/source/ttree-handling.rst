@@ -14,7 +14,7 @@ Many of the :py:class:`TTreeMethods <uproot.tree.TTreeMethods>` and :py:class:`T
 uproot.tree.TTreeMethods
 ------------------------
 
-Every class read from a ROOT file named "TTree" is mixed in with :py:class:`TTreeMethods <uproot.tree.TTreeMethods>` so that these methods are available.
+Every class read from a ROOT file named "TTree" is mixed in with :py:class:`TTreeMethods <uproot.tree.TTreeMethods>` so that the following methods are available.
 
 .. autoclass:: uproot.tree.TTreeMethods
 
@@ -80,7 +80,7 @@ oamap
 uproot.tree.TBranchMethods
 --------------------------
 
-Every class read from a ROOT file named "TBranch" is mixed in with :py:class:`TBranchMethods <uproot.tree.TBranchMethods>` so that these methods are available. Subclasses of "TBranch" (such as "TBranchElement") inherit the mix-in.
+Every class read from a ROOT file named "TBranch" is mixed in with :py:class:`TBranchMethods <uproot.tree.TBranchMethods>` so that the following methods are available. Subclasses of "TBranch" (such as "TBranchElement") inherit the mix-in.
 
 .. autoclass:: uproot.tree.TBranchMethods
 

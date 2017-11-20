@@ -691,7 +691,7 @@ u"""Create a lazy array that would read the branch as needed.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.arrays).__doc__ = \
-u"""read many branches into arrays (or other objects if provided alternate *interpretations*).
+u"""Read many branches into arrays (or other objects if provided alternate *interpretations*).
 
     Parameters
     ----------
@@ -1234,3 +1234,13 @@ u"""Iterate over baskets.
     iterator over arrays or other objects, depending on *interpretation*
         basket data.
 """.format(**tree_fragments)
+
+################################################################ uproot.interp fragments
+
+interp_fragments = {
+    }
+
+# uproot.interp.interp.Interpretation.__doc__ = \
+
+
+

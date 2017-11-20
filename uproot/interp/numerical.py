@@ -40,6 +40,9 @@ else:
     string_types = (str, bytes)
 
 class asdtype(Interpretation):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (Interpretation.__metaclass__,), {})
+
     def __init__(self, fromdtype, todtype=None, fromdims=(), todims=None):
         if isinstance(fromdtype, numpy.dtype):
             self.fromdtype = fromdtype
@@ -141,6 +144,9 @@ class asdtype(Interpretation):
         return destination
 
 class asarray(asdtype):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (asdtype.__metaclass__,), {})
+
     def __init__(self, fromdtype, toarray, fromdims=()):
         if isinstance(fromdtype, numpy.dtype):
             self.fromdtype = fromdtype

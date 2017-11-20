@@ -1,17 +1,18 @@
 Interpretation
 ==============
 
-uproot.interpret
-----------------
-
 uproot.interp.interp.Interpretation
 -----------------------------------
+
+uproot.interpret
+----------------
 
 uproot.interp.asdtype
 ---------------------
 
 uproot.interp.asarray
 ---------------------
+
 uproot.interp.asjagged
 ----------------------
 

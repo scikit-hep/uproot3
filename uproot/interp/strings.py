@@ -75,6 +75,9 @@ if numba is not None:
     _asstrings_fromroot = numba.njit(_asstrings_fromroot)
 
 class _asstrings(Interpretation):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (Interpretation.__metaclass__,), {})
+
     def empty(self):
         return Strings(JaggedArray(numpy.empty(0, dtype=CHARTYPE), numpy.empty(0, dtype=numpy.int64)))
 
@@ -115,6 +118,9 @@ asstrings = _asstrings()
 del _asstrings
 
 class Strings(object):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (type,), {})
+
     @staticmethod
     def fromstrs(*strs):
         offsets = numpy.empty(len(strs) + 1, dtype=numpy.int64)
