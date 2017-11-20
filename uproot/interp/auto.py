@@ -138,9 +138,9 @@ def interpret(branch, classes=None, swapbytes=True):
                 return asjagged(out)
 
         else:
-            fromdtype = numpy.dtype([(leaf.fName, leaf2dtype(leaf).newbyteorder(">")) for leaf in branch.fLeaves])
+            fromdtype = numpy.dtype([(leaf.fName.decode("ascii"), leaf2dtype(leaf).newbyteorder(">")) for leaf in branch.fLeaves])
             if swapbytes:
-                todtype = numpy.dtype([(leaf.fName, leaf2dtype(leaf).newbyteorder("=")) for leaf in branch.fLeaves])
+                todtype = numpy.dtype([(leaf.fName.decode("ascii"), leaf2dtype(leaf).newbyteorder("=")) for leaf in branch.fLeaves])
             else:
                 todtype = fromdtype
 
