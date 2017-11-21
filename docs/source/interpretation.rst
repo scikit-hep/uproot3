@@ -16,6 +16,10 @@ uproot.interp.asdtype
 
 .. autoclass:: uproot.interp.numerical.asdtype
 
+.. automethod:: uproot.interp.numerical.asdtype.to
+
+.. automethod:: uproot.interp.numerical.asdtype.toarray
+
 uproot.interp.asarray
 ---------------------
 
