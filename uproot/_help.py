@@ -1259,7 +1259,7 @@ u"""Interface for interpretations.
         calculate the number of "items" given a ``source`` instance.
 
     **fromroot(self, data, offsets, local_entrystart, local_entrystop)**
-        produce a source from one basket ``data`` array (dtype **numpy.uint8**) and its corresponding ``offsets`` array (dtype **numpy.int32** or ``None`` if not present) that has *n + 1* elements for *n* entries: ``offsets[0] == 0 and offsets[-1] == numentries``. The ``local_entrystart`` and ``local_entrystop`` are entry start (inclusive) and stop (exclusive), in which the first entry in the basket is number zero (hence "local"). The result of this operation may be a zero-copy cast of the basket data.
+        produce a source from one basket ``data`` array (dtype ``numpy.uint8``) and its corresponding ``offsets`` array (dtype **numpy.int32** or ``None`` if not present) that has *n + 1* elements for *n* entries: ``offsets[0] == 0 and offsets[-1] == numentries``. The ``local_entrystart`` and ``local_entrystop`` are entry start (inclusive) and stop (exclusive), in which the first entry in the basket is number zero (hence "local"). The result of this operation may be a zero-copy cast of the basket data.
 
     **destination(self, numitems, numentries)**
         create or otherwise produce an unfilled destination object, knowing only the number of items (``numitems``) and number of entries (``numentries``).
@@ -1481,6 +1481,8 @@ _method(uproot.interp.jagged.asjagged.fill).__doc__ = interp_fragments["see1"]
 _method(uproot.interp.jagged.asjagged.clip).__doc__ = interp_fragments["see1"]
 _method(uproot.interp.jagged.asjagged.finalize).__doc__ = interp_fragments["see1"]
 
+################################################################ uproot.interp.jagged.JaggedArray
+
 uproot.interp.jagged.JaggedArray.__doc__ = \
 u"""Array of non-uniformly sized arrays, implemented with contiguous *contents* and *offsets*.
 
@@ -1530,4 +1532,65 @@ u"""Create a :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>` from Pyt
     -------
     :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>`
         the jagged array.
+"""
+
+################################################################ uproot.interp.strings.asstrings
+
+uproot.interp.strings._asstrings.__doc__ = \
+u"""Interpret branch as a collection of strings (via a :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>` of ``numpy.uint8``).
+
+    This interpretation directs branch-reading to fill a contiguous array of characters and string byte offsets, presenting them to the user as a :py:class:`Strings <uproot.interp.strings.Strings>` interface. Such an object behaves as though it were an array of non-uniformly sized strings, but it is more memory and cache-line efficient because the underlying data are contiguous. Numpy's string-handling options either force fixed-size strings (the ``"S"`` dtype) or non-contiguous Python objects (the ``"O"`` dtype).
+
+    In this interpretation, "items" (for ``numitems``, ``itemstart``, ``itemstop``, etc.) are characters and "entries" are strings.
+
+    The **asstrings** object is a singleton with no parameters. Do not create new objects from the :py:class:`_asstrings <uproot.interp.strings._asstrings>` class.
+"""
+
+_method(uproot.interp.strings.asstrings.empty).__doc__ = interp_fragments["see1"]
+_method(uproot.interp.strings.asstrings.compatible).__doc__ = interp_fragments["see1"]
+_method(uproot.interp.strings.asstrings.numitems).__doc__ = interp_fragments["see1"]
+_method(uproot.interp.strings.asstrings.source_numitems).__doc__ = interp_fragments["see1"]
+_method(uproot.interp.strings.asstrings.fromroot).__doc__ = interp_fragments["see1"]
+_method(uproot.interp.strings.asstrings.destination).__doc__ = interp_fragments["see1"]
+_method(uproot.interp.strings.asstrings.fill).__doc__ = interp_fragments["see1"]
+_method(uproot.interp.strings.asstrings.clip).__doc__ = interp_fragments["see1"]
+_method(uproot.interp.strings.asstrings.finalize).__doc__ = interp_fragments["see1"]
+
+################################################################ uproot.interp.strings.Strings
+
+uproot.interp.strings.Strings.__doc__ = \
+u"""Array of non-uniformly sized strings, implemented with contiguous *contents* and *offsets*.
+
+    Objects of this type can be sliced and indexed as an array of strings, where each of the strings may have a different length, but it is stored as a :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>` of ``numpy.uint8``.
+
+    Numpy's string-handling options either force fixed-size strings (the ``"S"`` dtype) or non-contiguous Python objects (the ``"O"`` dtype).
+
+    This class has array-like semantics:
+
+    - square brackets (``__getitem__``) returns a string if the argument is an integer and a :py:class:`Strings <uproot.interp.strings.Strings>` if the argument is a slice.
+    - the ``len`` function (``__len__``) returns the number of strings.
+    - iteration (``__iter__``) iterates over strings.
+
+    In Python 3, these "strings" are ``bytes`` objects.
+
+    These methods are `Numba <http://numba.pydata.org/>`_-aware: if used in a Numba-compiled function, access will be accelerated. However, in a Numba function, the contents are presented as a plain array of ``numpy.uint8``, not a string (as of this writing, Numba has no ``array.tostring`` support). *(Also excluding slicing: slicing is not implemented inside Numba functions.)*
+
+    Parameters
+    ----------
+    jaggedarray : :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>`
+        a jagged array with one-dimensional ``numpy.uint8`` contents.
+"""
+
+_method(uproot.interp.strings.Strings.fromstrs).__doc__ = \
+u"""Create a :py:class:`Strings <uproot.interp.strings.Strings>` from Python strings.
+
+    Parameters
+    ----------
+    strs : iterable of Python strings
+        strings to convert. If any strings are Python 2 ``unicode`` or Python 3 ``str`` objects, they will be encoded as ``bytes`` with ``"utf-8"`` encoding, ``"replace"`` error semantics.
+
+    Returns
+    -------
+    :py:class:`Strings <uproot.interp.strings.Strings>`
+        the contiguous strings.
 """

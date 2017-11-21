@@ -42,9 +42,11 @@ uproot.interp.jagged.JaggedArray
 uproot.interp.asstrings
 -----------------------
 
-.. autoclass:: uproot.interp.strings.asstrings
+.. autoclass:: uproot.interp.strings._asstrings
 
 uproot.interp.strings.Strings
 -----------------------------
 
 .. autoclass:: uproot.interp.strings.Strings
+
+.. automethod:: uproot.interp.strings.Strings.fromstrs

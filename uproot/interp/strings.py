@@ -115,14 +115,13 @@ class _asstrings(Interpretation):
         return Strings(JaggedArray(contents, starts, stops))
 
 asstrings = _asstrings()
-del _asstrings
 
 class Strings(object):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (type,), {})
 
     @staticmethod
-    def fromstrs(*strs):
+    def fromstrs(strs):
         offsets = numpy.empty(len(strs) + 1, dtype=numpy.int64)
         offsets[0] = 0
         stop = 0
@@ -150,6 +149,7 @@ class Strings(object):
 
     def __init__(self, jaggedarray):
         assert jaggedarray.contents.dtype == CHARTYPE
+        assert len(jaggedarray.contents.shape) == 1
         self.jaggedarray = jaggedarray
 
     def __len__(self):
