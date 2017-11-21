@@ -1594,3 +1594,6 @@ u"""Create a :py:class:`Strings <uproot.interp.strings.Strings>` from Python str
     :py:class:`Strings <uproot.interp.strings.Strings>`
         the contiguous strings.
 """
+
+################################################################ uproot.cache.MemoryCache
+

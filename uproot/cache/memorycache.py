@@ -33,6 +33,9 @@ import numbers
 import threading
 
 class MemoryCache(dict):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (type,), {})
+
     __slots__ = ("limitbytes", "numevicted", "chain", "_order", "_lookup", "_numbytes")
 
     def __init__(self, limitbytes, chain=None, items=(), **kwds):
@@ -294,6 +297,9 @@ class MemoryCache(dict):
             self[key] = lookup[key]
 
 class ThreadSafeMemoryCache(MemoryCache):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (MemoryCache.__metaclass__,), {})
+
     __slots__ = ("limitbytes", "numevicted", "_order", "_lookup", "_numbytes", "_lock")
 
     def __init__(self, limitbytes, items=(), **kwds):
@@ -374,6 +380,9 @@ class ThreadSafeMemoryCache(MemoryCache):
             raise TypeError("unorderable types: {0} < {1}".format(type(self), type(other)))
 
 class ThreadSafeDict(dict):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (type,), {})
+
     def __init__(self, items=(), **kwds):
         self._lock = threading.RLock()
         with self._lock:

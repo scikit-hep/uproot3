@@ -117,6 +117,9 @@ def arraywrite(filename, obj):
         numpy.save(file, obj)
 
 class DiskCache(object):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (type,), {})
+
     CONFIG_FILE = "config.json"
     STATE_FILE = "state.json"
     LOOKUP_FILE = "lookup.npy"
