@@ -1246,32 +1246,32 @@ u"""Interface for interpretations.
 
     Interpretations must implement the following methods:
 
-**empty(self)**
-    return a zero-entry container (for special cases that can skip complex logic by returning an empty set).
+    **empty(self)**
+        return a zero-entry container (for special cases that can skip complex logic by returning an empty set).
 
-**compatible(self, other)**
-    return ``True`` if and only if ``self`` and ``other`` interpretations would return equivalent results, such as different source interpretations that fill the same destination.
+    **compatible(self, other)**
+        return ``True`` if and only if ``self`` and ``other`` interpretations would return equivalent results, such as different source interpretations that fill the same destination.
 
-**numitems(self, numbytes, numentries)**
-    calculate the number of "items" (whatever that means for a given interpretation, but always greater than or equal to the number of entries), knowing only the number of bytes (``numbytes``) and the number of entries (``numentries``).
+    **numitems(self, numbytes, numentries)**
+        calculate the number of "items" (whatever that means for a given interpretation, but always greater than or equal to the number of entries), knowing only the number of bytes (``numbytes``) and the number of entries (``numentries``).
 
-**source_numitems(self, source)**
-    calculate the number of "items" given a ``source`` instance.
+    **source_numitems(self, source)**
+        calculate the number of "items" given a ``source`` instance.
 
-**fromroot(self, data, offsets, local_entrystart, local_entrystop)**
-    produce a source from one basket ``data`` array (dtype **numpy.uint8**) and its corresponding ``offsets`` array (dtype **numpy.int32** or ``None`` if not present) that has *n + 1* elements for *n* entries: ``offsets[0] == 0 and offsets[-1] == numentries``. The ``local_entrystart`` and ``local_entrystop`` are entry start (inclusive) and stop (exclusive), in which the first entry in the basket is number zero (hence "local"). The result of this operation may be a zero-copy cast of the basket data.
+    **fromroot(self, data, offsets, local_entrystart, local_entrystop)**
+        produce a source from one basket ``data`` array (dtype **numpy.uint8**) and its corresponding ``offsets`` array (dtype **numpy.int32** or ``None`` if not present) that has *n + 1* elements for *n* entries: ``offsets[0] == 0 and offsets[-1] == numentries``. The ``local_entrystart`` and ``local_entrystop`` are entry start (inclusive) and stop (exclusive), in which the first entry in the basket is number zero (hence "local"). The result of this operation may be a zero-copy cast of the basket data.
 
-**destination(self, numitems, numentries)**
-    create or otherwise produce an unfilled destination object, knowing only the number of items (``numitems``) and number of entries (``numentries``).
+    **destination(self, numitems, numentries)**
+        create or otherwise produce an unfilled destination object, knowing only the number of items (``numitems``) and number of entries (``numentries``).
 
-**fill(self, source, destination, itemstart, itemstop, entrystart, entrystop)**
-    copy data from one basket``source`` (in its entirety) to part of the ``destination`` (usually a small slice). The items range from ``itemstart`` (inclusive) to ``itemstop`` (exclusive) and the entries range from ``entrystart`` (inclusive) to ``entrystop`` (exclusive). This function returns nothing; it is the only function in this interface called for its side-effects (the rest may be pure functions).
+    **fill(self, source, destination, itemstart, itemstop, entrystart, entrystop)**
+        copy data from one basket``source`` (in its entirety) to part of the ``destination`` (usually a small slice). The items range from ``itemstart`` (inclusive) to ``itemstop`` (exclusive) and the entries range from ``entrystart`` (inclusive) to ``entrystop`` (exclusive). This function returns nothing; it is the only function in this interface called for its side-effects (the rest may be pure functions).
 
-**clip(self, destination, itemstart, itemstop, entrystart, entrystop)**
-    return a slice of the ``destination`` from ``itemstart`` (inclusive) to ``itemstop`` (exclusive) and from ``entrystart`` (inclusive) to ``entrystop`` (exclusive). This is to trim memory allocated but not used, for instance if the entry range does not align with basket boundaries.
+    **clip(self, destination, itemstart, itemstop, entrystart, entrystop)**
+        return a slice of the ``destination`` from ``itemstart`` (inclusive) to ``itemstop`` (exclusive) and from ``entrystart`` (inclusive) to ``entrystop`` (exclusive). This is to trim memory allocated but not used, for instance if the entry range does not align with basket boundaries.
 
-**finalize(self, destination)**
-    possibly post-process a ``destination`` to make it ready for consumption. This is needed if a different form must be used for filling than should be provided to the user--- for instance, offsets of a jagged array can't be computed when filling sections of it in parallel (sizes can), but the user should receive a jagged array based on offsets for random access.
+    **finalize(self, destination)**
+        possibly post-process a ``destination`` to make it ready for consumption. This is needed if a different form must be used for filling than should be provided to the user--- for instance, offsets of a jagged array can't be computed when filling sections of it in parallel (sizes can), but the user should receive a jagged array based on offsets for random access.
 """
 
 ################################################################ uproot.interp.numerical fragments
