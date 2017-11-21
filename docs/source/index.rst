@@ -11,6 +11,7 @@ Tutorials and walk-throughs
 .. toctree::
    :maxdepth: 1
 
+   introduction
    installation
    reading-flat-ntuples
    reading-complex-objects
@@ -34,5 +35,11 @@ Reference documentation
    caches
    parallel-io
 
-.. include:: ../../README.rst
-  :start-after: inclusion-marker-do-not-remove
+Other information
+-----------------
+
+.. toctree::
+   :maxdepth: 1
+
+   performance
+   status-and-roadmap

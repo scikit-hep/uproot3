@@ -2214,7 +2214,7 @@ _method(uproot.source.xrootd.XRootDSource.threadlocal).__doc__ = source_fragment
 _method(uproot.source.xrootd.XRootDSource.dismiss).__doc__ = source_fragments["see1"]
 _method(uproot.source.xrootd.XRootDSource.data).__doc__ = source_fragments["see1"]
 
-################################################################ uproot.source.compressed.CompressedSource
+################################################################ uproot.source.compressed.Compression
 
 uproot.source.compressed.Compression.__doc__ = \
 u"""Describe the compression of a compressed block.
@@ -2231,4 +2231,31 @@ u"""Describe the compression of a compressed block.
     ----------
     fCompress : int
         ROOT fCompress field.
+"""
+
+################################################################ uproot.source.compressed.CompressedSource
+
+uproot.source.compressed.CompressedSource.__doc__ = \
+u"""A :py:class:`Source <uproot.source.source.Source>` for compressed data.
+
+    Decompresses on demand--- without caching the result--- so cache options in higher-level array functions are very important.
+
+    Ordinary users would never create a :py:class:`CompressedSource <uproot.source.compressed.CompressedSource>`. They are produced when a TKey encounters a compressed value.
+
+    Parameters
+    ----------
+    compression : :py:class:`Compression <uproot.source.compressed.Compression>`
+        inherited description of the compression. Note that *this is overridden* by the first two bytes of the compressed block, which can disagree with the higher-level description and takes precedence.
+
+    source : :py:class:`Source <uproot.source.source.Source>`
+        the source in which compressed data may be found.
+
+    cursor : :py:class:`Cursor <uproot.source.cursor.Cursor>`
+        location in the source.
+
+    compressedbytes : int
+        number of bytes after compression.
+
+    uncompressedbytes : int
+        number of bytes before compression.
 """
