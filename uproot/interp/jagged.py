@@ -119,7 +119,7 @@ class JaggedArray(object):
             self.sizes = sizes
 
     @staticmethod
-    def fromlists(*lists):
+    def fromlists(lists):
         offsets = numpy.empty(len(lists) + 1, dtype=numpy.int64)
         offsets[0] = 0
 

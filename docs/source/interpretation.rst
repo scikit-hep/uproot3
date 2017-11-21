@@ -30,10 +30,14 @@ uproot.interp.asjagged
 
 .. autoclass:: uproot.interp.jagged.asjagged
 
+.. automethod:: uproot.interp.jagged.asjagged.to
+
 uproot.interp.jagged.JaggedArray
 --------------------------------
 
 .. autoclass:: uproot.interp.jagged.JaggedArray
+
+.. automethod:: uproot.interp.jagged.JaggedArray.fromlists
 
 uproot.interp.asstrings
 -----------------------
