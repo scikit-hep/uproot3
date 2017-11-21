@@ -35,6 +35,10 @@ uproot.cache.DiskCache
 
 .. autoclass:: uproot.cache.diskcache.DiskCache
 
+.. automethod:: uproot.cache.diskcache.DiskCache.create
+
+.. automethod:: uproot.cache.diskcache.DiskCache.join
+
 uproot.cache.arrayread
 ----------------------
 

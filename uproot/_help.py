@@ -1604,6 +1604,8 @@ u"""A ``dict`` with a least-recently-used (LRU) eviction policy.
 
     Like ``dict``, this class is not thread-safe.
 
+    Like ``dict``, keys may be any hashable type.
+    
     **Attributes, properties, and methods:**
 
     - **numbytes** (*int*) the number of bytes currently stored in this cache.
@@ -1656,3 +1658,166 @@ u"""A ``dict`` with thread safety.
 
     This class is a direct subclass of ``dict`` with a global lock. Every method acquires the lock upon entry and releases it upon exit.
 """
+
+################################################################ uproot.cache.DiskCache
+
+uproot.cache.diskcache.DiskCache.__doc__ = \
+u"""A persistent, ``dict``-like object with a least-recently-used (LRU) eviction policy.
+
+    This class is not a subclass of ``dict``, but it implements the major features of the ``dict`` interface:
+
+    - square brackets get objects from the cache (``__getitem__``), put them in the cache (``__setitem__``), and delete them from the cache (``__delitem__``);
+    - ``in`` checks for key existence (``__contains__``);
+    - **keys**, **values**, and **items** return iterators over cache contents.
+
+    Unlike ``dict``, the least recently used key-value pairs are removed to avoid exceeding a user-specified memory budget. The memory budget may be temporarily exceeded during the process of setting the item.
+
+    Unlike ``dict``, all data is stored in a POSIX filesystem. The only data the in-memory object maintains is a read-only **config**, the **directory** name, and **read**, **write** functions for deserializing/serializing objects.
+
+    Unlike ``dict``, this cache is thread-safe and process-safe--- several processes can read and write to the same cache concurrently, and these threads/processes do not need to be aware of each other (so they can start and stop at will). The first thread/process calls :py:meth:`create <uproot.cache.diskcache.DiskCache.create>` to make a new cache directory and the rest :py:meth:`join <uproot.cache.diskcache.DiskCache.join>` an existing directory. Since the cache is on disk, it can be joined even if all processes are killed and restarted.
+
+    Do not use the :py:class:`DiskCache <uproot.cache.diskcache.DiskCache>` constructor: create instances using :py:meth:`create <uproot.cache.diskcache.DiskCache.create>` and :py:meth:`join <uproot.cache.diskcache.DiskCache.join>` *only*.
+
+    The cache is configured by a read-only ``config.json`` file and its changing state is tracked with a ``state.json`` file. Key lookup is performed through a shared, memory-mapped ``lookup.npy`` file. When the cache must be locked, it is locked by locking the ``lookup.npy`` file (``fcntl.LOCK_EX``). Read and write operations only lock while hard-linking or renaming files--- bulk reading and writing is performed outside the lock.
+
+    The names of the keys and their priority order is encoded in a subdirectory tree, which is updated in such a way that no directory exceeds a maximum number of subdirectories and the least and most recently used keys can be identified without traversing all of the keys.
+
+    The ``lookup.npy`` file is a binary-valued hashmap. If two keys hash to the same value, collisions are resolved via JSON files. Collisions are very expensive and should be avoided by providing enough slots in the ``lookup.npy`` file.
+
+    Unlike ``dict``, keys must be strings.
+
+    **Attributes, properties, and methods:**
+
+    - **numbytes** (*int*) the number of bytes currently stored in the cache.
+    - **config.limitbytes** (*int*) the memory budget expressed in bytes.
+    - **config.lookupsize** (*int*) the number of slots in the hashmap ``lookup.npy`` (increase this to reduce collisions).
+    - **config.maxperdir** (*int*) the maximum number of subdirectories per directory.
+    - **config.delimiter** (*str*) used to separate order prefix from keys.
+    - **config.numformat** (*str*) Numpy dtype of the ``lookup.npy`` file (as a string).
+    - **state.numbytes** (*int*) see **numbytes** above.
+    - **state.depth** (*int*) current depth of the subdirectory tree.
+    - **state.next** (*int*) next integer in the priority queue.
+    - **refresh_config()** re-reads **config** from ``config.json``.
+    - **promote(key)** declare a key to be the most recently used; raises ``KeyError`` if *key* is not in the cache.
+    - **keys()** locks the cache and returns an iterator over keys; cache is unlocked only when iteration finishes (so evaluate this quickly to avoid blocking the cache for all processes).
+    - **values()** locks the cache and returns an iterator over values; same locking warning.
+    - **items()** locks the cache and returns an iterator over key-value pairs; same locking warning.
+    - **destroy()** deletes the directory--- all subsequent actions are undefined.
+"""
+
+cache_diskcache_fragments = {
+    # read
+    "read": u"""read : function (filename, cleanup) \u21d2 data
+        deserialization function, used by "get" to turn files into Python objects (such as arrays). This function must call ``cleanup()`` when reading is complete, regardless of whether an exception occurs.""",
+
+    # write
+    "write": u"""write : function (filename, data) \u21d2 ``None``
+        serialization function, used by "put" to turn Python objects (such as arrays) into files. The return value of this function is ignored.""",
+    }
+
+_method(uproot.cache.diskcache.DiskCache.create).__doc__ = \
+u"""Create a new disk cache.
+
+    Parameters
+    ----------
+    limitbytes : int
+        the memory budget expressed in bytes.
+
+    directory : str
+        local path to the directory to create as a disk cache. If a file or directory exists at that location, it will be overwritten.
+
+    {read}
+
+    {write}
+
+    lookupsize : int
+        the number of slots in the hashmap ``lookup.npy`` (increase this to reduce collisions).
+
+    maxperdir : int
+        the maximum number of subdirectories per directory.
+
+    delimiter : str
+        used to separate order prefix from keys.
+
+    numformat : ``numpy.dtype``
+        type of the ``lookup.npy`` file.
+
+    Returns
+    -------
+    :py:class:`DiskCache <uproot.cache.diskcache.DiskCache>`
+        first view into the disk cache.
+""".format(**cache_diskcache_fragments)
+
+_method(uproot.cache.diskcache.DiskCache.join).__doc__ = \
+u"""Instantate a view into an existing disk cache.
+
+    Parameters
+    ----------
+    directory : str
+        local path to the directory to view as a disk cache.
+
+    {read}
+
+    {write}
+
+    check : bool
+        if ``True`` *(default)*, verify that the structure of the directory is a properly formatted disk cache, raising ``ValueError`` if it isn't.
+
+    Returns
+    -------
+    :py:class:`DiskCache <uproot.cache.diskcache.DiskCache>`
+        view into the disk cache.
+""".format(**cache_diskcache_fragments)
+
+uproot.cache.diskcache.arrayread.__doc__ = \
+u"""Sample deserialization function; reads Numpy files (``*.npy``) into Numpy arrays.
+
+    To be used as an argument to :py:meth:`create <uproot.cache.diskcache.DiskCache.create>` or :py:meth:`join <uproot.cache.diskcache.DiskCache.join>`.
+
+    Parameters
+    ----------
+    filename : str
+        local path to read.
+
+    cleanup : function () \u21d2 ``None``
+        cleanup function to call after reading is complete.
+
+    Returns
+    -------
+    ``numpy.ndarray``
+        Numpy array.
+"""
+
+uproot.cache.diskcache.arraywrite.__doc__ = \
+u"""Sample serialization function; writes Numpy arrays into Numpy files (``*.npy``).
+
+    To be used as an argument to :py:meth:`create <uproot.cache.diskcache.DiskCache.create>` or :py:meth:`join <uproot.cache.diskcache.DiskCache.join>`.
+
+    Parameters
+    ----------
+    filename : str
+        local path to overwrite.
+
+    obj : ``numpy.ndarray``
+        array to write.
+"""
+
+uproot.cache.diskcache.memmapread.__doc__ = \
+u"""Lazy deserialization function; reads Numpy files (``*.npy``) as a memory-map.
+
+    To be used as an argument to :py:meth:`create <uproot.cache.diskcache.DiskCache.create>` or :py:meth:`join <uproot.cache.diskcache.DiskCache.join>`.
+    
+    Parameters
+    ----------
+    filename : str
+        local path to read.
+
+    cleanup : function () \u21d2 ``None``
+        cleanup function to call after reading is complete.
+
+    Returns
+    -------
+    wrapped ``numpy.core.memmap``
+        cleanup function is called when this object is destroyed (``__del__``).
+"""
+
