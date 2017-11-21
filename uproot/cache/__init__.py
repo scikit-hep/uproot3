@@ -32,3 +32,7 @@ from uproot.cache.memorycache import MemoryCache
 from uproot.cache.memorycache import ThreadSafeMemoryCache
 from uproot.cache.memorycache import ThreadSafeDict
 from uproot.cache.diskcache import DiskCache
+
+from uproot.cache.diskcache import arrayread
+from uproot.cache.diskcache import arraywrite
+from uproot.cache.diskcache import memmapread

@@ -18,34 +18,34 @@ Passing explicit caches to **rawcache** and **keycache** will ensure that the fi
 uproot.cache.MemoryCache
 ------------------------
 
-.. autoclass:: uproot.cache.MemoryCache
+.. autoclass:: uproot.cache.memorycache.MemoryCache
 
 uproot.cache.ThreadSafeMemoryCache
 ----------------------------------
 
-.. autoclass:: uproot.cache.ThreadSafeMemoryCache
+.. autoclass:: uproot.cache.memorycache.ThreadSafeMemoryCache
 
 uproot.cache.ThreadSafeDict
 ---------------------------
 
-.. autoclass:: uproot.cache.ThreadSafeDict
+.. autoclass:: uproot.cache.memorycache.ThreadSafeDict
 
 uproot.cache.DiskCache
 ----------------------
 
-.. autoclass:: uproot.cache.DiskCache
+.. autoclass:: uproot.cache.diskcache.DiskCache
 
-uproot.cache.diskcache.arrayread
---------------------------------
+uproot.cache.arrayread
+----------------------
 
 .. autofunction:: uproot.cache.diskcache.arrayread
 
-uproot.cache.diskcache.arraywrite
----------------------------------
+uproot.cache.arraywrite
+-----------------------
 
 .. autofunction:: uproot.cache.diskcache.arraywrite
 
-uproot.cache.diskcache.memmapread
----------------------------------
+uproot.cache.memmapread
+-----------------------
 
 .. autofunction:: uproot.cache.diskcache.memmapread
