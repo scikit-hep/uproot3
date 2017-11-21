@@ -36,12 +36,13 @@ class MemoryCache(dict):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (type,), {})
 
-    __slots__ = ("limitbytes", "numevicted", "chain", "_order", "_lookup", "_numbytes")
+    __slots__ = ("limitbytes", "numevicted", "spillover", "spill_immediately", "_order", "_lookup", "_numbytes")
 
-    def __init__(self, limitbytes, chain=None, items=(), **kwds):
+    def __init__(self, limitbytes, spillover=None, spill_immediately=False, items=(), **kwds):
         assert isinstance(limitbytes, numbers.Integral) and limitbytes > 0
         self.limitbytes = limitbytes
-        self.chain = chain
+        self.spillover = spillover
+        self.spill_immediately = spill_immediately
         self.numevicted = 0
         self._order = []
         self._lookup = {}
@@ -64,7 +65,7 @@ class MemoryCache(dict):
         for i, obj in enumerate(reversed(self._order)):
             if key == obj:
                 return len(self._order) - i - 1
-        raise ValueError("{0} is not in MemoryCache".format(repr(key)))
+        raise KeyError("{0} is not in MemoryCache".format(repr(key)))
 
     def promote(self, key):
         i = self.index(key)
@@ -76,20 +77,28 @@ class MemoryCache(dict):
             self.promote(key)
             return self._lookup[key]
 
-        elif self.chain is not None:
+        elif self.spillover is not None:
             # get it from the backup
-            value = self.chain[key]
-            # temporarily disconnect the chain so that we don't put the value back in there (should already be promoted)
-            chain = self.chain
-            self.chain = None
+            value = self.spillover[key]
+            # temporarily disconnect the spillover so that we don't put the value back in there (should already be promoted)
+            spillover = self.spillover
+            self.spillover = None
             # put the key-value pair into *this* cache
             self[key] = value
-            # restore the chain
-            self.chain = chain
+            # restore the spillover
+            self.spillover = spillover
             return value
 
         else:
             raise KeyError(repr(key))
+
+    def spill(self, key):
+        if self.spillover is not None:
+            self.spillover[key] = self._lookup[key]
+
+    def spillall(self):
+        for key in self._order:
+            self.spillover[key] = self._lookup[key]
 
     def __setitem__(self, key, value):
         container_before = sys.getsizeof(self._order) + sys.getsizeof(self._lookup)
@@ -102,8 +111,8 @@ class MemoryCache(dict):
             self._order.append(key)
         self._lookup[key] = value
 
-        if self.chain is not None:
-            self.chain[key] = value
+        if self.spill_immediately:
+            self.spill(key)
 
         container_after = sys.getsizeof(self._order) + sys.getsizeof(self._lookup)
         self._numbytes += container_after - container_before + delta_contents
@@ -111,6 +120,9 @@ class MemoryCache(dict):
         while len(self._order) > 0 and self._numbytes > self.limitbytes:
             container_before = sys.getsizeof(self._order) + sys.getsizeof(self._lookup)
             delta_contents = -(sys.getsizeof(self._lookup[self._order[0]]) + sys.getsizeof(self._order[0]))
+
+            if not self.spill_immediately:
+                self.spill(self._order[0])
 
             del self._lookup[self._order[0]]
             del self._order[0]
@@ -120,6 +132,12 @@ class MemoryCache(dict):
             self.numevicted += 1
 
     def __delitem__(self, key):
+        if self.spillover is not None:
+            try:
+                del self.spillover[key]
+            except KeyError:
+                pass
+
         if key not in self._lookup:
             raise KeyError(repr(key))
 
@@ -128,9 +146,6 @@ class MemoryCache(dict):
 
         del self._order[index(key)]
         del self._lookup[key]
-
-        if self.chain is not None:
-            del self.chain[key]
 
         container_after = sys.getsizeof(self._order) + sys.getsizeof(self._lookup)
         self._numbytes += container_after - container_before + delta_contents
@@ -178,7 +193,12 @@ class MemoryCache(dict):
         self._numbytes = sys.getsizeof(self.limitbytes) + sys.getsizeof(0) + sys.getsizeof(self.numevicted) + sys.getsizeof(self._order) + sys.getsizeof(self._lookup)
 
     def has_key(self, key):
-        return key in self._lookup
+        if key in self._lookup:
+            return True
+        elif self.spillover is not None:
+            return key in self.spillover
+        else:
+            return False
 
     def __contains__(self, key):
         return self.has_key(key)
@@ -318,6 +338,14 @@ class ThreadSafeMemoryCache(MemoryCache):
     def __getitem__(self, key):
         with self._lock:
             return super(ThreadSafeMemoryCache, self).__getitem__(key)
+
+    def spill(self, key):
+        with self._lock:
+            return super(ThreadSafeMemoryCache, self).spill(key)
+
+    def spillall(self):
+        with self._lock:
+            return super(ThreadSafeMemoryCache, self).spillall()
 
     def __setitem__(self, key, value):
         with self._lock:
