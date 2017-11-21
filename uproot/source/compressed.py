@@ -34,6 +34,9 @@ import uproot.const
 import uproot.source.source
 
 class Compression(object):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (type,), {})
+
     def __init__(self, fCompress):
         self.algo = max(fCompress // 100, uproot.const.kZLIB)
         self.level = fCompress % 100
@@ -102,6 +105,9 @@ class Compression(object):
             raise ValueError("unrecognized compression algorithm: {0}".format(self.algo))
 
 class CompressedSource(uproot.source.source.Source):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (uproot.source.source.Source.__metaclass__,), {})
+
     def __init__(self, compression, source, cursor, compressedbytes, uncompressedbytes):
         self.compression = compression
         self._compressed = source

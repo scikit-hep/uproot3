@@ -34,6 +34,9 @@ import uproot.cache.memorycache
 import uproot.source.source
 
 class ChunkedSource(uproot.source.source.Source):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (uproot.source.source.Source.__metaclass__,), {})
+
     def __init__(self, path, chunkbytes, limitbytes):
         self.path = path
         self._chunkbytes = chunkbytes

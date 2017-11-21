@@ -1313,10 +1313,10 @@ u"""Generate a default interpretation of a branch.
 ################################################################ uproot.interp fragments
 
 interp_fragments = {
-    # see
+    # see1
     "see1": u"""Part of the :py:class:`Interpretation <uproot.interp.interp.Interpretation>` interface; type ``help(uproot.interp.interp.Interpretation)`` for details.""",
 
-    # notes
+    # see2
     "see2": u"""Methods implementing the :py:class:`Interpretation <uproot.interp.interp.Interpretation>` interface are not documented here.""",
     }
 
@@ -1769,6 +1769,8 @@ u"""Instantate a view into an existing disk cache.
         view into the disk cache.
 """.format(**cache_diskcache_fragments)
 
+################################################################ uproot.cache.diskcache.arrayread
+
 uproot.cache.diskcache.arrayread.__doc__ = \
 u"""Sample deserialization function; reads Numpy files (``*.npy``) into Numpy arrays.
 
@@ -1788,6 +1790,8 @@ u"""Sample deserialization function; reads Numpy files (``*.npy``) into Numpy ar
         Numpy array.
 """
 
+################################################################ uproot.cache.diskcache.arraywrite
+
 uproot.cache.diskcache.arraywrite.__doc__ = \
 u"""Sample serialization function; writes Numpy arrays into Numpy files (``*.npy``).
 
@@ -1801,6 +1805,8 @@ u"""Sample serialization function; writes Numpy arrays into Numpy files (``*.npy
     obj : ``numpy.ndarray``
         array to write.
 """
+
+################################################################ uproot.cache.diskcache.memmapread
 
 uproot.cache.diskcache.memmapread.__doc__ = \
 u"""Lazy deserialization function; reads Numpy files (``*.npy``) as a memory-map.
@@ -1821,3 +1827,408 @@ u"""Lazy deserialization function; reads Numpy files (``*.npy``) as a memory-map
         cleanup function is called when this object is destroyed (``__del__``).
 """
 
+################################################################ uproot.source.cursor.Cursor
+
+uproot.source.cursor.Cursor.__doc__ = \
+u"""Maintain a position in a :py:class:`Source <uproot.source.source.Source>` that updates as data are read.
+
+    **Attributes, properties, and methods:**
+
+    - **index** (*int*) the position.
+    - **origin** (*int*) "beginning of buffer" position, used in the **refs** key in :py:func:`uproot.rootio._readobjany <uproot.rootio._readobjany>`.
+    - **refs** (``None`` or ``dict``-like) manages cross-references in :py:func:`uproot.rootio._readobjany <uproot.rootio._readobjany>`.
+    - :py:meth:`copied <uproot.source.cursor.Cursor.copied>` return a copy of this :py:class:`Cursor <uproot.source.cursor.Cursor>` with modifications.
+    - :py:meth:`skipped <uproot.source.cursor.Cursor.skipped>` return a copy of this :py:class:`Cursor <uproot.source.cursor.Cursor>` with the **index** moved forward.
+    - :py:meth:`skip <uproot.source.cursor.Cursor.skip>` move the **index** of this :py:class:`Cursor <uproot.source.cursor.Cursor>` forward.
+    - :py:meth:`fields <uproot.source.cursor.Cursor.fields>` interpret bytes in the :py:class:`Source <uproot.source.source.Source>` with given data types and skip the **index** past them.
+    - :py:meth:`field <uproot.source.cursor.Cursor.field>` interpret bytes in the :py:class:`Source <uproot.source.source.Source>` with a given data type and skip the **index** past it.
+    - :py:meth:`bytes <uproot.source.cursor.Cursor.bytes>` return a range of bytes from the :py:class:`Source <uproot.source.source.Source>` and skip the **index** past it.
+    - :py:meth:`array <uproot.source.cursor.Cursor.array>` return a range of bytes from the :py:class:`Source <uproot.source.source.Source>` as a typed Numpy array and skip the **index** past it.
+    - :py:meth:`string <uproot.source.cursor.Cursor.string>` read a string from the :py:class:`Source <uproot.source.source.Source>`, interpreting the first 1 or 5 bytes as a size and skip the **index** past it.
+    - :py:meth:`cstring <uproot.source.cursor.Cursor.cstring>` read a null-terminated string from the :py:class:`Source <uproot.source.source.Source>` and skip the **index** past it.
+    - :py:meth:`skipstring <uproot.source.cursor.Cursor.skipstring>` interpret the first 1 or 5 bytes as a size and skip the **index** past the string (without creating a Python string).
+    - :py:meth:`hexdump <uproot.source.cursor.Cursor.hexdump>` view a section of the :py:class:`Source <uproot.source.source.Source>` as formatted by the POSIX ``hexdump`` program and *do not* move the **index**.
+
+    Parameters
+    ----------
+    index : int
+       the initial **index**.
+
+    origin : int
+       the **origin**, *(default is 0)*.
+
+    refs : ``None`` or ``dict``-like
+       if ``None`` *(default)*, use a new :py:class:`ThreadSafeDict <uproot.cache.memorycache.ThreadSafeDict>` as the **ref**; otherwise, use the value provided.
+"""
+
+format_source_cursor = {
+    # source
+    "source": u"""source : :py:class:`Source <uproot.source.source.Source>`
+        data to be read."""
+    }
+
+_method(uproot.source.cursor.Cursor.copied).__doc__ = \
+u"""Return a copy of this :py:class:`Cursor <uproot.source.cursor.Cursor>` with modifications.
+    
+    Parameters
+    ----------
+    index : ``None`` or int
+        if not ``None`` *(default)*, use this as the new index position.
+
+    origin : ``None`` or int
+        if not ``None`` *(default)*, use this as the new origin.
+
+    refs : ``None`` or ``dict``-like
+        if not ``None`` *(default)*, use this as the new refs.
+
+    Returns
+    -------
+    :py:class:`Cursor <uproot.source.cursor.Cursor>`
+        the new cursor.
+
+    Notes
+    -----
+
+    This is a shallow copy--- the **refs** are shared with the parent and all other copies.
+""".format(**format_source_cursor)
+
+_method(uproot.source.cursor.Cursor.skipped).__doc__ = \
+u"""Return a copy of this :py:class:`Cursor <uproot.source.cursor.Cursor>` with the **index** moved forward.
+
+    Parameters
+    ----------
+    numbytes : int
+        number of bytes to be skipped in the copy, leaving the original unchanged.
+
+    origin : ``None`` or int
+        if not ``None`` *(default)*, use this as the new origin.
+
+    refs : ``None`` or ``dict``-like
+        if not ``None`` *(default)*, use this as the new refs.
+
+    Returns
+    -------
+    :py:class:`Cursor <uproot.source.cursor.Cursor>`
+        the new cursor.
+
+    Notes
+    -----
+
+    This is a shallow copy--- the **refs** are shared with the parent and all other copies.
+""".format(**format_source_cursor)
+
+_method(uproot.source.cursor.Cursor.skip).__doc__ = \
+u"""Move the **index** of this :py:class:`Cursor <uproot.source.cursor.Cursor>` forward.
+
+    Parameters
+    ----------
+    numbytes : int
+        number of bytes to skip
+""".format(**format_source_cursor)
+
+_method(uproot.source.cursor.Cursor.fields).__doc__ = \
+u"""Interpret bytes in the :py:class:`Source <uproot.source.source.Source>` with given data types and skip the **index** past them.
+
+    Parameters
+    ----------
+    {source}
+
+    format : ``struct.Struct``
+        compiled parser from Python's ``struct`` library.
+
+    Returns
+    -------
+    tuple
+        field values (types determined by format)
+""".format(**format_source_cursor)
+
+_method(uproot.source.cursor.Cursor.field).__doc__ = \
+u"""Interpret bytes in the :py:class:`Source <uproot.source.source.Source>` with a given data type and skip the **index** past it.
+
+    Parameters
+    ----------
+    {source}
+
+    format : ``struct.Struct``
+        compiled parser from Python's ``struct`` library; must return only one field.
+
+    Returns
+    -------
+    type determined by format
+        field value
+""".format(**format_source_cursor)
+
+_method(uproot.source.cursor.Cursor.bytes).__doc__ = \
+u"""Return a range of bytes from the :py:class:`Source <uproot.source.source.Source>` and skip the **index** past it.
+
+    Parameters
+    ----------
+    {source}
+
+    length : int
+        number of bytes.
+
+    Returns
+    -------
+    ``numpy.ndarray`` of ``numpy.uint8``
+        raw view of data from source.
+""".format(**format_source_cursor)
+
+_method(uproot.source.cursor.Cursor.array).__doc__ = \
+u"""Return a range of bytes from the :py:class:`Source <uproot.source.source.Source>` as a typed Numpy array and skip the **index** past it.
+
+    Parameters
+    ----------
+    {source}
+
+    length : int
+        number of items.
+
+    dtype : ``numpy.dtype``
+        type of the array.
+
+    Returns
+    -------
+    ``numpy.ndarray``
+        interpreted view of data from source.
+""".format(**format_source_cursor)
+
+_method(uproot.source.cursor.Cursor.string).__doc__ = \
+u"""Read a string from the :py:class:`Source <uproot.source.source.Source>`, interpreting the first 1 or 5 bytes as a size and skip the **index** past it.
+
+    Parameters
+    ----------
+    {source}
+    
+    Returns
+    -------
+    bytes
+        Python string (``bytes`` in Python 3).
+""".format(**format_source_cursor)
+
+_method(uproot.source.cursor.Cursor.cstring).__doc__ = \
+u"""Read a null-terminated string from the :py:class:`Source <uproot.source.source.Source>` and skip the **index** past it.
+
+    The index is also skipped past the null that terminates the string.
+
+    Parameters
+    ----------
+    {source}
+    
+    Returns
+    -------
+    bytes
+        Python string (``bytes`` in Python 3).
+""".format(**format_source_cursor)
+
+_method(uproot.source.cursor.Cursor.skipstring).__doc__ = \
+u"""Interpret the first 1 or 5 bytes as a size and skip the **index** past the string (without creating a Python string).
+
+    Parameters
+    ----------
+    {source}
+""".format(**format_source_cursor)
+
+_method(uproot.source.cursor.Cursor.hexdump).__doc__ = \
+u"""View a section of the :py:class:`Source <uproot.source.source.Source>` as formatted by the POSIX ``hexdump`` program and *do not* move the **index**.
+
+    This is much more useful than simply hexdumping the whole file, since partial interpretation is necessary to find the right point in the file to dump.
+
+    Parameters
+    ----------
+    {source}
+
+    size : int
+        number of bytes to view; default is 160 (10 lines).
+
+    offset : int
+        where to start the view, relative to index; default is 0 (at index).
+
+    format : str
+        Python's printf-style format string for individual bytes; default is "%02x" (zero-prefixed, two-character hexidecimal).
+
+    Returns
+    -------
+    str
+        hexdump-formatted view to be printed
+""".format(**format_source_cursor)
+
+################################################################ uproot.source.source.Source
+
+uproot.source.source.Source.__doc__ = \
+u"""Interface for data sources.
+
+    Sources do not need to inherit from this class, but they do need to satisfy the interface described below.
+
+    **parent(self)**
+        return the :py:class:`Source <uproot.source.source.Source>` from which this was copied; may be ``None``.
+
+    **threadlocal(self)**
+        either return ``self`` (if thread-safe) or return a thread-safe copy, such as a new file handle into the same file.
+
+    **dismiss(self)**
+        thread-local copies are no longer needed; they may be eliminated if redundant.
+
+    **data(self, start, stop, dtype=numpy.uint8)**
+        return a view of data from the starting byte (inclusive) to the stopping byte (exclusive), with a given Numpy type.
+"""
+
+source_fragments = {
+    # see1
+    "see1": u"""Part of the :py:class:`Source <uproot.source.source.Source>` interface; type ``help(uproot.source.source.Source)`` for details.""",
+
+    # see2
+    "see2": u"""Methods implementing the :py:class:`Source <uproot.source.source.Source>` interface are not documented here.""",
+    }
+
+################################################################ uproot.source.file.FileSource
+
+uproot.source.file.FileSource.defaults.__doc__ = \
+u"""Provide sensible defaults for a :py:class:`FileSource <uproot.source.file.FileSource>`.
+
+    The default parameters are:
+
+    - **chunkbytes:** 8*1024 (8 kB per chunk, the minimum that pages into memory if you try to read one byte on a typical Linux system).
+    - **limitbytes:** 1024**2 (1 MB), a very modest amount of RAM.
+
+    Parameters
+    ----------
+    path : str
+        local file path of the input file (it must not be moved during reading!).
+
+    Returns
+    -------
+    :py:class:`FileSource <uproot.source.file.FileSource>`
+        a new file source.
+"""
+
+uproot.source.file.FileSource.__doc__ = \
+u"""Emulate a memory-mapped interface with traditional file handles, opening many if necessary.
+
+    :py:class:`FileSource <uproot.source.file.FileSource>` objects avoid double-reading and many small reads by caching data in chunks. All thread-local copies of a :py:class:`FileSource <uproot.source.file.FileSource>` share a :py:class:`ThreadSafeMemoryCache <uproot.cache.memorycache.ThreadSafeMemoryCache>` to avoid double-reads across threads.
+
+    Parameters
+    ----------
+    path : str
+        local file path of the input file (it must not be moved during reading!).
+
+    chunkbytes : int
+        number of bytes per chunk.
+
+    limitbytes : int
+        maximum number of bytes to keep in the cache.
+
+    Notes
+    -----
+
+    {see2}
+""".format(**source_fragments)
+
+_method(uproot.source.file.FileSource.parent).__doc__ = source_fragments["see1"]
+_method(uproot.source.file.FileSource.threadlocal).__doc__ = source_fragments["see1"]
+_method(uproot.source.file.FileSource.dismiss).__doc__ = source_fragments["see1"]
+_method(uproot.source.file.FileSource.data).__doc__ = source_fragments["see1"]
+
+################################################################ uproot.source.memmap.MemmapSource
+
+uproot.source.memmap.MemmapSource.defaults.__doc__ = \
+u"""Provide sensible defaults for a :py:class:`MemmapSource <uproot.source.memmap.MemmapSource>`.
+
+    This is a dummy function, as :py:class:`MemmapSource <uproot.source.memmap.MemmapSource>` is not parameterizable. It exists to satisfy code symmetry.
+
+    Parameters
+    ----------
+    path : str
+        local file path of the input file.
+
+    Returns
+    -------
+    :py:class:`MemmapSource <uproot.source.memmap.MemmapSource>`
+        a new memory-mapped source.
+"""
+
+uproot.source.memmap.MemmapSource.__doc__ = \
+u"""Thin wrapper around a memory-mapped file, which already behaves like a :py:class:`Source <uproot.source.source.Source>`.
+
+    Parameters
+    ----------
+    path : str
+        local file path of the input file.
+
+    Notes
+    -----
+
+    {see2}
+""".format(**source_fragments)
+
+_method(uproot.source.memmap.MemmapSource.parent).__doc__ = source_fragments["see1"]
+_method(uproot.source.memmap.MemmapSource.threadlocal).__doc__ = source_fragments["see1"]
+_method(uproot.source.memmap.MemmapSource.dismiss).__doc__ = source_fragments["see1"]
+_method(uproot.source.memmap.MemmapSource.data).__doc__ = source_fragments["see1"]
+
+################################################################ uproot.source.xrootd.XRootDSource
+
+uproot.source.xrootd.XRootDSource.defaults.__doc__ = \
+u"""Provide sensible defaults for a :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>`.
+
+    The default parameters are:
+
+    - **chunkbytes:** 8*1024 (8 kB per chunk).
+    - **limitbytes:** 1024**2 (1 MB), a very modest amount of RAM.
+
+    Parameters
+    ----------
+    path : str
+        remote file URL.
+
+    Returns
+    -------
+    :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>`
+        a new XRootD source.
+"""
+
+uproot.source.xrootd.XRootDSource.__doc__ = \
+u"""Emulate a memory-mapped interface with XRootD.
+
+    XRootD is already thread-safe, but provides no caching. :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>` objects avoid double-reading and many small reads by caching data in chunks. They are not duplicated when splitting into threads.
+
+    Parameters
+    ----------
+    path : str
+        remote file URL.
+
+    chunkbytes : int
+        number of bytes per chunk.
+
+    limitbytes : int
+        maximum number of bytes to keep in the cache.
+
+    Notes
+    -----
+
+    {see2}
+""".format(**source_fragments)
+
+_method(uproot.source.xrootd.XRootDSource.parent).__doc__ = source_fragments["see1"]
+_method(uproot.source.xrootd.XRootDSource.threadlocal).__doc__ = source_fragments["see1"]
+_method(uproot.source.xrootd.XRootDSource.dismiss).__doc__ = source_fragments["see1"]
+_method(uproot.source.xrootd.XRootDSource.data).__doc__ = source_fragments["see1"]
+
+################################################################ uproot.source.compressed.CompressedSource
+
+uproot.source.compressed.Compression.__doc__ = \
+u"""Describe the compression of a compressed block.
+
+    **Attributes, properties, and methods:**
+
+    - **algo** (*int*) algorithm code.
+    - **level** (*int*) 0 is no compression, 1 is least, 9 is most.
+    - **algoname** (*str*) algorithm expressed as a string: ``"zlib"``, ``"lzma"``, ``"old"``, or ``"lz4"``.
+    - **copy(algo=None, level=None)** copy this :py:class:`Compression <uproot.source.compressed.Compression>` object, possibly changing a field.
+    - **decompress(source, cursor, compressedbytes, uncompressedbytes)** decompress data from **source** at **cursor**, knowing the compressed and uncompressed size.
+
+    Parameters
+    ----------
+    fCompress : int
+        ROOT fCompress field.
+"""

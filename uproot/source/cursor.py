@@ -36,6 +36,9 @@ import numpy
 import uproot.cache.memorycache
 
 class Cursor(object):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (type,), {})
+
     def __init__(self, index, origin=0, refs=None):
         self.index = index
         self.origin = origin

@@ -31,6 +31,9 @@
 import numpy
 
 class Source(object):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (type,), {})
+
     def parent(self):
         raise NotImplementedError
 

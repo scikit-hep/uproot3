@@ -36,6 +36,9 @@ import uproot.cache.memorycache
 import uproot.source.chunked
 
 class FileSource(uproot.source.chunked.ChunkedSource):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (uproot.source.chunked.ChunkedSource.__metaclass__,), {})
+
     @staticmethod
     def defaults(path):
         return FileSource(path, chunkbytes=8*1024, limitbytes=1024**2)
