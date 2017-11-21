@@ -1327,7 +1327,7 @@ interp_numerical_fragments = {
     "items": u"""In this interpretation, "items" (for ``numitems``, ``itemstart``, ``itemstop``, etc.) has the same meaning as in Numpy: an item is a single scalar value. For example, 100 entries of 2\u00d72 matrices (``todims == (2, 2)``) is 400 items.""",
 
     # fromdtype
-    "fromdtype": u"""fromdtype : **numpy.dtype**
+    "fromdtype": u"""fromdtype : ``numpy.dtype``
         the source type; the meaning associated with bytes in the ROOT file. Should be big-endian (e.g. ``">i4"`` for 32-bit integers and ``">f8"`` for 64-bit floats).""",
 
     # fromdims
@@ -1348,7 +1348,7 @@ u"""Interpret branch data as a new Numpy array with given dtypes and dimensions.
     ----------
     {fromdtype}
 
-    todtype : ``None`` or **numpy.dtype**
+    todtype : ``None`` or ``numpy.dtype``
         the destination type; the conversion performed if different from the source type. If ``None`` (the default), the destination type will be a native-endian variant of the source type, so that a byte-swap is performed.
 
     {fromdims}
@@ -1367,7 +1367,7 @@ u"""Create a new :py:class:`asdtype <uproot.interp.numerical.asdtype>` interpret
 
     Parameters
     ----------
-    todtype : ``None`` or **numpy.dtype**
+    todtype : ``None`` or ``numpy.dtype``
         if not ``None``, change the destination type.
 
     todims : ``None`` or tuple of ints
@@ -1384,7 +1384,7 @@ u"""Create a :py:class:`asarray <uproot.interp.numerical.asarray>` interpretatio
 
     Parameters
     ----------
-    array : **numpy.ndarray**
+    array : ``numpy.ndarray``
         the array to fill, instead of allocating a new one.
 
     Returns
@@ -1416,7 +1416,7 @@ u"""Interpret branch as array data that should overwrite an existing array.
     ----------
     {fromdtype}
 
-    toarray : **numpy.ndarray**
+    toarray : ``numpy.ndarray``
         array to be filled; must be at least as large as the branch data.
 
     {fromdims}
@@ -1459,7 +1459,7 @@ u"""Create a new :py:class:`asjagged <uproot.interp.jagged.asjagged>` interpreta
 
     Parameters
     ----------
-    todtype : ``None`` or **numpy.dtype**
+    todtype : ``None`` or ``numpy.dtype``
         if not ``None``, change the destination type of inner arrays.
 
     todims : ``None`` or tuple of ints
@@ -1508,13 +1508,13 @@ u"""Array of non-uniformly sized arrays, implemented with contiguous *contents* 
 
     Parameters
     ----------
-    contents : **numpy.ndarray**
+    contents : ``numpy.ndarray``
         the *contents* array, as defined above.
 
-    starts : **numpy.ndarray**
+    starts : ``numpy.ndarray``
         the *starts* array, as defined above. Must be one-dimensional with an integer dtype.
 
-    stops : **numpy.ndarray**
+    stops : ``numpy.ndarray``
         the *stops* array, as defined above. Must be one-dimensional with an integer dtype and the same length as *starts*.
 """
 
