@@ -34,6 +34,8 @@ import unittest
 import numpy
 
 import uproot
+from uproot.interp.jagged import asstlvector
+from uproot.interp.numerical import asdtype
 
 class TestSTLVector(unittest.TestCase):
     def runTest(self):
@@ -41,5 +43,4 @@ class TestSTLVector(unittest.TestCase):
 
     def test_vector_of_numbers(self):
         branch = uproot.open("tests/small-evnt-tree-fullsplit.root")["tree"]["StlVecU32"]
-        
-
+        branch.array(asstlvector(asdtype(numpy.uint32)))

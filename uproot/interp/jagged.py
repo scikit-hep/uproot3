@@ -98,6 +98,42 @@ class asjagged(Interpretation):
         contents = self.asdtype.finalize(destination.contents)
         return JaggedArray(contents, starts, stops)
 
+def _asstlvector_fromroot(data, offsets, local_entrystart, local_entrystop, itemsize):
+    numentries = local_entrystop - local_entrystart
+    contents = numpy.empty(offsets[local_entrystop] - offsets[local_entrystart] - 10*numentries, dtype=data.dtype)
+    newoffsets = numpy.empty(numentries + 1, dtype=offsets.dtype)
+    newoffsets[0] = 0
+
+    start = stop = 0
+    for entry in range(local_entrystart, local_entrystop):
+        datastart = offsets[entry] + 10
+        datastop = offsets[entry + 1]
+
+        stop = start + (datastop - datastart)
+
+        contents[start:stop] = data[datastart:datastop]
+        newoffsets[1 + entry - local_entrystart] = stop // itemsize
+
+        start = stop
+
+    return contents, newoffsets[:-1], newoffsets[1:]
+
+if numba is not None:
+    _asstlvector_fromroot = numba.njit(_asstlvector_fromroot)
+
+class asstlvector(asjagged):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (asjagged.__metaclass__,), {})
+
+    def __repr__(self):
+        return "asstlvector(" + repr(self.asdtype) + ")"
+
+    def fromroot(self, data, offsets, local_entrystart, local_entrystop):
+        if local_entrystart < 0 or local_entrystop >= len(offsets) or local_entrystart > local_entrystop:
+            raise ValueError("illegal local_entrystart or local_entrystop in asstlvector.fromroot")
+        contents, starts, stops = _asstlvector_fromroot(data, offsets, local_entrystart, local_entrystop, self.asdtype.fromdtype.itemsize)
+        return JaggedArray(contents.view(self.asdtype.fromdtype), starts, stops)
+
 def _jaggedarray_getitem(jaggedarray, index):
     stopslen = len(jaggedarray.stops)
     if index < 0:
