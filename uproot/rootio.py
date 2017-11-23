@@ -971,7 +971,7 @@ class TObject(ROOTStreamedObject):
         _skiptobj(source, cursor)
         return self
 
-class TString(str, ROOTStreamedObject):
+class TString(bytes, ROOTStreamedObject):
     @classmethod
     def _readinto(cls, self, source, cursor, context):
         return TString(cursor.string(source))
