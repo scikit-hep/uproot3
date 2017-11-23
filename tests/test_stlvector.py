@@ -46,3 +46,8 @@ class TestSTLVector(unittest.TestCase):
         a = branch.array()
         for i in range(100):
             self.assertEqual(a[i].tolist(), [i] * (i % 10))
+
+        branch = uproot.open("tests/small-evnt-tree-fullsplit.root")["tree"]["StlVecF64"]
+        a = branch.array()
+        for i in range(100):
+            self.assertEqual(a[i].tolist(), [i] * (i % 10))
