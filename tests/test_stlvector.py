@@ -43,4 +43,6 @@ class TestSTLVector(unittest.TestCase):
 
     def test_vector_of_numbers(self):
         branch = uproot.open("tests/small-evnt-tree-fullsplit.root")["tree"]["StlVecU32"]
-        branch.array(asstlvector(asdtype(numpy.uint32)))
+        a = branch.array()
+        for i in range(100):
+            self.assertEqual(a[i].tolist(), [i] * (i % 10))
