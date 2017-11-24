@@ -1,9 +1,9 @@
 Introduction
 ============
 
-.. include:: ../description.txt
+.. include:: ../../uproot/description.txt
 
-.. include:: ../long_description.txt
+.. include:: ../../uproot/long_description.txt
 
 .. include:: ../../README.rst
   :start-after: inclusion-marker-do-not-remove

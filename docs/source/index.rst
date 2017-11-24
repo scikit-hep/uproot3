@@ -1,9 +1,9 @@
 uproot
 ======
 
-.. include:: ../description.txt
+.. include:: ../../uproot/description.txt
 
-.. include:: ../long_description.txt
+.. include:: ../../uproot/long_description.txt
 
 Tutorials and walk-throughs
 ---------------------------
