@@ -151,12 +151,15 @@ def interpret(branch, classes=None, swapbytes=True):
 
             elif branch.fLeaves[0].__class__.__name__ == "TLeafElement":
                 if getattr(branch._streamer, "fSTLtype", None) == uproot.const.kSTLvector:
-                    fromdtype = _ftype2dtype(branch._streamer.fCtype)
-                    if swapbytes:
-                        ascontents = asdtype(fromdtype, fromdtype.newbyteorder("="))
-                    else:
-                        ascontents = asdtype(fromdtype, fromdtype)
-                    return asstlvector(ascontents)
+                    try:
+                        fromdtype = _ftype2dtype(branch._streamer.fCtype)
+                        if swapbytes:
+                            ascontents = asdtype(fromdtype, fromdtype.newbyteorder("="))
+                        else:
+                            ascontents = asdtype(fromdtype, fromdtype)
+                        return asstlvector(ascontents)
+                    except _NotNumerical:
+                        pass
 
         return None
 

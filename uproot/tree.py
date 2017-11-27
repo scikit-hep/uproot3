@@ -372,6 +372,16 @@ class TTreeMethods(object):
     def iterate_clusters(self, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, cache=None, rawcache=None, keycache=None, executor=None):
         return self._iterate(self.clusters(), branches, outputtype, reportentries, cache, rawcache, keycache, executor, True)
 
+    def _format(self, indent=""):
+        # TODO: add TTree data to the bottom of this
+        out = []
+        for branch in self.fBranches:
+            out.extend(branch._format(indent))
+        return out
+
+    def format(self):
+        return "\n".join(self._format())
+
     def _normalize_branches(self, arg):
         if arg is None:                                    # no specification; read all branches
             for branch in self.allvalues():                # that have interpretations
@@ -1212,7 +1222,27 @@ class TBranchMethods(object):
         if not 0 <= i < self.numbaskets:
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
         return self._BasketKey(source.parent(), Cursor(self.fBasketSeek[i]), uproot.source.compressed.Compression(self.fCompress), complete)
+
+    def _format(self, indent="", strip=""):
+        name = self.fName.decode("ascii")
+        if name.startswith(strip + "."):
+            name = name[len(strip) + 1:]
+
+        if len(name) > 40:
+            out = [indent + name, indent + "{0:40s} {1:20s} {2}".format("", self._streamer.__class__.__name__, interpret(self))]
+        else:
+            out = [indent + "{0:40s} {1:20s} {2}".format(name, self._streamer.__class__.__name__, interpret(self))]
+
+        for branch in self.fBranches:
+            out.extend(branch._format("    ", self.fName))
+        if len(self.fBranches) > 0 and out[-1] != "":
+            out.append("")
+
+        return out
         
+    def format(self):
+        return "\n".join(self._format())
+
     def __len__(self):
         return self.numentries
 
