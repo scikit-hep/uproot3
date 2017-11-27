@@ -31,7 +31,7 @@
 # high-level entry points
 from uproot.rootio import open, xrootd
 from uproot.tree import iterate
-from uproot.version import version
+from uproot.version import __version__
 
 from uproot.source.memmap import MemmapSource
 from uproot.source.file import FileSource
