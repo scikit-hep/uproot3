@@ -7,11 +7,13 @@ Installing uproot
 
     pip install uproot --user
 
-or your preferred variant.
+or your preferred variation.
 
-Note that the latest version on PyPI is 1.6.x, but this documentation describes uproot 2.0. To get the latest, install from GitHub:
+You can also get the latest from GitHub.
 
 .. code-block:: bash
 
     git clone https://github.com/scikit-hep/uproot.git
     python setup.py install --user           
+
+New features are developed in git branches that first merge into git ``master``, then get released to PyPI. Therefore non-``master`` branches are experimental, the ``master`` branch is bleeding edge but usually not broken, and pip-installation is for production use.
