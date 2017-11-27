@@ -338,7 +338,7 @@ u"""Superclass of all objects read out of a ROOT file (except :py:class:`ROOTDir
 uproot.rootio.ROOTStreamedObject.__doc__ = \
 u"""Superclass of all objects read out of a ROOT file with an automatically generated class, derived from the file's *streamer info*.
     
-    Each subclass of a :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>` has a ``version`` attribute, corresponding to the class version in the *streamer info*, and each object has a ``version`` attribute, read from the serialized object. If these versions do not match, an error is raised during the read.
+    Each subclass of a :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>` has a ``classversion`` attribute, corresponding to the class version in the *streamer info*. If this version does not match the version of the serialized class, an error is raised during the read.
 """
 
 ################################################################ uproot.tree fragments
@@ -2069,8 +2069,8 @@ u"""Interface for data sources.
     **dismiss(self)**
         thread-local copies are no longer needed; they may be eliminated if redundant.
 
-    **data(self, start, stop, dtype=numpy.uint8)**
-        return a view of data from the starting byte (inclusive) to the stopping byte (exclusive), with a given Numpy type.
+    **data(self, start, stop, dtype=None)**
+        return a view of data from the starting byte (inclusive) to the stopping byte (exclusive), with a given Numpy type (numpy.uint8 if ``None``).
 """
 
 source_fragments = {

@@ -151,8 +151,67 @@ class TTreeMethods(object):
 
     _copycontext = True
 
+    def _attachstreamer(self, branch, streamer, streamerinfosmap):
+        if streamer is None:
+            return
+
+        elif isinstance(streamer, uproot.rootio.TStreamerInfo):
+            if len(streamer.fElements) == 1 and isinstance(streamer.fElements[0], uproot.rootio.TStreamerBase) and streamer.fElements[0].fName == b"TObjArray":
+                if streamer.fName == b"TClonesArray":
+                    return self._attachstreamer(branch, streamerinfosmap.get(branch.fClonesName, None), streamerinfosmap)
+                else:
+                    # FIXME: can only determine streamer by reading some values?
+                    return
+
+        branch._streamer = streamer
+
+        digDeeperTypes = (uproot.rootio.TStreamerObject, uproot.rootio.TStreamerObjectAny, uproot.rootio.TStreamerObjectPointer, uproot.rootio.TStreamerObjectAnyPointer)
+
+        members = None
+        if isinstance(streamer, uproot.rootio.TStreamerInfo):
+            members = streamer.members
+        elif isinstance(streamer, digDeeperTypes):
+            typename = streamer.fTypeName.rstrip(b"*")
+            if typename in streamerinfosmap:
+                members = streamerinfosmap[typename].members
+        elif isinstance(streamer, uproot.rootio.TStreamerSTL):
+            try:
+                # FIXME: string manipulation only works for one-parameter templates
+                typename = streamer.fTypeName[streamer.fTypeName.index(b"<") + 1 : streamer.fTypeName.rindex(b">")].rstrip(b"*")
+            except ValueError:
+                pass
+            else:
+                if typename in streamerinfosmap:
+                    members = streamerinfosmap[typename].members
+
+        if members is not None:
+            for subbranch in branch.fBranches:
+                name = subbranch.fName
+                if name.startswith(branch.fName + b"."):           # drop parent branch's name
+                    name = name[len(branch.fName) + 1:]
+
+                submembers = members
+                while True:                                        # drop nested struct names one at a time
+                    try:
+                        index = name.index(b".")
+                    except ValueError:
+                        break
+                    else:
+                        base, name = name[:index], name[index + 1:]
+                        if base in submembers and isinstance(submembers[base], digDeeperTypes):
+                            submembers = streamerinfosmap[submembers[base].fTypeName.rstrip(b"*")].members
+
+                try:
+                    name = name[:name.index(b"[")]
+                except ValueError:
+                    pass
+
+                self._attachstreamer(subbranch, submembers.get(name, None), streamerinfosmap)
+
     def _postprocess(self, source, cursor, context):
         context.treename = self.name
+        for branch in self.fBranches:
+            self._attachstreamer(branch, context.streamerinfosmap.get(getattr(branch, "fClassName", None), None), context.streamerinfosmap)
 
     @property
     def name(self):
@@ -313,6 +372,16 @@ class TTreeMethods(object):
     def iterate_clusters(self, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, cache=None, rawcache=None, keycache=None, executor=None):
         return self._iterate(self.clusters(), branches, outputtype, reportentries, cache, rawcache, keycache, executor, True)
 
+    def _format(self, indent=""):
+        # TODO: add TTree data to the bottom of this
+        out = []
+        for branch in self.fBranches:
+            out.extend(branch._format(indent))
+        return out
+
+    def format(self):
+        return "\n".join(self._format())
+
     def _normalize_branches(self, arg):
         if arg is None:                                    # no specification; read all branches
             for branch in self.allvalues():                # that have interpretations
@@ -412,11 +481,9 @@ class TBranchMethods(object):
     __metaclass__ = type.__new__(type, "type", (uproot.rootio.ROOTObject.__metaclass__,), {})
 
     def _postprocess(self, source, cursor, context):
-        self.fBasketBytes = self.fBasketBytes
-        self.fBasketEntry = self.fBasketEntry
-        self.fBasketSeek = self.fBasketSeek
         self._source = source
         self._context = context
+        self._streamer = None
 
     @property
     def name(self):
@@ -1155,7 +1222,27 @@ class TBranchMethods(object):
         if not 0 <= i < self.numbaskets:
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
         return self._BasketKey(source.parent(), Cursor(self.fBasketSeek[i]), uproot.source.compressed.Compression(self.fCompress), complete)
+
+    def _format(self, indent="", strip=""):
+        name = self.fName.decode("ascii")
+        if name.startswith(strip + "."):
+            name = name[len(strip) + 1:]
+
+        if len(name) > 40:
+            out = [indent + name, indent + "{0:40s} {1:20s} {2}".format("", self._streamer.__class__.__name__, interpret(self))]
+        else:
+            out = [indent + "{0:40s} {1:20s} {2}".format(name, self._streamer.__class__.__name__, interpret(self))]
+
+        for branch in self.fBranches:
+            out.extend(branch._format("    ", self.fName))
+        if len(self.fBranches) > 0 and out[-1] != "":
+            out.append("")
+
+        return out
         
+    def format(self):
+        return "\n".join(self._format())
+
     def __len__(self):
         return self.numentries
 

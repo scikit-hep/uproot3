@@ -75,8 +75,8 @@ class ROOTDirectory(object):
     __metaclass__ = type.__new__(type, "type", (type,), {})
 
     class _FileContext(object):
-        def __init__(self, sourcepath, streamerinfos, classes, compression, tfile):
-            self.sourcepath, self.streamerinfos, self.classes, self.compression, self.tfile = sourcepath, streamerinfos, classes, compression, tfile
+        def __init__(self, sourcepath, streamerinfos, streamerinfosmap, classes, compression, tfile):
+            self.sourcepath, self.streamerinfos, self.streamerinfosmap, self.classes, self.compression, self.tfile = sourcepath, streamerinfos, streamerinfosmap, classes, compression, tfile
 
         def copy(self):
             out = ROOTDirectory._FileContext.__new__(ROOTDirectory._FileContext)
@@ -91,7 +91,6 @@ class ROOTDirectory(object):
         if len(args) == 0:
             try:
                 read_streamers = options.pop("read_streamers", True)
-                raise_unimplemented = options.pop("raise_unimplemented", False)
                 if len(options) > 0:
                     raise TypeError("unrecognized options: {0}".format(", ".join(options)))
 
@@ -127,14 +126,14 @@ class ROOTDirectory(object):
                                    "TObjString":                TObjString}
 
                 if read_streamers:
-                    streamercontext = ROOTDirectory._FileContext(source.path, None, streamerclasses, uproot.source.compressed.Compression(fCompress), tfile)
+                    streamercontext = ROOTDirectory._FileContext(source.path, None, None, streamerclasses, uproot.source.compressed.Compression(fCompress), tfile)
                     streamerkey = TKey.read(source, Cursor(fSeekInfo), streamercontext)
-                    streamerinfos, streamerrules = _readstreamers(streamerkey._source, streamerkey._cursor, streamercontext)
+                    streamerinfos, streamerinfosmap, streamerrules = _readstreamers(streamerkey._source, streamerkey._cursor, streamercontext)
                 else:
-                    streamerinfos, streamerrules = [], []
+                    streamerinfos, streamerinfosmap, streamerrules = [], {}, []
 
-                classes = _defineclasses(streamerinfos, raise_unimplemented)
-                context = ROOTDirectory._FileContext(source.path, streamerinfos, classes, uproot.source.compressed.Compression(fCompress), tfile)
+                classes = _defineclasses(streamerinfos)
+                context = ROOTDirectory._FileContext(source.path, streamerinfos, streamerinfosmap, classes, uproot.source.compressed.Compression(fCompress), tfile)
 
                 keycursor = Cursor(fBEGIN)
                 mykey = TKey.read(source, keycursor, context)
@@ -203,6 +202,9 @@ class ROOTDirectory(object):
     @staticmethod
     def _withcycle(key):
         return "{0};{1}".format(key.fName.decode("ascii"), key.fCycle).encode("ascii")
+
+    def formatstreamers(self, filtername=nofilter):
+        return "\n".join(x.format() for x in self._context.streamerinfos if filtername(x.fName))
 
     def keys(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         for key in self._keys:
@@ -429,7 +431,7 @@ def _readstreamers(source, cursor, context):
 
     # https://stackoverflow.com/a/11564769/1623645
     def topological_sort(items):
-        provided = set([b"TObject", b"TNamed", b"TString", b"TList", b"TObjArray", b"TObjString", b"TArrayC", b"TArrayS", b"TArrayI", b"TArrayL", b"TArrayL64", b"TArrayF", b"TArrayD"])
+        provided = set([x.encode("ascii") for x in builtin_classes])
         while len(items) > 0:
             remaining_items = []
             emitted = False
@@ -447,7 +449,19 @@ def _readstreamers(source, cursor, context):
 
             items = remaining_items
 
-    return list(topological_sort(streamerinfos)), streamerrules
+    streamerinfos = list(topological_sort(streamerinfos))
+    streamerinfosmap = dict((x.fName, x) for x in streamerinfos)
+
+    for streamerinfo in streamerinfos:
+        streamerinfo.members = {}
+        for element in streamerinfo.fElements:
+            if isinstance(element, TStreamerBase):
+                if element.fName in streamerinfosmap:
+                    streamerinfo.members.update(getattr(streamerinfosmap[element.fName], "members", {}))
+            else:
+                streamerinfo.members[element.fName] = element
+
+    return streamerinfos, streamerinfosmap, streamerrules
 
 def _ftype2dtype(fType):
     if fType == uproot.const.kBool:
@@ -512,149 +526,131 @@ def _ftype2struct(fType):
 def _safename(name):
     return re.sub(b"[^a-zA-Z0-9]+", lambda bad: b"_" + b"".join(b"%02x" % ord(x) for x in bad.group(0)) + b"_", name).decode("ascii")
 
-def _defineclasses(streamerinfos, raise_unimplemented):
-    classes = {"TObject":                   TObject,
-               "TNamed":                    TNamed,
-               "TString":                   TString,
-               "TList":                     TList,
-               "TObjArray":                 TObjArray,
-               "TObjString":                TObjString,
-               "TArrayC":                   TArrayC,
-               "TArrayS":                   TArrayS,
-               "TArrayI":                   TArrayI,
-               "TArrayL":                   TArrayL,
-               "TArrayL64":                 TArrayL64,
-               "TArrayF":                   TArrayF,
-               "TArrayD":                   TArrayD}
+def _raise_notimplemented(streamertype, streamerdict, source, cursor):
+    raise NotImplementedError("\n\nUnimplemented streamer type: {0}\n\nmembers: {1}\n\nfile contents:\n\n{2}".format(streamertype, streamerdict, cursor.hexdump(source)))
 
-    skip    = {"TBranch":                   ["fBaskets"]}
-
+def _defineclasses(streamerinfos):
+    classes = dict(builtin_classes)
+    skip = dict(builtin_skip)
     rename = dict((streamerinfo.fName, _safename(streamerinfo.fName)) for streamerinfo in streamerinfos)
 
     for streamerinfo in streamerinfos:
-        try:
-            if isinstance(streamerinfo, TStreamerInfo) and _safename(streamerinfo.fName) not in classes:
-                code = ["    @classmethod",
-                        "    def _readinto(cls, self, source, cursor, context):",
-                        "        start, cnt, version = _startcheck(source, cursor)",
-                        "        if version != cls.version:",
-                        "            raise ValueError(\"attempting to read {0} object version {1} with a class generated by streamer version {2}\".format(cls.__name__, version, cls.version))"]
+        if isinstance(streamerinfo, TStreamerInfo) and _safename(streamerinfo.fName) not in classes:
+            code = ["    @classmethod",
+                    "    def _readinto(cls, self, source, cursor, context):",
+                    "        start, cnt, classversion = _startcheck(source, cursor)",
+                    "        if classversion != cls.classversion:",
+                    "            raise ValueError(\"attempting to read {0} object version {1} with a class generated by streamer version {2}\".format(cls.__name__, classversion, cls.classversion))"]
 
-                fields = []
-                bases = []
-                formats = {}
-                dtypes = {}
-                basicnames = []
-                basicletters = ""
-                for elementi, element in enumerate(streamerinfo.fElements):
-                    if isinstance(element, TStreamerArtificial):
-                        raise NotImplementedError
+            fields = []
+            bases = []
+            formats = {}
+            dtypes = {}
+            basicnames = []
+            basicletters = ""
+            for elementi, element in enumerate(streamerinfo.fElements):
+                if isinstance(element, TStreamerArtificial):
+                    code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
 
-                    elif isinstance(element, TStreamerBase):
-                        code.append("        {0}._readinto(self, source, cursor, context)".format(rename.get(element.fName, element.fName)))
-                        bases.append(rename.get(element.fName, element.fName))
+                elif isinstance(element, TStreamerBase):
+                    code.append("        {0}._readinto(self, source, cursor, context)".format(rename.get(element.fName, element.fName)))
+                    bases.append(rename.get(element.fName, element.fName))
 
-                    elif isinstance(element, TStreamerBasicPointer):
-                        code.append("        cursor.skip(1)")
+                elif isinstance(element, TStreamerBasicPointer):
+                    code.append("        cursor.skip(1)")
 
-                        m = re.search(b"\[([^\]]*)\]", element.fTitle)
-                        if m is None:
-                            raise ValueError("TStreamerBasicPointer fTitle should have a counter name between brackets: {0}".format(repr(element.fTitle)))
-                        counter = m.group(1)
+                    m = re.search(b"\[([^\]]*)\]", element.fTitle)
+                    if m is None:
+                        raise ValueError("TStreamerBasicPointer fTitle should have a counter name between brackets: {0}".format(repr(element.fTitle)))
+                    counter = m.group(1)
 
-                        assert uproot.const.kOffsetP < element.fType < uproot.const.kOffsetP + 20
-                        fType = element.fType - uproot.const.kOffsetP
+                    assert uproot.const.kOffsetP < element.fType < uproot.const.kOffsetP + 20
+                    fType = element.fType - uproot.const.kOffsetP
 
+                    dtypename = "_dtype{0}".format(len(dtypes) + 1)
+                    dtypes[dtypename] = _ftype2dtype(fType)
+                    code.append("        self.{0} = cursor.array(source, self.{1}, {2}.{3})".format(_safename(element.fName), _safename(counter), _safename(streamerinfo.fName), dtypename))
+                    fields.append(_safename(element.fName))
+
+                elif isinstance(element, TStreamerBasicType):
+                    if element.fArrayLength == 0:
+                        basicnames.append("self.{0}".format(_safename(element.fName)))
+                        fields.append(_safename(element.fName))
+                        basicletters += _ftype2struct(element.fType)
+
+                        if elementi + 1 == len(streamerinfo.fElements) or not isinstance(streamerinfo.fElements[elementi + 1], TStreamerBasicType) or streamerinfo.fElements[elementi + 1].fArrayLength != 0:
+                            formatnum = len(formats) + 1
+                            formats["_format{0}".format(formatnum)] = "struct.Struct('>{0}')".format(basicletters)
+
+                            if len(basicnames) == 1:
+                                code.append("        {0} = cursor.field(source, {1}._format{2})".format(basicnames[0], _safename(streamerinfo.fName), formatnum))
+                            else:
+                                code.append("        {0} = cursor.fields(source, {1}._format{2})".format(", ".join(basicnames), _safename(streamerinfo.fName), formatnum))
+
+                            basicnames = []
+                            basicletters = ""
+
+                    else:
                         dtypename = "_dtype{0}".format(len(dtypes) + 1)
-                        dtypes[dtypename] = _ftype2dtype(fType)
-                        code.append("        self.{0} = cursor.array(source, self.{1}, {2}.{3})".format(_safename(element.fName), _safename(counter), _safename(streamerinfo.fName), dtypename))
+                        dtypes[dtypename] = _ftype2dtype(element.fType)
+                        code.append("        self.{0} = cursor.array(source, {1}, {2}.{3})".format(_safename(element.fName), element.fArrayLength, dtypename, _safename(streamerinfo.fName)))
                         fields.append(_safename(element.fName))
 
-                    elif isinstance(element, TStreamerBasicType):
-                        if element.fArrayLength == 0:
-                            basicnames.append("self.{0}".format(_safename(element.fName)))
-                            fields.append(_safename(element.fName))
-                            basicletters += _ftype2struct(element.fType)
+                elif isinstance(element, TStreamerLoop):
+                    code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
 
-                            if elementi + 1 == len(streamerinfo.fElements) or not isinstance(streamerinfo.fElements[elementi + 1], TStreamerBasicType) or streamerinfo.fElements[elementi + 1].fArrayLength != 0:
-                                formatnum = len(formats) + 1
-                                formats["_format{0}".format(formatnum)] = "struct.Struct('>{0}')".format(basicletters)
+                elif isinstance(element, TStreamerObjectAnyPointer):
+                    code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
 
-                                if len(basicnames) == 1:
-                                    code.append("        {0} = cursor.field(source, {1}._format{2})".format(basicnames[0], _safename(streamerinfo.fName), formatnum))
-                                else:
-                                    code.append("        {0} = cursor.fields(source, {1}._format{2})".format(", ".join(basicnames), _safename(streamerinfo.fName), formatnum))
-
-                                basicnames = []
-                                basicletters = ""
-
-                        else:
-                            dtypename = "_dtype{0}".format(len(dtypes) + 1)
-                            dtypes[dtypename] = _ftype2dtype(element.fType)
-                            code.append("        self.{0} = cursor.array(source, {1}, {2}.{3})".format(_safename(element.fName), element.fArrayLength, dtypename, _safename(streamerinfo.fName)))
-                            fields.append(_safename(element.fName))
-
-                    elif isinstance(element, TStreamerLoop):
-                        raise NotImplementedError
-
-                    elif isinstance(element, TStreamerObjectAnyPointer):
-                        raise NotImplementedError
-
-                    elif isinstance(element, TStreamerObjectPointer):
-                        if element.fType == uproot.const.kObjectp:
-                            if _safename(streamerinfo.fName) in skip and _safename(element.fName) in skip[_safename(streamerinfo.fName)]:
-                                code.append("        Undefined.read(source, cursor, context)")
-                            else:
-                                code.append("        self.{0} = {1}.read(source, cursor, context)".format(_safename(element.fName), rename.get(element.fTypeName, element.fTypeName.decode("ascii")).rstrip("*")))
-                                fields.append(_safename(element.fName))
-                        elif element.fType == uproot.const.kObjectP:
-                            if _safename(streamerinfo.fName) in skip and _safename(element.fName) in skip[_safename(streamerinfo.fName)]:
-                                code.append("        _readobjany(source, cursor, context, wantundefined=True)")
-                            else:
-                                code.append("        self.{0} = _readobjany(source, cursor, context)".format(_safename(element.fName)))
-                                fields.append(_safename(element.fName))
-                        else:
-                            raise NotImplementedError
-
-                    elif isinstance(element, TStreamerSTL):
-                        raise NotImplementedError
-
-                    elif isinstance(element, TStreamerSTLstring):
-                        raise NotImplementedError
-
-                    elif isinstance(element, (TStreamerObject, TStreamerObjectAny, TStreamerString)):
+                elif isinstance(element, TStreamerObjectPointer):
+                    if element.fType == uproot.const.kObjectp:
                         if _safename(streamerinfo.fName) in skip and _safename(element.fName) in skip[_safename(streamerinfo.fName)]:
                             code.append("        Undefined.read(source, cursor, context)")
                         else:
-                            code.append("        self.{0} = {1}.read(source, cursor, context)".format(_safename(element.fName), rename.get(element.fTypeName, element.fTypeName.decode("ascii"))))
+                            code.append("        self.{0} = {1}.read(source, cursor, context)".format(_safename(element.fName), rename.get(element.fTypeName, element.fTypeName.decode("ascii")).rstrip("*")))
                             fields.append(_safename(element.fName))
-
+                    elif element.fType == uproot.const.kObjectP:
+                        if _safename(streamerinfo.fName) in skip and _safename(element.fName) in skip[_safename(streamerinfo.fName)]:
+                            code.append("        _readobjany(source, cursor, context, wantundefined=True)")
+                        else:
+                            code.append("        self.{0} = _readobjany(source, cursor, context)".format(_safename(element.fName)))
+                            fields.append(_safename(element.fName))
                     else:
-                        raise AssertionError
+                        code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
 
-                code.extend(["        _endcheck(start, cursor, cnt)",
-                             "        if self.__class__ is {0}:".format(_safename(streamerinfo.fName)),
-                             "            self.version = version",
-                             "        return self"])
+                elif isinstance(element, TStreamerSTL):
+                    code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
 
-                if len(bases) == 0:
-                    bases.append("ROOTStreamedObject")
-                if _safename(streamerinfo.fName) in methods:
-                    bases.insert(0, methods[_safename(streamerinfo.fName)].__name__)
+                elif isinstance(element, TStreamerSTLstring):
+                    code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
 
-                for n, v in sorted(formats.items()):
-                    code.append("    {0} = {1}".format(n, v))
-                for n, v in sorted(dtypes.items()):
-                    code.append("    {0} = {1}".format(n, v))
+                elif isinstance(element, (TStreamerObject, TStreamerObjectAny, TStreamerString)):
+                    if _safename(streamerinfo.fName) in skip and _safename(element.fName) in skip[_safename(streamerinfo.fName)]:
+                        code.append("        Undefined.read(source, cursor, context)")
+                    else:
+                        code.append("        self.{0} = {1}.read(source, cursor, context)".format(_safename(element.fName), rename.get(element.fTypeName, element.fTypeName.decode("ascii"))))
+                        fields.append(_safename(element.fName))
 
-                code.insert(0, "    version = {0}".format(streamerinfo.fClassVersion))
-                code.insert(0, "    _fields = [{0}]".format(", ".join(repr(x) for x in fields)))
-                code.insert(0, "class {0}({1}):".format(_safename(streamerinfo.fName), ", ".join(bases)))
-                classes[_safename(streamerinfo.fName)] = _makeclass(streamerinfo.fName, id(streamerinfo), "\n".join(code), classes)
+                else:
+                    raise AssertionError
 
-        except NotImplementedError:
-            if raise_unimplemented:
-                raise
+            code.extend(["        _endcheck(start, cursor, cnt)",
+                         "        return self"])
+
+            if len(bases) == 0:
+                bases.append("ROOTStreamedObject")
+            if _safename(streamerinfo.fName) in methods:
+                bases.insert(0, methods[_safename(streamerinfo.fName)].__name__)
+
+            for n, v in sorted(formats.items()):
+                code.append("    {0} = {1}".format(n, v))
+            for n, v in sorted(dtypes.items()):
+                code.append("    {0} = {1}".format(n, v))
+
+            code.insert(0, "    classversion = {0}".format(streamerinfo.fClassVersion))
+            code.insert(0, "    _fields = [{0}]".format(", ".join(repr(x) for x in fields)))
+            code.insert(0, "class {0}({1}):".format(_safename(streamerinfo.fName), ", ".join(bases)))
+            classes[_safename(streamerinfo.fName)] = _makeclass(streamerinfo.fName, id(streamerinfo), "\n".join(code), classes)
 
     return classes
 
@@ -971,7 +967,7 @@ class TObject(ROOTStreamedObject):
         _skiptobj(source, cursor)
         return self
 
-class TString(str, ROOTStreamedObject):
+class TString(bytes, ROOTStreamedObject):
     @classmethod
     def _readinto(cls, self, source, cursor, context):
         return TString(cursor.string(source))
@@ -1063,3 +1059,19 @@ class Undefined(ROOTStreamedObject):
             return "<{0} (no class named {1}) at 0x{2:012x}>".format(self.__class__.__name__, repr(self.classname), id(self))
         else:
             return "<{0} at 0x{1:012x}>".format(self.__class__.__name__, id(self))
+
+builtin_classes = {"TObject":               TObject,
+                    "TNamed":               TNamed,
+                    "TString":              TString,
+                    "TList":                TList,
+                    "TObjArray":            TObjArray,
+                    "TObjString":           TObjString,
+                    "TArrayC":              TArrayC,
+                    "TArrayS":              TArrayS,
+                    "TArrayI":              TArrayI,
+                    "TArrayL":              TArrayL,
+                    "TArrayL64":            TArrayL64,
+                    "TArrayF":              TArrayF,
+                    "TArrayD":              TArrayD}
+
+builtin_skip =     {"TBranch":              ["fBaskets"]}

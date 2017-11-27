@@ -28,10 +28,26 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import re
+from collections import namedtuple
+import unittest
 
-__version__ = "2.1.0"
-version = __version__
-version_info = tuple(re.split(r"[-\.]", __version__))
+import numpy
 
-del re
+import uproot
+from uproot.interp.jagged import asstlvector
+from uproot.interp.numerical import asdtype
+
+class TestSTLVector(unittest.TestCase):
+    def runTest(self):
+        pass
+
+    def test_vector_of_numbers(self):
+        branch = uproot.open("tests/small-evnt-tree-fullsplit.root")["tree"]["StlVecU32"]
+        a = branch.array()
+        for i in range(100):
+            self.assertEqual(a[i].tolist(), [i] * (i % 10))
+
+        branch = uproot.open("tests/small-evnt-tree-fullsplit.root")["tree"]["StlVecF64"]
+        a = branch.array()
+        for i in range(100):
+            self.assertEqual(a[i].tolist(), [i] * (i % 10))
