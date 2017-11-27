@@ -43,5 +43,5 @@ class Source(object):
     def dismiss(self):
         raise NotImplementedError
 
-    def data(self, start, stop, dtype=numpy.dtype(numpy.uint8)):
+    def data(self, start, stop, dtype=None):
         raise NotImplementedError

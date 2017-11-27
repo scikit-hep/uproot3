@@ -2069,8 +2069,8 @@ u"""Interface for data sources.
     **dismiss(self)**
         thread-local copies are no longer needed; they may be eliminated if redundant.
 
-    **data(self, start, stop, dtype=numpy.uint8)**
-        return a view of data from the starting byte (inclusive) to the stopping byte (exclusive), with a given Numpy type.
+    **data(self, start, stop, dtype=None)**
+        return a view of data from the starting byte (inclusive) to the stopping byte (exclusive), with a given Numpy type (numpy.uint8 if ``None``).
 """
 
 source_fragments = {

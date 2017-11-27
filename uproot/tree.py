@@ -151,8 +151,35 @@ class TTreeMethods(object):
 
     _copycontext = True
 
+    def _attachstreamer(self, branch, streamer, streamerinfosmap):
+        if isinstance(streamer, uproot.rootio.TStreamerInfo):
+            if len(streamer.fElements) == 1 and isinstance(streamer.fElements[0], uproot.rootio.TStreamerBase) and streamer.fElements[0].fName == b"TObjArray":
+                if streamer.fName == b"TClonesArray":
+                    self._attachstreamer(branch, streamerinfosmap.get(branch.fClonesName, None), streamerinfosmap)
+                else:
+                    pass   # FIXME: can only determine streamer by reading some values?
+
+            else:
+                branch._streamer = streamer
+
+                for subbranch in branch.fBranches:
+                    name = subbranch.fName
+                    if name.startswith(branch.fName + b"."):
+                        name = name[len(branch.fName) + 1:]
+                    try:
+                        name = name[:name.index(b"[")]
+                    except ValueError:
+                        pass
+
+                    self._attachstreamer(subbranch, branch._streamer.members.get(name, None), streamerinfosmap)
+
+        else:
+            branch._streamer = streamer
+
     def _postprocess(self, source, cursor, context):
         context.treename = self.name
+        for branch in self.fBranches:
+            self._attachstreamer(branch, context.streamerinfosmap.get(getattr(branch, "fClassName", None), None), context.streamerinfosmap)
 
     @property
     def name(self):
@@ -412,11 +439,9 @@ class TBranchMethods(object):
     __metaclass__ = type.__new__(type, "type", (uproot.rootio.ROOTObject.__metaclass__,), {})
 
     def _postprocess(self, source, cursor, context):
-        self.fBasketBytes = self.fBasketBytes
-        self.fBasketEntry = self.fBasketEntry
-        self.fBasketSeek = self.fBasketSeek
         self._source = source
         self._context = context
+        self._streamer = None
 
     @property
     def name(self):

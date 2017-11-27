@@ -55,20 +55,15 @@ class MemmapSource(uproot.source.source.Source):
     def dismiss(self):
         pass
 
-    def data(self, start, stop, dtype=numpy.dtype(numpy.uint8)):
-        if not isinstance(dtype, numpy.dtype):
-            dtype = numpy.dtype(dtype)
-
-        assert start >= 0
-        assert stop >= 0
-        assert stop >= start
-        if start == stop:
-            return numpy.empty(0, dtype=dtype)
+    def data(self, start, stop, dtype=None):
+        # assert start >= 0
+        # assert stop >= 0
+        # assert stop >= start
 
         if stop > len(self._source):
             raise IndexError("indexes {0}:{1} are beyond the end of data source {2}".format(len(self._source), stop, repr(self.path)))
 
-        if dtype == numpy.dtype(numpy.uint8):
+        if dtype is None:
             return self._source[start:stop]
         else:
             return self._source[start:stop].view(dtype)

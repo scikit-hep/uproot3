@@ -104,15 +104,6 @@ def _leaf2dtype(leaf):
     else:
         raise _NotNumerical
 
-def _findstreamer(branch):
-    # FIXME: insufficiently general
-    for streamerinfo in branch._context.streamerinfos:
-        if streamerinfo.fName == branch.fClassName:
-            for element in streamerinfo.fElements:
-                if element.fName == branch.fName:
-                    return element
-    return None
-
 def interpret(branch, classes=None, swapbytes=True):
     if classes is None:
         classes = branch._context.classes
@@ -159,9 +150,8 @@ def interpret(branch, classes=None, swapbytes=True):
                 return asstrings
 
             elif branch.fLeaves[0].__class__.__name__ == "TLeafElement":
-                streamer = _findstreamer(branch)
-                if getattr(streamer, "fSTLtype", None) == uproot.const.kSTLvector:
-                    fromdtype = _ftype2dtype(streamer.fCtype)
+                if getattr(branch._streamer, "fSTLtype", None) == uproot.const.kSTLvector:
+                    fromdtype = _ftype2dtype(branch._streamer.fCtype)
                     if swapbytes:
                         ascontents = asdtype(fromdtype, fromdtype.newbyteorder("="))
                     else:

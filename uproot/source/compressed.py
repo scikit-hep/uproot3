@@ -122,36 +122,33 @@ class CompressedSource(uproot.source.source.Source):
     def threadlocal(self):
         return self
 
-    def data(self, start, stop, dtype=numpy.dtype(numpy.uint8)):
-        cursor = self._cursor.copied()
-
-        if not isinstance(dtype, numpy.dtype):
-            dtype = numpy.dtype(dtype)
-
-        assert start >= 0
-        assert stop >= 0
-        assert stop >= start
-        if start == stop:
-            return numpy.empty(0, dtype=dtype)
-
-        algo = cursor.bytes(self._compressed, 2).tostring()
-
+    def data(self, start, stop, dtype=None):
         if self._uncompressed is None:
-            if algo == b"ZL":   # self.compression.algo == uproot.const.kZLIB:
+            cursor = self._cursor.copied()
+            algo = self._compressed.data(cursor.index, cursor.index + 2).tostring()
+
+            if algo == b"ZL":
                 compression = self.compression.copy(uproot.const.kZLIB)
-                skip = 7        # https://github.com/root-project/root/blob/master/core/zip/src/Bits.h#L646
-            elif algo == b"XZ": # self.compression.algo == uproot.const.kLZMA:
+                skip = 9        # https://github.com/root-project/root/blob/master/core/zip/src/Bits.h#L646
+
+            elif algo == b"XZ":
                 compression = self.compression.copy(uproot.const.kLZMA)
-                skip = 7        # https://github.com/root-project/root/blob/master/core/lzma/src/ZipLZMA.c#L81
-            elif algo == b"L4": # self.compression.algo == uproot.const.kLZ4:
+                skip = 9        # https://github.com/root-project/root/blob/master/core/lzma/src/ZipLZMA.c#L81
+
+            elif algo == b"L4":
                 compression = self.compression.copy(uproot.const.kLZ4)
-                skip = 7 + 8    # https://github.com/root-project/root/blob/master/core/lz4/src/ZipLZ4.cxx#L38
+                skip = 9 + 8    # https://github.com/root-project/root/blob/master/core/lz4/src/ZipLZ4.cxx#L38
+
             else:
                 raise ValueError("unrecognized compression algorithm: {0}".format(algo))
 
-            self._uncompressed = numpy.frombuffer(compression.decompress(self._compressed, cursor.skipped(skip), self._compressedbytes - skip - 2, self._uncompressedbytes), dtype=numpy.uint8)
-            
-        if dtype == numpy.dtype(numpy.uint8):
+            self._uncompressed = numpy.frombuffer(compression.decompress(self._compressed, cursor.skipped(skip), self._compressedbytes - skip, self._uncompressedbytes), dtype=numpy.uint8)
+
+        # assert start >= 0
+        # assert stop >= 0
+        # assert stop >= start
+
+        if dtype is None:
             return self._uncompressed[start:stop]
         else:
             return self._uncompressed[start:stop].view(dtype)

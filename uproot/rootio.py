@@ -75,8 +75,8 @@ class ROOTDirectory(object):
     __metaclass__ = type.__new__(type, "type", (type,), {})
 
     class _FileContext(object):
-        def __init__(self, sourcepath, streamerinfos, classes, compression, tfile):
-            self.sourcepath, self.streamerinfos, self.classes, self.compression, self.tfile = sourcepath, streamerinfos, classes, compression, tfile
+        def __init__(self, sourcepath, streamerinfosmap, classes, compression, tfile):
+            self.sourcepath, self.streamerinfosmap, self.classes, self.compression, self.tfile = sourcepath, streamerinfosmap, classes, compression, tfile
 
         def copy(self):
             out = ROOTDirectory._FileContext.__new__(ROOTDirectory._FileContext)
@@ -129,12 +129,12 @@ class ROOTDirectory(object):
                 if read_streamers:
                     streamercontext = ROOTDirectory._FileContext(source.path, None, streamerclasses, uproot.source.compressed.Compression(fCompress), tfile)
                     streamerkey = TKey.read(source, Cursor(fSeekInfo), streamercontext)
-                    streamerinfos, streamerrules = _readstreamers(streamerkey._source, streamerkey._cursor, streamercontext)
+                    streamerinfos, streamerinfosmap, streamerrules = _readstreamers(streamerkey._source, streamerkey._cursor, streamercontext)
                 else:
-                    streamerinfos, streamerrules = [], []
+                    streamerinfos, streamerinfosmap, streamerrules = [], {}, []
 
                 classes = _defineclasses(streamerinfos, raise_unimplemented)
-                context = ROOTDirectory._FileContext(source.path, streamerinfos, classes, uproot.source.compressed.Compression(fCompress), tfile)
+                context = ROOTDirectory._FileContext(source.path, streamerinfosmap, classes, uproot.source.compressed.Compression(fCompress), tfile)
 
                 keycursor = Cursor(fBEGIN)
                 mykey = TKey.read(source, keycursor, context)
@@ -429,7 +429,7 @@ def _readstreamers(source, cursor, context):
 
     # https://stackoverflow.com/a/11564769/1623645
     def topological_sort(items):
-        provided = set([b"TObject", b"TNamed", b"TString", b"TList", b"TObjArray", b"TObjString", b"TArrayC", b"TArrayS", b"TArrayI", b"TArrayL", b"TArrayL64", b"TArrayF", b"TArrayD"])
+        provided = set([x.encode("ascii") for x in builtin_classes])
         while len(items) > 0:
             remaining_items = []
             emitted = False
@@ -447,7 +447,19 @@ def _readstreamers(source, cursor, context):
 
             items = remaining_items
 
-    return list(topological_sort(streamerinfos)), streamerrules
+    streamerinfos = list(topological_sort(streamerinfos))
+    streamerinfosmap = dict((x.fName, x) for x in streamerinfos)
+
+    for streamerinfo in streamerinfos:
+        streamerinfo.members = {}
+        for element in streamerinfo.fElements:
+            if isinstance(element, TStreamerBase):
+                if element.fName in streamerinfosmap:
+                    streamerinfo.members.update(getattr(streamerinfosmap[element.fName], "members", {}))
+            else:
+                streamerinfo.members[element.fName] = element
+
+    return streamerinfos, streamerinfosmap, streamerrules
 
 def _ftype2dtype(fType):
     if fType == uproot.const.kBool:
@@ -513,22 +525,8 @@ def _safename(name):
     return re.sub(b"[^a-zA-Z0-9]+", lambda bad: b"_" + b"".join(b"%02x" % ord(x) for x in bad.group(0)) + b"_", name).decode("ascii")
 
 def _defineclasses(streamerinfos, raise_unimplemented):
-    classes = {"TObject":                   TObject,
-               "TNamed":                    TNamed,
-               "TString":                   TString,
-               "TList":                     TList,
-               "TObjArray":                 TObjArray,
-               "TObjString":                TObjString,
-               "TArrayC":                   TArrayC,
-               "TArrayS":                   TArrayS,
-               "TArrayI":                   TArrayI,
-               "TArrayL":                   TArrayL,
-               "TArrayL64":                 TArrayL64,
-               "TArrayF":                   TArrayF,
-               "TArrayD":                   TArrayD}
-
-    skip    = {"TBranch":                   ["fBaskets"]}
-
+    classes = dict(builtin_classes)
+    skip = dict(builtin_skip)
     rename = dict((streamerinfo.fName, _safename(streamerinfo.fName)) for streamerinfo in streamerinfos)
 
     for streamerinfo in streamerinfos:
@@ -1061,3 +1059,19 @@ class Undefined(ROOTStreamedObject):
             return "<{0} (no class named {1}) at 0x{2:012x}>".format(self.__class__.__name__, repr(self.classname), id(self))
         else:
             return "<{0} at 0x{1:012x}>".format(self.__class__.__name__, id(self))
+
+builtin_classes = {"TObject":               TObject,
+                    "TNamed":               TNamed,
+                    "TString":              TString,
+                    "TList":                TList,
+                    "TObjArray":            TObjArray,
+                    "TObjString":           TObjString,
+                    "TArrayC":              TArrayC,
+                    "TArrayS":              TArrayS,
+                    "TArrayI":              TArrayI,
+                    "TArrayL":              TArrayL,
+                    "TArrayL64":            TArrayL64,
+                    "TArrayF":              TArrayF,
+                    "TArrayD":              TArrayD}
+
+builtin_skip =     {"TBranch":              ["fBaskets"]}
