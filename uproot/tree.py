@@ -171,7 +171,9 @@ class TTreeMethods(object):
         if isinstance(streamer, uproot.rootio.TStreamerInfo):
             members = streamer.members
         elif isinstance(streamer, digDeeperTypes):
-            members = streamerinfosmap[streamer.fTypeName.rstrip(b"*")].members
+            typename = streamer.fTypeName.rstrip(b"*")
+            if typename in streamerinfosmap:
+                members = streamerinfosmap[typename].members
         elif isinstance(streamer, uproot.rootio.TStreamerSTL):
             try:
                 # FIXME: string manipulation only works for one-parameter templates
