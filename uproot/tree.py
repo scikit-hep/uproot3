@@ -163,6 +163,9 @@ class TTreeMethods(object):
                     # FIXME: can only determine streamer by reading some values?
                     return
 
+            elif len(streamer.fElements) == 1 and isinstance(streamer.fElements[0], uproot.rootio.TStreamerSTL) and streamer.fElements[0].fName == b"This":
+                return self._attachstreamer(branch, streamer.fElements[0], streamerinfosmap)
+
         branch._streamer = streamer
 
         digDeeperTypes = (uproot.rootio.TStreamerObject, uproot.rootio.TStreamerObjectAny, uproot.rootio.TStreamerObjectPointer, uproot.rootio.TStreamerObjectAnyPointer)
@@ -379,8 +382,8 @@ class TTreeMethods(object):
             out.extend(branch._format(indent))
         return out
 
-    def format(self):
-        return "\n".join(self._format())
+    def format(self, foldnames=False):
+        return "\n".join(self._format(foldnames))
 
     def _normalize_branches(self, arg):
         if arg is None:                                    # no specification; read all branches
@@ -1223,25 +1226,25 @@ class TBranchMethods(object):
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
         return self._BasketKey(source.parent(), Cursor(self.fBasketSeek[i]), uproot.source.compressed.Compression(self.fCompress), complete)
 
-    def _format(self, indent="", strip=""):
+    def _format(self, foldnames, indent="", strip=""):
         name = self.fName.decode("ascii")
-        if name.startswith(strip + "."):
+        if foldnames and name.startswith(strip + "."):
             name = name[len(strip) + 1:]
 
-        if len(name) > 40:
-            out = [indent + name, indent + "{0:40s} {1:20s} {2}".format("", self._streamer.__class__.__name__, interpret(self))]
+        if len(name) > 26:
+            out = [indent + name, indent + "{0:26s} {1:26s} {2}".format("", self._streamer.__class__.__name__, interpret(self))]
         else:
-            out = [indent + "{0:40s} {1:20s} {2}".format(name, self._streamer.__class__.__name__, interpret(self))]
+            out = [indent + "{0:26s} {1:26s} {2}".format(name, self._streamer.__class__.__name__, interpret(self))]
 
         for branch in self.fBranches:
-            out.extend(branch._format("    ", self.fName))
+            out.extend(branch._format(foldnames, indent + "  " if foldnames else indent, self.fName))
         if len(self.fBranches) > 0 and out[-1] != "":
             out.append("")
 
         return out
         
-    def format(self):
-        return "\n".join(self._format())
+    def format(self, foldnames=False):
+        return "\n".join(self._format(foldnames))
 
     def __len__(self):
         return self.numentries
