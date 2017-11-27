@@ -31,6 +31,7 @@
 # high-level entry points
 from uproot.rootio import open, xrootd
 from uproot.tree import iterate
+from uproot.version import version
 
 from uproot.source.memmap import MemmapSource
 from uproot.source.file import FileSource
@@ -42,3 +43,6 @@ from uproot.interp.auto import interpret
 # in the code, and are built programmatically to avoid duplication; Python's
 # inline docstring method doesn't accept non-literals)
 import uproot._help
+
+# don't expose uproot.uproot; it's ugly
+del uproot

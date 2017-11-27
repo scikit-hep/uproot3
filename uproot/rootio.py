@@ -28,10 +28,11 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import keyword
+import numbers
 import re
 import struct
 import sys
-import numbers
 try:
     from urlparse import urlparse
 except ImportError:
@@ -524,7 +525,10 @@ def _ftype2struct(fType):
         raise NotImplementedError(fType)
 
 def _safename(name):
-    return re.sub(b"[^a-zA-Z0-9]+", lambda bad: b"_" + b"".join(b"%02x" % ord(x) for x in bad.group(0)) + b"_", name).decode("ascii")
+    out = re.sub(b"[^a-zA-Z0-9]+", lambda bad: b"_" + b"".join(b"%02x" % ord(x) for x in bad.group(0)) + b"_", name).decode("ascii")
+    if keyword.iskeyword(out):
+        out = out + "__"
+    return out
 
 def _raise_notimplemented(streamertype, streamerdict, source, cursor):
     raise NotImplementedError("\n\nUnimplemented streamer type: {0}\n\nmembers: {1}\n\nfile contents:\n\n{2}".format(streamertype, streamerdict, cursor.hexdump(source)))
