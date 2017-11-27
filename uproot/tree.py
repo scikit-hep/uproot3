@@ -152,29 +152,59 @@ class TTreeMethods(object):
     _copycontext = True
 
     def _attachstreamer(self, branch, streamer, streamerinfosmap):
-        if isinstance(streamer, uproot.rootio.TStreamerInfo):
+        if streamer is None:
+            return
+
+        elif isinstance(streamer, uproot.rootio.TStreamerInfo):
             if len(streamer.fElements) == 1 and isinstance(streamer.fElements[0], uproot.rootio.TStreamerBase) and streamer.fElements[0].fName == b"TObjArray":
                 if streamer.fName == b"TClonesArray":
-                    self._attachstreamer(branch, streamerinfosmap.get(branch.fClonesName, None), streamerinfosmap)
+                    return self._attachstreamer(branch, streamerinfosmap.get(branch.fClonesName, None), streamerinfosmap)
                 else:
-                    pass   # FIXME: can only determine streamer by reading some values?
+                    # FIXME: can only determine streamer by reading some values?
+                    return
 
+        branch._streamer = streamer
+
+        digDeeperTypes = (uproot.rootio.TStreamerObject, uproot.rootio.TStreamerObjectAny, uproot.rootio.TStreamerObjectPointer, uproot.rootio.TStreamerObjectAnyPointer)
+
+        members = None
+        if isinstance(streamer, uproot.rootio.TStreamerInfo):
+            members = streamer.members
+        elif isinstance(streamer, digDeeperTypes):
+            members = streamerinfosmap[streamer.fTypeName.rstrip(b"*")].members
+        elif isinstance(streamer, uproot.rootio.TStreamerSTL):
+            try:
+                # FIXME: string manipulation only works for one-parameter templates
+                typename = streamer.fTypeName[streamer.fTypeName.index(b"<") + 1 : streamer.fTypeName.rindex(b">")].rstrip(b"*")
+            except ValueError:
+                pass
             else:
-                branch._streamer = streamer
+                if typename in streamerinfosmap:
+                    members = streamerinfosmap[typename].members
 
-                for subbranch in branch.fBranches:
-                    name = subbranch.fName
-                    if name.startswith(branch.fName + b"."):
-                        name = name[len(branch.fName) + 1:]
+        if members is not None:
+            for subbranch in branch.fBranches:
+                name = subbranch.fName
+                if name.startswith(branch.fName + b"."):           # drop parent branch's name
+                    name = name[len(branch.fName) + 1:]
+
+                submembers = members
+                while True:                                        # drop nested struct names one at a time
                     try:
-                        name = name[:name.index(b"[")]
+                        index = name.index(b".")
                     except ValueError:
-                        pass
+                        break
+                    else:
+                        base, name = name[:index], name[index + 1:]
+                        if base in submembers and isinstance(submembers[base], digDeeperTypes):
+                            submembers = streamerinfosmap[submembers[base].fTypeName.rstrip(b"*")].members
 
-                    self._attachstreamer(subbranch, branch._streamer.members.get(name, None), streamerinfosmap)
+                try:
+                    name = name[:name.index(b"[")]
+                except ValueError:
+                    pass
 
-        else:
-            branch._streamer = streamer
+                self._attachstreamer(subbranch, submembers.get(name, None), streamerinfosmap)
 
     def _postprocess(self, source, cursor, context):
         context.treename = self.name

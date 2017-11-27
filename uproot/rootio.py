@@ -75,8 +75,8 @@ class ROOTDirectory(object):
     __metaclass__ = type.__new__(type, "type", (type,), {})
 
     class _FileContext(object):
-        def __init__(self, sourcepath, streamerinfosmap, classes, compression, tfile):
-            self.sourcepath, self.streamerinfosmap, self.classes, self.compression, self.tfile = sourcepath, streamerinfosmap, classes, compression, tfile
+        def __init__(self, sourcepath, streamerinfos, streamerinfosmap, classes, compression, tfile):
+            self.sourcepath, self.streamerinfos, self.streamerinfosmap, self.classes, self.compression, self.tfile = sourcepath, streamerinfos, streamerinfosmap, classes, compression, tfile
 
         def copy(self):
             out = ROOTDirectory._FileContext.__new__(ROOTDirectory._FileContext)
@@ -127,14 +127,14 @@ class ROOTDirectory(object):
                                    "TObjString":                TObjString}
 
                 if read_streamers:
-                    streamercontext = ROOTDirectory._FileContext(source.path, None, streamerclasses, uproot.source.compressed.Compression(fCompress), tfile)
+                    streamercontext = ROOTDirectory._FileContext(source.path, None, None, streamerclasses, uproot.source.compressed.Compression(fCompress), tfile)
                     streamerkey = TKey.read(source, Cursor(fSeekInfo), streamercontext)
                     streamerinfos, streamerinfosmap, streamerrules = _readstreamers(streamerkey._source, streamerkey._cursor, streamercontext)
                 else:
                     streamerinfos, streamerinfosmap, streamerrules = [], {}, []
 
                 classes = _defineclasses(streamerinfos, raise_unimplemented)
-                context = ROOTDirectory._FileContext(source.path, streamerinfosmap, classes, uproot.source.compressed.Compression(fCompress), tfile)
+                context = ROOTDirectory._FileContext(source.path, streamerinfos, streamerinfosmap, classes, uproot.source.compressed.Compression(fCompress), tfile)
 
                 keycursor = Cursor(fBEGIN)
                 mykey = TKey.read(source, keycursor, context)
@@ -203,6 +203,9 @@ class ROOTDirectory(object):
     @staticmethod
     def _withcycle(key):
         return "{0};{1}".format(key.fName.decode("ascii"), key.fCycle).encode("ascii")
+
+    def formatstreamers(self, filtername=nofilter):
+        return "\n".join(x.format() for x in self._context.streamerinfos if filtername(x.fName))
 
     def keys(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         for key in self._keys:
