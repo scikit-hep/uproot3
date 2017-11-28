@@ -40,7 +40,7 @@ class TestIssues(unittest.TestCase):
         pass
 
     def test_issue21(self):
-        t = uproot.open("/tmp/downloads/test.root")["nllscan"]
+        t = uproot.open("tests/samples/issue21.root")["nllscan"]
 
         self.assertEqual(t.array("mH").tolist(), [])
 
