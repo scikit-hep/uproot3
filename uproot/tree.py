@@ -788,11 +788,7 @@ class TBranchMethods(object):
                     keysource.dismiss()
 
             if basketdata is None:
-                datasource = key.source.threadlocal()
-                try:
-                    basketdata = key.cursor.copied().bytes(datasource, key.fObjlen)
-                finally:
-                    datasource.dismiss()
+                basketdata = key.basketdata()
 
             if rawcache is not None:
                 rawcache[rawcachekey] = basketdata
@@ -1221,6 +1217,13 @@ class TBranchMethods(object):
         _format_big = struct.Struct(">ihiIhhqq")
         _format_complete = struct.Struct(">Hiiii")
 
+        def basketdata(self):
+            datasource = self.source.threadlocal()
+            try:
+                return self.cursor.copied().bytes(datasource, self.fObjlen)
+            finally:
+                datasource.dismiss()
+            
     def _basketkey(self, source, i, complete):
         if not 0 <= i < self.numbaskets:
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))

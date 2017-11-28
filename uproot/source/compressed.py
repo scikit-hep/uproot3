@@ -129,7 +129,7 @@ class CompressedSource(uproot.source.source.Source):
 
             if algo == b"ZL":
                 compression = self.compression.copy(uproot.const.kZLIB)
-                skip = 9        # https://github.com/root-project/root/blob/master/core/zip/src/Bits.h#L646
+                skip = 9        # https://github.com/root-project/root/blob/master/core/zip/src/RZip.cxx#L217
 
             elif algo == b"XZ":
                 compression = self.compression.copy(uproot.const.kLZMA)
@@ -138,6 +138,9 @@ class CompressedSource(uproot.source.source.Source):
             elif algo == b"L4":
                 compression = self.compression.copy(uproot.const.kLZ4)
                 skip = 9 + 8    # https://github.com/root-project/root/blob/master/core/lz4/src/ZipLZ4.cxx#L38
+
+            elif algo == b"CS":
+                raise ValueError("unsupported compression algorithm: 'old' (according to ROOT comments, hasn't been used in 20+ years!)")
 
             else:
                 raise ValueError("unrecognized compression algorithm: {0}".format(algo))

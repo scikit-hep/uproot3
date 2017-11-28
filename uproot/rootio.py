@@ -363,7 +363,7 @@ def _readobjany(source, cursor, context, wantundefined=False):
     elif tag == uproot.const.kNewClassTag:
         # new class and object
         cname = cursor.cstring(source).decode("ascii")
-
+            
         fct = context.classes.get(cname, Undefined)
 
         if vers > 0:
@@ -704,11 +704,10 @@ class TKey(ROOTObject):
     def _readinto(cls, self, source, cursor, context):
         start = cursor.index
 
-        self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle = cursor.fields(source, self._format1)
-        if self.fVersion <= 1000:
-            self.fSeekKey, self.fSeekPdir = cursor.fields(source, self._format2_small)
-        else:
-            self.fSeekKey, self.fSeekPdir = cursor.fields(source, self._format2_big)
+        self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir = cursor.fields(source, self._format_small)
+        if self.fVersion > 1000:
+            cursor.index = start
+            self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir = cursor.fields(source, self._format_big)
 
         self.fClassName = cursor.string(source)
         self.fName = cursor.string(source)
@@ -727,9 +726,8 @@ class TKey(ROOTObject):
         self._context = context
         return self
 
-    _format1       = struct.Struct(">ihiIhh")
-    _format2_small = struct.Struct(">ii")
-    _format2_big   = struct.Struct(">qq")
+    _format_small = struct.Struct(">ihiIhhii")
+    _format_big   = struct.Struct(">ihiIhhqq")
 
     def get(self, dismiss=True):
         """Extract the object this key points to.
@@ -753,6 +751,56 @@ class TKey(ROOTObject):
         finally:
             if dismiss:
                 self._source.dismiss()
+
+class TBasket(ROOTObject):
+    @classmethod
+    def _readinto(cls, self, source, cursor, context):
+        start = cursor.index
+
+        self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir = cursor.fields(source, self._format_small)
+        if self.fVersion > 1000:
+            cursor.index = start
+            self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir = cursor.fields(source, self._format_big)
+
+        self.fClassName = cursor.string(source)
+        self.fName = cursor.string(source)
+        self.fTitle = cursor.string(source)
+
+        self.fVersion, self.fBufferSize, self.fNevBufSize, self.fNevBuf, self.fLast = cursor.fields(source, cls._format_complete)
+
+        cursor.skip(1)
+
+        print "FIRST ", self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir, repr(self.fClassName), repr(self.fName), repr(self.fTitle), self.fVersion, self.fBufferSize, self.fNevBufSize, self.fNevBuf, self.fLast
+
+        start = cursor.index
+
+        fNbytes, fVersion, fObjlen, fDatime, fKeylen, fCycle, fSeekKey, fSeekPdir = cursor.fields(source, self._format_small)
+        if fVersion > 1000:
+            cursor.index = start
+            fNbytes, fVersion, fObjlen, fDatime, fKeylen, fCycle, fSeekKey, fSeekPdir = cursor.fields(source, self._format_big)
+
+        fClassName = cursor.string(source)
+        fName = cursor.string(source)
+        fTitle = cursor.string(source)
+
+        fVersion, fBufferSize, fNevBufSize, fNevBuf, fLast = cursor.fields(source, cls._format_complete)
+
+        print "SECOND", fNbytes, fVersion, "   ", fObjlen, fDatime, fKeylen, fCycle, fSeekKey, fSeekPdir, repr(fClassName), repr(fName), repr(fTitle), fVersion, fBufferSize, fNevBufSize, fNevBuf, fLast
+        print
+
+        cursor.skip(1)
+
+        size = self.fLast - self.fKeylen
+        if self.fNevBufSize > 8:
+            size += self.fNevBufSize
+
+        self.contents = cursor.bytes(source, size)
+
+        return self
+
+    _format_small = struct.Struct(">ihiIhhii")
+    _format_big   = struct.Struct(">ihiIhhqq")
+    _format_complete = struct.Struct(">Hiiii")
 
 class TStreamerInfo(ROOTObject):
     @classmethod
@@ -1066,18 +1114,19 @@ class Undefined(ROOTStreamedObject):
         else:
             return "<{0} at 0x{1:012x}>".format(self.__class__.__name__, id(self))
 
-builtin_classes = {"TObject":               TObject,
-                    "TNamed":               TNamed,
-                    "TString":              TString,
-                    "TList":                TList,
-                    "TObjArray":            TObjArray,
-                    "TObjString":           TObjString,
-                    "TArrayC":              TArrayC,
-                    "TArrayS":              TArrayS,
-                    "TArrayI":              TArrayI,
-                    "TArrayL":              TArrayL,
-                    "TArrayL64":            TArrayL64,
-                    "TArrayF":              TArrayF,
-                    "TArrayD":              TArrayD}
+builtin_classes = {"TBasket":    TBasket,
+                   "TObject":    TObject,
+                   "TNamed":     TNamed,
+                   "TString":    TString,
+                   "TList":      TList,
+                   "TObjArray":  TObjArray,
+                   "TObjString": TObjString,
+                   "TArrayC":    TArrayC,
+                   "TArrayS":    TArrayS,
+                   "TArrayI":    TArrayI,
+                   "TArrayL":    TArrayL,
+                   "TArrayL64":  TArrayL64,
+                   "TArrayF":    TArrayF,
+                   "TArrayD":    TArrayD}
 
-builtin_skip =     {"TBranch":              ["fBaskets"]}
+builtin_skip =     {}  # {"TBranch":              ["fBaskets"]}
