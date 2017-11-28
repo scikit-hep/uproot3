@@ -966,6 +966,8 @@ class ROOTStreamedObject(ROOTObject):
     pass
 
 class TObject(ROOTStreamedObject):
+    _fields = []
+
     @classmethod
     def _readinto(cls, self, source, cursor, context):
         _skiptobj(source, cursor)
