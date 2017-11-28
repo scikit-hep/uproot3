@@ -39,16 +39,16 @@ class TestPartition(unittest.TestCase):
     def runTest(self):
         pass
     
-    files = ["tests/sample-5.23.02-uncompressed.root",
-             "tests/sample-5.24.00-uncompressed.root",
-             "tests/sample-5.25.02-uncompressed.root",
-             "tests/sample-5.26.00-uncompressed.root",
-             "tests/sample-5.27.02-uncompressed.root",
-             "tests/sample-5.28.00-uncompressed.root",
-             "tests/sample-5.29.02-uncompressed.root",
-             "tests/sample-5.30.00-uncompressed.root",
-             "tests/sample-6.08.04-uncompressed.root",
-             "tests/sample-6.10.05-uncompressed.root"]
+    files = ["tests/samples/sample-5.23.02-uncompressed.root",
+             "tests/samples/sample-5.24.00-uncompressed.root",
+             "tests/samples/sample-5.25.02-uncompressed.root",
+             "tests/samples/sample-5.26.00-uncompressed.root",
+             "tests/samples/sample-5.27.02-uncompressed.root",
+             "tests/samples/sample-5.28.00-uncompressed.root",
+             "tests/samples/sample-5.29.02-uncompressed.root",
+             "tests/samples/sample-5.30.00-uncompressed.root",
+             "tests/samples/sample-6.08.04-uncompressed.root",
+             "tests/samples/sample-6.10.05-uncompressed.root"]
 
     check = uproot.partition.PartitionSet(
         "sample",
@@ -58,27 +58,27 @@ class TestPartition(unittest.TestCase):
         7,
         300,
         uproot.partition.Partition(0,
-            uproot.partition.Range("tests/sample-5.23.02-uncompressed.root", 0, 30),
-            uproot.partition.Range("tests/sample-5.24.00-uncompressed.root", 0, 18)),
+            uproot.partition.Range("tests/samples/sample-5.23.02-uncompressed.root", 0, 30),
+            uproot.partition.Range("tests/samples/sample-5.24.00-uncompressed.root", 0, 18)),
         uproot.partition.Partition(1,
-            uproot.partition.Range("tests/sample-5.24.00-uncompressed.root", 18, 30),
-            uproot.partition.Range("tests/sample-5.25.02-uncompressed.root", 0, 30),
-            uproot.partition.Range("tests/sample-5.26.00-uncompressed.root", 0, 6)),
+            uproot.partition.Range("tests/samples/sample-5.24.00-uncompressed.root", 18, 30),
+            uproot.partition.Range("tests/samples/sample-5.25.02-uncompressed.root", 0, 30),
+            uproot.partition.Range("tests/samples/sample-5.26.00-uncompressed.root", 0, 6)),
         uproot.partition.Partition(2,
-            uproot.partition.Range("tests/sample-5.26.00-uncompressed.root", 6, 30),
-            uproot.partition.Range("tests/sample-5.27.02-uncompressed.root", 0, 24)),
+            uproot.partition.Range("tests/samples/sample-5.26.00-uncompressed.root", 6, 30),
+            uproot.partition.Range("tests/samples/sample-5.27.02-uncompressed.root", 0, 24)),
         uproot.partition.Partition(3,
-            uproot.partition.Range("tests/sample-5.27.02-uncompressed.root", 24, 30),
-            uproot.partition.Range("tests/sample-5.28.00-uncompressed.root", 0, 30),
-            uproot.partition.Range("tests/sample-5.29.02-uncompressed.root", 0, 12)),
+            uproot.partition.Range("tests/samples/sample-5.27.02-uncompressed.root", 24, 30),
+            uproot.partition.Range("tests/samples/sample-5.28.00-uncompressed.root", 0, 30),
+            uproot.partition.Range("tests/samples/sample-5.29.02-uncompressed.root", 0, 12)),
         uproot.partition.Partition(4,
-            uproot.partition.Range("tests/sample-5.29.02-uncompressed.root", 12, 30),
-            uproot.partition.Range("tests/sample-5.30.00-uncompressed.root", 0, 30)),
+            uproot.partition.Range("tests/samples/sample-5.29.02-uncompressed.root", 12, 30),
+            uproot.partition.Range("tests/samples/sample-5.30.00-uncompressed.root", 0, 30)),
         uproot.partition.Partition(5,
-            uproot.partition.Range("tests/sample-6.08.04-uncompressed.root", 0, 30),
-            uproot.partition.Range("tests/sample-6.10.05-uncompressed.root", 0, 16)),
+            uproot.partition.Range("tests/samples/sample-6.08.04-uncompressed.root", 0, 30),
+            uproot.partition.Range("tests/samples/sample-6.10.05-uncompressed.root", 0, 16)),
         uproot.partition.Partition(6,
-            uproot.partition.Range("tests/sample-6.10.05-uncompressed.root", 16, 30)))
+            uproot.partition.Range("tests/samples/sample-6.10.05-uncompressed.root", 16, 30)))
 
     # def test_make_partitions(self):
     #     partitionset = uproot.partition.PartitionSet.fill(self.files, "sample", ["n", "i8", "ai4", "Ai2"], under=lambda baskets: sum(x.numbytes for x in baskets) < 600, debug=False)

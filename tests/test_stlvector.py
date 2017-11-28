@@ -42,12 +42,12 @@ class TestSTLVector(unittest.TestCase):
         pass
 
     def test_vector_of_numbers(self):
-        branch = uproot.open("tests/small-evnt-tree-fullsplit.root")["tree"]["StlVecU32"]
+        branch = uproot.open("tests/samples/small-evnt-tree-fullsplit.root")["tree"]["StlVecU32"]
         a = branch.array()
         for i in range(100):
             self.assertEqual(a[i].tolist(), [i] * (i % 10))
 
-        branch = uproot.open("tests/small-evnt-tree-fullsplit.root")["tree"]["StlVecF64"]
+        branch = uproot.open("tests/samples/small-evnt-tree-fullsplit.root")["tree"]["StlVecF64"]
         a = branch.array()
         for i in range(100):
             self.assertEqual(a[i].tolist(), [i] * (i % 10))
