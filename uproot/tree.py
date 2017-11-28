@@ -215,7 +215,7 @@ class TTreeMethods(object):
         context.treename = self.name
         for branch in self.fBranches:
             self._attachstreamer(branch, context.streamerinfosmap.get(getattr(branch, "fClassName", None), None), context.streamerinfosmap)
-
+        
     @property
     def name(self):
         return self.fName
@@ -487,6 +487,7 @@ class TBranchMethods(object):
         self._source = source
         self._context = context
         self._streamer = None
+        self._numrecovered = 0
 
     @property
     def name(self):
@@ -1224,6 +1225,31 @@ class TBranchMethods(object):
             finally:
                 datasource.dismiss()
             
+    class _RecoveredTBasket(uproot.rootio.ROOTObject):
+        @classmethod
+        def _readinto(cls, self, source, cursor, context):
+            start = cursor.index
+            self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle = cursor.fields(source, cls._format1)
+            cursor.index = start + self.fKeylen - cls._format2.size - 1
+            self.fVersion, self.fBufferSize, self.fNevBufSize, self.fNevBuf, self.fLast = cursor.fields(source, cls._format2)
+
+            cursor.skip(1 + self.fKeylen)
+
+            size = self.fLast - self.fKeylen
+            if self.fNevBufSize > 8:
+                size += self.fNevBufSize
+
+            self.contents = cursor.bytes(source, size)
+            return self
+
+        _format1 = struct.Struct(">ihiIhh")
+        _format2 = struct.Struct(">Hiiii")
+
+    def recover(self):
+        if isinstance(self.fBaskets, uproot.rootio.Undefined):
+            self.fBaskets = uproot.rootio.TObjArray.read(self._source, self.fBaskets._cursor, self._context, asclass=TBranchMethods._RecoveredTBasket)
+            self._numrecovered = len(self.fBaskets)
+
     def _basketkey(self, source, i, complete):
         if not 0 <= i < self.numbaskets:
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
