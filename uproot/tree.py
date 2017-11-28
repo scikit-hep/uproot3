@@ -215,7 +215,7 @@ class TTreeMethods(object):
         context.treename = self.name
         for branch in self.fBranches:
             self._attachstreamer(branch, context.streamerinfosmap.get(getattr(branch, "fClassName", None), None), context.streamerinfosmap)
-
+        
     @property
     def name(self):
         return self.fName
@@ -385,6 +385,10 @@ class TTreeMethods(object):
     def format(self, foldnames=False):
         return "\n".join(self._format(foldnames))
 
+    def recover(self):
+        for branch in self.allvalues():
+            branch.recover()
+
     def _normalize_branches(self, arg):
         if arg is None:                                    # no specification; read all branches
             for branch in self.allvalues():                # that have interpretations
@@ -487,6 +491,7 @@ class TBranchMethods(object):
         self._source = source
         self._context = context
         self._streamer = None
+        self._recoveredbasket = None
 
     @property
     def name(self):
@@ -531,7 +536,10 @@ class TBranchMethods(object):
 
     @property
     def numbaskets(self):
-        return self.fWriteBasket
+        if self._recoveredbasket is None:
+            return self.fWriteBasket
+        else:
+            return self.fWriteBasket + 1
 
     def uncompressedbytes(self, keycache=None):
         if keycache is not None and all(self._keycachekey(i) in keycache for i in range(self.numbaskets)):
@@ -673,19 +681,21 @@ class TBranchMethods(object):
         return uproot.source.compressed.Compression(self.fCompress)
 
     def basket_entrystart(self, i):
-        if not 0 <= i < self.numbaskets:
-            raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
-            return self.fBasketEntry[i]
-        else:
+        if 0 <= i < self.numbaskets:
             return self.fBasketEntry[i]
 
-    def basket_entrystop(self, i):
-        if not 0 <= i < self.numbaskets:
-            raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
-        if i + 1 < len(self.fBasketEntry):
-            return self.fBasketEntry[i + 1]
         else:
-            return self.fEntryNumber
+            raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
+
+    def basket_entrystop(self, i):
+        if 0 <= i < self.fWriteBasket:
+            return self.fBasketEntry[i + 1]
+
+        elif i == self.numbaskets - 1:
+            return self.fEntries   # or self.fEntryNumber?
+
+        else:
+            raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
     def basket_numentries(self, i):
         return self.basket_entrystop(i) - self.basket_entrystart(i)
@@ -788,11 +798,7 @@ class TBranchMethods(object):
                     keysource.dismiss()
 
             if basketdata is None:
-                datasource = key.source.threadlocal()
-                try:
-                    basketdata = key.cursor.copied().bytes(datasource, key.fObjlen)
-                finally:
-                    datasource.dismiss()
+                basketdata = key.basketdata()
 
             if rawcache is not None:
                 rawcache[rawcachekey] = basketdata
@@ -1202,10 +1208,7 @@ class TBranchMethods(object):
                 self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir = cursor.fields(source, TBranchMethods._BasketKey._format_big)
 
             if complete:
-                cursor.skipstring(source)
-                cursor.skipstring(source)
-                cursor.skipstring(source)
-
+                cursor.index = start + self.fKeylen - TBranchMethods._BasketKey._format_complete.size - 1
                 self.fVersion, self.fBufferSize, self.fNevBufSize, self.fNevBuf, self.fLast = cursor.fields(source, TBranchMethods._BasketKey._format_complete)
 
                 self.border = self.fLast - self.fKeylen
@@ -1221,10 +1224,60 @@ class TBranchMethods(object):
         _format_big = struct.Struct(">ihiIhhqq")
         _format_complete = struct.Struct(">Hiiii")
 
+        def basketdata(self):
+            datasource = self.source.threadlocal()
+            try:
+                return self.cursor.copied().bytes(datasource, self.fObjlen)
+            finally:
+                datasource.dismiss()
+            
+    class _RecoveredTBasket(uproot.rootio.ROOTObject):
+        @classmethod
+        def _readinto(cls, self, source, cursor, context):
+            start = cursor.index
+            self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle = cursor.fields(source, cls._format1)
+
+            # skip the class name, name, and title
+            cursor.index = start + self.fKeylen - cls._format2.size - 1
+            self.fVersion, self.fBufferSize, self.fNevBufSize, self.fNevBuf, self.fLast = cursor.fields(source, cls._format2)
+
+            # there's a one-byte terminator and then another TKey, this one with less detail than the first
+            cursor.skip(1 + self.fKeylen)
+
+            size = self.border = self.fLast - self.fKeylen
+
+            if self.fNevBufSize > 8:
+                size += self.fNevBufSize
+
+            self.fObjlen = size
+            self.fNbytes = self.fObjlen + self.fKeylen
+                
+            self.contents = cursor.bytes(source, size)
+            return self
+
+        _format1 = struct.Struct(">ihiIhh")
+        _format2 = struct.Struct(">Hiiii")
+
+        def basketdata(self):
+            return self.contents
+
+    def recover(self):
+        if self._recoveredbasket is None:
+            recovered = uproot.rootio.TObjArray.read(self._source, self.fBaskets._cursor, self._context, asclass=TBranchMethods._RecoveredTBasket)
+            if len(recovered) == 1:
+                self._recoveredbasket = recovered[0]
+            else:
+                raise ValueError("recovered {0} baskets, expected 1".format(len(recovered)))
+
     def _basketkey(self, source, i, complete):
-        if not 0 <= i < self.numbaskets:
+        if 0 <= i < self.fWriteBasket:
+            return self._BasketKey(source.parent(), Cursor(self.fBasketSeek[i]), uproot.source.compressed.Compression(self.fCompress), complete)
+
+        elif self.fWriteBasket <= i < self.numbaskets:
+            return self._recoveredbasket
+
+        else:
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
-        return self._BasketKey(source.parent(), Cursor(self.fBasketSeek[i]), uproot.source.compressed.Compression(self.fCompress), complete)
 
     def _format(self, foldnames, indent="", strip=""):
         name = self.fName.decode("ascii")

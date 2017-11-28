@@ -327,7 +327,7 @@ def _nametitle(source, cursor):
     _endcheck(start, cursor, cnt)
     return name, title
 
-def _readobjany(source, cursor, context, wantundefined=False):
+def _readobjany(source, cursor, context, asclass=None):
     # TBufferFile::ReadObjectAny()
     # https://github.com/root-project/root/blob/c4aa801d24d0b1eeb6c1623fd18160ef2397ee54/io/io/src/TBufferFile.cxx#L2404
 
@@ -363,20 +363,20 @@ def _readobjany(source, cursor, context, wantundefined=False):
     elif tag == uproot.const.kNewClassTag:
         # new class and object
         cname = cursor.cstring(source).decode("ascii")
-
+            
         fct = context.classes.get(cname, Undefined)
 
         if vers > 0:
             cursor.refs[start + uproot.const.kMapOffset] = fct
         else:
             cursor.refs[len(cursor.refs) + 1] = fct
-
-        if wantundefined:
-            obj = Undefined.read(source, cursor, context)  # placeholder new object
-        else:
+        
+        if asclass is None:
             obj = fct.read(source, cursor, context)        # new object
             if isinstance(obj, Undefined):
                 obj.classname = cname
+        else:
+            obj = asclass.read(source, cursor, context)    # placeholder new object
 
         if vers > 0:
             cursor.refs[beg + uproot.const.kMapOffset] = obj
@@ -389,18 +389,19 @@ def _readobjany(source, cursor, context, wantundefined=False):
         # reference class, new object
         ref = int(numpy.int64(tag) & ~uproot.const.kClassMask)
 
-        if ref not in cursor.refs:
-            raise IOError("invalid class-tag reference")
+        if asclass is None:
+            if ref not in cursor.refs:
+                raise IOError("invalid class-tag reference")
 
-        fct = cursor.refs[ref]                             # reference class
+            fct = cursor.refs[ref]                         # reference class
 
-        if fct not in context.classes.values():
-            raise IOError("invalid class-tag reference (not a recognized class: {0})".format(fct))
+            if fct not in context.classes.values():
+                raise IOError("invalid class-tag reference (not a recognized class: {0})".format(fct))
 
-        if wantundefined:
-            obj = Undefined.read(source, cursor, context)  # placeholder new object
-        else:
             obj = fct.read(source, cursor, context)        # new object
+
+        else:
+            obj = asclass.read(source, cursor, context)    # placeholder new object
 
         if vers > 0:
             cursor.refs[beg + uproot.const.kMapOffset] = obj
@@ -615,7 +616,7 @@ def _defineclasses(streamerinfos):
                             fields.append(_safename(element.fName))
                     elif element.fType == uproot.const.kObjectP:
                         if _safename(streamerinfo.fName) in skip and _safename(element.fName) in skip[_safename(streamerinfo.fName)]:
-                            code.append("        _readobjany(source, cursor, context, wantundefined=True)")
+                            code.append("        _readobjany(source, cursor, context, asclass=Undefined)")
                         else:
                             code.append("        self.{0} = _readobjany(source, cursor, context)".format(_safename(element.fName)))
                             fields.append(_safename(element.fName))
@@ -630,7 +631,7 @@ def _defineclasses(streamerinfos):
 
                 elif isinstance(element, (TStreamerObject, TStreamerObjectAny, TStreamerString)):
                     if _safename(streamerinfo.fName) in skip and _safename(element.fName) in skip[_safename(streamerinfo.fName)]:
-                        code.append("        Undefined.read(source, cursor, context)")
+                        code.append("        self.{0} = Undefined.read(source, cursor, context)".format(_safename(element.fName)))
                     else:
                         code.append("        self.{0} = {1}.read(source, cursor, context)".format(_safename(element.fName), rename.get(element.fTypeName, element.fTypeName.decode("ascii"))))
                         fields.append(_safename(element.fName))
@@ -704,11 +705,10 @@ class TKey(ROOTObject):
     def _readinto(cls, self, source, cursor, context):
         start = cursor.index
 
-        self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle = cursor.fields(source, self._format1)
-        if self.fVersion <= 1000:
-            self.fSeekKey, self.fSeekPdir = cursor.fields(source, self._format2_small)
-        else:
-            self.fSeekKey, self.fSeekPdir = cursor.fields(source, self._format2_big)
+        self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir = cursor.fields(source, self._format_small)
+        if self.fVersion > 1000:
+            cursor.index = start
+            self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir = cursor.fields(source, self._format_big)
 
         self.fClassName = cursor.string(source)
         self.fName = cursor.string(source)
@@ -727,9 +727,8 @@ class TKey(ROOTObject):
         self._context = context
         return self
 
-    _format1       = struct.Struct(">ihiIhh")
-    _format2_small = struct.Struct(">ii")
-    _format2_big   = struct.Struct(">qq")
+    _format_small = struct.Struct(">ihiIhhii")
+    _format_big   = struct.Struct(">ihiIhhqq")
 
     def get(self, dismiss=True):
         """Extract the object this key points to.
@@ -966,6 +965,8 @@ class ROOTStreamedObject(ROOTObject):
     pass
 
 class TObject(ROOTStreamedObject):
+    _fields = []
+
     @classmethod
     def _readinto(cls, self, source, cursor, context):
         _skiptobj(source, cursor)
@@ -988,12 +989,21 @@ class TNamed(TObject):
 
 class TObjArray(list, ROOTStreamedObject):
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
+    def read(cls, source, cursor, context, asclass=None):
+        if cls._copycontext:
+            context = context.copy()
+        out = cls.__new__(cls)
+        out = cls._readinto(out, source, cursor, context, asclass=asclass)
+        out._postprocess(source, cursor, context)
+        return out
+
+    @classmethod
+    def _readinto(cls, self, source, cursor, context, asclass=None):
         start, cnt, self.version = _startcheck(source, cursor)
         _skiptobj(source, cursor)
         name = cursor.string(source)
         size, low = cursor.fields(source, struct.Struct(">ii"))
-        self.extend([_readobjany(source, cursor, context) for i in range(size)])
+        self.extend([_readobjany(source, cursor, context, asclass=asclass) for i in range(size)])
         _endcheck(start, cursor, cnt)
         return self
 
@@ -1053,6 +1063,7 @@ class TArrayD(TArray):
 class Undefined(ROOTStreamedObject):
     @classmethod
     def _readinto(cls, self, source, cursor, context):
+        self._cursor = cursor.copied()
         start, cnt, self.version = _startcheck(source, cursor)
         cursor.skip(cnt - 6)
         _endcheck(start, cursor, cnt)
@@ -1064,18 +1075,18 @@ class Undefined(ROOTStreamedObject):
         else:
             return "<{0} at 0x{1:012x}>".format(self.__class__.__name__, id(self))
 
-builtin_classes = {"TObject":               TObject,
-                    "TNamed":               TNamed,
-                    "TString":              TString,
-                    "TList":                TList,
-                    "TObjArray":            TObjArray,
-                    "TObjString":           TObjString,
-                    "TArrayC":              TArrayC,
-                    "TArrayS":              TArrayS,
-                    "TArrayI":              TArrayI,
-                    "TArrayL":              TArrayL,
-                    "TArrayL64":            TArrayL64,
-                    "TArrayF":              TArrayF,
-                    "TArrayD":              TArrayD}
+builtin_classes = {"TObject":    TObject,
+                   "TNamed":     TNamed,
+                   "TString":    TString,
+                   "TList":      TList,
+                   "TObjArray":  TObjArray,
+                   "TObjString": TObjString,
+                   "TArrayC":    TArrayC,
+                   "TArrayS":    TArrayS,
+                   "TArrayI":    TArrayI,
+                   "TArrayL":    TArrayL,
+                   "TArrayL64":  TArrayL64,
+                   "TArrayF":    TArrayF,
+                   "TArrayD":    TArrayD}
 
-builtin_skip =     {"TBranch":              ["fBaskets"]}
+builtin_skip =    {"TBranch":    ["fBaskets"]}
