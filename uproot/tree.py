@@ -36,6 +36,7 @@ import struct
 import sys
 import threading
 from collections import namedtuple
+from types import MethodType
 try:
     from urlparse import urlparse
 except ImportError:
@@ -439,6 +440,15 @@ class TTreeMethods(object):
                     else:
                         yield branch, interpretation
 
+    def _normalize_entrystartstop(self, entrystart, entrystop):
+        if entrystart is None:
+            entrystart = 0
+        if entrystop is None:
+            entrystop = self.numentries
+        if entrystop < entrystart:
+            raise IndexError("entrystop must be greater than or equal to entrystart")
+        return entrystart, entrystop
+
     def __len__(self):
         return self.numentries
 
@@ -449,35 +459,37 @@ class TTreeMethods(object):
         # prevent Python's attempt to interpret __len__ and __getitem__ as iteration
         raise TypeError("'TTree' object is not iterable")
 
-    class _Connector(object): pass
+    class _Connector(object):
+        def __init__(self, tree):
+            self._tree = tree
 
     @property
     def pandas(self):
         import uproot._connect.to_pandas
-        connector = self._Connector()
-        connector.df = uproot._connect.to_pandas.df
+        connector = self._Connector(self)
+        connector.df = MethodType(uproot._connect.to_pandas.df, connector, TTreeMethods._Connector)
         return connector
 
-    @property
-    def numba(self):
-        import uproot._connect.to_numba
-        connector = self._Connector()
-        connector.run       = uproot._connect.to_numba.run
-        connector.foreach   = uproot._connect.to_numba.foreach
-        connector.map       = uproot._connect.to_numba.map
-        connector.filter    = uproot._connect.to_numba.filter
-        connector.aggregate = uproot._connect.to_numba.aggregate
-        return connector
+    # @property
+    # def numba(self):
+    #     import uproot._connect.to_numba
+    #     connector = self._Connector()
+    #     connector.run       = uproot._connect.to_numba.run
+    #     connector.foreach   = uproot._connect.to_numba.foreach
+    #     connector.map       = uproot._connect.to_numba.map
+    #     connector.filter    = uproot._connect.to_numba.filter
+    #     connector.aggregate = uproot._connect.to_numba.aggregate
+    #     return connector
 
-    @property
-    def oamap(self):
-        import uproot._connect.to_oamap
-        connector = self._Connector()
-        connector.schema  = uproot._connect.to_oamap.schema
-        connector.proxy   = uproot._connect.to_oamap.proxy
-        connector.run     = uproot._connect.to_oamap.run
-        connector.compile = uproot._connect.to_oamap.compile
-        return connector
+    # @property
+    # def oamap(self):
+    #     import uproot._connect.to_oamap
+    #     connector = self._Connector()
+    #     connector.schema  = uproot._connect.to_oamap.schema
+    #     connector.proxy   = uproot._connect.to_oamap.proxy
+    #     connector.run     = uproot._connect.to_oamap.run
+    #     connector.compile = uproot._connect.to_oamap.compile
+    #     return connector
 
 uproot.rootio.methods["TTree"] = TTreeMethods
 

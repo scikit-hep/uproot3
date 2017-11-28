@@ -65,17 +65,7 @@ iterate
 pandas
 ^^^^^^
 
-*(not implemented)*
-
-numba
-^^^^^
-
-*(not implemented)*
-
-oamap
-^^^^^
-
-*(not implemented)*
+Implemented, but not documented yet.
 
 uproot.tree.TBranchMethods
 --------------------------
