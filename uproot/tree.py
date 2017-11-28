@@ -385,6 +385,10 @@ class TTreeMethods(object):
     def format(self, foldnames=False):
         return "\n".join(self._format(foldnames))
 
+    def recover(self):
+        for branch in self.allvalues():
+            branch.recover()
+
     def _normalize_branches(self, arg):
         if arg is None:                                    # no specification; read all branches
             for branch in self.allvalues():                # that have interpretations
@@ -684,13 +688,10 @@ class TBranchMethods(object):
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
     def basket_entrystop(self, i):
-        if 0 <= i < self.fWriteBasket - 1:
+        if 0 <= i < self.fWriteBasket:
             return self.fBasketEntry[i + 1]
 
         elif i == self.numbaskets - 1:
-            return self.fBasketEntry[i + 1]
-
-        elif i == self.numbaskets:
             return self.fEntries   # or self.fEntryNumber?
 
         else:
