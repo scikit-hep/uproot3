@@ -527,23 +527,23 @@ class TestTree(unittest.TestCase):
         tree = uproot.open("tests/samples/sample-5.30.00-uncompressed.root")["sample"]
 
         keycache = {}
-        rawcache = {}
+        basketcache = {}
 
         for branchname in b"u1", b"i8", b"Ai8", b"f4", b"af4":
             strict = tree[branchname].array()
 
-            lazy = tree[branchname].lazyarray(keycache=keycache, rawcache=rawcache)
+            lazy = tree[branchname].lazyarray(keycache=keycache, basketcache=basketcache)
             for i in range(len(lazy)):
                 self.assertEqual(lazy[i].tolist(), strict[i].tolist())
 
-            lazy = tree[branchname].lazyarray(keycache=keycache, rawcache=rawcache)
+            lazy = tree[branchname].lazyarray(keycache=keycache, basketcache=basketcache)
             for i in range(len(lazy), 0, -1):
                 self.assertEqual(lazy[i - 1].tolist(), strict[i - 1].tolist())
 
-            lazy = tree[branchname].lazyarray(keycache=keycache, rawcache=rawcache)
+            lazy = tree[branchname].lazyarray(keycache=keycache, basketcache=basketcache)
             for i in range(len(lazy)):
                 self.assertEqual(lazy[i : i + 3].tolist(), strict[i : i + 3].tolist())
 
-            lazy = tree[branchname].lazyarray(keycache=keycache, rawcache=rawcache)
+            lazy = tree[branchname].lazyarray(keycache=keycache, basketcache=basketcache)
             for i in range(len(lazy), 0, -1):
                 self.assertEqual(lazy[i - 1 : i + 3].tolist(), strict[i - 1 : i + 3].tolist())
