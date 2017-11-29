@@ -564,79 +564,61 @@ class TBranchMethods(object):
         else:
             return self.fWriteBasket + 1
 
-    def uncompressedbytes(self, keycache=None):
-        if keycache is not None and all(self._keycachekey(i) in keycache for i in range(self.numbaskets)):
-            out = 0
-            for i in range(self.numbaskets):
-                key = keycache[self._keycachekey(i)]
-                out += key.fObjlen
-            return out
+    def _threadsafe_key(self, i, keycache, complete):
+        key = None
+        if keycache is not None:
+            key = keycache.get(self._keycachekey(i), None)
 
-        else:
+        if key is None:
             keysource = self._source.threadlocal()
             try:
-                out = 0
-                for i in range(self.numbaskets):
-                    if keycache is not None and self._keycachekey(i) in keycache:
-                        key = keycache[self._keycachekey(i)]
-                    else:
-                        key = self._basketkey(keysource, i, False)
-                    out += key.fObjlen
-                    if keycache is not None:
-                        keycache[self._keycachekey(i)] = key
-                return out
+                key = self._basketkey(keysource, i, complete)
+                if keycache is not None:
+                    keycache[self._keycachekey(i)] = key
             finally:
                 keysource.dismiss()
+
+        return key
+
+    def _threadsafe_iterate_keys(self, keycache, complete, basketstart=None, basketstop=None):
+        if basketstart is None:
+            basketstart = 0
+        if basketstop is None:
+            basketstop = self.numbaskets
+
+        if keycache is not None:
+            keys = [keycache.get(self._keycachekey(i), None) for i in range(basketstart, basketstop)]
+            if all(x is not None for x in keys):
+                for key in keys:
+                    yield key
+                raise StopIteration
+
+        keysource = self._source.threadlocal()
+        try:
+            for i in range(basketstart, basketstop):
+                key = None if keycache is None else keycache.get(self._keycachekey(i), None)
+                if key is None:
+                    key = self._basketkey(keysource, i, complete)
+                    if keycache is not None:
+                        keycache[self._keycachekey(i)] = key
+                    yield key
+                else:
+                    yield key
+        finally:
+            keysource.dismiss()
+
+    def uncompressedbytes(self, keycache=None):
+        return sum(key.fObjlen for key in self._threadsafe_iterate_keys(keycache, False))
 
     def compressedbytes(self, keycache=None):
-        if keycache is not None and all(self._keycachekey(i) in keycache for i in range(self.numbaskets)):
-            out = 0
-            for i in range(self.numbaskets):
-                key = keycache[self._keycachekey(i)]
-                out += key.fNbytes - key.fKeylen
-            return out
-
-        else:
-            keysource = self._source.threadlocal()
-            try:
-                out = 0
-                for i in range(self.numbaskets):
-                    if keycache is not None and self._keycachekey(i) in keycache:
-                        key = keycache[self._keycachekey(i)]
-                    else:
-                        key = self._basketkey(keysource, i, False)
-                    out += key.fNbytes - key.fKeylen
-                    if keycache is not None:
-                        keycache[self._keycachekey(i)] = key
-                return out
-            finally:
-                keysource.dismiss()
+        return sum(key.fNbytes - key.fKeylen for key in self._threadsafe_iterate_keys(keycache, False))
 
     def compressionratio(self, keycache=None):
-        if keycache is not None and all(self._keycachekey(i) in keycache for i in range(self.numbaskets)):
-            numer, denom = 0, 0
-            for i in range(self.numbaskets):
-                key = keycache[self._keycachekey(i)]
-                numer += key.fObjlen
-                denom += key.fNbytes - key.fKeylen
-            return float(numer) / float(denom)
-
-        else:
-            keysource = self._source.threadlocal()
-            try:
-                numer, denom = 0, 0
-                for i in range(self.numbaskets):
-                    if keycache is not None and self._keycachekey(i) in keycache:
-                        key = keycache[self._keycachekey(i)]
-                    else:
-                        key = self._basketkey(keysource, i, False)
-                    numer += key.fObjlen
-                    denom += key.fNbytes - key.fKeylen
-                    if keycache is not None:
-                        keycache[self._keycachekey(i)] = key
-                return float(numer) / float(denom)
-            finally:
-                keysource.dismiss()
+        numer, denom = 0, 0
+        for key in self._threadsafe_iterate_keys(keycache, False):
+            numer += key.fObjlen
+            denom += key.fNbytes - key.fKeylen
+        return float(numer) / float(denom)
 
     def _normalize_dtype(self, interpretation):
         if inspect.isclass(interpretation) and issubclass(interpretation, numpy.generic):
@@ -675,29 +657,7 @@ class TBranchMethods(object):
 
     def numitems(self, interpretation=None, keycache=None):
         interpretation = self._normalize_interpretation(interpretation)
-
-        if keycache is not None and all(self._keycachekey(i) in keycache for i in range(self.numbaskets)):
-            out = 0
-            for i in range(self.numbaskets):
-                key = keycache[self._keycachekey(i)]
-                out += interpretation.numitems(key.border, self.basket_numentries(i))
-            return out
-
-        else:
-            keysource = self._source.threadlocal()
-            try:
-                out = 0
-                for i in range(self.numbaskets):
-                    if keycache is not None and self._keycachekey(i) in keycache:
-                        key = keycache[self._keycachekey(i)]
-                    else:
-                        key = self._basketkey(keysource, i, True)
-                    out += interpretation.numitems(key.border, self.basket_numentries(i))
-                    if keycache is not None:
-                        keycache[self._keycachekey(i)] = key
-                return out
-            finally:
-                keysource.dismiss()
+        return sum(interpretation.numitems(key.border, self.basket_numentries(i)) for i, key in enumerate(_threadsafe_iterate_keys(keycache, True)))
 
     @property
     def compression(self):
@@ -724,46 +684,16 @@ class TBranchMethods(object):
         return self.basket_entrystop(i) - self.basket_entrystart(i)
 
     def basket_uncompressedbytes(self, i, keycache=None):
-        if keycache is not None and self._keycachekey(i) in keycache:
-            key = keycache[self._keycachekey(i)]
-        else:
-            keysource = self._source.threadlocal()
-            try:
-                key = self._basketkey(keysource, i, False)
-                if keycache is not None:
-                    keycache[self._keycachekey(i)] = key
-            finally:
-                keysource.dismiss()
-        return key.fObjlen
+        return self._threadsafe_key(i, keycache, False).fObjlen
 
     def basket_compressedbytes(self, i):
-        if keycache is not None and self._keycachekey(i) in keycache:
-            key = keycache[self._keycachekey(i)]
-        else:
-            keysource = self._source.threadlocal()
-            try:
-                key = self._basketkey(keysource, i, False)
-                if keycache is not None:
-                    keycache[self._keycachekey(i)] = key
-            finally:
-                keysource.dismiss()
+        key = self._threadsafe_key(i, keycache, False)
         return key.fNbytes - key.fKeylen
 
     def basket_numitems(self, i, interpretation=None, keycache=None):
         interpretation = self._normalize_interpretation(interpretation)
-
-        if keycache is not None and self._keycachekey(i) in keycache:
-            return keycache[self._keycachekey(i)]
-
-        else:
-            keysource = self._source.threadlocal()
-            try:
-                key = self._basketkey(keysource, i, True)
-                if keycache is not None:
-                    keycache[self._keycachekey(i)] = key
-                return interpretation.numitems(key.border, self.basket_numentries(i))
-            finally:
-                keysource.dismiss()
+        key = self._threadsafe_key(i, keycache, True)
+        return interpretation.numitems(key.border, self.basket_numentries(i))
             
     def get(self, name):
         name = _bytesid(name)
@@ -805,16 +735,7 @@ class TBranchMethods(object):
             rawcachekey = self._rawcachekey(i)
             basketdata = rawcache.get(rawcachekey, None)
 
-        if keycache is not None and self._keycachekey(i) in keycache:
-            key = keycache[self._keycachekey(i)]
-        else:
-            keysource = self._source.threadlocal()
-            try:
-                key = self._basketkey(keysource, i, True)
-                if keycache is not None:
-                    keycache[self._keycachekey(i)] = key
-            finally:
-                keysource.dismiss()
+        key = self._threadsafe_key(i, keycache, True)
 
         if basketdata is None:
             basketdata = key.basketdata()
@@ -938,30 +859,12 @@ class TBranchMethods(object):
                         yield self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, cache=cache, rawcache=rawcache, keycache=keycache)
 
     def _basket_itemoffset(self, interpretation, basketstart, basketstop, keycache):
-        if keycache is not None and all(self._keycachekey(i) in keycache for i in range(basketstart, basketstop)):
-            basket_itemoffset = [0]
-            for i in range(basketstart, basketstop):
-                key = keycache[self._keycachekey(i)]
-                numitems = interpretation.numitems(key.border, self.basket_numentries(i))
-                basket_itemoffset.append(basket_itemoffset[-1] + numitems)
-            return basket_itemoffset
-
-        else:
-            basket_itemoffset = [0]
-            keysource = self._source.threadlocal()
-            try:
-                for i in range(basketstart, basketstop):
-                    if keycache is not None and self._keycachekey(i) in keycache:
-                        key = keycache[self._keycachekey(i)]
-                    else:
-                        key = self._basketkey(keysource, i, True)
-                    numitems = interpretation.numitems(key.border, self.basket_numentries(i))
-                    basket_itemoffset.append(basket_itemoffset[-1] + numitems)
-                    if keycache is not None:
-                        keycache[self._keycachekey(i)] = key
-            finally:
-                keysource.dismiss()
-            return basket_itemoffset
+        basket_itemoffset = [0]
+        for j, key in enumerate(self._threadsafe_iterate_keys(keycache, True, basketstart, basketstop)):
+            i = basketstart + j
+            numitems = interpretation.numitems(key.border, self.basket_numentries(i))
+            basket_itemoffset.append(basket_itemoffset[-1] + numitems)
+        return basket_itemoffset
 
     def _basket_entryoffset(self, basketstart, basketstop):
         basket_entryoffset = [0]
