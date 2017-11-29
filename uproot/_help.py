@@ -1239,7 +1239,7 @@ u"""Iterate over baskets.
 ################################################################ uproot.tree.TTreeMethods.pandas
 
 _method(uproot._connect.to_pandas.TTreeMethods_pandas.df).__doc__ = \
-u"""Create a `Pandas <https://pandas.pydata.org>`_ DataFrame from some branches.
+u"""Create a Pandas DataFrame from some branches.
 
     Parameters
     ----------
@@ -1259,8 +1259,8 @@ u"""Create a `Pandas <https://pandas.pydata.org>`_ DataFrame from some branches.
 
     Returns
     -------
-    `Pandas DataFrame <http://pandas.pydata.org/pandas-docs/stable/api.html#dataframe>`_
-        data frame.
+    Pandas DataFrame
+        data frame (`see docs <http://pandas.pydata.org/pandas-docs/stable/api.html#dataframe>`_).
 """.format(**tree_fragments)
 
 ################################################################ uproot.interp.interp.Interpretation
