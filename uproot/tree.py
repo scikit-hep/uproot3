@@ -1200,7 +1200,7 @@ class TBranchMethods(object):
 
     def recover(self):
         if self._recoveredbasket is None:
-            recovered = uproot.rootio.TObjArray.read(self._source, self.fBaskets._cursor, self._context, asclass=TBranchMethods._RecoveredTBasket)
+            recovered = [x for x in uproot.rootio.TObjArray.read(self._source, self.fBaskets._cursor, self._context, asclass=TBranchMethods._RecoveredTBasket) if x is not None]
             if len(recovered) == 1:
                 self._recoveredbasket = recovered[0]
             else:
