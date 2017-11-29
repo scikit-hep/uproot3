@@ -564,6 +564,15 @@ class TBranchMethods(object):
         else:
             return self.fWriteBasket + 1
 
+    def _cachekey(self, entrystart, entrystop):
+        return "{0};{1};{2};{3}-{4}".format(self._context.sourcepath, self._context.treename, self.name, entrystart, entrystop)
+
+    def _rawcachekey(self, i):
+        return "{0};{1};{2};{3};raw".format(self._context.sourcepath, self._context.treename, self.name, i)
+
+    def _keycachekey(self, i):
+        return "{0};{1};{2};{3};key".format(self._context.sourcepath, self._context.treename, self.name, i)
+
     def _threadsafe_key(self, i, keycache, complete):
         key = None
         if keycache is not None:
@@ -720,15 +729,6 @@ class TBranchMethods(object):
         local_entrystop  = max(0, min(entrystop - self.basket_entrystart(i), self.basket_entrystop(i) - self.basket_entrystart(i)))
         return local_entrystart, local_entrystop
 
-    def _cachekey(self, entrystart, entrystop):
-        return "{0};{1};{2};{3}-{4}".format(self._context.sourcepath, self._context.treename, self.name, entrystart, entrystop)
-
-    def _rawcachekey(self, i):
-        return "{0};{1};{2};{3};raw".format(self._context.sourcepath, self._context.treename, self.name, i)
-
-    def _keycachekey(self, i):
-        return "{0};{1};{2};{3};key".format(self._context.sourcepath, self._context.treename, self.name, i)
-        
     def _basket(self, i, interpretation, local_entrystart, local_entrystop, rawcache, keycache):
         basketdata = None
         if rawcache is not None:
@@ -765,8 +765,11 @@ class TBranchMethods(object):
         entrystop = self.basket_entrystart(i) + local_entrystop
         numentries = local_entrystop - local_entrystart
 
-        if cache is not None and self._cachekey(entrystart, entrystop) in cache:
-            return cache[self._cachekey(entrystart, entrystop)]
+        if cache is not None:
+            cachekey = self._cachekey(entrystart, entrystop)
+            out = cache.get(cachekey, None)
+            if out is not None:
+                return out
 
         source = self._basket(i, interpretation, local_entrystart, local_entrystop, rawcache, keycache)
         numitems = interpretation.source_numitems(source)
@@ -776,7 +779,7 @@ class TBranchMethods(object):
         out = interpretation.finalize(destination)
 
         if cache is not None:
-            cache[self._cachekey(entrystart, entrystop)] = out
+            cache[cachekey] = out
         return out
 
     def _basketstartstop(self, entrystart, entrystop):
@@ -873,12 +876,14 @@ class TBranchMethods(object):
         return basket_entryoffset
 
     def array(self, interpretation=None, entrystart=None, entrystop=None, cache=None, rawcache=None, keycache=None, executor=None, blocking=True):
-        if cache is not None and self._cachekey(entrystart, entrystop) in cache:
-            out = cache[self._cachekey(entrystart, entrystop)]
-            if blocking:
-                return out
-            else:
-                return lambda: out
+        if cache is not None:
+            cachekey = self._cachekey(entrystart, entrystop)
+            out = cache.get(cachekey, None)
+            if out is not None:
+                if blocking:
+                    return out
+                else:
+                    return lambda: out
 
         interpretation = self._normalize_interpretation(interpretation)
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
@@ -953,7 +958,7 @@ class TBranchMethods(object):
 
             out = interpretation.finalize(clipped)
             if cache is not None:
-                cache[self._cachekey(entrystart, entrystop)] = out
+                cache[cachekey] = out
             return out
 
         if blocking:
