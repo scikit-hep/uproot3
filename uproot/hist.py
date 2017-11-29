@@ -46,6 +46,14 @@ class TH1Methods(object):
             return "<{0} at 0x{1:012x}>".format(self.classname, id(self))
 
     @property
+    def name(self):
+        return getattr(self, "fName", None)
+
+    @property
+    def title(self):
+        return getattr(self, "fTitle", None)
+
+    @property
     def numbins(self):
         return self.fXaxis.fNbins
 
@@ -73,6 +81,15 @@ class TH1Methods(object):
     def allvalues(self):
         return self[:]
 
+    @property
+    def numpy(self):
+        low = self.fXaxis.fXmin
+        high = self.fXaxis.fXmax
+        norm = (high - low) / self.fXaxis.fNbins
+        freq = numpy.array(self.values, dtype=self._dtype.newbyteorder("="))
+        edges = numpy.array([i*norm + low for i in range(self.numbins + 1)])
+        return freq, edges
+
     def interval(self, index):
         if index < 0:
             index += len(self)
@@ -86,7 +103,7 @@ class TH1Methods(object):
         else:
             norm = (high - low) / self.fXaxis.fNbins
             return (index - 1)*norm + low, index*norm + low
-            
+
     def index(self, data):
         low = self.fXaxis.fXmin
         high = self.fXaxis.fXmax
@@ -136,6 +153,9 @@ class TH1Methods(object):
                 self[0] += underflows.sum()
                 self[-1] += overflows.sum()
 
-uproot.rootio.methods["TH1"] = TH1Methods
+    @property
+    def hv(self):
+        import uproot._connect.to_holoviews
+        return uproot._connect.to_holoviews.TH1Methods_hv(self)
 
-# holoviews.Spread((e[numpy.repeat(numpy.arange(len(f) + 1), 2)[1:-1]],) + (f[numpy.repeat(numpy.arange(len(f)), 2)]/2.0,) * 2)
+uproot.rootio.methods["TH1"] = TH1Methods
