@@ -90,6 +90,7 @@ class ROOTDirectory(object):
     def read(source, *args, **options):
         # make sure that all methods classes have been loaded
         import uproot.tree
+        import uproot.hist
 
         if len(args) == 0:
             try:
