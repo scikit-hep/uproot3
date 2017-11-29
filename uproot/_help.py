@@ -60,11 +60,11 @@ rootdirectory_fragments = {
 
     # filtername
     "filtername": u"""filtername : function: str \u21d2 bool
-        only keys for which ``filtername(name)`` returns ``True`` are yielded by the iterator (does not eliminate subdirectories if ``recursive=True``). Default returns ``True`` for all input.""",
+        only keys for which ``filtername(name)`` returns ``True`` are returned (does not eliminate subdirectories if ``recursive=True``). Default returns ``True`` for all input.""",
 
     # filterclass
-    "filterclass": u"""filterclass : function: str \u21d2 bool
-        only keys for which ``filterclass(class name)`` returns ``True`` are yielded by the iterator (does not eliminate subdirectories if ``recursive=True``). Default returns ``True`` for all input.""",
+    "filterclass": u"""filterclass : function: class object \u21d2 bool
+        only keys for which ``filterclass(class object)`` returns ``True`` are returned (does not eliminate subdirectories if ``recursive=True``). Default returns ``True`` for all input. Note that all class objects passed to this function have a ``classname`` attribute for the C++ class name (may differ from the Python class name for syntactic reasons).""",
     }
 
 ################################################################ uproot.rootio.open
@@ -148,21 +148,29 @@ u"""Represents a ROOT file or directory, an entry point for reading objects.
 
     - :py:meth:`get <uproot.rootio.ROOTDirectory.get>` read an object from the file, selected by name.
 
-    - :py:meth:`keys <uproot.rootio.ROOTDirectory.keys>` iterate over key names in this directory.
+    - :py:meth:`iterkeys <uproot.rootio.ROOTDirectory.iterkeys>` iterate over key names in this directory.
 
-    - :py:meth:`values <uproot.rootio.ROOTDirectory.values>` iterate over objects in this directory.
+    - :py:meth:`itervalues <uproot.rootio.ROOTDirectory.itervalues>` iterate over objects in this directory.
 
-    - :py:meth:`items <uproot.rootio.ROOTDirectory.items>` iterate over *(key name, object)* pairs in this directory, like a ``dict``.
+    - :py:meth:`iteritems <uproot.rootio.ROOTDirectory.iteritems>` iterate over *(key name, object)* pairs in this directory, like a ``dict``.
 
-    - :py:meth:`classes <uproot.rootio.ROOTDirectory.classes>` iterate over *(key name, class name)* pairs in this directory.
+    - :py:meth:`iterclasses <uproot.rootio.ROOTDirectory.iterclasses>` iterate over *(key name, class object)* pairs in this directory.
 
-    - :py:meth:`allkeys <uproot.rootio.ROOTDirectory.allkeys>` iterate over keys at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`keys <uproot.rootio.ROOTDirectory.keys>`).
+    - :py:meth:`keys <uproot.rootio.ROOTDirectory.keys>` return key names in this directory.
 
-    - :py:meth:`allvalues <uproot.rootio.ROOTDirectory.allvalues>` iterate over objects at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`values <uproot.rootio.ROOTDirectory.values>`).
+    - :py:meth:`values <uproot.rootio.ROOTDirectory.values>` return objects in this directory.
 
-    - :py:meth:`allitems <uproot.rootio.ROOTDirectory.allitems>` iterate over *(key name, object)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`items <uproot.rootio.ROOTDirectory.items>`).
+    - :py:meth:`items <uproot.rootio.ROOTDirectory.items>` return *(key name, object)* pairs in this directory, like a ``dict``.
 
-    - :py:meth:`allclasses <uproot.rootio.ROOTDirectory.allclasses>` iterate over *(key name, class name)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`classes <uproot.rootio.ROOTDirectory.classes>`).
+    - :py:meth:`classes <uproot.rootio.ROOTDirectory.classes>` return *(key name, class object)* pairs in this directory.
+
+    - :py:meth:`allkeys <uproot.rootio.ROOTDirectory.allkeys>` return keys at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`keys <uproot.rootio.ROOTDirectory.keys>`).
+
+    - :py:meth:`allvalues <uproot.rootio.ROOTDirectory.allvalues>` return objects at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`values <uproot.rootio.ROOTDirectory.values>`).
+
+    - :py:meth:`allitems <uproot.rootio.ROOTDirectory.allitems>` return *(key name, object)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`items <uproot.rootio.ROOTDirectory.items>`).
+
+    - :py:meth:`allclasses <uproot.rootio.ROOTDirectory.allclasses>` return *(key name, class object)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`classes <uproot.rootio.ROOTDirectory.classes>`).
 """
 
 _method(uproot.rootio.ROOTDirectory.get).__doc__ = \
@@ -187,7 +195,7 @@ u"""Read an object from the ROOT file or directory by name.
     This method, without the ``cycle`` argument, can be accessed more directly through square brackets (``__getitem__``) on the :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` object.
 """.format(**rootdirectory_fragments)
 
-_method(uproot.rootio.ROOTDirectory.keys).__doc__ = \
+_method(uproot.rootio.ROOTDirectory.iterkeys).__doc__ = \
 u"""Iterate over key names in this directory.
 
     This method does not read objects.
@@ -211,7 +219,7 @@ u"""Iterate over key names in this directory.
     This method can be accessed more directly by simply iterating over a :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` object.
 """.format(**rootdirectory_fragments)
     
-_method(uproot.rootio.ROOTDirectory.values).__doc__ = \
+_method(uproot.rootio.ROOTDirectory.itervalues).__doc__ = \
 u"""Iterate over objects in this directory.
 
     Parameters
@@ -228,7 +236,7 @@ u"""Iterate over objects in this directory.
         freshly read objects from the ROOT file.
 """.format(**rootdirectory_fragments)
 
-_method(uproot.rootio.ROOTDirectory.items).__doc__ = \
+_method(uproot.rootio.ROOTDirectory.iteritems).__doc__ = \
 u"""Iterate over *(key name, object)* pairs in this directory, like a ``dict``.
 
     Parameters
@@ -245,8 +253,8 @@ u"""Iterate over *(key name, object)* pairs in this directory, like a ``dict``.
         name-object pairs from the file.
 """.format(**rootdirectory_fragments)
 
-_method(uproot.rootio.ROOTDirectory.classes).__doc__ = \
-u"""Iterate over *(key name, class name)* pairs in this directory.
+_method(uproot.rootio.ROOTDirectory.iterclasses).__doc__ = \
+u"""Iterate over *(key name, class object)* pairs in this directory.
 
     This method does not read objects.
 
@@ -260,12 +268,84 @@ u"""Iterate over *(key name, class name)* pairs in this directory.
 
     Returns
     -------
-    iterator over (bytes, bytes)
-        name-class name pairs from the file.
+    iterator over (bytes, class object)
+        name-class object pairs from the file.
+""".format(**rootdirectory_fragments)
+
+_method(uproot.rootio.ROOTDirectory.keys).__doc__ = \
+u"""Return key names in this directory.
+
+    This method does not read objects.
+
+    Parameters
+    ----------
+    {recursive}
+
+    {filtername}
+
+    {filterclass}
+
+    Returns
+    -------
+    list of bytes
+        names of objects and subdirectories in the file.
+""".format(**rootdirectory_fragments)
+    
+_method(uproot.rootio.ROOTDirectory.values).__doc__ = \
+u"""Return objects in this directory.
+
+    Parameters
+    ----------
+    {recursive}
+
+    {filtername}
+
+    {filterclass}
+
+    Returns
+    -------
+    list of :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`
+        freshly read objects from the ROOT file.
+""".format(**rootdirectory_fragments)
+
+_method(uproot.rootio.ROOTDirectory.items).__doc__ = \
+u"""Return *(key name, object)* pairs in this directory, like a ``dict``.
+
+    Parameters
+    ----------
+    {recursive}
+
+    {filtername}
+
+    {filterclass}
+
+    Returns
+    -------
+    list of (bytes, :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`)
+        name-object pairs from the file.
+""".format(**rootdirectory_fragments)
+
+_method(uproot.rootio.ROOTDirectory.classes).__doc__ = \
+u"""Return *(key name, class object)* pairs in this directory.
+
+    This method does not read objects.
+
+    Parameters
+    ----------
+    {recursive}
+
+    {filtername}
+
+    {filterclass}
+
+    Returns
+    -------
+    list of (bytes, class object)
+        name-class object pairs from the file.
 """.format(**rootdirectory_fragments)
 
 _method(uproot.rootio.ROOTDirectory.allkeys).__doc__ = \
-u"""Iterate over keys at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`keys <uproot.rootio.ROOTDirectory.keys>`).
+u"""Return keys at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`keys <uproot.rootio.ROOTDirectory.keys>`).
 
     This method does not read objects.
 
@@ -277,12 +357,12 @@ u"""Iterate over keys at all levels of depth (shortcut for passing ``recursive=T
 
     Returns
     -------
-    iterator over bytes
+    list of bytes
         names of objects and subdirectories in the file.
 """.format(**rootdirectory_fragments)
     
 _method(uproot.rootio.ROOTDirectory.allvalues).__doc__ = \
-u"""Iterate over objects at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`values <uproot.rootio.ROOTDirectory.values>`).
+u"""Return objects at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`values <uproot.rootio.ROOTDirectory.values>`).
 
     Parameters
     ----------
@@ -292,12 +372,12 @@ u"""Iterate over objects at all levels of depth (shortcut for passing ``recursiv
 
     Returns
     -------
-    iterator over :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`
+    list of :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`
         freshly read objects from the ROOT file.
 """.format(**rootdirectory_fragments)
 
 _method(uproot.rootio.ROOTDirectory.allitems).__doc__ = \
-u"""Iterate over *(key name, object)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`items <uproot.rootio.ROOTDirectory.items>`).
+u"""Return *(key name, object)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`items <uproot.rootio.ROOTDirectory.items>`).
 
     Parameters
     ----------
@@ -307,12 +387,12 @@ u"""Iterate over *(key name, object)* pairs at all levels of depth (shortcut for
 
     Returns
     -------
-    iterator over (bytes, :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`)
+    list of (bytes, :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`)
         name-object pairs from the file.
 """.format(**rootdirectory_fragments)
 
 _method(uproot.rootio.ROOTDirectory.allclasses).__doc__ = \
-u"""Iterate over *(key name, class name)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`classes <uproot.rootio.ROOTDirectory.classes>`).
+u"""Return *(key name, class object)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`classes <uproot.rootio.ROOTDirectory.classes>`).
 
     This method does not read objects.
 
@@ -324,8 +404,8 @@ u"""Iterate over *(key name, class name)* pairs at all levels of depth (shortcut
 
     Returns
     -------
-    iterator over (bytes, bytes)
-        name-class name pairs from the file.
+    list of (bytes, class object)
+        name-class object pairs from the file.
 """.format(**rootdirectory_fragments)
 
 ################################################################ uproot.rootio.ROOTObject and uproot.rootio.ROOTStreamedObject
@@ -407,11 +487,11 @@ tree_fragments = {
 
     # filtername
     "filtername": u"""filtername : function: str \u21d2 bool
-        only branches for which ``filtername(name)`` returns ``True`` are yielded by the iterator. Default returns ``True`` for all input.""",
+        only branches for which ``filtername(name)`` returns ``True`` are returned. Default returns ``True`` for all input.""",
 
     # filtertitle
     "filtertitle": u"""filtertitle : function: str \u21d2 bool
-        only branches for which ``filtertitle(title)`` returns ``True`` are yielded by the iterator. Default returns ``True`` for all input.""",
+        only branches for which ``filtertitle(title)`` returns ``True`` are returned. Default returns ``True`` for all input.""",
 
     # i
     "i": u"""i : non-negative int
@@ -496,12 +576,15 @@ u"""Adds array reading methods to TTree objects that have been streamed from a R
     - **oamap** connector to `OAMap <https://github.com/diana-hep/oamap>`_ functions *(not implemented)*.
 
     - :py:meth:`get <uproot.tree.TTreeMethods.get>` return a branch by name (at any level of depth).
-    - :py:meth:`keys <uproot.tree.TTreeMethods.keys>` iterate over branch names.
-    - :py:meth:`values <uproot.tree.TTreeMethods.values>` iterate over branches.
-    - :py:meth:`items <uproot.tree.TTreeMethods.items>` iterate over *(branch name, branch)* pairs.
-    - :py:meth:`allkeys <uproot.tree.TTreeMethods.allkeys>` iterate over branch names at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`keys <uproot.tree.TTreeMethods.keys>`).
-    - :py:meth:`allvalues <uproot.tree.TTreeMethods.allvalues>` iterate over branches at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`values <uproot.tree.TTreeMethods.values>`).
-    - :py:meth:`allitems <uproot.tree.TTreeMethods.allitems>` iterate over *(branch name, branch)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`items <uproot.tree.TTreeMethods.items>`).
+    - :py:meth:`iterkeys <uproot.tree.TTreeMethods.iterkeys>` iterate over branch names.
+    - :py:meth:`itervalues <uproot.tree.TTreeMethods.itervalues>` iterate over branches.
+    - :py:meth:`iteritems <uproot.tree.TTreeMethods.iteritems>` iterate over *(branch name, branch)* pairs.
+    - :py:meth:`keys <uproot.tree.TTreeMethods.keys>` return branch names.
+    - :py:meth:`values <uproot.tree.TTreeMethods.values>` return branches.
+    - :py:meth:`items <uproot.tree.TTreeMethods.items>` return *(branch name, branch)* pairs.
+    - :py:meth:`allkeys <uproot.tree.TTreeMethods.allkeys>` return branch names at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`keys <uproot.tree.TTreeMethods.keys>`).
+    - :py:meth:`allvalues <uproot.tree.TTreeMethods.allvalues>` return branches at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`values <uproot.tree.TTreeMethods.values>`).
+    - :py:meth:`allitems <uproot.tree.TTreeMethods.allitems>` return *(branch name, branch)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`items <uproot.tree.TTreeMethods.items>`).
     - :py:meth:`clusters <uproot.tree.TTreeMethods.clusters>` iterate over *(int, int)* pairs representing cluster entry starts and stops in this TTree *(not implemented)*.
 
     **Methods for reading array data:**
@@ -533,7 +616,7 @@ u"""Return a branch by name (at any level of depth).
     This method can be accessed more directly through square brackets (``__getitem__``) on the :py:class:`TTree <uproot.tree.TTreeMethods>` object.
 """
 
-_method(uproot.tree.TTreeMethods.keys).__doc__ = \
+_method(uproot.tree.TTreeMethods.iterkeys).__doc__ = \
 u"""Iterate over branch names.
 
     Parameters
@@ -550,7 +633,7 @@ u"""Iterate over branch names.
         names of branches.
 """.format(**tree_fragments)
 
-_method(uproot.tree.TTreeMethods.values).__doc__ = \
+_method(uproot.tree.TTreeMethods.itervalues).__doc__ = \
 u"""Iterate over branches.
 
     Parameters
@@ -567,7 +650,7 @@ u"""Iterate over branches.
         branches.
 """.format(**tree_fragments)
 
-_method(uproot.tree.TTreeMethods.items).__doc__ = \
+_method(uproot.tree.TTreeMethods.iteritems).__doc__ = \
 u"""Iterate over *(branch name, branch)* pairs.
 
     Parameters
@@ -584,8 +667,59 @@ u"""Iterate over *(branch name, branch)* pairs.
         name-branch pairs.
 """.format(**tree_fragments)
 
+_method(uproot.tree.TTreeMethods.keys).__doc__ = \
+u"""Return branch names.
+
+    Parameters
+    ----------
+    {recursive}
+
+    {filtername}
+
+    {filtertitle}
+
+    Returns
+    -------
+    list of bytes
+        names of branches.
+""".format(**tree_fragments)
+
+_method(uproot.tree.TTreeMethods.values).__doc__ = \
+u"""Return branches.
+
+    Parameters
+    ----------
+    {recursive}
+
+    {filtername}
+
+    {filtertitle}
+
+    Returns
+    -------
+    list of :py:class:`TBranch <uproot.tree.TBranchMethods>`
+        branches.
+""".format(**tree_fragments)
+
+_method(uproot.tree.TTreeMethods.items).__doc__ = \
+u"""Return *(branch name, branch)* pairs.
+
+    Parameters
+    ----------
+    {recursive}
+
+    {filtername}
+
+    {filtertitle}
+
+    Returns
+    -------
+    list of (bytes, :py:class:`TBranch <uproot.tree.TBranchMethods>`)
+        name-branch pairs.
+""".format(**tree_fragments)
+
 _method(uproot.tree.TTreeMethods.allkeys).__doc__ = \
-u"""Iterate over branch names at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`keys <uproot.tree.TTreeMethods.keys>`).
+u"""Return branch names at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`keys <uproot.tree.TTreeMethods.keys>`).
 
     Parameters
     ----------
@@ -595,12 +729,12 @@ u"""Iterate over branch names at all levels of depth (shortcut for passing ``rec
 
     Returns
     -------
-    iterator over bytes
+    list of bytes
         names of branches.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.allvalues).__doc__ = \
-u"""Iterate over branches at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`values <uproot.tree.TTreeMethods.values>`).
+u"""Return branches at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`values <uproot.tree.TTreeMethods.values>`).
 
     Parameters
     ----------
@@ -610,12 +744,12 @@ u"""Iterate over branches at all levels of depth (shortcut for passing ``recursi
 
     Returns
     -------
-    iterator over :py:class:`TBranch <uproot.tree.TBranchMethods>`
+    list of :py:class:`TBranch <uproot.tree.TBranchMethods>`
         branches.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.allitems).__doc__ = \
-u"""Iterate over *(branch name, branch)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`items <uproot.tree.TTreeMethods.items>`).
+u"""Return *(branch name, branch)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`items <uproot.tree.TTreeMethods.items>`).
 
     Parameters
     ----------
@@ -625,18 +759,18 @@ u"""Iterate over *(branch name, branch)* pairs at all levels of depth (shortcut 
 
     Returns
     -------
-    iterator over (bytes, :py:class:`TBranch <uproot.tree.TBranchMethods>`
+    list of (bytes, :py:class:`TBranch <uproot.tree.TBranchMethods>`
         name-branch pairs.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.clusters).__doc__ = \
-u"""Iterate over *(int, int)* pairs representing cluster entry starts and stops in this TTree.
+u"""Return *(int, int)* pairs representing cluster entry starts and stops in this TTree.
 
     .. todo:: Not implemented.
 
     Returns
     -------
-    iterator over (int, int)
+    list of (int, int)
         start (inclusive) and stop (exclusive) pairs for each cluster.
 """
 
@@ -820,12 +954,15 @@ u"""Adds array reading methods to TBranch objects that have been streamed from a
     - **title** (*bytes*) title of the TBranch.
     - **compression** (:py:class:`Compression <uproot.source.compressed.Compression>`) the compression algorithm and level specified in the TBranch header. (Actual compression used may differ.)
     - :py:meth:`get <uproot.tree.TBranchMethods.get>` return a subbranch by name (at any level of depth).
-    - :py:meth:`keys <uproot.tree.TBranchMethods.keys>` iterate over subbranch names.
-    - :py:meth:`values <uproot.tree.TBranchMethods.values>` iterate over subbranches.
-    - :py:meth:`items <uproot.tree.TBranchMethods.items>` iterate over *(subbranch name, subbranch)* pairs.
-    - :py:meth:`allkeys <uproot.tree.TBranchMethods.allkeys>` iterate over subbranch names at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`keys <uproot.tree.TBranchMethods.keys>`).
-    - :py:meth:`allvalues <uproot.tree.TBranchMethods.allvalues>` iterate over subbranches at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`values <uproot.tree.TBranchMethods.values>`).
-    - :py:meth:`allitems <uproot.tree.TBranchMethods.allitems>` iterate over *(subbranch name, subbranch)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`items <uproot.tree.TBranchMethods.items>`).
+    - :py:meth:`iterkeys <uproot.tree.TBranchMethods.iterkeys>` iterate over subbranch names.
+    - :py:meth:`itervalues <uproot.tree.TBranchMethods.itervalues>` iterate over subbranches.
+    - :py:meth:`iteritems <uproot.tree.TBranchMethods.iteritems>` iterate over *(subbranch name, subbranch)* pairs.
+    - :py:meth:`keys <uproot.tree.TBranchMethods.keys>` return subbranch names.
+    - :py:meth:`values <uproot.tree.TBranchMethods.values>` return subbranches.
+    - :py:meth:`items <uproot.tree.TBranchMethods.items>` return *(subbranch name, subbranch)* pairs.
+    - :py:meth:`allkeys <uproot.tree.TBranchMethods.allkeys>` return subbranch names at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`keys <uproot.tree.TBranchMethods.keys>`).
+    - :py:meth:`allvalues <uproot.tree.TBranchMethods.allvalues>` return subbranches at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`values <uproot.tree.TBranchMethods.values>`).
+    - :py:meth:`allitems <uproot.tree.TBranchMethods.allitems>` return *(subbranch name, subbranch)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`items <uproot.tree.TBranchMethods.items>`).
 
     **Branch information:**
 
@@ -873,7 +1010,7 @@ u"""Return a subbranch by name (at any level of depth).
     This method can be accessed more directly through square brackets (``__getitem__``) on the :py:class:`TBranch <uproot.tree.TBranchMethods>` object.
 """
 
-_method(uproot.tree.TBranchMethods.keys).__doc__ = \
+_method(uproot.tree.TBranchMethods.iterkeys).__doc__ = \
 u"""Iterate over subbranch names.
 
     Parameters
@@ -890,7 +1027,7 @@ u"""Iterate over subbranch names.
         subbranch names.
 """.format(**tree_fragments)
 
-_method(uproot.tree.TBranchMethods.values).__doc__ = \
+_method(uproot.tree.TBranchMethods.itervalues).__doc__ = \
 u"""Iterate over subbranches.
 
     Parameters
@@ -907,7 +1044,7 @@ u"""Iterate over subbranches.
         subbranches.
 """.format(**tree_fragments)
 
-_method(uproot.tree.TBranchMethods.items).__doc__ = \
+_method(uproot.tree.TBranchMethods.iteritems).__doc__ = \
 u"""Iterate over *(subbranch name, subbranch)* pairs.
 
     Parameters
@@ -924,8 +1061,59 @@ u"""Iterate over *(subbranch name, subbranch)* pairs.
         *(subbranch name, subbranch)* pairs.
 """.format(**tree_fragments)
 
+_method(uproot.tree.TBranchMethods.keys).__doc__ = \
+u"""Return subbranch names.
+
+    Parameters
+    ----------
+    {recursive}
+
+    {filtername}
+
+    {filtertitle}
+
+    Returns
+    -------
+    list of bytes
+        subbranch names.
+""".format(**tree_fragments)
+
+_method(uproot.tree.TBranchMethods.values).__doc__ = \
+u"""Return subbranches.
+
+    Parameters
+    ----------
+    {recursive}
+
+    {filtername}
+
+    {filtertitle}
+
+    Returns
+    -------
+    list of :py:class:`TBranch <uproot.tree.TBranchMethods>`
+        subbranches.
+""".format(**tree_fragments)
+
+_method(uproot.tree.TBranchMethods.items).__doc__ = \
+u"""Return *(subbranch name, subbranch)* pairs.
+
+    Parameters
+    ----------
+    {recursive}
+
+    {filtername}
+
+    {filtertitle}
+
+    Returns
+    -------
+    list of (bytes, :py:class:`TBranch <uproot.tree.TBranchMethods>`)
+        *(subbranch name, subbranch)* pairs.
+""".format(**tree_fragments)
+
 _method(uproot.tree.TBranchMethods.allkeys).__doc__ = \
-u"""Iterate over subbranch names at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`keys <uproot.tree.TBranchMethods.keys>`).
+u"""Return subbranch names at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`keys <uproot.tree.TBranchMethods.keys>`).
 
     Parameters
     ----------
@@ -935,12 +1123,12 @@ u"""Iterate over subbranch names at all levels of depth (shortcut for passing ``
 
     Returns
     -------
-    iterator over bytes
+    list of bytes
         subbranch names.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.allvalues).__doc__ = \
-u"""Iterate over subbranches at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`values <uproot.tree.TBranchMethods.values>`).
+u"""Return subbranches at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`values <uproot.tree.TBranchMethods.values>`).
 
     Parameters
     ----------
@@ -950,12 +1138,12 @@ u"""Iterate over subbranches at all levels of depth (shortcut for passing ``recu
 
     Returns
     -------
-    iterator over :py:class:`TBranch <uproot.tree.TBranchMethods>`
+    list of :py:class:`TBranch <uproot.tree.TBranchMethods>`
         subbranches.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.allitems).__doc__ = \
-u"""Iterate over *(subbranch name, subbranch)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`items <uproot.tree.TBranchMethods.items>`).
+u"""Return *(subbranch name, subbranch)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`items <uproot.tree.TBranchMethods.items>`).
 
     Parameters
     ----------
@@ -965,7 +1153,7 @@ u"""Iterate over *(subbranch name, subbranch)* pairs at all levels of depth (sho
 
     Returns
     -------
-    iterator over (bytes, :py:class:`TBranch <uproot.tree.TBranchMethods>`
+    list of (bytes, :py:class:`TBranch <uproot.tree.TBranchMethods>`
         (subbranch name, subbranch)* pairs.
 """.format(**tree_fragments)
 

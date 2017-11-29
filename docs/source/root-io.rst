@@ -16,6 +16,14 @@ A :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` may represent a whole 
 
 .. automethod:: uproot.rootio.ROOTDirectory.get
 
+.. automethod:: uproot.rootio.ROOTDirectory.iterkeys
+
+.. automethod:: uproot.rootio.ROOTDirectory.itervalues
+
+.. automethod:: uproot.rootio.ROOTDirectory.iteritems
+
+.. automethod:: uproot.rootio.ROOTDirectory.iterclasses
+
 .. automethod:: uproot.rootio.ROOTDirectory.keys
 
 .. automethod:: uproot.rootio.ROOTDirectory.values

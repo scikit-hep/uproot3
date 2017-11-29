@@ -62,15 +62,15 @@ class TestCompression(unittest.TestCase):
         self.assertEqual(uproot.open("tests/samples/HZZ-uncompressed.root").compression.level, 0)
 
     def test_compression_keys(self):
-        keys = list(uproot.open("tests/samples/Zmumu-uncompressed.root").allclasses())
-        self.assertEqual(list(uproot.open("tests/samples/Zmumu-zlib.root").allclasses()), keys)
-        self.assertEqual(list(uproot.open("tests/samples/Zmumu-lzma.root").allclasses()), keys)
-        self.assertEqual(list(uproot.open("tests/samples/Zmumu-lz4.root").allclasses()), keys)
+        keys = [(n, cls.classname) for n, cls in uproot.open("tests/samples/Zmumu-uncompressed.root").allclasses()]
+        self.assertEqual([(n, cls.classname) for n, cls in uproot.open("tests/samples/Zmumu-zlib.root").allclasses()], keys)
+        self.assertEqual([(n, cls.classname) for n, cls in uproot.open("tests/samples/Zmumu-lzma.root").allclasses()], keys)
+        self.assertEqual([(n, cls.classname) for n, cls in uproot.open("tests/samples/Zmumu-lz4.root").allclasses()], keys)
 
-        keys = list(uproot.open("tests/samples/HZZ-uncompressed.root").allclasses())
-        self.assertEqual(list(uproot.open("tests/samples/HZZ-zlib.root").allclasses()), keys)
-        self.assertEqual(list(uproot.open("tests/samples/HZZ-lzma.root").allclasses()), keys)
-        self.assertEqual(list(uproot.open("tests/samples/HZZ-lz4.root").allclasses()), keys)
+        keys = [(n, cls.classname) for n, cls in uproot.open("tests/samples/HZZ-uncompressed.root").allclasses()]
+        self.assertEqual([(n, cls.classname) for n, cls in uproot.open("tests/samples/HZZ-zlib.root").allclasses()], keys)
+        self.assertEqual([(n, cls.classname) for n, cls in uproot.open("tests/samples/HZZ-lzma.root").allclasses()], keys)
+        self.assertEqual([(n, cls.classname) for n, cls in uproot.open("tests/samples/HZZ-lz4.root").allclasses()], keys)
 
     def test_compression_branches(self):
         branches = list(uproot.open("tests/samples/Zmumu-uncompressed.root")["events"].keys())

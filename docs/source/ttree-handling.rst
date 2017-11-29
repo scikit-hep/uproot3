@@ -23,6 +23,12 @@ branch accessors
 
 .. automethod:: uproot.tree.TTreeMethods.get
 
+.. automethod:: uproot.tree.TTreeMethods.iterkeys
+
+.. automethod:: uproot.tree.TTreeMethods.itervalues
+
+.. automethod:: uproot.tree.TTreeMethods.iteritems
+
 .. automethod:: uproot.tree.TTreeMethods.keys
 
 .. automethod:: uproot.tree.TTreeMethods.values
@@ -83,6 +89,12 @@ branch accessors
 ^^^^^^^^^^^^^^^^
 
 .. automethod:: uproot.tree.TBranchMethods.get
+
+.. automethod:: uproot.tree.TBranchMethods.iterkeys
+
+.. automethod:: uproot.tree.TBranchMethods.itervalues
+
+.. automethod:: uproot.tree.TBranchMethods.iteritems
 
 .. automethod:: uproot.tree.TBranchMethods.keys
 

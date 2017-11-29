@@ -75,6 +75,8 @@ class ROOTDirectory(object):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (type,), {})
 
+    classname = b"TDirectory"
+
     class _FileContext(object):
         def __init__(self, sourcepath, streamerinfos, streamerinfosmap, classes, compression, tfile):
             self.sourcepath, self.streamerinfos, self.streamerinfosmap, self.classes, self.compression, self.tfile = sourcepath, streamerinfos, streamerinfosmap, classes, compression, tfile
@@ -207,53 +209,78 @@ class ROOTDirectory(object):
     def formatstreamers(self, filtername=nofilter):
         return "\n".join(x.format() for x in self._context.streamerinfos if filtername(x.fName))
 
-    def keys(self, recursive=False, filtername=nofilter, filterclass=nofilter):
+    def _classof(self, classname):
+        if classname == b"TDirectory":
+            cls = ROOTDirectory
+        else:
+            cls = self._context.classes.get(classname, None)
+            if cls is None:
+                cls = ROOTObject.__metaclass__("Undefined_" + str(_safename(classname)), (Undefined,), {"classname": classname})
+        return cls
+
+    def iterkeys(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         for key in self._keys:
-            if filtername(key.fName) and filterclass(key.fClassName):
+            cls = self._classof(key.fClassName)
+            if filtername(key.fName) and filterclass(cls):
                 yield self._withcycle(key)
 
             if recursive and key.fClassName == b"TDirectory":
-                for name in key.get().keys(recursive, filtername, filterclass):
+                for name in key.get().iterkeys(recursive, filtername, filterclass):
                     yield "{0}/{1}".format(self._withcycle(key).decode("ascii"), name.decode("ascii")).encode("ascii")
 
-    def values(self, recursive=False, filtername=nofilter, filterclass=nofilter):
+    def itervalues(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         for key in self._keys:
-            if filtername(key.fName) and filterclass(key.fClassName):
+            cls = self._classof(key.fClassName)
+            if filtername(key.fName) and filterclass(cls):
                 yield key.get()
 
             if recursive and key.fClassName == b"TDirectory":
-                for value in key.get().values(recursive, filtername, filterclass):
+                for value in key.get().itervalues(recursive, filtername, filterclass):
                     yield value
 
-    def items(self, recursive=False, filtername=nofilter, filterclass=nofilter):
+    def iteritems(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         for key in self._keys:
-            if filtername(key.fName) and filterclass(key.fClassName):
+            cls = self._classof(key.fClassName)
+            if filtername(key.fName) and filterclass(cls):
                 yield self._withcycle(key), key.get()
 
             if recursive and key.fClassName == b"TDirectory":
-                for name, value in key.get().items(recursive, filtername, filterclass):
+                for name, value in key.get().iteritems(recursive, filtername, filterclass):
                     yield "{0}/{1}".format(self._withcycle(key).decode("ascii"), name.decode("ascii")).encode("ascii"), value
 
-    def classes(self, recursive=False, filtername=nofilter, filterclass=nofilter):
+    def iterclasses(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         for key in self._keys:
-            if filtername(key.fName) and filterclass(key.fClassName):
-                yield self._withcycle(key), key.fClassName
+            cls = self._classof(key.fClassName)
+            if filtername(key.fName) and filterclass(cls):
+                yield self._withcycle(key), cls
 
             if recursive and key.fClassName == b"TDirectory":
-                for name, classname in key.get().classes(recursive, filtername, filterclass):
+                for name, classname in key.get().iterclasses(recursive, filtername, filterclass):
                     yield "{0}/{1}".format(self._withcycle(key).decode("ascii"), name.decode("ascii")).encode("ascii"), classname
 
+    def keys(self, recursive=False, filtername=nofilter, filterclass=nofilter):
+        return list(self.iterkeys(recursive=recursive, filtername=filtername, filterclass=filterclass))
+
+    def values(self, recursive=False, filtername=nofilter, filterclass=nofilter):
+        return list(self.itervalues(recursive=recursive, filtername=filtername, filterclass=filterclass))
+
+    def items(self, recursive=False, filtername=nofilter, filterclass=nofilter):
+        return list(self.iteritems(recursive=recursive, filtername=filtername, filterclass=filterclass))
+
+    def classes(self, recursive=False, filtername=nofilter, filterclass=nofilter):
+        return list(self.iterclasses(recursive=recursive, filtername=filtername, filterclass=filterclass))
+
     def allkeys(self, filtername=nofilter, filterclass=nofilter):
-        return self.keys(True, filtername, filterclass)
+        return self.keys(recursive=True, filtername=filtername, filterclass=filterclass)
 
     def allvalues(self, filtername=nofilter, filterclass=nofilter):
-        return self.values(True, filtername, filterclass)
+        return self.values(recursive=True, filtername=filtername, filterclass=filterclass)
 
     def allitems(self, filtername=nofilter, filterclass=nofilter):
-        return self.items(True, filtername, filterclass)
+        return self.items(recursive=True, filtername=filtername, filterclass=filterclass)
 
     def allclasses(self, filtername=nofilter, filterclass=nofilter):
-        return self.classes(True, filtername, filterclass)
+        return self.classes(recursive=True, filtername=filtername, filterclass=filterclass)
 
     def get(self, name, cycle=None):
         name = _bytesid(name)
@@ -653,6 +680,10 @@ def _defineclasses(streamerinfos):
                 code.append("    {0} = {1}".format(n, v))
 
             code.insert(0, "    classversion = {0}".format(streamerinfo.fClassVersion))
+            if sys.version_info[0] > 2:
+                code.insert(0, "    classname = {0}".format(repr(streamerinfo.fName)))
+            else:
+                code.insert(0, "    classname = b{0}".format(repr(streamerinfo.fName)))
             code.insert(0, "    _fields = [{0}]".format(", ".join(repr(x) for x in fields)))
             code.insert(0, "class {0}({1}):".format(_safename(streamerinfo.fName), ", ".join(bases)))
             classes[_safename(streamerinfo.fName)] = _makeclass(streamerinfo.fName, id(streamerinfo), "\n".join(code), classes)

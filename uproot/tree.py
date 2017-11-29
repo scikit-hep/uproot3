@@ -228,34 +228,43 @@ class TTreeMethods(object):
     def numentries(self):
         return self.fEntries
 
-    def keys(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
-        for branch in self.values(recursive, filtername, filtertitle):
+    def iterkeys(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
+        for branch in self.itervalues(recursive, filtername, filtertitle):
             yield branch.name
 
-    def allkeys(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
-        return self.keys(True, filtername, filtertitle)
-
-    def values(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
+    def itervalues(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
         for branch in self.fBranches:
             if filtername(branch.name) and filtertitle(branch.title):
                 yield branch
             if recursive:
-                for x in branch.values(recursive, filtername, filtertitle):
+                for x in branch.itervalues(recursive, filtername, filtertitle):
                     yield x
 
-    def allvalues(self, filtername=nofilter, filtertitle=nofilter):
-        return self.values(True, filtername, filtertitle)
-
-    def items(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
+    def iteritems(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
         for branch in self.fBranches:
             if filtername(branch.name) and filtertitle(branch.title):
                 yield branch.name, branch
             if recursive:
-                for x in branch.items(recursive, filtername, filtertitle):
+                for x in branch.iteritems(recursive, filtername, filtertitle):
                     yield x
 
+    def keys(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
+        return list(self.iterkeys(recursive=recursive, filtername=filtername, filtertitle=filtertitle))
+
+    def values(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
+        return list(self.itervalues(recursive=recursive, filtername=filtername, filtertitle=filtertitle))
+
+    def items(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
+        return list(self.iteritems(recursive=recursive, filtername=filtername, filtertitle=filtertitle))
+
+    def allkeys(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
+        return self.keys(recursive=True, filtername=filtername, filtertitle=filtertitle)
+
+    def allvalues(self, filtername=nofilter, filtertitle=nofilter):
+        return self.values(recursive=True, filtername=filtername, filtertitle=filtertitle)
+
     def allitems(self, filtername=nofilter, filtertitle=nofilter):
-        return self.items(True, filtername, filtertitle)
+        return self.items(recursive=True, filtername=filtername, filtertitle=filtertitle)
 
     def get(self, name):
         name = _bytesid(name)
@@ -508,36 +517,45 @@ class TBranchMethods(object):
 
     @property
     def numentries(self):
-        return self.fEntryNumber
+        return self.fEntries   # or self.fEntryNumber?
 
-    def keys(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
-        for branch in self.values(recursive, filtername, filtertitle):
+    def iterkeys(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
+        for branch in self.itervalues(recursive, filtername, filtertitle):
             yield branch.name
 
-    def allkeys(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
-        return self.keys(True, filtername, filtertitle)
-
-    def values(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
+    def itervalues(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
         for branch in self.fBranches:
             if filtername(branch.name) and filtertitle(branch.title):
                 yield branch
             if recursive:
-                for x in branch.values(recursive, filtername, filtertitle):
+                for x in branch.itervalues(recursive, filtername, filtertitle):
                     yield x
 
-    def allvalues(self, filtername=nofilter, filtertitle=nofilter):
-        return self.values(True, filtername, filtertitle)
-
-    def items(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
+    def iteritems(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
         for branch in self.fBranches:
             if filtername(branch.name) and filtertitle(branch.title):
                 yield branch.name, branch
             if recursive:
-                for x in branch.items(recursive, filtername, filtertitle):
+                for x in branch.iteritems(recursive, filtername, filtertitle):
                     yield x
 
+    def keys(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
+        return list(self.iterkeys(recursive=recursive, filtername=filtername, filtertitle=filtertitle))
+
+    def values(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
+        return list(self.itervalues(recursive=recursive, filtername=filtername, filtertitle=filtertitle))
+
+    def items(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
+        return list(self.iteritems(recursive=recursive, filtername=filtername, filtertitle=filtertitle))
+
+    def allkeys(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
+        return self.keys(recursive=True, filtername=filtername, filtertitle=filtertitle)
+
+    def allvalues(self, filtername=nofilter, filtertitle=nofilter):
+        return self.values(recursive=True, filtername=filtername, filtertitle=filtertitle)
+
     def allitems(self, filtername=nofilter, filtertitle=nofilter):
-        return self.items(True, filtername, filtertitle)
+        return self.items(recursive=True, filtername=filtername, filtertitle=filtertitle)
 
     @property
     def numbaskets(self):
