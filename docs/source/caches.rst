@@ -9,11 +9,11 @@ This interface, in which the user instantiates and passes the cache object expli
 
 The array-reading functions (in :py:class:`TTreeMethods <uproot.tree.TTreeMethods>` and :py:class:`TBranchMethods <uproot.tree.TBranchMethods>`) each have three cache parameters:
 
-- **cache** for fully interpreted data. May yield stale results if the same branch is read with a different :py:class:`Interpretation <uproot.interp.interp.Interpretation>` and may result in unexpected cache misses if ``entrystart`` and ``entrystop`` boundaries change. Under normal circumstances, however, this cache is fastest.
-- **rawcache** for raw basket data. Always yields correct results, regardless of how the branch is interpreted, because the interpreted data are not saved. This cache only avoids reading and decompressing the ROOT data, which is usually the biggest bottleneck. It is also insensitive to changes in ``entrystart`` and ``entrystop``. This is the safe option.
-- **keycache** for basket TKeys. TKeys are tiny and may be stored in a "save forever" ``dict`` without much danger of running out of memory. After bulk re-reading has been avoided with a **cache** or **rawcache**, TKey re-reading may become the bottleneck because it is a disk operation, so the **keycache** provides a way to avoid it.
+- **cache** for fully interpreted data. Accessing the same arrays with a different interpretation or a different entry range results in a cache miss.
+- **basketcache** for raw basket data. Accessing the same arrays with a different interpretation or a different entry range fully utilizes this cache, since the interpretation/construction from baskets is performed after retrieving data from this cache.
+- **keycache** for basket TKeys. TKeys are small, but require file access, so caching them can speed up repeated access.
 
-Passing explicit caches to **rawcache** and **keycache** will ensure that the file is read only once, while passing explicit caches to **cache** and **keycache** will ensure that the file is read *and interpreted* only once.
+Passing explicit caches to **basketcache** and **keycache** will ensure that the file is read only once, while passing explicit caches to **cache** and **keycache** will ensure that the file is read *and interpreted* only once.
 
 uproot.cache.MemoryCache
 ------------------------

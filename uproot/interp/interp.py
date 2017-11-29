@@ -32,6 +32,10 @@ class Interpretation(object):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (type,), {})
 
+    @property
+    def identifier(self):
+        raise NotImplementedError
+
     def empty(self):
         raise NotImplementedError
 

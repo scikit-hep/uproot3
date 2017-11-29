@@ -52,8 +52,8 @@ class TestTree(unittest.TestCase):
         entrystart, entrystop = branch._normalize_entrystartstop(None, None)
         local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
 
-        one = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None, None)
-        two = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None, None)
+        one = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None)
+        two = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None)
         self.assertTrue(numpy.array_equal(one, numpy.array([-15, -14, -13], dtype=">i8")))
         self.assertTrue(basest(one) is basest(two))
 
@@ -72,8 +72,8 @@ class TestTree(unittest.TestCase):
         entrystart, entrystop = branch._normalize_entrystartstop(None, None)
         local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
 
-        one = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None, None)
-        two = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None, None)
+        one = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None)
+        two = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None)
         self.assertTrue(numpy.array_equal(one, numpy.array([[-14, -13, -12]], dtype=">i8")))
         self.assertTrue(basest(one) is basest(two))
 
@@ -98,8 +98,8 @@ class TestTree(unittest.TestCase):
         entrystart, entrystop = branch._normalize_entrystartstop(None, None)
         local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
 
-        one = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None, None)
-        two = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None, None)
+        one = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None)
+        two = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None)
         self.assertTrue(numpy.array_equal(one[0], numpy.array([], dtype=">i8")))
         self.assertTrue(numpy.array_equal(one[1], numpy.array([-15], dtype=">i8")))
         self.assertTrue(basest(one.contents) is basest(two.contents))
@@ -114,8 +114,8 @@ class TestTree(unittest.TestCase):
         entrystart, entrystop = branch._normalize_entrystartstop(None, None)
         local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
 
-        one = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None, None)
-        two = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None, None)
+        one = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None)
+        two = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None)
         self.assertTrue(one.tolist() == [b"hey-0", b"hey-1", b"hey-2", b"hey-3", b"hey-4", b"hey-5"])
         self.assertFalse(basest(one.jaggedarray.contents) is basest(two.jaggedarray.contents))
 
@@ -527,23 +527,23 @@ class TestTree(unittest.TestCase):
         tree = uproot.open("tests/samples/sample-5.30.00-uncompressed.root")["sample"]
 
         keycache = {}
-        rawcache = {}
+        basketcache = {}
 
         for branchname in b"u1", b"i8", b"Ai8", b"f4", b"af4":
             strict = tree[branchname].array()
 
-            lazy = tree[branchname].lazyarray(keycache=keycache, rawcache=rawcache)
+            lazy = tree[branchname].lazyarray(keycache=keycache, basketcache=basketcache)
             for i in range(len(lazy)):
                 self.assertEqual(lazy[i].tolist(), strict[i].tolist())
 
-            lazy = tree[branchname].lazyarray(keycache=keycache, rawcache=rawcache)
+            lazy = tree[branchname].lazyarray(keycache=keycache, basketcache=basketcache)
             for i in range(len(lazy), 0, -1):
                 self.assertEqual(lazy[i - 1].tolist(), strict[i - 1].tolist())
 
-            lazy = tree[branchname].lazyarray(keycache=keycache, rawcache=rawcache)
+            lazy = tree[branchname].lazyarray(keycache=keycache, basketcache=basketcache)
             for i in range(len(lazy)):
                 self.assertEqual(lazy[i : i + 3].tolist(), strict[i : i + 3].tolist())
 
-            lazy = tree[branchname].lazyarray(keycache=keycache, rawcache=rawcache)
+            lazy = tree[branchname].lazyarray(keycache=keycache, basketcache=basketcache)
             for i in range(len(lazy), 0, -1):
                 self.assertEqual(lazy[i - 1 : i + 3].tolist(), strict[i - 1 : i + 3].tolist())

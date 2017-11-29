@@ -463,11 +463,11 @@ tree_fragments = {
 
     # cache
     "cache": u"""cache : ``None`` or ``dict``-like object
-        if not ``None`` *(default)*, chunks of fully interpreted data (at most basket size) will be saved in the ``dict``-like object for later use. If arrays are later accessed with a different interpretation, the output may be wrong.""",
+        if not ``None`` *(default)*, fully interpreted arrays will be saved in the ``dict``-like object for later use. Accessing the same arrays with a different interpretation or a different entry range results in a cache miss.""",
 
-    # rawcache
-    "rawcache": u"""rawcache : ``None`` or ``dict``-like object
-        if not ``None`` *(default)*, chunks of raw basket data (exactly basket size) will be saved in the ``dict``-like object for later use. Arrays may be later accessed with a different interpretation because raw data must be reinterpreted each time.""",
+    # basketcache
+    "basketcache": u"""basketcache : ``None`` or ``dict``-like object
+        if not ``None`` *(default)*, raw basket data will be saved in the ``dict``-like object for later use. Accessing the same arrays with a different interpretation or a different entry range fully utilizes this cache, since the interpretation/construction from baskets is performed after retrieving data from this cache.""",
 
     # keycache
     "keycache": u"""keycache : ``None`` or ``dict``-like object
@@ -521,9 +521,7 @@ u"""Opens a series of ROOT files (local or remote), iterating over events in chu
 
     {reportentries}
 
-    {cache}
-
-    {rawcache}
+    {basketcache}
 
     {keycache}
 
@@ -789,7 +787,7 @@ u"""Read one branch into an array (or other object if provided an alternate *int
 
     {cache}
 
-    {rawcache}
+    {basketcache}
 
     {keycache}
 
@@ -813,7 +811,7 @@ u"""Create a lazy array that would read the branch as needed.
 
     {cache}
 
-    {rawcache}
+    {basketcache}
 
     {keycache}
 
@@ -840,7 +838,7 @@ u"""Read many branches into arrays (or other objects if provided alternate *inte
 
     {cache}
 
-    {rawcache}
+    {basketcache}
 
     {keycache}
 
@@ -865,7 +863,7 @@ u"""Create many lazy arrays.
 
     {cache}
 
-    {rawcache}
+    {basketcache}
 
     {keycache}
 
@@ -894,9 +892,7 @@ u"""Iterate over many arrays at once, yielding a fixed number of entries at a ti
 
     {entrystop}
 
-    {cache}
-
-    {rawcache}
+    {basketcache}
 
     {keycache}
 
@@ -925,9 +921,7 @@ u"""Iterate at cluster boundaries, which are more efficient but not necessarily 
 
     {entrystop}
 
-    {cache}
-
-    {rawcache}
+    {basketcache}
 
     {keycache}
 
@@ -1310,7 +1304,7 @@ u"""Read the branch into an array (or other object if provided an alternate *int
 
     {cache}
 
-    {rawcache}
+    {basketcache}
 
     {keycache}
 
@@ -1333,7 +1327,7 @@ u"""Create a lazy array that would read the branch as needed.
 
     {cache}
 
-    {rawcache}
+    {basketcache}
 
     {keycache}
 
@@ -1360,7 +1354,7 @@ u"""Read a single basket into an array.
 
     {cache}
 
-    {rawcache}
+    {basketcache}
 
     {keycache}
 
@@ -1383,7 +1377,7 @@ u"""Read baskets into a list of arrays.
 
     {cache}
 
-    {rawcache}
+    {basketcache}
 
     {keycache}
 
@@ -1412,7 +1406,7 @@ u"""Iterate over baskets.
 
     {cache}
 
-    {rawcache}
+    {basketcache}
 
     {keycache}
 
@@ -1439,7 +1433,7 @@ u"""Create a Pandas DataFrame from some branches.
 
     {cache}
 
-    {rawcache}
+    {basketcache}
 
     {keycache}
 
@@ -1461,6 +1455,9 @@ u"""Interface for interpretations.
     Arrays and other collections are filled from ROOT in two stages: raw bytes from each basket are interpreted as a "source" and sources are copied into a branch-wide collection called the "destination" (often swapping bytes from big-endian to native-endian in the process). Public functions return a finalized destination. The distinction between source and destination (a) compactifies disparate baskets into a contiguous collection and (b) allows the output data to differ from the bytes on disk (byte swapping and other conversions).
 
     Interpretations must implement the following methods:
+
+    **identifier**
+        *(property)* a unique identifier for this interpretation, used as part of the cache key so that stale interpretations are not counted as cache hits.
 
     **empty(self)**
         return a zero-entry container (for special cases that can skip complex logic by returning an empty set).

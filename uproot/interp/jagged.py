@@ -58,6 +58,10 @@ class asjagged(Interpretation):
     def to(self, todtype=None, todims=None):
         return asjagged(self.asdtype.to(todtype, todims))
 
+    @property
+    def identifier(self):
+        return "asjagged(" + self.asdtype.identifier + ")"
+
     def empty(self):
         return JaggedArray(self.asdtype.empty(), numpy.empty(0, dtype=numpy.int64))
 
@@ -129,6 +133,10 @@ class asstlvector(asjagged):
 
     def __repr__(self):
         return "asstlvector(" + repr(self.asdtype) + ")"
+
+    @property
+    def identifier(self):
+        return "asstlvector(" + self.asdtype.identifier + ")"
 
     def numitems(self, numbytes, numentries):
         return self.asdtype.numitems(numbytes - _STLVECTOR_HEADER*numentries, numentries)

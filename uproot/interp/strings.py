@@ -78,6 +78,10 @@ class _asstrings(Interpretation):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (Interpretation.__metaclass__,), {})
 
+    @property
+    def identifier(self):
+        return "asstrings"
+
     def empty(self):
         return Strings(JaggedArray(numpy.empty(0, dtype=CHARTYPE), numpy.empty(0, dtype=numpy.int64)))
 
