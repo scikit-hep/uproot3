@@ -65,7 +65,12 @@ iterate
 pandas
 ^^^^^^
 
-Implemented, but not documented yet.
+TTree objects can be converted into `Pandas <https://pandas.pydata.org>`_ DataFrames.
+
+.. autoattribute:: uproot.tree.TTreeMethods.pandas
+   :annotation: methods for interacting with Pandas.
+
+.. automethod:: uproot._connect.to_pandas.TTreeMethods_pandas.df
 
 uproot.tree.TBranchMethods
 --------------------------

@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import uproot
+import uproot._connect.to_pandas
 
 def _method(x):
     if hasattr(x, "__func__"):
@@ -1233,6 +1234,33 @@ u"""Iterate over baskets.
     -------
     iterator over arrays or other objects, depending on *interpretation*
         basket data.
+""".format(**tree_fragments)
+
+################################################################ uproot.tree.TTreeMethods.pandas
+
+_method(uproot._connect.to_pandas.TTreeMethods_pandas.df).__doc__ = \
+u"""Create a `Pandas <https://pandas.pydata.org>`_ DataFrame from some branches.
+
+    Parameters
+    ----------
+    {branches}
+
+    {entrystart}
+
+    {entrystop}
+
+    {cache}
+
+    {rawcache}
+
+    {keycache}
+
+    {executor}
+
+    Returns
+    -------
+    `Pandas DataFrame <http://pandas.pydata.org/pandas-docs/stable/api.html#dataframe>`_
+        data frame.
 """.format(**tree_fragments)
 
 ################################################################ uproot.interp.interp.Interpretation

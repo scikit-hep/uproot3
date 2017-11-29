@@ -36,7 +36,6 @@ import struct
 import sys
 import threading
 from collections import namedtuple
-from types import MethodType
 try:
     from urlparse import urlparse
 except ImportError:
@@ -459,16 +458,10 @@ class TTreeMethods(object):
         # prevent Python's attempt to interpret __len__ and __getitem__ as iteration
         raise TypeError("'TTree' object is not iterable")
 
-    class _Connector(object):
-        def __init__(self, tree):
-            self._tree = tree
-
     @property
     def pandas(self):
         import uproot._connect.to_pandas
-        connector = self._Connector(self)
-        connector.df = MethodType(uproot._connect.to_pandas.df, connector, TTreeMethods._Connector)
-        return connector
+        return uproot._connect.to_pandas.TTreeMethods_pandas(self)
 
     # @property
     # def numba(self):

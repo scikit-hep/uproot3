@@ -29,43 +29,57 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import numpy
-import pandas
 
 from uproot.interp import asdtype
 from uproot.interp import asjagged
 from uproot.interp import asstrings
 
-def df(self, branches=None, entrystart=None, entrystop=None, cache=None, rawcache=None, keycache=None, executor=None):
-    branches = list(self._tree._normalize_branches(branches))
-    entrystart, entrystop = self._tree._normalize_entrystartstop(entrystart, entrystop)
+class TTreeMethods_pandas(object):
+    def __init__(self, tree):
+        self._tree = tree
 
-    # verify that the types are allowed and create stubs for the numerical types
-    initialcolumns = {}
-    for branch, interpretation in branches:
-        if isinstance(interpretation, asdtype):
-            initialcolumns[branch.name] = interpretation.todtype.type(0)
-        elif isinstance(interpretation, asjagged):
-            pass
-        elif interpretation is asstrings:
-            pass
-        else:
-            raise TypeError("cannot convert interpretation {0} to DataFrame".format(interpretation))
+    def df(self, branches=None, entrystart=None, entrystop=None, cache=None, rawcache=None, keycache=None, executor=None):
+        import pandas
 
-    # when Pandas creates a DataFrame with numerical stubs, it allocates memory the way it wants to
-    out = pandas.DataFrame(initialcolumns, index=numpy.arange(entrystart, entrystop))
+        branches = list(self._tree._normalize_branches(branches))
+        entrystart, entrystop = self._tree._normalize_entrystartstop(entrystart, entrystop)
 
-    # actually read all the data, possibly in parallel
-    arrays = self._tree.arrays(dict((b.name, i) for b, i in branches), entrystart=entrystart, entrystop=entrystop, cache=cache, rawcache=rawcache, keycache=keycache, executor=executor)
+        # verify that the types are allowed and create stubs for the numerical types
+        initialcolumns = {}
+        for branch, interpretation in branches:
+            if isinstance(interpretation, asdtype):
+                initialcolumns[branch.name] = interpretation.todtype.type(0)
+            elif isinstance(interpretation, asjagged):
+                pass
+            elif interpretation is asstrings:
+                pass
+            else:
+                raise TypeError("cannot convert interpretation {0} to DataFrame".format(interpretation))
 
-    # numerical data are already in the DataFrame, but the others have to be merged in
-    for branch, interpretation in branches:
-        if isinstance(interpretation, asdtype):
-            out[branch.name] = arrays[branch.name]
-        elif isinstance(interpretation, asjagged):
-            out[branch.name] = list(arrays[branch.name])
-        elif interpretation is asstrings:
-            out[branch.name] = list(arrays[branch.name])
-        else:
-            raise AssertionError
-            
-    return out
+        # when Pandas creates a DataFrame with numerical stubs, it allocates memory the way it wants to
+        out = pandas.DataFrame(initialcolumns, index=numpy.arange(entrystart, entrystop))
+
+        # in the common case of converting the whole tree, you can safely fill Pandas's internal arrays in-place
+        if entrystart == 0 and entrystop == self._tree.numentries:
+            newbranches = {}
+            for branch, interpretation in branches:
+                if isinstance(interpretation, asdtype):
+                    newbranches[branch.name] = interpretation.toarray(out[branch.name].values)
+                else:
+                    newbranches[branch.name] = interpretation
+
+        # actually read all the data, possibly in parallel
+        arrays = self._tree.arrays(newbranches, entrystart=entrystart, entrystop=entrystop, cache=cache, rawcache=rawcache, keycache=keycache, executor=executor)
+
+        # numerical data are already in the DataFrame, but the others have to be merged in
+        for branch, interpretation in branches:
+            if isinstance(interpretation, asdtype):
+                out[branch.name] = arrays[branch.name]
+            elif isinstance(interpretation, asjagged):
+                out[branch.name] = list(arrays[branch.name])
+            elif interpretation is asstrings:
+                out[branch.name] = list(arrays[branch.name])
+            else:
+                raise AssertionError
+
+        return out
