@@ -46,7 +46,7 @@ class TH1Methods(object):
             return "<{0} at 0x{1:012x}>".format(self.classname, id(self))
 
     @property
-    def num(self):
+    def numbins(self):
         return self.fXaxis.fNbins
 
     @property
@@ -69,6 +69,34 @@ class TH1Methods(object):
     def values(self):
         return self[1:-1]
 
+    @property
+    def allvalues(self):
+        return self[:]
+
+    def interval(self, index):
+        if index < 0:
+            index += len(self)
+
+        low = self.fXaxis.fXmin
+        high = self.fXaxis.fXmax
+        if index == 0:
+            return (float("-inf"), low)
+        elif index == len(self) - 1:
+            return (high, float("inf"))
+        else:
+            norm = (high - low) / self.fXaxis.fNbins
+            return (index - 1)*norm + low, index*norm + low
+            
+    def index(self, data):
+        low = self.fXaxis.fXmin
+        high = self.fXaxis.fXmax
+        if data < low:
+            return 0
+        elif data >= high:
+            return len(self) - 1
+        else:
+            return int(math.floor(self.fXaxis.fNbins * (data - low) / (high - low))) + 1
+
     def fill(self, data, weights=None):
         low = self.fXaxis.fXmin
         high = self.fXaxis.fXmax
@@ -82,9 +110,12 @@ class TH1Methods(object):
             elif data >= high:
                 self[-1] += weight
             else:
-                self[int(math.floor(self.fXaxis.fNbins * (data - low) / (high - low)))] += weights
+                self[int(math.floor(self.fXaxis.fNbins * (data - low) / (high - low))) + 1] += weights
 
         else:
+            if not isinstance(data, numpy.ndarray):
+                data = numpy.array(data)
+
             if isinstance(weights, numbers.Real):
                 weights = numpy.empty_like(data)
 
