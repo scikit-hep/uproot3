@@ -463,11 +463,11 @@ tree_fragments = {
 
     # cache
     "cache": u"""cache : ``None`` or ``dict``-like object
-        if not ``None`` *(default)*, chunks of fully interpreted data (at most basket size) will be saved in the ``dict``-like object for later use. If arrays are later accessed with a different interpretation, the output may be wrong.""",
+        if not ``None`` *(default)*, fully interpreted arrays will be saved in the ``dict``-like object for later use. Accessing the same arrays with a different interpretation or a different entry range results in a cache miss.""",
 
     # rawcache
     "rawcache": u"""rawcache : ``None`` or ``dict``-like object
-        if not ``None`` *(default)*, chunks of raw basket data (exactly basket size) will be saved in the ``dict``-like object for later use. Arrays may be later accessed with a different interpretation because raw data must be reinterpreted each time.""",
+        if not ``None`` *(default)*, raw basket data will be saved in the ``dict``-like object for later use. Accessing the same arrays with a different interpretation or a different entry range fully utilizes this cache, since the interpretation/construction from baskets is performed after retrieving data from this cache.""",
 
     # keycache
     "keycache": u"""keycache : ``None`` or ``dict``-like object
@@ -520,8 +520,6 @@ u"""Opens a series of ROOT files (local or remote), iterating over events in chu
     {outputtype}
 
     {reportentries}
-
-    {cache}
 
     {rawcache}
 
@@ -894,8 +892,6 @@ u"""Iterate over many arrays at once, yielding a fixed number of entries at a ti
 
     {entrystop}
 
-    {cache}
-
     {rawcache}
 
     {keycache}
@@ -924,8 +920,6 @@ u"""Iterate at cluster boundaries, which are more efficient but not necessarily 
     {entrystart}
 
     {entrystop}
-
-    {cache}
 
     {rawcache}
 

@@ -93,12 +93,12 @@ def _delayedraise(excinfo):
 
 ################################################################ high-level interface
 
-def iterate(path, treepath, entrystepsize, branches=None, outputtype=dict, reportentries=False, cache=None, rawcache=None, keycache=None, executor=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, **options):
+def iterate(path, treepath, entrystepsize, branches=None, outputtype=dict, reportentries=False, rawcache=None, keycache=None, executor=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, **options):
     if not isinstance(entrystepsize, numbers.Integral) or entrystepsize <= 0:
         raise ValueError("'entrystepsize' must be a positive integer")
 
     for tree, newbranches, globalentrystart in _iterate(path, treepath, branches, localsource, xrootdsource, **options):
-        for start, stop, arrays in tree.iterate(entrystepsize, branches=newbranches, outputtype=outputtype, reportentries=True, entrystart=0, entrystop=tree.numentries, cache=cache, rawcache=rawcache, keycache=keycache, executor=executor):
+        for start, stop, arrays in tree.iterate(entrystepsize, branches=newbranches, outputtype=outputtype, reportentries=True, entrystart=0, entrystop=tree.numentries, rawcache=rawcache, keycache=keycache, executor=executor):
             if reportentries:
                 yield globalentrystart + start, globalentrystart + stop, arrays
             else:
@@ -326,7 +326,7 @@ class TTreeMethods(object):
         else:
             return outputtype(*[lazyarray for name, lazyarray in lazyarrays])
 
-    def _iterate(self, startstop, branches, outputtype, reportentries, cache, rawcache, keycache, executor, finalize):
+    def _iterate(self, startstop, branches, outputtype, reportentries, rawcache, keycache, executor, finalize):
         branches = list(self._normalize_branches(branches))
 
         if outputtype == namedtuple:
@@ -349,7 +349,7 @@ class TTreeMethods(object):
             finish = lambda interpretation, array: array
                 
         for entrystart, entrystop in startstop:
-            futures = [(branch.name, interpretation, branch._step_array(interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, cache, rawcache, keycache, executor, explicit_rawcache)) for branch, interpretation, basket_itemoffset, basket_entryoffset in branchinfo]
+            futures = [(branch.name, interpretation, branch._step_array(interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, rawcache, keycache, executor, explicit_rawcache)) for branch, interpretation, basket_itemoffset, basket_entryoffset in branchinfo]
 
             if issubclass(outputtype, dict):
                 out = outputtype([(name, finish(interpretation, future())) for name, interpretation, future in futures])
@@ -363,7 +363,7 @@ class TTreeMethods(object):
             else:
                 yield out
 
-    def iterate(self, entrystepsize, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, cache=None, rawcache=None, keycache=None, executor=None):
+    def iterate(self, entrystepsize, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, rawcache=None, keycache=None, executor=None):
         if not isinstance(entrystepsize, numbers.Integral) or entrystepsize <= 0:
             raise ValueError("'entrystepsize' must be a positive integer")
 
@@ -379,10 +379,10 @@ class TTreeMethods(object):
                 yield start, stop
                 start = stop
 
-        return self._iterate(startstop(), branches, outputtype, reportentries, cache, rawcache, keycache, executor, True)
+        return self._iterate(startstop(), branches, outputtype, reportentries, rawcache, keycache, executor, True)
 
-    def iterate_clusters(self, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, cache=None, rawcache=None, keycache=None, executor=None):
-        return self._iterate(self.clusters(), branches, outputtype, reportentries, cache, rawcache, keycache, executor, True)
+    def iterate_clusters(self, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, rawcache=None, keycache=None, executor=None):
+        return self._iterate(self.clusters(), branches, outputtype, reportentries, rawcache, keycache, executor, True)
 
     def _format(self, indent=""):
         # TODO: add TTree data to the bottom of this
@@ -790,8 +790,8 @@ class TBranchMethods(object):
         local_entrystop  = max(0, min(entrystop - self.basket_entrystart(i), self.basket_entrystop(i) - self.basket_entrystart(i)))
         return local_entrystart, local_entrystop
 
-    def _cachekey(self, i, local_entrystart, local_entrystop):
-        return "{0};{1};{2};{3};{4}-{5}".format(self._context.sourcepath, self._context.treename, self.name, i, local_entrystart, local_entrystop)
+    def _cachekey(self, entrystart, entrystop):
+        return "{0};{1};{2};{3}-{4}".format(self._context.sourcepath, self._context.treename, self.name, entrystart, entrystop)
 
     def _rawcachekey(self, i):
         return "{0};{1};{2};{3};raw".format(self._context.sourcepath, self._context.treename, self.name, i)
@@ -799,50 +799,39 @@ class TBranchMethods(object):
     def _keycachekey(self, i):
         return "{0};{1};{2};{3};key".format(self._context.sourcepath, self._context.treename, self.name, i)
         
-    def _basket(self, i, interpretation, local_entrystart, local_entrystop, cache, rawcache, keycache):
-        source = None
-        if cache is not None:
-            cachekey = self._cachekey(i, local_entrystart, local_entrystop)
-            source = cache.get(cachekey, None)
+    def _basket(self, i, interpretation, local_entrystart, local_entrystop, rawcache, keycache):
+        basketdata = None
+        if rawcache is not None:
+            rawcachekey = self._rawcachekey(i)
+            basketdata = rawcache.get(rawcachekey, None)
 
-        if source is None:
-            basketdata = None
-            if rawcache is not None:
-                rawcachekey = self._rawcachekey(i)
-                basketdata = rawcache.get(rawcachekey, None)
+        if keycache is not None and self._keycachekey(i) in keycache:
+            key = keycache[self._keycachekey(i)]
+        else:
+            keysource = self._source.threadlocal()
+            try:
+                key = self._basketkey(keysource, i, True)
+                if keycache is not None:
+                    keycache[self._keycachekey(i)] = key
+            finally:
+                keysource.dismiss()
 
-            if keycache is not None and self._keycachekey(i) in keycache:
-                key = keycache[self._keycachekey(i)]
-            else:
-                keysource = self._source.threadlocal()
-                try:
-                    key = self._basketkey(keysource, i, True)
-                    if keycache is not None:
-                        keycache[self._keycachekey(i)] = key
-                finally:
-                    keysource.dismiss()
+        if basketdata is None:
+            basketdata = key.basketdata()
 
-            if basketdata is None:
-                basketdata = key.basketdata()
+        if rawcache is not None:
+            rawcache[rawcachekey] = basketdata
 
-            if rawcache is not None:
-                rawcache[rawcachekey] = basketdata
+        if key.fObjlen == key.border:
+            data, offsets = basketdata, None
+        else:
+            data = basketdata[:key.border]
+            offsets = numpy.empty((key.fObjlen - key.border - 4) // 4, dtype=numpy.int32)  # native endian
+            offsets[:-1] = basketdata[key.border + 4 : -4].view(">i4")                     # read as big-endian and convert
+            offsets[-1] = key.fLast
+            numpy.subtract(offsets, key.fKeylen, offsets)
 
-            if key.fObjlen == key.border:
-                data, offsets = basketdata, None
-            else:
-                data = basketdata[:key.border]
-                offsets = numpy.empty((key.fObjlen - key.border - 4) // 4, dtype=numpy.int32)  # native endian
-                offsets[:-1] = basketdata[key.border + 4 : -4].view(">i4")                     # read as big-endian and convert
-                offsets[-1] = key.fLast
-                numpy.subtract(offsets, key.fKeylen, offsets)
-
-            source = interpretation.fromroot(data, offsets, local_entrystart, local_entrystop)
-
-        if cache is not None:
-            cache[cachekey] = source
-
-        return source
+        return interpretation.fromroot(data, offsets, local_entrystart, local_entrystop)
 
     def basket(self, i, interpretation=None, entrystart=None, entrystop=None, cache=None, rawcache=None, keycache=None):
         if not 0 <= i < self.numbaskets:
@@ -851,14 +840,23 @@ class TBranchMethods(object):
         interpretation = self._normalize_interpretation(interpretation)
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
         local_entrystart, local_entrystop = self._localentries(i, entrystart, entrystop)
+        entrystart = self.basket_entrystart(i) + local_entrystart
+        entrystop = self.basket_entrystart(i) + local_entrystop
         numentries = local_entrystop - local_entrystart
 
-        source = self._basket(i, interpretation, local_entrystart, local_entrystop, cache, rawcache, keycache)
+        if cache is not None and self._cachekey(entrystart, entrystop) in cache:
+            return cache[self._cachekey(entrystart, entrystop)]
+
+        source = self._basket(i, interpretation, local_entrystart, local_entrystop, rawcache, keycache)
         numitems = interpretation.source_numitems(source)
 
         destination = interpretation.destination(numitems, numentries)
         interpretation.fill(source, destination, 0, numitems, 0, numentries)
-        return interpretation.finalize(destination)
+        out = interpretation.finalize(destination)
+
+        if cache is not None:
+            cache[self._cachekey(entrystart, entrystop)] = out
+        return out
 
     def _basketstartstop(self, entrystart, entrystop):
         basketstart, basketstop = None, None
@@ -972,6 +970,13 @@ class TBranchMethods(object):
         return basket_entryoffset
 
     def array(self, interpretation=None, entrystart=None, entrystop=None, cache=None, rawcache=None, keycache=None, executor=None, blocking=True):
+        if cache is not None and self._cachekey(entrystart, entrystop) in cache:
+            out = cache[self._cachekey(entrystart, entrystop)]
+            if blocking:
+                return out
+            else:
+                return lambda: out
+
         interpretation = self._normalize_interpretation(interpretation)
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
         basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
@@ -996,7 +1001,7 @@ class TBranchMethods(object):
             try:
                 i = j + basketstart
                 local_entrystart, local_entrystop = self._localentries(i, entrystart, entrystop)
-                source = self._basket(i, interpretation, local_entrystart, local_entrystop, cache, rawcache, keycache)
+                source = self._basket(i, interpretation, local_entrystart, local_entrystop, rawcache, keycache)
 
                 expecteditems = basket_itemoffset[j + 1] - basket_itemoffset[j]
                 source_numitems = interpretation.source_numitems(source)
@@ -1033,28 +1038,27 @@ class TBranchMethods(object):
         else:
             excinfos = executor.map(fill, range(basketstop - basketstart))
 
-        if blocking:
+        def await():
             for excinfo in excinfos:
                 _delayedraise(excinfo)
+
             clipped = interpretation.clip(destination,
                                           basket_itemoffset[0],
                                           basket_itemoffset[-1],
                                           basket_entryoffset[0],
                                           basket_entryoffset[-1])
-            return interpretation.finalize(clipped)
+
+            out = interpretation.finalize(clipped)
+            if cache is not None:
+                cache[self._cachekey(entrystart, entrystop)] = out
+            return out
+
+        if blocking:
+            return await()
         else:
-            def await():
-                for excinfo in excinfos:
-                    _delayedraise(excinfo)
-                clipped = interpretation.clip(destination,
-                                              basket_itemoffset[0],
-                                              basket_itemoffset[-1],
-                                              basket_entryoffset[0],
-                                              basket_entryoffset[-1])
-                return interpretation.finalize(clipped)
             return await
 
-    def _step_array(self, interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, cache, rawcache, keycache, executor, explicit_rawcache):
+    def _step_array(self, interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, rawcache, keycache, executor, explicit_rawcache):
         basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
 
         if basketstart is None:
@@ -1072,7 +1076,7 @@ class TBranchMethods(object):
             try:
                 i = j + basketstart
                 local_entrystart, local_entrystop = self._localentries(i, entrystart, entrystop)
-                source = self._basket(i, interpretation, local_entrystart, local_entrystop, cache, rawcache, keycache)
+                source = self._basket(i, interpretation, local_entrystart, local_entrystop, rawcache, keycache)
 
                 expecteditems = basket_itemoffset[j + 1] - basket_itemoffset[j]
                 source_numitems = interpretation.source_numitems(source)
