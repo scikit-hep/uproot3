@@ -817,6 +817,8 @@ class TBranchMethods(object):
                 keysource = self._source.threadlocal()
                 try:
                     key = self._basketkey(keysource, i, True)
+                    if keycache is not None:
+                        keycache[self._keycachekey(i)] = key
                 finally:
                     keysource.dismiss()
 

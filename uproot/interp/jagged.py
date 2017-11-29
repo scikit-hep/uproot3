@@ -98,15 +98,17 @@ class asjagged(Interpretation):
         contents = self.asdtype.finalize(destination.contents)
         return JaggedArray(contents, starts, stops)
 
+_STLVECTOR_HEADER = 10
+
 def _asstlvector_fromroot(data, offsets, local_entrystart, local_entrystop, itemsize):
     numentries = local_entrystop - local_entrystart
-    contents = numpy.empty(offsets[local_entrystop] - offsets[local_entrystart] - 10*numentries, dtype=data.dtype)
+    contents = numpy.empty(offsets[local_entrystop] - offsets[local_entrystart] - _STLVECTOR_HEADER*numentries, dtype=data.dtype)
     newoffsets = numpy.empty(numentries + 1, dtype=offsets.dtype)
     newoffsets[0] = 0
 
     start = stop = 0
     for entry in range(local_entrystart, local_entrystop):
-        datastart = offsets[entry] + 10
+        datastart = offsets[entry] + _STLVECTOR_HEADER
         datastop = offsets[entry + 1]
 
         stop = start + (datastop - datastart)
@@ -127,6 +129,9 @@ class asstlvector(asjagged):
 
     def __repr__(self):
         return "asstlvector(" + repr(self.asdtype) + ")"
+
+    def numitems(self, numbytes, numentries):
+        return self.asdtype.numitems(numbytes - _STLVECTOR_HEADER*numentries, numentries)
 
     def fromroot(self, data, offsets, local_entrystart, local_entrystop):
         if local_entrystart < 0 or local_entrystop >= len(offsets) or local_entrystart > local_entrystop:
