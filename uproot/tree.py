@@ -564,8 +564,8 @@ class TBranchMethods(object):
         else:
             return self.fWriteBasket + 1
 
-    def _cachekey(self, entrystart, entrystop):
-        return "{0};{1};{2};{3}-{4}".format(self._context.sourcepath, self._context.treename, self.name, entrystart, entrystop)
+    def _cachekey(self, interpretation, entrystart, entrystop):
+        return "{0};{1};{2};{3};{4}-{5}".format(self._context.sourcepath, self._context.treename, self.name, interpretation.identifier, entrystart, entrystop)
 
     def _rawcachekey(self, i):
         return "{0};{1};{2};{3};raw".format(self._context.sourcepath, self._context.treename, self.name, i)
@@ -766,7 +766,7 @@ class TBranchMethods(object):
         numentries = local_entrystop - local_entrystart
 
         if cache is not None:
-            cachekey = self._cachekey(entrystart, entrystop)
+            cachekey = self._cachekey(interpretation, entrystart, entrystop)
             out = cache.get(cachekey, None)
             if out is not None:
                 return out
@@ -876,18 +876,18 @@ class TBranchMethods(object):
         return basket_entryoffset
 
     def array(self, interpretation=None, entrystart=None, entrystop=None, cache=None, rawcache=None, keycache=None, executor=None, blocking=True):
+        interpretation = self._normalize_interpretation(interpretation)
+        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+        basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
+
         if cache is not None:
-            cachekey = self._cachekey(entrystart, entrystop)
+            cachekey = self._cachekey(interpretation, entrystart, entrystop)
             out = cache.get(cachekey, None)
             if out is not None:
                 if blocking:
                     return out
                 else:
                     return lambda: out
-
-        interpretation = self._normalize_interpretation(interpretation)
-        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
-        basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
 
         if basketstart is None:
             if blocking:

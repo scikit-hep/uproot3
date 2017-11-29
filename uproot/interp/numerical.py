@@ -95,6 +95,16 @@ class asdtype(Interpretation):
 
         return "asdtype(" + ", ".join(args) + ")"
 
+    _byteorder_transform = {"!": "B", ">": "B", "<": "L", "=": "B" if numpy.dtype(">f8").isnative else "L"}
+
+    @property
+    def identifier(self):
+        fromdtype = "{0}{1}{2}".format(self._byteorder_transform[self.fromdtype.byteorder], self.fromdtype.kind, self.fromdtype.itemsize)
+        todtype = "{0}{1}{2}".format(self._byteorder_transform[self.todtype.byteorder], self.todtype.kind, self.todtype.itemsize)
+        fromdims = "(" + ",".join(repr(x) for x in self.fromdims) + ")"
+        todims = "(" + ",".join(repr(x) for x in self.todims) + ")"
+        return "asdtype({0},{1},{2},{3})".format(fromdtype, todtype, fromdims, todims)
+
     def empty(self):
         return numpy.empty((0,) + self.todims, dtype=self.todtype)
 
@@ -177,6 +187,14 @@ class asarray(asdtype):
             args.append("<array dtype={0} at 0x{1:012x}>".format(repr(self.todtype), id(self.todtype)))
 
         return "asarray(" + ", ".join(args) + ")"
+
+    @property
+    def identifier(self):
+        fromdtype = "{0}{1}{2}".format(self._byteorder_transform[self.fromdtype.byteorder], self.fromdtype.kind, self.fromdtype.itemsize)
+        todtype = "{0}{1}{2}".format(self._byteorder_transform[self.todtype.byteorder], self.todtype.kind, self.todtype.itemsize)
+        fromdims = "(" + ",".join(repr(x) for x in self.fromdims) + ")"
+        todims = "(" + ",".join(repr(x) for x in self.todims) + ")"
+        return "asarray({0},{1},{2},{3})".format(fromdtype, todtype, fromdims, todims)
 
     def destination(self, numitems, numentries):
         product = _dimsprod(self.todims)

@@ -1456,6 +1456,9 @@ u"""Interface for interpretations.
 
     Interpretations must implement the following methods:
 
+    **identifier**
+        *(property)* a unique identifier for this interpretation, used as part of the cache key so that stale interpretations are not counted as cache hits.
+
     **empty(self)**
         return a zero-entry container (for special cases that can skip complex logic by returning an empty set).
 
