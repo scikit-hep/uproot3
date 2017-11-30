@@ -28,32 +28,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# import threading
-# try:
-#     import queue
-# except ImportError:
-#     import Queue as queue
-
 import numpy
-
-# class Canvas(threading.Thread):
-#     def __init__(self, name):
-#         import holoviews
-#         super(Canvas, self).__init__()
-#         self.queue = queue.Queue()
-#         self.renderer = holoviews.Store.renderers[name]
-#         self.daemon = True
-#         self.start()
-
-#     def __call__(self, obj):
-#         self.queue.put(obj)
-
-#     def run(self):
-#         while True:
-#             obj = self.queue.get()
-#             print "BEFORE"
-#             self.renderer.show(obj)
-#             print "AFTER"
 
 class TH1Methods_hv(object):
     def __init__(self, hist):

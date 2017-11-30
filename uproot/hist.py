@@ -40,18 +40,18 @@ class TH1Methods(object):
     __metaclass__ = type.__new__(type, "type", (uproot.rootio.ROOTObject.__metaclass__,), {})
 
     def __repr__(self):
-        if hasattr(self, "fName"):
-            return "<{0} {1} 0x{2:012x}>".format(self.classname, repr(self.fName), id(self))
-        else:
+        if self.fName is None:
             return "<{0} at 0x{1:012x}>".format(self.classname, id(self))
+        else:
+            return "<{0} {1} 0x{2:012x}>".format(self.classname, repr(self.fName), id(self))
 
     @property
     def name(self):
-        return getattr(self, "fName", None)
+        return self.fName
 
     @property
     def title(self):
-        return getattr(self, "fTitle", None)
+        return self.fTitle
 
     @property
     def numbins(self):
@@ -120,7 +120,7 @@ class TH1Methods(object):
 
         if isinstance(data, numbers.Real):
             if weights is None:
-                weights = 1.0
+                weights = 1
 
             if data < low:
                 self[0] += weight
@@ -153,9 +153,104 @@ class TH1Methods(object):
                 self[0] += underflows.sum()
                 self[-1] += overflows.sum()
 
+    def format(self, width=80, minimum=None, maximum=None):
+        if minimum is None:
+            minimum = min(self)
+            if minimum < 0:
+                minimum *= 1.05
+            else:
+                minimum = 0
+
+        if maximum is None:
+            maximum = max(self) * 1.05
+
+        if maximum <= minimum:
+            average = (minimum + maximum) / 2.0
+            minimum = average - 0.5
+            maximum = average + 0.5
+
+        intervals = ["[{0:<.4g}, {1:<.4g})".format(l, h) for l, h in [self.interval(i) for i in range(len(self))]]
+        intervals[-1] = intervals[-1][:-1] + "]"   # last interval is closed on top edge
+        intervalswidth = max(len(x) for x in intervals)
+
+        values = ["{0:<.4g}".format(x) for x in self]
+        valueswidth = max(len(x) for x in values)
+
+        minimumtext = "{0:<.4g}".format(minimum)
+        maximumtext = "{0:<.4g}".format(maximum)
+
+        plotwidth = max(len(minimumtext) + len(maximumtext), width - (intervalswidth + 1 + valueswidth + 1 + 2))
+        scale = minimumtext + " "*(plotwidth + 2 - len(minimumtext) - len(maximumtext)) + maximumtext
+
+        norm = float(plotwidth) / float(maximum - minimum)
+        zero = int(round((0.0 - minimum)*norm))
+        line = numpy.empty(plotwidth, dtype=numpy.uint8)
+
+        formatter = "{0:<%s} {1:<%s} |{2}|" % (intervalswidth, valueswidth)
+        line[:] = ord("-")
+        if minimum != 0 and 0 <= zero < plotwidth:
+            line[zero] = ord("+")
+        capstone = " " * (intervalswidth + 1 + valueswidth + 1) + "+" + str(line.tostring().decode("ascii")) + "+"
+
+        out = [" "*(intervalswidth + valueswidth + 2) + scale]
+        out.append(capstone)
+        for interval, value, x in zip(intervals, values, self):
+            line[:] = ord(" ")
+
+            pos = int(round((x - minimum)*norm))
+            if x < 0:
+                line[pos:zero] = ord("*")
+            else:
+                line[zero:pos] = ord("*")
+
+            if minimum != 0 and 0 <= zero < plotwidth:
+                line[zero] = ord("|")
+
+            out.append(formatter.format(interval, value, str(line.tostring().decode("ascii"))))
+
+        out.append(capstone)
+        return "\n".join(out)
+
     @property
     def hv(self):
         import uproot._connect.to_holoviews
         return uproot._connect.to_holoviews.TH1Methods_hv(self)
 
 uproot.rootio.methods["TH1"] = TH1Methods
+
+class TH1(TH1Methods, list):
+    def _type(self):
+        if all(isinstance(x, numbers.Integral) for x in self):
+            return int
+        elif all(isinstance(x, numbers.Real) for x in self):
+            return float
+        else:
+            raise TypeError("histogram bin values must be integers or floats")
+
+    @property
+    def classname(self):
+        if self._type() is int:
+            return "TH1I"
+        else:
+            return "TH1D"
+
+    @property
+    def _dtype(self):
+        if self._type() is int:
+            return numpy.dtype(">i4")
+        else:
+            return numpy.dtype(">f8")
+        
+class TAxis(object):
+    classname = "TAxis"
+
+def hist(numbins, low, high, name=None, title=None):
+    out = TH1()
+    out.fXaxis = TAxis()
+    out.fXaxis.fNbins = int(numbins)
+    out.fXaxis.fXmin = float(low)
+    out.fXaxis.fXmax = float(high)
+    out.fName = name
+    out.fTitle = title
+    out.extend([0] * (numbins + 2))
+    return out
