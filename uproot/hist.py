@@ -212,9 +212,14 @@ class TH1Methods(object):
         return "\n".join(out)
 
     @property
-    def hv(self):
+    def holoviews(self):
         import uproot._connect.to_holoviews
-        return uproot._connect.to_holoviews.TH1Methods_hv(self)
+        return uproot._connect.to_holoviews.TH1Methods_holoviews(self)
+
+    @property
+    def bokeh(self):
+        import uproot._connect.to_bokeh
+        return uproot._connect.to_bokeh.TH1Methods_bokeh(self)
 
 uproot.rootio.methods["TH1"] = TH1Methods
 

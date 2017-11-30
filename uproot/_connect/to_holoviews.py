@@ -30,7 +30,7 @@
 
 import numpy
 
-class TH1Methods_hv(object):
+class TH1Methods_holoviews(object):
     def __init__(self, hist):
         self._hist = hist
 
