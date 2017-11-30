@@ -102,12 +102,12 @@ class BokehCanvas(object):
         if cls._instance is None:
             cls._instance = cls._new(port, hosts)
 
-        elif port is not None and port != cls._instance._server.port:
+        elif port is not None and port != cls._instance._port:
             if not cls._instance._server._stopped:
                 cls._instance._server.stop()
             cls._instance = cls._new(port, hosts)
 
-        elif hosts is not None and hosts != cls._instance._server.hosts:
+        elif hosts is not None and hosts != cls._instance._hosts:
             if not cls._instance._server._stopped:
                 cls._instance._server.stop()
             cls._instance = cls._new(port, hosts)
