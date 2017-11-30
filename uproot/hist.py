@@ -96,6 +96,9 @@ class TH1Methods(object):
         edges = numpy.array([i*norm + low for i in range(self.numbins + 1)])
         return freq, edges
 
+    # def _numba(self):
+    #     return self, int(self.fXaxis.fNbins), float(self.fXaxis.fXmin), float(self.fXaxis.fXmax), numpy.array(self, dtype=numpy.float64)
+
     def interval(self, index):
         if index < 0:
             index += len(self)
@@ -256,7 +259,7 @@ class TH1(TH1Methods, list):
             return numpy.dtype(">i4")
         else:
             return numpy.dtype(">f8")
-        
+
 class TAxis(object):
     classname = "TAxis"
 
@@ -270,3 +273,74 @@ def hist(numbins, low, high, name=None, title=None):
     out.fTitle = title
     out.extend([0] * (numbins + 2))
     return out
+
+if numba is not None:
+    class Regular1dType(numba.types.Type):
+        def __init__(self):
+            super(Regular1dType, self).__init__(name="Regular1dType")
+
+    regular1dType = Regular1dType()
+    
+    @numba.extending.typeof_impl.register(TH1Methods)
+    def th1_typeof(val, c):
+        assert isinstance(val, TH1Methods)
+        return regular1dType
+
+    @numba.extending.register_model(Regular1dType)
+    class Regular1dModel(numba.datamodel.models.TupleModel):
+        def __init__(self, dmm, fe_type):
+            super(Regular1dModel, self).__init__(dmm, numba.types.Tuple(()))   # numba.types.Opaque, numba.types.int64, numba.types.float64, numba.types.float64, numba.types.float64[:])))
+
+    # @numba.extending.infer_getattr
+    # class StructAttribute(numba.typing.templates.AttributeTemplate):
+    #     key = Regular1dType
+    #     def generic_resolve(self, typ, attr):
+    #         if attr == "numbins":
+    #             return numba.types.int64
+    #         elif attr == "low":
+    #             return numba.types.float64
+    #         elif attr == "high":
+    #             return numba.types.float64
+    #         elif attr == "data":
+    #             return numba.types.float64[:]
+
+    # @numba.extending.lower_getattr(Regular1dType, "numbins")
+    # def th1_getattr_numbins_impl(context, builder, typ, val):
+    #     res = builder.extract_value(val, 1)
+    #     return numba.targets.imputils.impl_ret_borrowed(context, builder, typ.contents, res)
+
+    # @numba.extending.lower_getattr(Regular1dType, "low")
+    # def th1_getattr_low_impl(context, builder, typ, val):
+    #     res = builder.extract_value(val, 2)
+    #     return numba.targets.imputils.impl_ret_borrowed(context, builder, typ.contents, res)
+
+    # @numba.extending.lower_getattr(Regular1dType, "high")
+    # def th1_getattr_high_impl(context, builder, typ, val):
+    #     res = builder.extract_value(val, 3)
+    #     return numba.targets.imputils.impl_ret_borrowed(context, builder, typ.contents, res)
+
+    # @numba.extending.lower_getattr(Regular1dType, "data")
+    # def th1_getattr_data_impl(context, builder, typ, val):
+    #     res = builder.extract_value(val, 4)
+    #     return numba.targets.imputils.impl_ret_borrowed(context, builder, typ.contents, res)
+
+    @numba.extending.unbox(Regular1dType)
+    def th1_unbox(typ, obj, c):
+        tuple_obj = c.pyapi.tuple_new(0)
+        # c.pyapi.tuple_setitem(tuple_obj, 0, obj)
+        # out = c.unbox(numba.types.Tuple((numba.types.Opaque,)), tuple_obj)
+        out = c.unbox(numba.types.Tuple(()), tuple_obj)
+        c.pyapi.decref(tuple_obj)
+        return out
+
+    # @numba.extending.box(Regular1dType)
+    # def th1_box(typ, val, c):
+    #     return c.box(numba.types.Opaque, c.builder.extract_value(val, 0))
+
+@numba.njit
+def testy(x):
+    return 3.14
+
+h = hist(10, -3.0, 3.0)
+print h
+print testy(h)
