@@ -32,6 +32,11 @@ import numbers
 import math
 
 import numpy
+try:
+    import numba
+    import llvmlite
+except ImportError:
+    numba = None
 
 import uproot.rootio
 
@@ -173,7 +178,7 @@ class TH1Methods(object):
         intervals[-1] = intervals[-1][:-1] + "]"   # last interval is closed on top edge
         intervalswidth = max(len(x) for x in intervals)
 
-        values = ["{0:<.4g}".format(x) for x in self]
+        values = ["{0:<.4g}".format(float(x)) for x in self]
         valueswidth = max(len(x) for x in values)
 
         minimumtext = "{0:<.4g}".format(minimum)
