@@ -391,8 +391,13 @@ class TTreeMethods(object):
             out.extend(branch._format(indent))
         return out
 
-    def format(self, foldnames=False):
-        return "\n".join(self._format(foldnames))
+    def show(self, foldnames=False, stream=sys.stdout):
+        if stream is None:
+            return "\n".join(self._format(foldnames))
+        else:
+            for line in self._format(foldnames):
+                stream.write(line)
+                stream.write("\n")
 
     def recover(self):
         for branch in self.allvalues():
@@ -1224,7 +1229,7 @@ class TBranchMethods(object):
         if len(name) > 26:
             out = [indent + name, indent + "{0:26s} {1:26s} {2}".format("", self._streamer.__class__.__name__, interpret(self))]
         else:
-            out = [indent + "{0:26s} {1:26s} {2}".format(name, self._streamer.__class__.__name__, interpret(self))]
+            out = [indent + "{0:26s} {1:26s} {2}".format(name, "(no streamer)" if self._streamer is None else self._streamer.__class__.__name__, interpret(self))]
 
         for branch in self.fBranches:
             out.extend(branch._format(foldnames, indent + "  " if foldnames else indent, self.fName))
@@ -1232,9 +1237,14 @@ class TBranchMethods(object):
             out.append("")
 
         return out
-        
-    def format(self, foldnames=False):
-        return "\n".join(self._format(foldnames))
+
+    def show(self, foldnames=False, stream=sys.stdout):
+        if stream is None:
+            return "\n".join(self._format(foldnames))
+        else:
+            for line in self._format(foldnames):
+                stream.write(line)
+                stream.write("\n")
 
     def __len__(self):
         return self.numentries

@@ -28,6 +28,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import sys
 import numbers
 import math
 
@@ -158,7 +159,7 @@ class TH1Methods(object):
                 self[0] += underflows.sum()
                 self[-1] += overflows.sum()
 
-    def format(self, width=80, minimum=None, maximum=None):
+    def show(self, width=80, minimum=None, maximum=None, stream=sys.stdout):
         if minimum is None:
             minimum = min(self)
             if minimum < 0:
@@ -214,7 +215,12 @@ class TH1Methods(object):
             out.append(formatter.format(interval, value, str(line.tostring().decode("ascii"))))
 
         out.append(capstone)
-        return "\n".join(out)
+        out = "\n".join(out)
+        if stream is None:
+            return out
+        else:
+            stream.write(out)
+            stream.write("\n")
 
     @property
     def holoviews(self):
