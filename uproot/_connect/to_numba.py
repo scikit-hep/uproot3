@@ -31,20 +31,22 @@
 import ast
 import math
 import sys
+from collections import namedtuple
 
 import numpy
 
-import uproot.tree
+def numbanjit(x):
+    return x
 
 if sys.version_info[0] <= 2:
     parsable = (unicode, str)
 else:
     parsable = (str,)
 
-def makefcn(code, env):
+def makefcn(code, env, name):
     env = dict(env)
     exec(code, env)
-    return env["fcn"]
+    return env[name]
 
 def string2fcn(string):
     insymbols = set()
@@ -81,7 +83,7 @@ def string2fcn(string):
 
     module = ast.parse("def fcn({0}): pass".format(", ".join(sorted(insymbols))))
     module.body[0].body = body
-    return makefcn(compile(module, string, "exec"), math.__dict__)
+    return makefcn(compile(module, string, "exec"), math.__dict__, "fcn")
 
 class ChainStep(object):
     def __init__(self, previous):
@@ -94,15 +96,15 @@ class ChainStep(object):
     def _tofcn(self, expr):
         import numba
         if isinstance(expr, parsable):
-            expr = string2fcn(exprs)
-        return numba.njit(expr), expr.__code__.co_varnames
+            expr = string2fcn(expr)
+        return numbanjit(expr), expr.__code__.co_varnames
 
     def _tofcns(self, exprs):
         if isinstance(exprs, parsable):
-            return [self._tofcn(exprs) + (exprs, None)]
+            return [self._tofcn(exprs) + (exprs, exprs)]
 
         elif callable(exprs) and hasattr(exprs, "__code__"):
-            return [self._tofcn(exprs) + (id(exprs), None)]
+            return [self._tofcn(exprs) + (id(exprs), getattr(exprs, "__name__", None))]
 
         elif isinstance(exprs, dict) and all(isinstance(x, parsable) or (callable(x) and hasattr(x, "__code__")) for x in exprs.values()):
             return [self._tofcn(x) + (x if isinstance(x, parsable) else id(x), n) for n, x in exprs.items()]
@@ -113,7 +115,7 @@ class ChainStep(object):
             except (TypeError, AssertionError):
                 raise TypeError("exprs must be a dict of strings or functions, iterable of strings or functions, a single string, or a single function")
             else:
-                return [self._tofcn(x) + (x if isinstance(x, parsable) else id(x), None) for i, x in enumerate(exprs)]
+                return [self._tofcn(x) + ((x, x) if isinstance(x, parsable) else (id(x), getattr(x, "__name__", None))) for i, x in enumerate(exprs)]
 
     def _satisfy(self, requirement, branchnames, entryvars):
         self.previous._satisfy(requirement, branchnames, entryvars)
@@ -121,8 +123,31 @@ class ChainStep(object):
     def _argfcn(self, requirement, branchnames):
         return self.previous._argfcn(requirement, branchnames)
 
-    def iterate(self, exprs, outputtype=dict, calcexecutor=calcexecutor):
+    def iterate(self, exprs, outputtype=dict, calcexecutor=None):
+        import numba
+        import uproot.tree
+
         fcns = self._tofcns(exprs)
+
+        dictnames = [dictname for fcn, requirements, cacheid, dictname in fcns]
+        if outputtype == namedtuple:
+            for dictname in dictnames:
+                try:
+                    x = ast.parse(dictname)
+                    assert len(x.body) == 1 and isinstance(x.body[0], ast.Expr) and isinstance(x.body[0].value, ast.Name)
+                except (SyntaxError, TypeError, AssertionError):
+                    raise ValueError("illegal field name for namedtuple: {0}".format(repr(dictname)))
+            outputtype = namedtuple("Arrays", dictnames)
+
+        if issubclass(outputtype, dict):
+            def finish(results):
+                return outputtype(zip(dictnames, results))
+        elif outputtype == tuple or outputtype == list:
+            def finish(results):
+                return outputtype(results)
+        else:
+            def finish(results):
+                return outputtype(*results)
 
         branchnames = []
         entryvars = set()
@@ -134,26 +159,26 @@ class ChainStep(object):
         for fcn, requirements, cacheid, dictname in fcns:
             argstrs = []
             argfcns = []
-            env = {}
+            env = {"fcn": fcn}
             for i, requirement in enumerate(requirements):
                 argstrs.append("arg{0}(arrays)".format(i))
                 argfcn = self._argfcn(requirement, branchnames)
                 argfcns.append(argfcn)
                 env["arg{0}".format(i)] = argfcn
 
-            module = ast.parse("lambda arrays: fcn({0})".format(", ".join(argstrs)))
-            compiled.append(numba.njit(makefcn(compile(module, str(cacheid), "exec"), env)))
+            module = ast.parse("def cfcn(arrays): return fcn({0})".format(", ".join(argstrs)))
+            compiled.append(numbanjit(makefcn(compile(module, str(cacheid), "exec"), env, "cfcn")))
 
-        execinfos = None
+        excinfos = None
         for arrays in self.source._iterate(branchnames, len(entryvars) > 0):
-            if execinfos is not None:
+            if excinfos is not None:
                 for excinfo in excinfos:
                     _delayedraise(excinfo)
-                yield results
+                yield finish(results)
 
             results = [None] * len(compiled)
             arrays = tuple(arrays)
-            
+
             def calculate(i):
                 try:
                     out = compiled[i](arrays)
@@ -170,10 +195,10 @@ class ChainStep(object):
             else:
                 excinfos = calcexecutor.map(calculate, range(len(compiled)))
 
-        if execinfos is not None:
+        if excinfos is not None:
             for excinfo in excinfos:
                 _delayedraise(excinfo)
-            yield results
+            yield finish(results)
 
 class ChainSource(ChainStep):
     def __init__(self, tree, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, cache, basketcache, keycache, readexecutor):
@@ -202,7 +227,11 @@ class ChainSource(ChainStep):
                                                                executor = self.readexecutor,
                                                                blocking = True):
             if hasentryvar:
+                print "NO"
                 arrays.append(numpy.arange(entrystart, entrystop))
+
+            print arrays
+
             yield arrays
 
     @property
@@ -214,7 +243,7 @@ class ChainSource(ChainStep):
             entryvars.add(None)
 
         else:
-            branchname = aliases.get(requirement, requirement)
+            branchname = self.aliases.get(requirement, requirement)
             try:
                 index = branchnames.index(branchname)
             except ValueError:
@@ -225,15 +254,15 @@ class ChainSource(ChainStep):
         if requirement == self.entryvar:
             index = len(branchnames)
         else:
-            branchname = aliases.get(requirement, requirement)
+            branchname = self.aliases.get(requirement, requirement)
             index = branchnames.index(branchname)
 
         import numba
-        return numba.njit(lambda arrays: arrays[index])
+        return numbanjit(lambda arrays: arrays[index])
 
 class TTreeMethods_numba(object):
     def __init__(self, tree):
         self._tree = tree
 
     def iterate(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None):
-        return FunctionalChain(self._tree, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, cache, basketcache, keycache, readexecutor).iterate(exprs, outputtype=outputtype, calcexecutor=calcexecutor)
+        return ChainSource(self._tree, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, cache, basketcache, keycache, readexecutor).iterate(exprs, outputtype=outputtype, calcexecutor=calcexecutor)

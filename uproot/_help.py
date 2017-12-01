@@ -513,9 +513,9 @@ u"""Opens a series of ROOT files (local or remote), iterating over events in chu
     treepath : str
         path within each ROOT file to find the TTree (may include "``/``" for subdirectories or "``;``" for cycle numbers).
 
-    {entrystepsize}
-
     {branches}
+
+    {entrystepsize}
 
     {outputtype}
 
@@ -886,9 +886,9 @@ u"""Iterate over many arrays at once, yielding a fixed number of entries at a ti
 
     Parameters
     ----------
-    {entrystepsize}
-
     {branches}
+
+    {entrystepsize}
 
     {outputtype}
 
