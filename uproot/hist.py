@@ -120,41 +120,60 @@ class TH1Methods(object):
         elif not math.isnan(data):
             return int(math.floor(self.fXaxis.fNbins * (data - low) / (high - low))) + 1
 
-    def fill(self, data, weights=None):
+    def fill(self, datum):
+        numbins = self.fXaxis.fNbins
+        low = self.fXaxis.fXmin
+        high = self.fXaxis.fXmax
+        if data < low:
+            self[0] += 1
+        elif data >= high:
+            self[-1] += 1
+        else:
+            self[int(math.floor(numbins * (data - low) / (high - low))) + 1] += 1
+
+    def fillw(self, datum, weight):
+        numbins = self.fXaxis.fNbins
+        low = self.fXaxis.fXmin
+        high = self.fXaxis.fXmax
+        if data < low:
+            self[0] += weight
+        elif data >= high:
+            self[-1] += weight
+        else:
+            self[int(math.floor(numbins * (data - low) / (high - low))) + 1] += weight
+
+    def fillall(self, data):
+        numbins = self.fXaxis.fNbins
         low = self.fXaxis.fXmin
         high = self.fXaxis.fXmax
 
-        if isinstance(data, numbers.Real):
-            if weights is None:
-                weights = 1
+        if not isinstance(data, numpy.ndarray):
+            data = numpy.array(data)
 
-            if data < low:
-                self[0] += weight
-            elif data >= high:
-                self[-1] += weight
-            else:
-                self[int(math.floor(self.fXaxis.fNbins * (data - low) / (high - low))) + 1] += weights
+        freq, edges = numpy.histogram(data, bins=numbins, range=(low, high), density=False)
+        for i, x in enumerate(freq):
+            self[i + 1] += x
 
-        else:
-            if not isinstance(data, numpy.ndarray):
-                data = numpy.array(data)
+        self[0] += (data < low).sum()
+        self[-1] += (data >= high).sum()
 
-            if isinstance(weights, numbers.Real):
-                weights = numpy.empty_like(data)
+    def fillallw(self, data, weights):
+        numbins = self.fXaxis.fNbins
+        low = self.fXaxis.fXmin
+        high = self.fXaxis.fXmax
 
-            freq, edges = numpy.histogram(data, bins=self.fXaxis.fNbins, range=(low, high), weights=weights, density=False)
-            for i, x in enumerate(freq):
-                self[i + 1] += x
+        if not isinstance(data, numpy.ndarray):
+            data = numpy.array(data)
 
-            underflows = (data < low)
-            overflows = (data >= high)
+        if isinstance(weights, numbers.Real):
+            weights = numpy.empty_like(data)
 
-            if isinstance(weights, numpy.ndarray):
-                self[0] += weights[underflows].sum()
-                self[-1] += weights[overflows].sum()
-            else:
-                self[0] += underflows.sum()
-                self[-1] += overflows.sum()
+        freq, edges = numpy.histogram(data, bins=numbins, range=(low, high), weights=weights, density=False)
+        for i, x in enumerate(freq):
+            self[i + 1] += x
+
+        self[0] += weights[data < low].sum()
+        self[-1] += weights[data >= high].sum()
 
     def show(self, width=80, minimum=None, maximum=None, stream=sys.stdout):
         if minimum is None:
@@ -270,36 +289,55 @@ def hist(numbins, low, high, name=None, title=None):
 
 if numba is not None:
     class Regular1dType(numba.types.Type):
-        def __init__(self, valuetype):
-            super(Regular1dType, self).__init__(name="Regular1dType")
-            self.valuetype = valuetype
+        def __init__(self):
             self.obj = numba.types.PyObject("obj")
             self.numbins = numba.types.int64
             self.low = numba.types.float64
             self.high = numba.types.float64
-            if self.valuetype is int:
-                self.data = numba.types.int64[:]
-            else:
-                self.data = numba.types.float64[:]
+
+    class IntRegular1dType(Regular1dType):
+        pythontype = int
+        numbametatype = numba.types.Integer
+        def __init__(self):
+            Regular1dType.__init__(self)
+            numba.types.Type.__init__(self, name="IntRegular1dType")
+            self.allvalues = numba.types.int64[:]
+
+    class FloatRegular1dType(Regular1dType):
+        pythontype = float
+        numbametatype = (numba.types.Integer, numba.types.Float)
+        def __init__(self):
+            Regular1dType.__init__(self)
+            numba.types.Type.__init__(self, name="FloatRegular1dType")
+            self.allvalues = numba.types.float64[:]
+
+    intRegular1dType = IntRegular1dType()
+    floatRegular1dType = FloatRegular1dType()
 
     @numba.extending.typeof_impl.register(TH1Methods)
     def th1_typeof(val, c):
         assert isinstance(val, TH1Methods)
         if val.classname == "TH1F" or val.classname == "TH1D":
-            return Regular1dType(float)
+            return floatRegular1dType
         else:
-            return Regular1dType(int)
+            return intRegular1dType
 
-    @numba.extending.register_model(Regular1dType)
-    class Regular1dModel(numba.datamodel.models.StructModel):
+    @numba.extending.register_model(IntRegular1dType)
+    class IntRegular1dModel(numba.datamodel.models.StructModel):
         def __init__(self, dmm, fe_type):
-            members = [(x, getattr(fe_type, x)) for x in "obj", "numbins", "low", "high", "data"]
-            super(Regular1dModel, self).__init__(dmm, fe_type, members)
+            members = [(x, getattr(fe_type, x)) for x in "obj", "numbins", "low", "high", "allvalues"]
+            numba.datamodel.models.StructModel.__init__(self, dmm, fe_type, members)
+
+    @numba.extending.register_model(FloatRegular1dType)
+    class FloatRegular1dModel(numba.datamodel.models.StructModel):
+        def __init__(self, dmm, fe_type):
+            members = [(x, getattr(fe_type, x)) for x in "obj", "numbins", "low", "high", "allvalues"]
+            numba.datamodel.models.StructModel.__init__(self, dmm, fe_type, members)
 
     numba.extending.make_attribute_wrapper(Regular1dType, "numbins", "numbins")
     numba.extending.make_attribute_wrapper(Regular1dType, "low", "low")
     numba.extending.make_attribute_wrapper(Regular1dType, "high", "high")
-    numba.extending.make_attribute_wrapper(Regular1dType, "data", "_data")
+    numba.extending.make_attribute_wrapper(Regular1dType, "allvalues", "allvalues")
 
     @numba.extending.unbox(Regular1dType)
     def th1_unbox(typ, obj, c):
@@ -310,34 +348,34 @@ if numba is not None:
         high_obj = c.pyapi.object_getattr_string(obj, "high")
 
         array_fcn = c.pyapi.unserialize(c.pyapi.serialize_object(numpy.array))
-        valuetype_obj = c.pyapi.unserialize(c.pyapi.serialize_object(typ.valuetype))
-        array_obj = c.pyapi.call_function_objargs(array_fcn, (obj, valuetype_obj))
+        pythontype_obj = c.pyapi.unserialize(c.pyapi.serialize_object(typ.pythontype))
+        array_obj = c.pyapi.call_function_objargs(array_fcn, (obj, pythontype_obj))
 
         struct.obj = obj
         struct.numbins = c.pyapi.long_as_longlong(numbins_obj)
         struct.low = c.pyapi.float_as_double(low_obj)
         struct.high = c.pyapi.float_as_double(high_obj)
-        struct.data = c.unbox(typ.data, array_obj).value
+        struct.allvalues = c.unbox(typ.allvalues, array_obj).value
 
         c.pyapi.decref(numbins_obj)
         c.pyapi.decref(low_obj)
         c.pyapi.decref(high_obj)
         c.pyapi.decref(array_fcn)
-        c.pyapi.decref(valuetype_obj)
+        c.pyapi.decref(pythontype_obj)
         c.pyapi.decref(array_obj)
 
         is_error = numba.cgutils.is_not_null(c.builder, c.pyapi.err_occurred())
         return numba.extending.NativeValue(struct._getvalue(), is_error=is_error)
 
-    def th1_merge(obj, data):
-        obj[:] = data
+    def th1_merge(obj, allvalues):
+        obj[:] = allvalues
 
     @numba.extending.box(Regular1dType)
     def th1_box(typ, val, c):
         struct = numba.cgutils.create_struct_proxy(typ)(c.context, c.builder, value=val)
         obj = struct.obj
 
-        array_obj = c.box(typ.data, struct.data)
+        array_obj = c.box(typ.allvalues, struct.allvalues)
         merge_fcn = c.pyapi.unserialize(c.pyapi.serialize_object(th1_merge))
 
         c.pyapi.call_function_objargs(merge_fcn, (obj, array_obj))
@@ -346,39 +384,74 @@ if numba is not None:
 
         return obj
 
-    # @numba.extending.overload_method(Regular1dType, "fill")
-    # def th1_fill1(regular1dType, data):
-    #     if isinstance(data, numba.types.Number):
-    #         def fill1_impl(th1, data):
-    #             if data < th1.low:
-    #                 th1._data[0] += 1
-    #             elif data >= th1.high:
-    #                 th1._data[-1] += 1
-    #             elif not math.isnan(data):
-    #                 th1._data[int(math.floor(th1.numbins * (data - th1.low) / (th1.high - th1.low))) + 1] += 1
-    #         return fill1_impl
+    def th1_fill(th1, datum):
+        if datum < th1.low:
+            th1.allvalues[0] += 1
+        elif datum >= th1.high:
+            th1.allvalues[-1] += 1
+        elif not math.isnan(datum):
+            th1.allvalues[int(math.floor(th1.numbins * (datum - th1.low) / (th1.high - th1.low))) + 1] += 1
 
-    @numba.extending.overload_method(Regular1dType, "fill")
-    def th1_fill(regular1dType, data, weight=None):
-        if isinstance(data, numba.types.Number) and (
-            weight is None or
-            (regular1dType.valuetype is int and isinstance(weight, numba.types.Integer)) or
-            (regular1dType.valuetype is float and isinstance(weight, numba.types.Float))):
-            def fill_impl(th1, data, weight=1):
-                if data < th1.low:
-                    th1._data[0] += weight
-                elif data >= th1.high:
-                    th1._data[-1] += weight
-                elif not math.isnan(data):
-                    th1._data[int(math.floor(th1.numbins * (data - th1.low) / (th1.high - th1.low))) + 1] += weight
-            return fill_impl
+    def th1_fillw(th1, datum, weight):
+        if datum < th1.low:
+            th1.allvalues[0] += weight
+        elif datum >= th1.high:
+            th1.allvalues[-1] += weight
+        elif not math.isnan(datum):
+            th1.allvalues[int(math.floor(th1.numbins * (datum - th1.low) / (th1.high - th1.low))) + 1] += weight
+
+    def th1_fillall(th1, data):
+        for datum in data:
+            if datum < th1.low:
+                th1.allvalues[0] += 1
+            elif datum >= th1.high:
+                th1.allvalues[-1] += 1
+            elif not math.isnan(datum):
+                th1.allvalues[int(math.floor(th1.numbins * (datum - th1.low) / (th1.high - th1.low))) + 1] += 1
+
+    def th1_fillallw(th1, data, weight):
+        for datum in data:
+            if datum < th1.low:
+                th1.allvalues[0] += weight
+            elif datum >= th1.high:
+                th1.allvalues[-1] += weight
+            elif not math.isnan(datum):
+                th1.allvalues[int(math.floor(th1.numbins * (datum - th1.low) / (th1.high - th1.low))) + 1] += weight
+
+    for metatype in IntRegular1dType, FloatRegular1dType:
+        @numba.extending.overload_method(metatype, "fill")
+        def highlevel_fill(typ, datum):
+            if isinstance(datum, numba.types.Number):
+                return th1_fill
+
+        @numba.extending.overload_method(metatype, "fillw")
+        def highlevel_fillw(typ, datum, weight):
+            if isinstance(datum, numba.types.Number) and isinstance(weight, typ.numbametatype):
+                return th1_fillw
+
+        @numba.extending.overload_method(metatype, "fillall")
+        def highlevel_fillall(typ, data):
+            if isinstance(data, numba.types.Array):
+                return th1_fillall
+
+        @numba.extending.overload_method(metatype, "fillallw")
+        def highlevel_fillallw(typ, data, weights):
+            if isinstance(data, numba.types.Array) and isinstance(weights, numba.types.Array) and isinstance(weights.dtype, typ.numbametatype):
+                return th1_fillallw
 
 def doit():
     @numba.njit
-    def testy(x):
-        x.fill(0, 5)
-        return x
+    def testy(x, y):
+        x.fill(0)
+        x.fillw(0.00001, 3)
+        y.fill(0)
+        y.fillw(0.00001, 3.14)
+        return x, y
 
     h = hist(10, -3.0, 3.0)
     h[3] = 7
-    print testy(h).values
+    h2 = hist(10, -3.0, 3.0)
+    h2[3] = 7.0
+    x, y = testy(h, h2)
+    print x.values
+    print y.values
