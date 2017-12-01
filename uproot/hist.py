@@ -96,9 +96,6 @@ class TH1Methods(object):
         edges = numpy.array([i*norm + low for i in range(self.numbins + 1)])
         return freq, edges
 
-    # def _numba(self):
-    #     return self, int(self.fXaxis.fNbins), float(self.fXaxis.fXmin), float(self.fXaxis.fXmax), numpy.array(self, dtype=numpy.float64)
-
     def interval(self, index):
         if index < 0:
             index += len(self)
@@ -278,6 +275,11 @@ if numba is not None:
     class Regular1dType(numba.types.Type):
         def __init__(self):
             super(Regular1dType, self).__init__(name="Regular1dType")
+            self.obj = numba.types.PyObject("obj")
+            self.numbins = numba.types.int64
+            self.low = numba.types.float64
+            self.high = numba.types.float64
+            self.data = numba.types.float64[:]
 
     regular1dType = Regular1dType()
     
@@ -287,9 +289,62 @@ if numba is not None:
         return regular1dType
 
     @numba.extending.register_model(Regular1dType)
-    class Regular1dModel(numba.datamodel.models.TupleModel):
+    class Regular1dModel(numba.datamodel.models.StructModel):
         def __init__(self, dmm, fe_type):
-            super(Regular1dModel, self).__init__(dmm, numba.types.Tuple(()))   # numba.types.Opaque, numba.types.int64, numba.types.float64, numba.types.float64, numba.types.float64[:])))
+            members = [(x, getattr(fe_type, x)) for x in "obj", "numbins", "low", "high", "data"]
+            super(Regular1dModel, self).__init__(dmm, fe_type, members)
+
+    @numba.extending.unbox(Regular1dType)
+    def th1_unbox(typ, obj, c):
+        struct = numba.cgutils.create_struct_proxy(typ)(c.context, c.builder)
+
+        numbins_obj = c.pyapi.object_getattr_string(obj, "numbins")
+        low_obj = c.pyapi.object_getattr_string(obj, "low")
+        high_obj = c.pyapi.object_getattr_string(obj, "high")
+
+        array_fcn = c.pyapi.unserialize(c.pyapi.serialize_object(numpy.array))
+        float_obj = c.pyapi.unserialize(c.pyapi.serialize_object(float))
+        array_obj = c.pyapi.call_function_objargs(array_fcn, (obj, float_obj))
+
+        struct.obj = obj
+        struct.numbins = c.pyapi.long_as_longlong(numbins_obj)
+        struct.low = c.pyapi.float_as_double(low_obj)
+        struct.high = c.pyapi.float_as_double(high_obj)
+        struct.data = c.unbox(typ.data, array_obj).value
+
+        c.pyapi.decref(numbins_obj)
+        c.pyapi.decref(low_obj)
+        c.pyapi.decref(high_obj)
+        c.pyapi.decref(array_fcn)
+        c.pyapi.decref(float_obj)
+        c.pyapi.decref(array_obj)
+
+        is_error = numba.cgutils.is_not_null(c.builder, c.pyapi.err_occurred())
+        return numba.extending.NativeValue(struct._getvalue(), is_error=is_error)
+
+    def th1_merge(obj, data):
+        for i, x in enumerate(data):
+            obj[i] += x
+
+    @numba.extending.box(Regular1dType)
+    def th1_box(typ, val, c):
+        struct = numba.cgutils.create_struct_proxy(typ)(c.context, c.builder, value=val)
+        obj = struct.obj
+
+        array_obj = c.box(typ.data, struct.data)
+        merge_fcn = c.pyapi.unserialize(c.pyapi.serialize_object(th1_merge))
+
+        c.pyapi.call_function_objargs(merge_fcn, (obj, array_obj))
+
+        c.pyapi.decref(array_obj)
+
+        return obj
+
+
+    # @numba.extending.register_model(Regular1dType)
+    # class Regular1dModel(numba.datamodel.models.TupleModel):
+    #     def __init__(self, dmm, fe_type):
+    #         super(Regular1dModel, self).__init__(dmm, numba.types.Tuple((numba.types.PyObject("obj"),)))   # numba.types.int64, numba.types.float64, numba.types.float64, numba.types.float64[:])))
 
     # @numba.extending.infer_getattr
     # class StructAttribute(numba.typing.templates.AttributeTemplate):
@@ -324,23 +379,33 @@ if numba is not None:
     #     res = builder.extract_value(val, 4)
     #     return numba.targets.imputils.impl_ret_borrowed(context, builder, typ.contents, res)
 
-    @numba.extending.unbox(Regular1dType)
-    def th1_unbox(typ, obj, c):
-        tuple_obj = c.pyapi.tuple_new(0)
-        # c.pyapi.tuple_setitem(tuple_obj, 0, obj)
-        # out = c.unbox(numba.types.Tuple((numba.types.Opaque,)), tuple_obj)
-        out = c.unbox(numba.types.Tuple(()), tuple_obj)
-        c.pyapi.decref(tuple_obj)
-        return out
+    # @numba.extending.unbox(Regular1dType)
+    # def th1_unbox(typ, obj, c):
+    #     tuple_obj = c.pyapi.tuple_new(1)
+    #     c.pyapi.tuple_setitem(tuple_obj, 0, obj)
+    #     out = c.unbox(numba.types.Tuple((numba.types.PyObject("obj"),)), tuple_obj)
+    #     c.pyapi.decref(tuple_obj)
+    #     return out
 
     # @numba.extending.box(Regular1dType)
     # def th1_box(typ, val, c):
-    #     return c.box(numba.types.Opaque, c.builder.extract_value(val, 0))
+    #     return c.box(numba.types.PyObject("obj"), c.builder.extract_value(val, 0))
 
-@numba.njit
-def testy(x):
-    return 3.14
+def doit():
+    @numba.njit
+    def testy(x):
+        return x
 
-h = hist(10, -3.0, 3.0)
-print h
-print testy(h)
+    h = hist(10, -3.0, 3.0)
+    h[3] = 7
+    print h, h.values
+    out = testy(h)
+    print out
+    print out.name, out.low, out.high, out.values
+    out2 = testy(out)
+    print out2
+    print out2.name, out2.low, out2.high, out2.values
+    print out
+    print out.name, out.low, out.high, out.values
+    print h
+    print h.name, h.low, h.high, h.values
