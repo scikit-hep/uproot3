@@ -64,11 +64,6 @@ class ChainStep(object):
         env = dict(env)
         exec(code, env)
         env[name].source = source
-
-        print "DEFINING"
-        print env[name].source
-        print
-
         return env[name]
 
     def _string2fcn(self, string):
@@ -166,7 +161,7 @@ class ChainStep(object):
         for fcn, requirements, cacheid, dictname in fcns:
             argstrs = []
             argfcns = []
-            env = {"fcn": fcn}
+            env = {"fcn": compilefcn(fcn)}
             for i, requirement in enumerate(requirements):
                 argstrs.append("arg{0}(arrays)".format(i))
                 argfcn = self._argfcn(requirement, branchnames, entryvar, aliases, compilefcn)
@@ -196,15 +191,7 @@ class ChainStep(object):
 
         elif numba is True:
             import numba as nb
-            # return lambda f: nb.njit()(f)
-
-            def dummy(f):
-                print "Compiling", f
-                print getattr(f, "source", None)
-                print
-                return nb.njit()(f)
-
-            return dummy
+            return lambda f: nb.njit()(f)
 
         else:
             import numba as nb
@@ -268,7 +255,7 @@ class ChainStep(object):
     def arrayapply(self, exprs, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         entrystart, entrystop = self.source.tree._normalize_entrystartstop(entrystart, entrystop)
         entrystepsize = entrystop - entrystart
-        for results in self.iterate_apply(exprs, entrystepsize=entrystepsize, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=dict, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba):
+        for results in self.iterate_arrayapply(exprs, entrystepsize=entrystepsize, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=dict, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba):
             return results
         return {}
 
@@ -296,13 +283,13 @@ def {afcn}({params}):
            out = names["out"],
            one = requirements[0],
            empty = names["empty"],
-           dtype = repr(dtype),
+           dtype = names["dtype"],
            i = names["i"],
            itemdefs = "\n        ".join("{0} = {1}[{2}]".format(names[req + "_i"], req, names["i"]) for req in requirements),
            fcn = names["fcn"],
            items = ", ".join(names[req + "_i"] for req in requirements))
 
-                newfcn = self._makefcn(compile(ast.parse(source), dictname, "exec"), {"fcn": compilefcn(fcn), "empty": numpy.empty, "dtype": numpy.dtype}, names["afcn"], source)
+                newfcn = self._makefcn(compile(ast.parse(source), dictname, "exec"), {"fcn": compilefcn(fcn), "empty": numpy.empty, "dtype": dtype}, names["afcn"], source)
 
             fcns.append((newfcn, requirements, cacheid, dictname))
             
