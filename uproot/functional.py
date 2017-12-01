@@ -200,7 +200,7 @@ class ChainStep(object):
             def finish(results):
                 return outputtype(*results)
 
-        compiled, branchnames, entryvars = self.source._compilefcns(fcns, entryvar, aliases, compilefcn)
+        compiled, branchnames, entryvars = self._compilefcns(fcns, entryvar, aliases, compilefcn)
 
         excinfos = None
         for arrays in self.source._iterate(branchnames, len(entryvars) > 0, interpretations, entrystepsize, entrystart, entrystop, cache, basketcache, keycache, readexecutor):
@@ -265,7 +265,7 @@ class Define(ChainStep):
         if requirement in self.requirements:
             argstrs = []
             argfcns = []
-            env = {"fcn": fcn}
+            env = {"fcn": self.fcn[requirement]}
             for i, req in enumerate(self.requirements[requirement]):
                 argstrs.append("arg{0}(arrays)".format(i))
                 argfcn = self.previous._argfcn(req, branchnames, entryvar, aliases, compilefcn)
@@ -273,7 +273,7 @@ class Define(ChainStep):
                 env["arg{0}".format(i)] = argfcn
 
             module = ast.parse("def cfcn(arrays): return fcn({0})".format(", ".join(argstrs)))
-            return self.source._compilefcn(makefcn(compile(module, str(dictname), "exec"), env, "cfcn"))
+            return self.source._compilefcn(makefcn(compile(module, str(requirement), "exec"), env, "cfcn"))
 
         else:
             return self.previous._argfcn(requirement, branchnames, entryvar, aliases, compilefcn)
