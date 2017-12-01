@@ -435,7 +435,7 @@ tree_fragments = {
 
     # entrystepsize
     "entrystepsize": u"""entrystepsize : positive int
-        number of entries to provide in each step of iteration except the last in each file (unless it exactly divides the number of entries in the file).""",
+        number of entries to provide in each step of iteration except the last in each file (unless it exactly divides the number of entries in the file). Default is 100000, which is about 1 MB of double-precision array.""",
 
     # branch
     "branch": u"""branch : str
@@ -562,7 +562,7 @@ u"""Adds array reading methods to TTree objects that have been streamed from a R
 
     - square brackets (``__getitem__``) returns a branch by name (see :py:meth:`get <uproot.tree.TTreeMethods.get>`).
     - the ``len`` function (``__len__``) returns the number of entries (same as ``numentries``).
-    - iteration (``__iter__``) has no implementation. This is to avoid confusion between iterating over all branches (probably not what you want, but fitting the pattern set by :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` and ``dict``) and iterating over the data. Also, iteration over data requires a user-provided ``entrystepsize``, so it must be started with a function (see :py:meth:`iterate <uproot.tree.TTreeMethods.iterate>`).
+    - iteration (``__iter__``) has no implementation. This is to avoid confusion between iterating over all branches (probably not what you want, but fitting the pattern set by :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` and ``dict``) and iterating over the data.
 
     **Attributes, properties, and methods:**
 

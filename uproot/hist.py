@@ -438,20 +438,3 @@ if numba is not None:
         def highlevel_fillallw(typ, data, weights):
             if isinstance(data, numba.types.Array) and isinstance(weights, numba.types.Array) and isinstance(weights.dtype, typ.numbametatype):
                 return th1_fillallw
-
-def doit():
-    @numba.njit
-    def testy(x, y):
-        x.fill(0)
-        x.fillw(0.00001, 3)
-        y.fill(0)
-        y.fillw(0.00001, 3.14)
-        return x, y
-
-    h = hist(10, -3.0, 3.0)
-    h[3] = 7
-    h2 = hist(10, -3.0, 3.0)
-    h2[3] = 7.0
-    x, y = testy(h, h2)
-    print x.values
-    print y.values
