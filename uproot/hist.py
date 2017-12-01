@@ -302,9 +302,10 @@ if numba is not None:
         low_obj = c.pyapi.object_getattr_string(obj, "low")
         high_obj = c.pyapi.object_getattr_string(obj, "high")
 
-        array_fcn = c.pyapi.unserialize(c.pyapi.serialize_object(numpy.array))
-        float_obj = c.pyapi.unserialize(c.pyapi.serialize_object(float))
-        array_obj = c.pyapi.call_function_objargs(array_fcn, (obj, float_obj))
+        len_fcn = c.pyapi.unserialize(c.pyapi.serialize_object(len))
+        arraysize_obj = c.pyapi.call_function_objargs(len_fcn, (obj,))
+        array_fcn = c.pyapi.unserialize(c.pyapi.serialize_object(numpy.zeros))
+        array_obj = c.pyapi.call_function_objargs(array_fcn, (arraysize_obj,))
 
         struct.obj = obj
         struct.numbins = c.pyapi.long_as_longlong(numbins_obj)
@@ -315,8 +316,9 @@ if numba is not None:
         c.pyapi.decref(numbins_obj)
         c.pyapi.decref(low_obj)
         c.pyapi.decref(high_obj)
+        c.pyapi.decref(len_fcn)
+        c.pyapi.decref(arraysize_obj)
         c.pyapi.decref(array_fcn)
-        c.pyapi.decref(float_obj)
         c.pyapi.decref(array_obj)
 
         is_error = numba.cgutils.is_not_null(c.builder, c.pyapi.err_occurred())
@@ -339,57 +341,6 @@ if numba is not None:
         c.pyapi.decref(array_obj)
 
         return obj
-
-
-    # @numba.extending.register_model(Regular1dType)
-    # class Regular1dModel(numba.datamodel.models.TupleModel):
-    #     def __init__(self, dmm, fe_type):
-    #         super(Regular1dModel, self).__init__(dmm, numba.types.Tuple((numba.types.PyObject("obj"),)))   # numba.types.int64, numba.types.float64, numba.types.float64, numba.types.float64[:])))
-
-    # @numba.extending.infer_getattr
-    # class StructAttribute(numba.typing.templates.AttributeTemplate):
-    #     key = Regular1dType
-    #     def generic_resolve(self, typ, attr):
-    #         if attr == "numbins":
-    #             return numba.types.int64
-    #         elif attr == "low":
-    #             return numba.types.float64
-    #         elif attr == "high":
-    #             return numba.types.float64
-    #         elif attr == "data":
-    #             return numba.types.float64[:]
-
-    # @numba.extending.lower_getattr(Regular1dType, "numbins")
-    # def th1_getattr_numbins_impl(context, builder, typ, val):
-    #     res = builder.extract_value(val, 1)
-    #     return numba.targets.imputils.impl_ret_borrowed(context, builder, typ.contents, res)
-
-    # @numba.extending.lower_getattr(Regular1dType, "low")
-    # def th1_getattr_low_impl(context, builder, typ, val):
-    #     res = builder.extract_value(val, 2)
-    #     return numba.targets.imputils.impl_ret_borrowed(context, builder, typ.contents, res)
-
-    # @numba.extending.lower_getattr(Regular1dType, "high")
-    # def th1_getattr_high_impl(context, builder, typ, val):
-    #     res = builder.extract_value(val, 3)
-    #     return numba.targets.imputils.impl_ret_borrowed(context, builder, typ.contents, res)
-
-    # @numba.extending.lower_getattr(Regular1dType, "data")
-    # def th1_getattr_data_impl(context, builder, typ, val):
-    #     res = builder.extract_value(val, 4)
-    #     return numba.targets.imputils.impl_ret_borrowed(context, builder, typ.contents, res)
-
-    # @numba.extending.unbox(Regular1dType)
-    # def th1_unbox(typ, obj, c):
-    #     tuple_obj = c.pyapi.tuple_new(1)
-    #     c.pyapi.tuple_setitem(tuple_obj, 0, obj)
-    #     out = c.unbox(numba.types.Tuple((numba.types.PyObject("obj"),)), tuple_obj)
-    #     c.pyapi.decref(tuple_obj)
-    #     return out
-
-    # @numba.extending.box(Regular1dType)
-    # def th1_box(typ, val, c):
-    #     return c.box(numba.types.PyObject("obj"), c.builder.extract_value(val, 0))
 
 def doit():
     @numba.njit
