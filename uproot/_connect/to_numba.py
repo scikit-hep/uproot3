@@ -34,6 +34,8 @@ import sys
 
 import numpy
 
+import uproot.tree
+
 if sys.version_info[0] <= 2:
     parsable = (unicode, str)
 else:
@@ -89,15 +91,6 @@ class ChainStep(object):
     def source(self):
         return self.previous.source
 
-    def _iterate(self):
-        entrystart, entrystop = self.source.tree._normalize_entrystartstop(self.source.entrystart, self.source.entrystop)
-
-        start = entrystart
-        while start < entrystop and start < self.source.tree.numentries:
-            stop = start + entrystepsize
-            yield start, stop
-            start = stop
-
     def _tofcn(self, expr):
         import numba
         if isinstance(expr, parsable):
@@ -122,38 +115,68 @@ class ChainStep(object):
             else:
                 return [self._tofcn(x) + (x if isinstance(x, parsable) else id(x), None) for i, x in enumerate(exprs)]
 
-    def iterate(self, exprs, outputtype=dict):
+    def _satisfy(self, requirement, branchnames, entryvars):
+        self.previous._satisfy(requirement, branchnames, entryvars)
+
+    def _argfcn(self, requirement, branchnames):
+        return self.previous._argfcn(requirement, branchnames)
+
+    def iterate(self, exprs, outputtype=dict, calcexecutor=calcexecutor):
         fcns = self._tofcns(exprs)
 
-        compiled = []
         branchnames = []
+        entryvars = set()
+        for fcn, requirements, cacheid, dictname in fcns:
+            for i, requirement in enumerate(requirements):
+                self._satisfy(requirement, branchnames, entryvars)
+
+        compiled = []
         for fcn, requirements, cacheid, dictname in fcns:
             argstrs = []
             argfcns = []
             env = {}
             for i, requirement in enumerate(requirements):
                 argstrs.append("arg{0}(arrays)".format(i))
-                argfcn = self.previous.satisfy(requirement, branchnames)
+                argfcn = self._argfcn(requirement, branchnames)
                 argfcns.append(argfcn)
                 env["arg{0}".format(i)] = argfcn
 
             module = ast.parse("lambda arrays: fcn({0})".format(", ".join(argstrs)))
             compiled.append(numba.njit(makefcn(compile(module, str(cacheid), "exec"), env)))
 
-        for entrystart, entrystop in self._iterate():
-            pass
+        execinfos = None
+        for arrays in self.source._iterate(branchnames, len(entryvars) > 0):
+            if execinfos is not None:
+                for excinfo in excinfos:
+                    _delayedraise(excinfo)
+                yield results
 
+            results = [None] * len(compiled)
+            arrays = tuple(arrays)
+            
+            def calculate(i):
+                try:
+                    out = compiled[i](arrays)
+                except:
+                    return sys.exc_info()
+                else:
+                    results[i] = out
+                    return None
 
+            if calcexecutor is None:
+                for i in range(len(compiled)):
+                    uproot.tree._delayedraise(calculate(i))
+                excinfos = ()
+            else:
+                excinfos = calcexecutor.map(calculate, range(len(compiled)))
 
-
-            # for (fcn, requirements, cacheid, dictname), cfcn in zip(fcns, compiled):
-            #     pass
-
-
-
+        if execinfos is not None:
+            for excinfo in excinfos:
+                _delayedraise(excinfo)
+            yield results
 
 class ChainSource(ChainStep):
-    def __init__(self, tree, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, cache, basketcache, keycache, executor):
+    def __init__(self, tree, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, cache, basketcache, keycache, readexecutor):
         self.tree = tree
         self.entrystepsize = entrystepsize
         self.entrystart = entrystart
@@ -164,27 +187,53 @@ class ChainSource(ChainStep):
         self.cache = cache
         self.basketcache = basketcache
         self.keycache = keycache
-        self.executor = executor
+        self.readexecutor = readexecutor
+
+    def _iterate(self, branchnames, hasentryvar):
+        for entrystart, entrystop, arrays in self.tree.iterate(entrystepsize = self.entrystepsize,
+                                                               branches = branchnames,
+                                                               outputtype = list,
+                                                               reportentries = True,
+                                                               entrystart = self.entrystart,
+                                                               entrystop = self.entrystop,
+                                                               cache = self.cache,
+                                                               basketcache = self.basketcache,
+                                                               keycache = self.keycache,
+                                                               executor = self.readexecutor,
+                                                               blocking = True):
+            if hasentryvar:
+                arrays.append(numpy.arange(entrystart, entrystop))
+            yield arrays
 
     @property
     def source(self):
         return self
 
-    def satisfy(self, requirement, branchnames):
-        import numba
+    def _satisfy(self, requirement, branchnames, entryvars):
+        if requirement == self.entryvar:
+            entryvars.add(None)
 
-        branchname = aliases.get(requirement, requirement)
-        try:
-            index = branchnames.index(branchname)
-        except ValueError:
+        else:
+            branchname = aliases.get(requirement, requirement)
+            try:
+                index = branchnames.index(branchname)
+            except ValueError:
+                index = len(branchnames)
+                branchnames.append(branchname)
+
+    def _argfcn(self, requirement, branchnames):
+        if requirement == self.entryvar:
             index = len(branchnames)
-            branchnames.append(branchname)
+        else:
+            branchname = aliases.get(requirement, requirement)
+            index = branchnames.index(branchname)
 
+        import numba
         return numba.njit(lambda arrays: arrays[index])
 
 class TTreeMethods_numba(object):
     def __init__(self, tree):
         self._tree = tree
 
-    def iterate(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, executor=None):
-        return FunctionalChain(self._tree, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, cache, basketcache, keycache, executor).iterate(exprs, outputtype=outputtype)
+    def iterate(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None):
+        return FunctionalChain(self._tree, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, cache, basketcache, keycache, readexecutor).iterate(exprs, outputtype=outputtype, calcexecutor=calcexecutor)

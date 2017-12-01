@@ -93,12 +93,12 @@ def _delayedraise(excinfo):
 
 ################################################################ high-level interface
 
-def iterate(path, treepath, entrystepsize=100000, branches=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, executor=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, **options):
+def iterate(path, treepath, entrystepsize=100000, branches=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, **options):
     if not isinstance(entrystepsize, numbers.Integral) or entrystepsize <= 0:
         raise ValueError("'entrystepsize' must be a positive integer")
 
     for tree, newbranches, globalentrystart in _iterate(path, treepath, branches, localsource, xrootdsource, **options):
-        for start, stop, arrays in tree.iterate(entrystepsize, branches=newbranches, outputtype=outputtype, reportentries=True, entrystart=0, entrystop=tree.numentries, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor):
+        for start, stop, arrays in tree.iterate(entrystepsize, branches=newbranches, outputtype=outputtype, reportentries=True, entrystart=0, entrystop=tree.numentries, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking):
             if reportentries:
                 yield globalentrystart + start, globalentrystart + stop, arrays
             else:
@@ -377,7 +377,7 @@ class TTreeMethods(object):
             else:
                 yield out
 
-    def iterate(self, entrystepsize=100000, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None):
+    def iterate(self, entrystepsize=100000, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         if not isinstance(entrystepsize, numbers.Integral) or entrystepsize <= 0:
             raise ValueError("'entrystepsize' must be a positive integer")
 
@@ -393,10 +393,10 @@ class TTreeMethods(object):
                 yield start, stop
                 start = stop
 
-        return self._iterate(startstop(), branches, outputtype, reportentries, cache, basketcache, keycache, executor, blocking=True)
+        return self._iterate(startstop(), branches, outputtype, reportentries, cache, basketcache, keycache, executor, blocking)
 
-    def iterate_clusters(self, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None):
-        return self._iterate(self.clusters(), branches, outputtype, reportentries, cache, basketcache, keycache, executor, blocking=True)
+    def iterate_clusters(self, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+        return self._iterate(self.clusters(), branches, outputtype, reportentries, cache, basketcache, keycache, executor, blocking)
 
     def _format(self, indent=""):
         # TODO: add TTree data to the bottom of this

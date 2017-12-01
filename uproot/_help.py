@@ -527,6 +527,10 @@ u"""Opens a series of ROOT files (local or remote), iterating over events in chu
 
     {keycache}
 
+    {executor}
+
+    {blocking}
+
     {localsource}
 
     {xrootdsource}
@@ -902,6 +906,8 @@ u"""Iterate over many arrays at once, yielding a fixed number of entries at a ti
 
     {executor}
 
+    {blocking}
+
     Returns
     -------
     iterator over (int, int, outputtype) (if *reportentries*) or just outputtype (otherwise)
@@ -921,10 +927,6 @@ u"""Iterate at cluster boundaries, which are more efficient but not necessarily 
 
     {reportentries}
 
-    {entrystart}
-
-    {entrystop}
-
     {cache}
 
     {basketcache}
@@ -932,6 +934,8 @@ u"""Iterate at cluster boundaries, which are more efficient but not necessarily 
     {keycache}
 
     {executor}
+
+    {blocking}
 
     Returns
     -------
