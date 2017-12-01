@@ -36,6 +36,8 @@ from collections import namedtuple
 
 import numpy
 
+import uproot.tree
+
 def ifinstalled(f):
     try:
         import numba
@@ -160,9 +162,7 @@ class ChainStep(object):
         else:
             return True
 
-    def iterate(self, exprs, outputtype=dict, calcexecutor=None):
-        import uproot.tree
-
+    def apply(self, exprs, outputtype=dict, calcexecutor=None):
         fcns = self._tofcns(exprs)
 
         dictnames = [dictname for fcn, requirements, cacheid, dictname in fcns]
@@ -328,12 +328,14 @@ class ChainSource(ChainStep):
             index = branchnames.index(branchname)
         return self._compilefcn(lambda arrays: arrays[index])
 
-class TTreeMethods_numba(object):
-    def __init__(self, tree):
-        self._tree = tree
+class TTreeFunctionalMethods(uproot.tree.TTreeMethods):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (uproot.tree.TTreeMethods.__metaclass__,), {})
 
-    def iterate(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        return ChainSource(self._tree, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, cache, basketcache, keycache, readexecutor, numba).iterate(exprs, outputtype=outputtype, calcexecutor=calcexecutor)
+    def apply(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        return ChainSource(self, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, cache, basketcache, keycache, readexecutor, numba).apply(exprs, outputtype=outputtype, calcexecutor=calcexecutor)
 
     def define(self, exprs={}, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, cache=None, basketcache=None, keycache=None, readexecutor=None, numba=ifinstalled, **more_exprs):
-        return ChainSource(self._tree, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, cache, basketcache, keycache, readexecutor, numba).define(exprs, **more_exprs)
+        return ChainSource(self, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, cache, basketcache, keycache, readexecutor, numba).define(exprs, **more_exprs)
+
+uproot.rootio.methods["TTree"] = TTreeFunctionalMethods

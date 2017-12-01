@@ -495,13 +495,6 @@ class TTreeMethods(object):
         import uproot._connect.to_pandas
         return uproot._connect.to_pandas.TTreeMethods_pandas(self)
 
-    @property
-    def numba(self):
-        import uproot._connect.to_numba
-        return uproot._connect.to_numba.TTreeMethods_numba(self)
-
-uproot.rootio.methods["TTree"] = TTreeMethods
-
 ################################################################ methods for TBranch
 
 class TBranchMethods(object):
