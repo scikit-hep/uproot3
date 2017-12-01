@@ -346,24 +346,37 @@ if numba is not None:
 
         return obj
 
+    # @numba.extending.overload_method(Regular1dType, "fill")
+    # def th1_fill1(regular1dType, data):
+    #     if isinstance(data, numba.types.Number):
+    #         def fill1_impl(th1, data):
+    #             if data < th1.low:
+    #                 th1._data[0] += 1
+    #             elif data >= th1.high:
+    #                 th1._data[-1] += 1
+    #             elif not math.isnan(data):
+    #                 th1._data[int(math.floor(th1.numbins * (data - th1.low) / (th1.high - th1.low))) + 1] += 1
+    #         return fill1_impl
+
     @numba.extending.overload_method(Regular1dType, "fill")
-    def th1_fill(regular1dType, data):
-        if isinstance(data, numba.types.Number):
-            def fill_impl(th1, data):
+    def th1_fill(regular1dType, data, weight=None):
+        if isinstance(data, numba.types.Number) and (
+            weight is None or
+            (regular1dType.valuetype is int and isinstance(weight, numba.types.Integer)) or
+            (regular1dType.valuetype is float and isinstance(weight, numba.types.Float))):
+            def fill_impl(th1, data, weight=1):
                 if data < th1.low:
-                    th1._data[0] += 1
+                    th1._data[0] += weight
                 elif data >= th1.high:
-                    th1._data[-1] += 1
+                    th1._data[-1] += weight
                 elif not math.isnan(data):
-                    th1._data[int(math.floor(th1.numbins * (data - th1.low) / (th1.high - th1.low))) + 1] += 1
+                    th1._data[int(math.floor(th1.numbins * (data - th1.low) / (th1.high - th1.low))) + 1] += weight
             return fill_impl
 
 def doit():
     @numba.njit
     def testy(x):
-        x.fill(0)
-        x.fill(0)
-        x.fill(0)
+        x.fill(0, 5)
         return x
 
     h = hist(10, -3.0, 3.0)
