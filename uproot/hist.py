@@ -273,20 +273,25 @@ def hist(numbins, low, high, name=None, title=None):
 
 if numba is not None:
     class Regular1dType(numba.types.Type):
-        def __init__(self):
+        def __init__(self, valuetype):
             super(Regular1dType, self).__init__(name="Regular1dType")
+            self.valuetype = valuetype
             self.obj = numba.types.PyObject("obj")
             self.numbins = numba.types.int64
             self.low = numba.types.float64
             self.high = numba.types.float64
-            self.data = numba.types.float64[:]
+            if self.valuetype is int:
+                self.data = numba.types.int64[:]
+            else:
+                self.data = numba.types.float64[:]
 
-    regular1dType = Regular1dType()
-    
     @numba.extending.typeof_impl.register(TH1Methods)
     def th1_typeof(val, c):
         assert isinstance(val, TH1Methods)
-        return regular1dType
+        if val.classname == "TH1F" or val.classname == "TH1D":
+            return Regular1dType(float)
+        else:
+            return Regular1dType(int)
 
     @numba.extending.register_model(Regular1dType)
     class Regular1dModel(numba.datamodel.models.StructModel):
@@ -302,10 +307,9 @@ if numba is not None:
         low_obj = c.pyapi.object_getattr_string(obj, "low")
         high_obj = c.pyapi.object_getattr_string(obj, "high")
 
-        len_fcn = c.pyapi.unserialize(c.pyapi.serialize_object(len))
-        arraysize_obj = c.pyapi.call_function_objargs(len_fcn, (obj,))
-        array_fcn = c.pyapi.unserialize(c.pyapi.serialize_object(numpy.zeros))
-        array_obj = c.pyapi.call_function_objargs(array_fcn, (arraysize_obj,))
+        array_fcn = c.pyapi.unserialize(c.pyapi.serialize_object(numpy.array))
+        valuetype_obj = c.pyapi.unserialize(c.pyapi.serialize_object(typ.valuetype))
+        array_obj = c.pyapi.call_function_objargs(array_fcn, (obj, valuetype_obj))
 
         struct.obj = obj
         struct.numbins = c.pyapi.long_as_longlong(numbins_obj)
@@ -316,9 +320,8 @@ if numba is not None:
         c.pyapi.decref(numbins_obj)
         c.pyapi.decref(low_obj)
         c.pyapi.decref(high_obj)
-        c.pyapi.decref(len_fcn)
-        c.pyapi.decref(arraysize_obj)
         c.pyapi.decref(array_fcn)
+        c.pyapi.decref(valuetype_obj)
         c.pyapi.decref(array_obj)
 
         is_error = numba.cgutils.is_not_null(c.builder, c.pyapi.err_occurred())
@@ -326,7 +329,7 @@ if numba is not None:
 
     def th1_merge(obj, data):
         for i, x in enumerate(data):
-            obj[i] += x
+            obj[i] = x
 
     @numba.extending.box(Regular1dType)
     def th1_box(typ, val, c):
