@@ -117,7 +117,7 @@ class TH1Methods(object):
             return 0
         elif data >= high:
             return len(self) - 1
-        else:
+        elif not math.isnan(data):
             return int(math.floor(self.fXaxis.fNbins * (data - low) / (high - low))) + 1
 
     def fill(self, data, weights=None):
@@ -142,10 +142,7 @@ class TH1Methods(object):
             if isinstance(weights, numbers.Real):
                 weights = numpy.empty_like(data)
 
-            freq, edges = numpy.histogram(data,
-                                          bins=numpy.linspace(low, high, self.fXaxis.fNbins + 1),
-                                          weights=weights,
-                                          density=False)
+            freq, edges = numpy.histogram(data, bins=self.fXaxis.fNbins, range=(low, high), weights=weights, density=False)
             for i, x in enumerate(freq):
                 self[i + 1] += x
 
@@ -299,6 +296,11 @@ if numba is not None:
             members = [(x, getattr(fe_type, x)) for x in "obj", "numbins", "low", "high", "data"]
             super(Regular1dModel, self).__init__(dmm, fe_type, members)
 
+    numba.extending.make_attribute_wrapper(Regular1dType, "numbins", "numbins")
+    numba.extending.make_attribute_wrapper(Regular1dType, "low", "low")
+    numba.extending.make_attribute_wrapper(Regular1dType, "high", "high")
+    numba.extending.make_attribute_wrapper(Regular1dType, "data", "_data")
+
     @numba.extending.unbox(Regular1dType)
     def th1_unbox(typ, obj, c):
         struct = numba.cgutils.create_struct_proxy(typ)(c.context, c.builder)
@@ -328,8 +330,7 @@ if numba is not None:
         return numba.extending.NativeValue(struct._getvalue(), is_error=is_error)
 
     def th1_merge(obj, data):
-        for i, x in enumerate(data):
-            obj[i] = x
+        obj[:] = data
 
     @numba.extending.box(Regular1dType)
     def th1_box(typ, val, c):
@@ -345,21 +346,26 @@ if numba is not None:
 
         return obj
 
+    @numba.extending.overload_method(Regular1dType, "fill")
+    def th1_fill(regular1dType, data):
+        if isinstance(data, numba.types.Number):
+            def fill_impl(th1, data):
+                if data < th1.low:
+                    th1._data[0] += 1
+                elif data >= th1.high:
+                    th1._data[-1] += 1
+                elif not math.isnan(data):
+                    th1._data[int(math.floor(th1.numbins * (data - th1.low) / (th1.high - th1.low))) + 1] += 1
+            return fill_impl
+
 def doit():
     @numba.njit
     def testy(x):
+        x.fill(0)
+        x.fill(0)
+        x.fill(0)
         return x
 
     h = hist(10, -3.0, 3.0)
     h[3] = 7
-    print h, h.values
-    out = testy(h)
-    print out
-    print out.name, out.low, out.high, out.values
-    out2 = testy(out)
-    print out2
-    print out2.name, out2.low, out2.high, out2.values
-    print out
-    print out.name, out.low, out.high, out.values
-    print h
-    print h.name, h.low, h.high, h.values
+    print testy(h).values
