@@ -227,11 +227,7 @@ class ChainSource(ChainStep):
                                                                executor = self.readexecutor,
                                                                blocking = True):
             if hasentryvar:
-                print "NO"
                 arrays.append(numpy.arange(entrystart, entrystop))
-
-            print arrays
-
             yield arrays
 
     @property

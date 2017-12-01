@@ -354,7 +354,11 @@ class TTreeMethods(object):
         for entrystart, entrystop in startstop:
             futures = [(branch.name, interpretation, branch._step_array(interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, cache, basketcache, keycache, executor, explicit_basketcache)) for branch, interpretation, basket_itemoffset, basket_entryoffset in branchinfo]
 
-            delayed = [(name, lambda: interpretation.finalize(future())) for name, interpretation, future in futures]
+            delayed = []
+            for name, interpretation, future in futures:
+                def wrap_for_python_scope(future):
+                    return lambda: interpretation.finalize(future())
+                delayed.append((name, wrap_for_python_scope(future)))
 
             if blocking:
                 if issubclass(outputtype, dict):
@@ -366,11 +370,11 @@ class TTreeMethods(object):
 
             else:
                 if issubclass(outputtype, dict):
-                    out = lambda: outputtype([(name, delay()) for name, delay in delayed])
+                    out = lambda: outputtype(delayed)
                 elif outputtype == tuple or outputtype == list:
-                    out = lambda: outputtype([delay() for name, delay in delayed])
+                    out = lambda: outputtype([delay for name, delay in delayed])
                 else:
-                    out = lambda: outputtype(*[delay() for name, delay in delayed])
+                    out = lambda: outputtype(*[delay for name, delay in delayed])
 
             if reportentries:
                 yield max(0, entrystart), min(entrystop, self.numentries), out
