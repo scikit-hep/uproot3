@@ -60,9 +60,15 @@ class ChainStep(object):
     def source(self):
         return self.previous.source
 
-    def _makefcn(self, code, env, name):
+    def _makefcn(self, code, env, name, source):
         env = dict(env)
         exec(code, env)
+        env[name].source = source
+
+        print "DEFINING"
+        print env[name].source
+        print
+
         return env[name]
 
     def _string2fcn(self, string):
@@ -100,12 +106,12 @@ class ChainStep(object):
 
         module = ast.parse("def fcn({0}): pass".format(", ".join(sorted(insymbols))))
         module.body[0].body = body
-        return self._makefcn(compile(module, string, "exec"), math.__dict__, "fcn")
+        return self._makefcn(compile(module, string, "exec"), math.__dict__, "fcn", string)
 
     def _tofcn(self, expr):
         if isinstance(expr, parsable):
             expr = self._string2fcn(expr)
-        return self.source._compilefcn(expr), expr.__code__.co_varnames
+        return expr, expr.__code__.co_varnames
 
     def _generatenames(self, want, avoid):
         disambigifier = 0
@@ -167,8 +173,8 @@ class ChainStep(object):
                 argfcns.append(argfcn)
                 env["arg{0}".format(i)] = argfcn
 
-            module = ast.parse("def cfcn(arrays): return fcn({0})".format(", ".join(argstrs)))
-            compiled.append(self.source._compilefcn(self._makefcn(compile(module, str(dictname), "exec"), env, "cfcn")))
+            source = "def cfcn(arrays): return fcn({0})".format(", ".join(argstrs))
+            compiled.append(compilefcn(self._makefcn(compile(ast.parse(source), str(dictname), "exec"), env, "cfcn", source)))
 
         return compiled, branchnames, entryvars
 
@@ -190,7 +196,15 @@ class ChainStep(object):
 
         elif numba is True:
             import numba as nb
-            return lambda f: nb.njit()(f)
+            # return lambda f: nb.njit()(f)
+
+            def dummy(f):
+                print "Compiling", f
+                print getattr(f, "source", None)
+                print
+                return nb.njit()(f)
+
+            return dummy
 
         else:
             import numba as nb
@@ -259,13 +273,18 @@ class ChainStep(object):
         return {}
 
     def iterate_apply(self, exprs, dtype=numpy.float64, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        if not isinstance(dtype, numpy.dtype):
+            dtype = numpy.dtype(dtype)
+
+        compilefcn = self._compilefcn(numba)
+
         fcns = []
         for fcn, requirements, cacheid, dictname in self._tofcns(exprs):
             if len(requirements) == 0:
-                newfcn = fcn
+                newfcn = compilefcn(fcn)
             else:
                 names = self._generatenames(["afcn", "fcn", "out", "empty", "dtype", "i"] + [req + "_i" for req in requirements], requirements)
-                code = ("""
+                source = """
 def {afcn}({params}):
     {out} = {empty}(len({one}), {dtype})
     for {i} in range(len({one})):
@@ -279,14 +298,11 @@ def {afcn}({params}):
            empty = names["empty"],
            dtype = repr(dtype),
            i = names["i"],
-           itemdefs = "\n        ".join("{0} = {1}[{2}]".format(names[req], req, names["i"]) for req in requirements),
+           itemdefs = "\n        ".join("{0} = {1}[{2}]".format(names[req + "_i"], req, names["i"]) for req in requirements),
            fcn = names["fcn"],
-           items = ", ".join(names[req] for req in requirements)))
+           items = ", ".join(names[req + "_i"] for req in requirements))
 
-                print(code)
-
-                module = ast.parse(code)
-                newfcn = self._makefcn(compile(module, dictname, "exec"), {"fcn": fcn, "empty": numpy.empty, "dtype": numpy.dtype}, names["afcn"])
+                newfcn = self._makefcn(compile(ast.parse(source), dictname, "exec"), {"fcn": compilefcn(fcn), "empty": numpy.empty, "dtype": numpy.dtype}, names["afcn"], source)
 
             fcns.append((newfcn, requirements, cacheid, dictname))
             
@@ -326,15 +342,15 @@ class ArrayDefine(ChainStep):
         if requirement in self.requirements:
             argstrs = []
             argfcns = []
-            env = {"fcn": self.fcn[requirement]}
+            env = {"fcn": compilefcn(self.fcn[requirement])}
             for i, req in enumerate(self.requirements[requirement]):
                 argstrs.append("arg{0}(arrays)".format(i))
                 argfcn = self.previous._argfcn(req, branchnames, entryvar, aliases, compilefcn)
                 argfcns.append(argfcn)
                 env["arg{0}".format(i)] = argfcn
 
-            module = ast.parse("def cfcn(arrays): return fcn({0})".format(", ".join(argstrs)))
-            return self.source._compilefcn(self._makefcn(compile(module, str(requirement), "exec"), env, "cfcn"))
+            source = "def cfcn(arrays): return fcn({0})".format(", ".join(argstrs))
+            return compilefcn(self._makefcn(compile(ast.parse(source), str(requirement), "exec"), env, "cfcn", source))
 
         else:
             return self.previous._argfcn(requirement, branchnames, entryvar, aliases, compilefcn)
