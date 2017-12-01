@@ -309,6 +309,14 @@ class ROOTDirectory(object):
                         return key.get()
             raise KeyError("not found: {0}".format(repr(name)))
 
+    def __contains__(self, name):
+        try:
+            self.get(name)
+        except KeyError:
+            return False
+        else:
+            return True
+
     def __enter__(self, *args, **kwds):
         return self
 

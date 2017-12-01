@@ -93,12 +93,12 @@ def _delayedraise(excinfo):
 
 ################################################################ high-level interface
 
-def iterate(path, treepath, entrystepsize=100000, branches=None, outputtype=dict, reportentries=False, basketcache=None, keycache=None, executor=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, **options):
+def iterate(path, treepath, entrystepsize=100000, branches=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, executor=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, **options):
     if not isinstance(entrystepsize, numbers.Integral) or entrystepsize <= 0:
         raise ValueError("'entrystepsize' must be a positive integer")
 
     for tree, newbranches, globalentrystart in _iterate(path, treepath, branches, localsource, xrootdsource, **options):
-        for start, stop, arrays in tree.iterate(entrystepsize, branches=newbranches, outputtype=outputtype, reportentries=True, entrystart=0, entrystop=tree.numentries, basketcache=basketcache, keycache=keycache, executor=executor):
+        for start, stop, arrays in tree.iterate(entrystepsize, branches=newbranches, outputtype=outputtype, reportentries=True, entrystart=0, entrystop=tree.numentries, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor):
             if reportentries:
                 yield globalentrystart + start, globalentrystart + stop, arrays
             else:
@@ -277,6 +277,14 @@ class TTreeMethods(object):
                 pass
         raise KeyError("not found: {0}".format(repr(name)))
 
+    def __contains__(self, name):
+        try:
+            self.get(name)
+        except KeyError:
+            return False
+        else:
+            return True
+
     def clusters(self):
         # need to find an example of a file that has clusters!
         # yield as a (start, stop) generator
@@ -326,7 +334,7 @@ class TTreeMethods(object):
         else:
             return outputtype(*[lazyarray for name, lazyarray in lazyarrays])
 
-    def _iterate(self, startstop, branches, outputtype, reportentries, basketcache, keycache, executor, finalize):
+    def _iterate(self, startstop, branches, outputtype, reportentries, cache, basketcache, keycache, executor, blocking):
         branches = list(self._normalize_branches(branches))
 
         if outputtype == namedtuple:
@@ -342,28 +350,34 @@ class TTreeMethods(object):
             explicit_basketcache = False
         else:
             explicit_basketcache = True
-
-        if finalize:
-            finish = lambda interpretation, array: interpretation.finalize(array)
-        else:
-            finish = lambda interpretation, array: array
                 
         for entrystart, entrystop in startstop:
-            futures = [(branch.name, interpretation, branch._step_array(interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, basketcache, keycache, executor, explicit_basketcache)) for branch, interpretation, basket_itemoffset, basket_entryoffset in branchinfo]
+            futures = [(branch.name, interpretation, branch._step_array(interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, cache, basketcache, keycache, executor, explicit_basketcache)) for branch, interpretation, basket_itemoffset, basket_entryoffset in branchinfo]
 
-            if issubclass(outputtype, dict):
-                out = outputtype([(name, finish(interpretation, future())) for name, interpretation, future in futures])
-            elif outputtype == tuple or outputtype == list:
-                out = outputtype([finish(interpretation, future()) for name, interpretation, future in futures])
+            delayed = [(name, lambda: interpretation.finalize(future())) for name, interpretation, future in futures]
+
+            if blocking:
+                if issubclass(outputtype, dict):
+                    out = outputtype([(name, delay()) for name, delay in delayed])
+                elif outputtype == tuple or outputtype == list:
+                    out = outputtype([delay() for name, delay in delayed])
+                else:
+                    out = outputtype(*[delay() for name, delay in delayed])
+
             else:
-                out = outputtype(*[finish(interpretation, future()) for name, interpretation, future in futures])
+                if issubclass(outputtype, dict):
+                    out = lambda: outputtype([(name, delay()) for name, delay in delayed])
+                elif outputtype == tuple or outputtype == list:
+                    out = lambda: outputtype([delay() for name, delay in delayed])
+                else:
+                    out = lambda: outputtype(*[delay() for name, delay in delayed])
 
             if reportentries:
                 yield max(0, entrystart), min(entrystop, self.numentries), out
             else:
                 yield out
 
-    def iterate(self, entrystepsize=100000, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, basketcache=None, keycache=None, executor=None):
+    def iterate(self, entrystepsize=100000, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None):
         if not isinstance(entrystepsize, numbers.Integral) or entrystepsize <= 0:
             raise ValueError("'entrystepsize' must be a positive integer")
 
@@ -379,10 +393,10 @@ class TTreeMethods(object):
                 yield start, stop
                 start = stop
 
-        return self._iterate(startstop(), branches, outputtype, reportentries, basketcache, keycache, executor, True)
+        return self._iterate(startstop(), branches, outputtype, reportentries, cache, basketcache, keycache, executor, blocking=True)
 
-    def iterate_clusters(self, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, basketcache=None, keycache=None, executor=None):
-        return self._iterate(self.clusters(), branches, outputtype, reportentries, basketcache, keycache, executor, True)
+    def iterate_clusters(self, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None):
+        return self._iterate(self.clusters(), branches, outputtype, reportentries, cache, basketcache, keycache, executor, blocking=True)
 
     def _format(self, indent=""):
         # TODO: add TTree data to the bottom of this
@@ -477,26 +491,10 @@ class TTreeMethods(object):
         import uproot._connect.to_pandas
         return uproot._connect.to_pandas.TTreeMethods_pandas(self)
 
-    # @property
-    # def numba(self):
-    #     import uproot._connect.to_numba
-    #     connector = self._Connector()
-    #     connector.run       = uproot._connect.to_numba.run
-    #     connector.foreach   = uproot._connect.to_numba.foreach
-    #     connector.map       = uproot._connect.to_numba.map
-    #     connector.filter    = uproot._connect.to_numba.filter
-    #     connector.aggregate = uproot._connect.to_numba.aggregate
-    #     return connector
-
-    # @property
-    # def oamap(self):
-    #     import uproot._connect.to_oamap
-    #     connector = self._Connector()
-    #     connector.schema  = uproot._connect.to_oamap.schema
-    #     connector.proxy   = uproot._connect.to_oamap.proxy
-    #     connector.run     = uproot._connect.to_oamap.run
-    #     connector.compile = uproot._connect.to_oamap.compile
-    #     return connector
+    @property
+    def numba(self):
+        import uproot._connect.to_numba
+        return uproot._connect.to_numba.TTreeMethods_numba(self)
 
 uproot.rootio.methods["TTree"] = TTreeMethods
 
@@ -971,7 +969,12 @@ class TBranchMethods(object):
         else:
             return await
 
-    def _step_array(self, interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, basketcache, keycache, executor, explicit_basketcache):
+    def _step_array(self, interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, cache, basketcache, keycache, executor, explicit_basketcache):
+        if cache is not None:
+            out = cache.get(self._cachekey(interpretation, entrystart, entrystop), None)
+            if out is not None:
+                return lambda: out
+
         basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
 
         if basketstart is None:

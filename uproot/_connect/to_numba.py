@@ -30,11 +30,17 @@
 
 import ast
 import math
+import sys
 
 import numpy
 
-def execute(code):
-    env = dict(math.__dict__)
+if sys.version_info[0] <= 2:
+    parsable = (unicode, str)
+else:
+    parsable = (str,)
+
+def makefcn(code, env):
+    env = dict(env)
     exec(code, env)
     return env["fcn"]
 
@@ -73,25 +79,112 @@ def string2fcn(string):
 
     module = ast.parse("def fcn({0}): pass".format(", ".join(sorted(insymbols))))
     module.body[0].body = body
-    return execute(compile(module, string, "exec"))
+    return makefcn(compile(module, string, "exec"), math.__dict__)
 
-class FunctionalChain(object):
-    def __init__(self, names, arrays, outputtype, reportentries):
-        self.names = names
-        self.arrays = arrays
-        self.outputtype = outputtype
-        self.reportentries = reportentries
-        self.functions = []
+class ChainStep(object):
+    def __init__(self, previous):
+        self.previous = previous
+
+    @property
+    def source(self):
+        return self.previous.source
+
+    def _iterate(self):
+        entrystart, entrystop = self.source.tree._normalize_entrystartstop(self.source.entrystart, self.source.entrystop)
+
+        start = entrystart
+        while start < entrystop and start < self.source.tree.numentries:
+            stop = start + entrystepsize
+            yield start, stop
+            start = stop
+
+    def _tofcn(self, expr):
+        import numba
+        if isinstance(expr, parsable):
+            expr = string2fcn(exprs)
+        return numba.njit(expr), expr.__code__.co_varnames
+
+    def _tofcns(self, exprs):
+        if isinstance(exprs, parsable):
+            return [self._tofcn(exprs) + (exprs, None)]
+
+        elif callable(exprs) and hasattr(exprs, "__code__"):
+            return [self._tofcn(exprs) + (id(exprs), None)]
+
+        elif isinstance(exprs, dict) and all(isinstance(x, parsable) or (callable(x) and hasattr(x, "__code__")) for x in exprs.values()):
+            return [self._tofcn(x) + (x if isinstance(x, parsable) else id(x), n) for n, x in exprs.items()]
+
+        else:
+            try:
+                assert all(isinstance(x, parsable) or (callable(x) and hasattr(x, "__code__")) for x in exprs)
+            except (TypeError, AssertionError):
+                raise TypeError("exprs must be a dict of strings or functions, iterable of strings or functions, a single string, or a single function")
+            else:
+                return [self._tofcn(x) + (x if isinstance(x, parsable) else id(x), None) for i, x in enumerate(exprs)]
+
+    def iterate(self, exprs, outputtype=dict):
+        fcns = self._tofcns(exprs)
+
+        compiled = []
+        branchnames = []
+        for fcn, requirements, cacheid, dictname in fcns:
+            argstrs = []
+            argfcns = []
+            env = {}
+            for i, requirement in enumerate(requirements):
+                argstrs.append("arg{0}(arrays)".format(i))
+                argfcn = self.previous.satisfy(requirement, branchnames)
+                argfcns.append(argfcn)
+                env["arg{0}".format(i)] = argfcn
+
+            module = ast.parse("lambda arrays: fcn({0})".format(", ".join(argstrs)))
+            compiled.append(numba.njit(makefcn(compile(module, str(cacheid), "exec"), env)))
+
+        for entrystart, entrystop in self._iterate():
+            pass
+
+
+
+
+            # for (fcn, requirements, cacheid, dictname), cfcn in zip(fcns, compiled):
+            #     pass
+
+
+
+
+class ChainSource(ChainStep):
+    def __init__(self, tree, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, cache, basketcache, keycache, executor):
+        self.tree = tree
+        self.entrystepsize = entrystepsize
+        self.entrystart = entrystart
+        self.entrystop = entrystop
+        self.aliases = aliases
+        self.interpretations = interpretations
+        self.entryvar = entryvar
+        self.cache = cache
+        self.basketcache = basketcache
+        self.keycache = keycache
+        self.executor = executor
+
+    @property
+    def source(self):
+        return self
+
+    def satisfy(self, requirement, branchnames):
+        import numba
+
+        branchname = aliases.get(requirement, requirement)
+        try:
+            index = branchnames.index(branchname)
+        except ValueError:
+            index = len(branchnames)
+            branchnames.append(branchname)
+
+        return numba.njit(lambda arrays: arrays[index])
 
 class TTreeMethods_numba(object):
     def __init__(self, tree):
         self._tree = tree
 
-    def iterate(self, function, entrystepsize=100000, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, basketcache=None, keycache=None, executor=None):
-
-
-
-
-
-        import numba
-
+    def iterate(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, executor=None):
+        return FunctionalChain(self._tree, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, cache, basketcache, keycache, executor).iterate(exprs, outputtype=outputtype)

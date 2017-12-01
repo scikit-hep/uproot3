@@ -521,6 +521,8 @@ u"""Opens a series of ROOT files (local or remote), iterating over events in chu
 
     {reportentries}
 
+    {cache}
+
     {basketcache}
 
     {keycache}
@@ -892,6 +894,8 @@ u"""Iterate over many arrays at once, yielding a fixed number of entries at a ti
 
     {entrystop}
 
+    {cache}
+
     {basketcache}
 
     {keycache}
@@ -920,6 +924,8 @@ u"""Iterate at cluster boundaries, which are more efficient but not necessarily 
     {entrystart}
 
     {entrystop}
+
+    {cache}
 
     {basketcache}
 
