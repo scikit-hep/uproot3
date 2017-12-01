@@ -37,6 +37,7 @@ from collections import namedtuple
 import numpy
 
 import uproot.tree
+import uproot.interp.auto
 
 def ifinstalled(f):
     try:
@@ -104,7 +105,7 @@ class ChainStep(object):
     def _tofcn(self, expr):
         if isinstance(expr, parsable):
             expr = string2fcn(expr)
-        return self._compilefcn(expr), expr.__code__.co_varnames
+        return self.source._compilefcn(expr), expr.__code__.co_varnames
 
     def _tofcns(self, exprs):
         if isinstance(exprs, parsable):
@@ -124,18 +125,18 @@ class ChainStep(object):
             else:
                 return [self._tofcn(x) + ((x, x) if isinstance(x, parsable) else (id(x), getattr(x, "__name__", None))) for i, x in enumerate(exprs)]
 
-    def _satisfy(self, requirement, branchnames, entryvars):
-        self.previous._satisfy(requirement, branchnames, entryvars)
+    def _satisfy(self, requirement, branchnames, entryvars, entryvar, aliases):
+        self.previous._satisfy(requirement, branchnames, entryvars, entryvar, aliases)
 
-    def _argfcn(self, requirement, branchnames):
-        return self.previous._argfcn(requirement, branchnames)
+    def _argfcn(self, requirement, branchnames, entryvar, aliases, compilefcn):
+        return self.previous._argfcn(requirement, branchnames, entryvar, aliases, compilefcn)
 
-    def _compilefcns(self, fcns):
+    def _compilefcns(self, fcns, entryvar, aliases, compilefcn):
         branchnames = []
         entryvars = set()
         for fcn, requirements, cacheid, dictname in fcns:
             for requirement in requirements:
-                self._satisfy(requirement, branchnames, entryvars)
+                self._satisfy(requirement, branchnames, entryvars, entryvar, aliases)
 
         compiled = []
         for fcn, requirements, cacheid, dictname in fcns:
@@ -144,12 +145,12 @@ class ChainStep(object):
             env = {"fcn": fcn}
             for i, requirement in enumerate(requirements):
                 argstrs.append("arg{0}(arrays)".format(i))
-                argfcn = self._argfcn(requirement, branchnames)
+                argfcn = self._argfcn(requirement, branchnames, entryvar, aliases, compilefcn)
                 argfcns.append(argfcn)
                 env["arg{0}".format(i)] = argfcn
 
             module = ast.parse("def cfcn(arrays): return fcn({0})".format(", ".join(argstrs)))
-            compiled.append(self._compilefcn(makefcn(compile(module, str(dictname), "exec"), env, "cfcn")))
+            compiled.append(self.source._compilefcn(makefcn(compile(module, str(dictname), "exec"), env, "cfcn")))
 
         return compiled, branchnames, entryvars
 
@@ -162,7 +163,24 @@ class ChainStep(object):
         else:
             return True
 
-    def apply(self, exprs, outputtype=dict, calcexecutor=None):
+    def _compilefcn(self, numba):
+        if callable(numba):
+            return numba
+
+        elif numba is None or numba is False:
+            return lambda f: f
+
+        elif numba is True:
+            import numba as nb
+            return lambda f: nb.njit()(f)
+
+        else:
+            import numba as nb
+            return lambda f: nb.njit(**numba)(f)
+
+    def iterate_apply(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        compilefcn = self._compilefcn(numba)
+
         fcns = self._tofcns(exprs)
 
         dictnames = [dictname for fcn, requirements, cacheid, dictname in fcns]
@@ -182,10 +200,10 @@ class ChainStep(object):
             def finish(results):
                 return outputtype(*results)
 
-        compiled, branchnames, entryvars = self._compilefcns(fcns)
+        compiled, branchnames, entryvars = self.source._compilefcns(fcns, entryvar, aliases, compilefcn)
 
         excinfos = None
-        for arrays in self.source._iterate(branchnames, len(entryvars) > 0):
+        for arrays in self.source._iterate(branchnames, len(entryvars) > 0, interpretations, entrystepsize, entrystart, entrystop, cache, basketcache, keycache, readexecutor):
             if excinfos is not None:
                 for excinfo in excinfos:
                     _delayedraise(excinfo)
@@ -236,69 +254,52 @@ class Define(ChainStep):
             self.fcn[dictname] = fcn
             self.requirements[dictname] = requirements
 
-    def _satisfy(self, requirement, branchnames, entryvars):
+    def _satisfy(self, requirement, branchnames, entryvars, entryvar, aliases):
         if requirement in self.requirements:
             for req in self.requirements[requirement]:
-                self.previous._satisfy(req, branchnames, entryvars)
+                self.previous._satisfy(req, branchnames, entryvars, entryvar, aliases)
         else:
-            self.previous._satisfy(requirement, branchnames, entryvars)
+            self.previous._satisfy(requirement, branchnames, entryvars, entryvar, aliases)
 
-    def _argfcn(self, requirement, branchnames):
+    def _argfcn(self, requirement, branchnames, entryvar, aliases, compilefcn):
         if requirement in self.requirements:
             argstrs = []
             argfcns = []
             env = {"fcn": fcn}
             for i, req in enumerate(self.requirements[requirement]):
                 argstrs.append("arg{0}(arrays)".format(i))
-                argfcn = self.previous._argfcn(req, branchnames)
+                argfcn = self.previous._argfcn(req, branchnames, entryvar, aliases, compilefcn)
                 argfcns.append(argfcn)
                 env["arg{0}".format(i)] = argfcn
 
             module = ast.parse("def cfcn(arrays): return fcn({0})".format(", ".join(argstrs)))
-            return self._compilefcn(makefcn(compile(module, str(dictname), "exec"), env, "cfcn"))
+            return self.source._compilefcn(makefcn(compile(module, str(dictname), "exec"), env, "cfcn"))
 
         else:
-            return self.previous._argfcn(requirement, branchnames)
+            return self.previous._argfcn(requirement, branchnames, entryvar, aliases, compilefcn)
 
 class ChainSource(ChainStep):
-    def __init__(self, tree, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, cache, basketcache, keycache, readexecutor, numba):
+    def __init__(self, tree):
         self.tree = tree
-        self.entrystepsize = entrystepsize
-        self.entrystart = entrystart
-        self.entrystop = entrystop
-        self.aliases = aliases
-        self.interpretations = interpretations
-        self.entryvar = entryvar
-        self.cache = cache
-        self.basketcache = basketcache
-        self.keycache = keycache
-        self.readexecutor = readexecutor
 
-        if callable(numba):
-            self._compilefcn = numba
+    def _iterate(self, branchnames, hasentryvar, interpretations, entrystepsize, entrystart, entrystop, cache, basketcache, keycache, readexecutor):
+        branches = {}
+        for branchname in branchnames:
+            if branchname in interpretations:
+                branches[branchname] = interpretations[branchname]
+            else:
+                branches[branchname] = uproot.interp.auto.interpret(self.tree[branchname])
 
-        elif numba is None or numba is False:
-            self._compilefcn = lambda f: f
-
-        elif numba is True:
-            import numba as nb
-            self._compilefcn = lambda f: nb.njit()(f)
-
-        else:
-            import numba as nb
-            self._compilefcn = lambda f: nb.njit(**numba)(f)
-
-    def _iterate(self, branchnames, hasentryvar):
-        for entrystart, entrystop, arrays in self.tree.iterate(entrystepsize = self.entrystepsize,
-                                                               branches = branchnames,
+        for entrystart, entrystop, arrays in self.tree.iterate(entrystepsize = entrystepsize,
+                                                               branches = branches,
                                                                outputtype = list,
                                                                reportentries = True,
-                                                               entrystart = self.entrystart,
-                                                               entrystop = self.entrystop,
-                                                               cache = self.cache,
-                                                               basketcache = self.basketcache,
-                                                               keycache = self.keycache,
-                                                               executor = self.readexecutor,
+                                                               entrystart = entrystart,
+                                                               entrystop = entrystop,
+                                                               cache = cache,
+                                                               basketcache = basketcache,
+                                                               keycache = keycache,
+                                                               executor = readexecutor,
                                                                blocking = True):
             if hasentryvar:
                 arrays.append(numpy.arange(entrystart, entrystop))
@@ -308,34 +309,34 @@ class ChainSource(ChainStep):
     def source(self):
         return self
 
-    def _satisfy(self, requirement, branchnames, entryvars):
-        if requirement == self.entryvar:
+    def _satisfy(self, requirement, branchnames, entryvars, entryvar, aliases):
+        if requirement == entryvar:
             entryvars.add(None)
 
         else:
-            branchname = self.aliases.get(requirement, requirement)
+            branchname = aliases.get(requirement, requirement)
             try:
                 index = branchnames.index(branchname)
             except ValueError:
                 index = len(branchnames)
                 branchnames.append(branchname)
 
-    def _argfcn(self, requirement, branchnames):
-        if requirement == self.entryvar:
+    def _argfcn(self, requirement, branchnames, entryvar, aliases, compilefcn):
+        if requirement == entryvar:
             index = len(branchnames)
         else:
-            branchname = self.aliases.get(requirement, requirement)
+            branchname = aliases.get(requirement, requirement)
             index = branchnames.index(branchname)
-        return self._compilefcn(lambda arrays: arrays[index])
+        return compilefcn(lambda arrays: arrays[index])
 
 class TTreeFunctionalMethods(uproot.tree.TTreeMethods):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (uproot.tree.TTreeMethods.__metaclass__,), {})
 
-    def apply(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        return ChainSource(self, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, cache, basketcache, keycache, readexecutor, numba).apply(exprs, outputtype=outputtype, calcexecutor=calcexecutor)
+    def iterate_apply(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        return ChainSource(self).iterate_apply(exprs, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
 
-    def define(self, exprs={}, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, cache=None, basketcache=None, keycache=None, readexecutor=None, numba=ifinstalled, **more_exprs):
-        return ChainSource(self, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, cache, basketcache, keycache, readexecutor, numba).define(exprs, **more_exprs)
+    def define(self, exprs={}, **more_exprs):
+        return ChainSource(self).define(exprs, **more_exprs)
 
 uproot.rootio.methods["TTree"] = TTreeFunctionalMethods
