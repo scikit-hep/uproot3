@@ -123,6 +123,29 @@ class ChainStep(object):
     def _argfcn(self, requirement, branchnames):
         return self.previous._argfcn(requirement, branchnames)
 
+    def _compilefcns(self, fcns):
+        branchnames = []
+        entryvars = set()
+        for fcn, requirements, cacheid, dictname in fcns:
+            for i, requirement in enumerate(requirements):
+                self._satisfy(requirement, branchnames, entryvars)
+
+        compiled = []
+        for fcn, requirements, cacheid, dictname in fcns:
+            argstrs = []
+            argfcns = []
+            env = {"fcn": fcn}
+            for i, requirement in enumerate(requirements):
+                argstrs.append("arg{0}(arrays)".format(i))
+                argfcn = self._argfcn(requirement, branchnames)
+                argfcns.append(argfcn)
+                env["arg{0}".format(i)] = argfcn
+
+            module = ast.parse("def cfcn(arrays): return fcn({0})".format(", ".join(argstrs)))
+            compiled.append(numbanjit(makefcn(compile(module, str(cacheid), "exec"), env, "cfcn")))
+
+        return compiled, branchnames, entryvars
+
     def iterate(self, exprs, outputtype=dict, calcexecutor=None):
         import numba
         import uproot.tree
@@ -149,25 +172,7 @@ class ChainStep(object):
             def finish(results):
                 return outputtype(*results)
 
-        branchnames = []
-        entryvars = set()
-        for fcn, requirements, cacheid, dictname in fcns:
-            for i, requirement in enumerate(requirements):
-                self._satisfy(requirement, branchnames, entryvars)
-
-        compiled = []
-        for fcn, requirements, cacheid, dictname in fcns:
-            argstrs = []
-            argfcns = []
-            env = {"fcn": fcn}
-            for i, requirement in enumerate(requirements):
-                argstrs.append("arg{0}(arrays)".format(i))
-                argfcn = self._argfcn(requirement, branchnames)
-                argfcns.append(argfcn)
-                env["arg{0}".format(i)] = argfcn
-
-            module = ast.parse("def cfcn(arrays): return fcn({0})".format(", ".join(argstrs)))
-            compiled.append(numbanjit(makefcn(compile(module, str(cacheid), "exec"), env, "cfcn")))
+        compiled, branchnames, entryvars = self._compilefcns(fcns)
 
         excinfos = None
         for arrays in self.source._iterate(branchnames, len(entryvars) > 0):

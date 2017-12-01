@@ -325,13 +325,13 @@ if numba is not None:
     @numba.extending.register_model(IntRegular1dType)
     class IntRegular1dModel(numba.datamodel.models.StructModel):
         def __init__(self, dmm, fe_type):
-            members = [(x, getattr(fe_type, x)) for x in "obj", "numbins", "low", "high", "allvalues"]
+            members = [(x, getattr(fe_type, x)) for x in ("obj", "numbins", "low", "high", "allvalues")]
             numba.datamodel.models.StructModel.__init__(self, dmm, fe_type, members)
 
     @numba.extending.register_model(FloatRegular1dType)
     class FloatRegular1dModel(numba.datamodel.models.StructModel):
         def __init__(self, dmm, fe_type):
-            members = [(x, getattr(fe_type, x)) for x in "obj", "numbins", "low", "high", "allvalues"]
+            members = [(x, getattr(fe_type, x)) for x in ("obj", "numbins", "low", "high", "allvalues")]
             numba.datamodel.models.StructModel.__init__(self, dmm, fe_type, members)
 
     numba.extending.make_attribute_wrapper(Regular1dType, "numbins", "numbins")
