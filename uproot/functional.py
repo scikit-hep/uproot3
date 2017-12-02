@@ -252,12 +252,13 @@ class ChainStep(object):
                 _delayedraise(excinfo)
             yield finish(results)
 
-    def arrayapply(self, exprs, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+    def arrayapply(self, exprs, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         entrystart, entrystop = self.source.tree._normalize_entrystartstop(entrystart, entrystop)
+        if entrystop <= entrystart:
+            raise ValueError("empty entry range: from {0} (inclusive) to {1} (exclusive)".format(entrystart, entrystop))
         entrystepsize = entrystop - entrystart
-        for results in self.iterate_arrayapply(exprs, entrystepsize=entrystepsize, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=dict, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba):
+        for results in self.iterate_arrayapply(exprs, entrystepsize=entrystepsize, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba):
             return results
-        return {}
 
     def iterate_apply(self, exprs, dtype=numpy.float64, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         if not isinstance(dtype, numpy.dtype):
@@ -398,15 +399,30 @@ class TTreeFunctionalMethods(uproot.tree.TTreeMethods):
     __metaclass__ = type.__new__(type, "type", (uproot.tree.TTreeMethods.__metaclass__,), {})
 
     def iterate_arrayapply(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        return ChainSource(self).iterate_arrayapply(exprs, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
+        return ChainSource(self).iterate_arrayapply(exprs, entrystepsize=entrystepsize, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
 
-    def arrayapply(self, exprs, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        return ChainSource(self).arrayapply(exprs, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
+    def arrayapply(self, exprs, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        return ChainSource(self).arrayapply(exprs, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
 
     def iterate_apply(self, exprs, dtype=numpy.float64, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        return ChainSource(self).iterate_apply(exprs, dtype, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
+        return ChainSource(self).iterate_apply(exprs, dtype=dtype, entrystepsize=entrystepsize, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
+
+    def apply(self):
+        raise NotImplementedError
+
+    def arrayhist(self, numbins, low, high, expr):
+        raise NotImplementedError
+
+    def hist(self, numbins, low, high, expr):
+        raise NotImplementedError
 
     def arraydefine(self, exprs={}, **more_exprs):
         return ChainSource(self).arraydefine(exprs, **more_exprs)
+
+    def define(self):
+        raise NotImplementedError
+
+    def bundle(self):
+        raise NotImplementedError
 
 uproot.rootio.methods["TTree"] = TTreeFunctionalMethods
