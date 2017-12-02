@@ -145,29 +145,6 @@ class ChainStep(object):
     def _argfcn(self, requirement, branchnames, entryvar, aliases, compilefcn):
         return self.previous._argfcn(requirement, branchnames, entryvar, aliases, compilefcn)
 
-    def _compilefcns(self, fcns, entryvar, aliases, compilefcn):
-        branchnames = []
-        entryvars = set()
-        for fcn, requirements, cacheid, dictname in fcns:
-            for requirement in requirements:
-                self._satisfy(requirement, branchnames, entryvars, entryvar, aliases)
-
-        compiled = []
-        for fcn, requirements, cacheid, dictname in fcns:
-            argstrs = []
-            argfcns = []
-            env = {"fcn": compilefcn(fcn)}
-            for i, requirement in enumerate(requirements):
-                argstrs.append("arg{0}(start, stop, arrays)".format(i))
-                argfcn = self._argfcn(requirement, branchnames, entryvar, aliases, compilefcn)
-                argfcns.append(argfcn)
-                env["arg{0}".format(i)] = argfcn
-
-            source = "def cfcn(start, stop, arrays): return fcn({0})".format(", ".join(argstrs))
-            compiled.append(compilefcn(self._makefcn(compile(ast.parse(source), str(dictname), "exec"), env, "cfcn", source)))
-
-        return compiled, branchnames, entryvars
-
     def _isidentifier(self, dictname):
         try:
             x = ast.parse(dictname)
@@ -192,8 +169,7 @@ class ChainStep(object):
             import numba as nb
             return lambda f: nb.jit(**numba)(f)
 
-    def _iterateapply(self, fcns, compiled, branchnames, entryvars, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
-        dictnames = [dictname for fcn, requirements, cacheid, dictname in fcns]
+    def _iterateapply(self, dictnames, compiled, branchnames, entryvars, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
         if outputtype == namedtuple:
             for dictname in dictnames:
                 if not self._isidentifier(dictname):
@@ -244,57 +220,98 @@ class ChainStep(object):
     def iterate_newarrays(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         compilefcn = self._compilefcn(numba)
 
-        fcns = []
-        for fcn, requirements, cacheid, dictname in self._tofcns(exprs):
-            if len(requirements) == 0:
-                newfcn = compilefcn(fcn)
-            else:
-                names = self._generatenames(["afcn", "out", "empty", "dtype", "i", "fcn"] + [req + "_i" for req in requirements], requirements)
-                source = """
-def {afcn}({params}):
-    {out} = {empty}(len({one}), {dtype})
-    for {i} in range(len({one})):
-        {itemdefs}
-        {out}[{i}] = {fcn}({items})
-    return {out}
-""".format(afcn = names["afcn"],
-           params = ", ".join(requirements),
-           out = names["out"],
-           empty = names["empty"],
-           one = requirements[0],
-           dtype = names["dtype"],
-           i = names["i"],
-           itemdefs = "\n        ".join("{0} = {1}[{2}]".format(names[req + "_i"], req, names["i"]) for req in requirements),
-           fcn = names["fcn"],
-           items = ", ".join(names[req + "_i"] for req in requirements))
+        define = Define(self, exprs)
 
-                newfcn = self._makefcn(compile(ast.parse(source), dictname, "exec"), {"fcn": compilefcn(fcn), "empty": numpy.empty, "dtype": numpy.dtype(numpy.float64)}, names["afcn"], source)
+        branchnames = []
+        entryvars = set()
+        for dictname in define.order:
+            define._satisfy(dictname, branchnames, entryvars, entryvar, aliases)
 
-            fcns.append((newfcn, requirements, cacheid, dictname))
+        compiled = []
+        for dictname in define.order:
+            compiled.append(define._argfcn(dictname, branchnames, entryvar, aliases, compilefcn))
+
+        return self._iterateapply(define.order, compiled, branchnames, entryvars, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
+
+#         compilefcn = self._compilefcn(numba)
+
+#         fcns = []
+#         for fcn, requirements, cacheid, dictname in self._tofcns(exprs):
+#             if len(requirements) == 0:
+#                 newfcn = compilefcn(fcn)
+#             else:
+#                 names = self._generatenames(["afcn", "out", "empty", "dtype", "i", "fcn"] + [req + "_i" for req in requirements], requirements)
+#                 source = """
+# def {afcn}({params}):
+#     {out} = {empty}(len({one}), {dtype})
+#     for {i} in range(len({one})):
+#         {itemdefs}
+#         {out}[{i}] = {fcn}({items})
+#     return {out}
+# """.format(afcn = names["afcn"],
+#            params = ", ".join(requirements),
+#            out = names["out"],
+#            empty = names["empty"],
+#            one = requirements[0],
+#            dtype = names["dtype"],
+#            i = names["i"],
+#            itemdefs = "\n        ".join("{0} = {1}[{2}]".format(names[req + "_i"], req, names["i"]) for req in requirements),
+#            fcn = names["fcn"],
+#            items = ", ".join(names[req + "_i"] for req in requirements))
+
+#                 newfcn = self._makefcn(compile(ast.parse(source), dictname, "exec"), {"fcn": compilefcn(fcn), "empty": numpy.empty, "dtype": numpy.dtype(numpy.float64)}, names["afcn"], source)
+
+#             fcns.append((newfcn, requirements, cacheid, dictname))
             
-        compiled, branchnames, entryvars = self._compilefcns(fcns, entryvar, aliases, compilefcn)
-        return self._iterateapply(fcns, compiled, branchnames, entryvars, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
+#         branchnames = []
+#         entryvars = set()
+#         for fcn, requirements, cacheid, dictname in fcns:
+#             for requirement in requirements:
+#                 self._satisfy(requirement, branchnames, entryvars, entryvar, aliases)
+
+#         compiled = []
+#         for fcn, requirements, cacheid, dictname in fcns:
+#             argstrs = []
+#             argfcns = []
+#             env = {"fcn": compilefcn(fcn)}
+#             for i, requirement in enumerate(requirements):
+#                 argstrs.append("arg{0}(start, stop, arrays)".format(i))
+#                 argfcn = self._argfcn(requirement, branchnames, entryvar, aliases, compilefcn)
+#                 argfcns.append(argfcn)
+#                 env["arg{0}".format(i)] = argfcn
+
+#             source = "def cfcn(start, stop, arrays): return fcn({0})".format(", ".join(argstrs))
+#             compiled.append(compilefcn(self._makefcn(compile(ast.parse(source), str(dictname), "exec"), env, "cfcn", source)))
+
+#         return self._iterateapply(fcns, compiled, branchnames, entryvars, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
     
     def define(self, exprs={}, **more_exprs):
-        return Define(self, exprs, **more_exprs)
+        return Define._create(self, exprs, **more_exprs)
 
 class Define(ChainStep):
-    def __init__(self, previous, exprs={}, **more_exprs):
-        self.previous = previous
-
+    @staticmethod
+    def _create(previous, exprs={}, **more_exprs):
         if not isinstance(exprs, dict):
             raise TypeError("exprs must be a dict")
         exprs = dict(exprs)
         exprs.update(more_exprs)
 
-        if any(not isinstance(x, parsable) or not self._isidentifier(x) or keyword.iskeyword(x) for x in exprs):
+        out = Define(previous, exprs)
+
+        if any(not isinstance(x, parsable) or not out._isidentifier(x) or keyword.iskeyword(x) for x in exprs):
             raise TypeError("all names in exprs must be identifiers (and strings!)")
 
+        return out
+
+    def __init__(self, previous, exprs):
+        self.previous = previous
         self.fcn = {}
         self.requirements = {}
+        self.order = []
         for fcn, requirements, cacheid, dictname in self._tofcns(exprs):
             self.fcn[dictname] = fcn
             self.requirements[dictname] = requirements
+            self.order.append(dictname)
 
     def _satisfy(self, requirement, branchnames, entryvars, entryvar, aliases):
         if requirement in self.requirements:
