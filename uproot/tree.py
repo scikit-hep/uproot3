@@ -93,12 +93,9 @@ def _delayedraise(excinfo):
 
 ################################################################ high-level interface
 
-def iterate(path, treepath, branches=None, entrystepsize=100000, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, **options):
-    if not isinstance(entrystepsize, numbers.Integral) or entrystepsize <= 0:
-        raise ValueError("'entrystepsize' must be a positive integer")
-
+def iterate(path, treepath, branches=None, entrysteps=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, **options):
     for tree, newbranches, globalentrystart in _iterate(path, treepath, branches, localsource, xrootdsource, **options):
-        for start, stop, arrays in tree.iterate(branches=newbranches, entrystepsize=entrystepsize, outputtype=outputtype, reportentries=True, entrystart=0, entrystop=tree.numentries, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking):
+        for start, stop, arrays in tree.iterate(branches=newbranches, entrysteps=entrysteps, outputtype=outputtype, reportentries=True, entrystart=0, entrystop=tree.numentries, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking):
             if reportentries:
                 yield globalentrystart + start, globalentrystart + stop, arrays
             else:
@@ -285,36 +282,8 @@ class TTreeMethods(object):
         else:
             return True
 
-    def clusters(self, branches=None, entrystart=None, entrystop=None, strict=True):
-        # normalize the "branches" argument (note that this is different from arrays(branches))
-        if branches is None:
-            active = self.allvalues()
-            if len(active) == 0:
-                raise ValueError("tree contains no branches")
-
-        elif isinstance(branches, string_types):
-            branches = _bytesid(branches)
-            active = self.allvalues(lambda name: name == branches)
-            if len(active) == 0:
-                raise KeyError("could not find branch {0}".format(repr(branches)))
-
-        elif isinstance(branches, TBranchMethods):
-            active = [branches]
-
-        else:
-            try:
-                assert all(isinstance(x, string_types + (TBranchMethods,)) for x in branches)
-            except (TypeError, AssertionError):
-                raise TypeError("branches must be None, a string, a branch, or an iterable of strings or branches")
-
-            active = [x for x in branches if isinstance(x, TBranchMethods)]
-            branches = [_bytesid(x) for x in branches if isinstance(x, string_types)]
-            for branch in self.allvalues():
-                if branch.name in branches:
-                    active.append(branch)
-                    branches.remove(branch.name)
-            if len(branches) > 0:
-                raise KeyError("could not find the following branches: {0}".format(", ".join(repr(x) for x in branches)))
+    def clusters(self, branches=None, entrystart=None, entrystop=None, strict=False):
+        branches = list(self._normalize_branches(branches))
 
         # convenience class; simplifies presentation of the algorithm
         class BranchCursor(object):
@@ -329,7 +298,7 @@ class TTreeMethods(object):
             def entrystop(self):
                 return self.branch.basket_entrystop(self.basketstop)
 
-        cursors = [BranchCursor(x) for x in active]
+        cursors = [BranchCursor(branch) for branch, interpretation in branches]
 
         # everybody starts at the same entry number; if there is no such place before someone runs out of baskets, there will be an exception
         leadingstart = max(cursor.entrystart for cursor in cursors)
@@ -414,7 +383,29 @@ class TTreeMethods(object):
         else:
             return outputtype(*[lazyarray for name, lazyarray in lazyarrays])
 
-    def _iterate(self, startstop, branches, outputtype, reportentries, cache, basketcache, keycache, executor, blocking):
+    def iterate(self, branches=None, entrysteps=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+        if entrysteps is None:
+            entrysteps = self.clusters(branches, entrystart=entrystart, entrystop=entrystop, strict=False)
+
+        elif isinstance(entrysteps, numbers.Integral):
+            entrystepsize = entrysteps
+            if entrystepsize <= 0:
+                raise ValueError("if an integer, entrysteps must be positive")
+            
+            def startstop(entrystart, entrystop):
+                start = entrystart
+                while start < entrystop and start < self.numentries:
+                    stop = start + entrystepsize
+                    yield start, stop
+                    start = stop
+            entrysteps = startstop(*self._normalize_entrystartstop(entrystart, entrystop))
+
+        else:
+            try:
+                iter(entrysteps)
+            except TypeError:
+                raise TypeError("entrysteps must be None for cluster iteration, a positive integer for equal steps in number of entries, or an iterable of 2-tuples for explicit entry starts (inclusive) and stops (exclusive)")
+
         branches = list(self._normalize_branches(branches))
 
         if outputtype == namedtuple:
@@ -431,7 +422,7 @@ class TTreeMethods(object):
         else:
             explicit_basketcache = True
                 
-        for entrystart, entrystop in startstop:
+        for entrystart, entrystop in entrysteps:
             futures = [(branch.name, interpretation, branch._step_array(interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, cache, basketcache, keycache, executor, explicit_basketcache)) for branch, interpretation, basket_itemoffset, basket_entryoffset in branchinfo]
 
             delayed = []
@@ -460,27 +451,6 @@ class TTreeMethods(object):
                 yield max(0, entrystart), min(entrystop, self.numentries), out
             else:
                 yield out
-
-    def iterate(self, branches=None, entrysteps=100000, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
-        if not isinstance(entrystepsize, numbers.Integral) or entrystepsize <= 0:
-            raise ValueError("'entrystepsize' must be a positive integer")
-
-        if entrystart is None:
-            entrystart = 0
-        if entrystop is None:
-            entrystop = self.numentries
-
-        def startstop():
-            start = entrystart
-            while start < entrystop and start < self.numentries:
-                stop = start + entrystepsize
-                yield start, stop
-                start = stop
-
-        return self._iterate(startstop(), branches, outputtype, reportentries, cache, basketcache, keycache, executor, blocking)
-
-    def iterate_clusters(self, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
-        return self._iterate(self.clusters(), branches, outputtype, reportentries, cache, basketcache, keycache, executor, blocking)
 
     def _format(self, indent=""):
         # TODO: add TTree data to the bottom of this

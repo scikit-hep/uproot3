@@ -433,8 +433,8 @@ tree_fragments = {
     "entrystop": u"""entrystop : ``None`` or int
         entry at which reading stops (exclusive). If ``None`` *(default)*, stop at the end of the branch.""",
 
-    # entrystepsize
-    "entrystepsize": u"""entrystepsize : positive int
+    # entrysteps
+    "entrysteps": u"""entrysteps : positive int
         number of entries to provide in each step of iteration except the last in each file (unless it exactly divides the number of entries in the file). Default is 100000, which is about 1 MB of double-precision array.""",
 
     # branch
@@ -501,7 +501,7 @@ tree_fragments = {
 ################################################################ uproot.tree.iterate
 
 uproot.tree.iterate.__doc__ = \
-u"""Opens a series of ROOT files (local or remote), iterating over events in chunks of ``entrystepsize``.
+u"""Opens a series of ROOT files (local or remote), yielding the same number of entries from all selected branches in each step.
 
     All but the first two parameters are identical to :py:meth:`uproot.tree.TreeMethods.iterate`.
 
@@ -515,7 +515,7 @@ u"""Opens a series of ROOT files (local or remote), iterating over events in chu
 
     {branches}
 
-    {entrystepsize}
+    {entrysteps}
 
     {outputtype}
 
@@ -597,8 +597,7 @@ u"""Adds array reading methods to TTree objects that have been streamed from a R
     - :py:meth:`lazyarray <uproot.tree.TTreeMethods.lazyarray>` create a lazy array that would read the branch as needed.
     - :py:meth:`arrays <uproot.tree.TTreeMethods.arrays>` read many branches into arrays (or other objects if provided alternate *interpretations*).
     - :py:meth:`lazyarrays <uproot.tree.TTreeMethods.lazyarrays>` create many lazy arrays.
-    - :py:meth:`iterate <uproot.tree.TTreeMethods.iterate>` iterate over many arrays at once, yielding a fixed number of entries at a time in all the arrays.
-    - :py:meth:`iterate_clusters <uproot.tree.TTreeMethods.iterate_clusters>` iterate at cluster boundaries, which are more efficient but not necessarily a fixed number of entries *(not implemented)*.
+    - :py:meth:`iterate <uproot.tree.TTreeMethods.iterate>` iterate over many arrays at once, yielding the same number of entries from all selected branches in each step.
 """
 
 _method(uproot.tree.TTreeMethods.get).__doc__ = \
@@ -882,13 +881,13 @@ u"""Create many lazy arrays.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.iterate).__doc__ = \
-u"""Iterate over many arrays at once, yielding a fixed number of entries at a time in all the arrays.
+u"""Iterate over many arrays at once, yielding the same number of entries from all selected branches in each step.
 
     Parameters
     ----------
     {branches}
 
-    {entrystepsize}
+    {entrysteps}
 
     {outputtype}
 
@@ -897,35 +896,6 @@ u"""Iterate over many arrays at once, yielding a fixed number of entries at a ti
     {entrystart}
 
     {entrystop}
-
-    {cache}
-
-    {basketcache}
-
-    {keycache}
-
-    {executor}
-
-    {blocking}
-
-    Returns
-    -------
-    iterator over (int, int, outputtype) (if *reportentries*) or just outputtype (otherwise)
-        aligned array segments from the TTree.
-""".format(**tree_fragments)
-
-_method(uproot.tree.TTreeMethods.iterate_clusters).__doc__ = \
-u"""Iterate at cluster boundaries, which are more efficient but not necessarily a fixed number of entries.
-
-    .. todo:: Not implemented.
-
-    Parameters
-    ----------
-    {branches}
-
-    {outputtype}
-
-    {reportentries}
 
     {cache}
 
