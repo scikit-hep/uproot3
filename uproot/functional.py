@@ -282,7 +282,7 @@ class ChainStep(object):
             pass
         else:
             raise TypeError("expr must be a single string or function")
-        return self.newarrays(expr, entrysteps=None, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=tuple, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)[0]
+        return self.newarrays(expr, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=tuple, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)[0]
 
     def define(self, exprs={}, **more_exprs):
         return Define._create(self, exprs, **more_exprs)
