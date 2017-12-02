@@ -53,6 +53,8 @@ else:
     parsable = (str,)
 
 class ChainStep(object):
+    NEW_ARRAY_DTYPE = numpy.dtype(numpy.float64)
+
     def __init__(self, previous):
         self.previous = previous
 
@@ -147,6 +149,7 @@ class ChainStep(object):
 
     def _isidentifier(self, dictname):
         try:
+            assert not keyword.iskeyword(dictname)
             x = ast.parse(dictname)
             assert len(x.body) == 1 and isinstance(x.body[0], ast.Expr) and isinstance(x.body[0].value, ast.Name)
         except (SyntaxError, TypeError, AssertionError):
@@ -186,12 +189,12 @@ class ChainStep(object):
             def finish(results):
                 return outputtype(*results)
 
-        excinfos = None
+        excinfos, oldstart, oldstop = None, None, None
         for start, stop, arrays in self.source._iterate(branchnames, len(entryvars) > 0, interpretations, entrystepsize, entrystart, entrystop, cache, basketcache, keycache, readexecutor):
             if excinfos is not None:
                 for excinfo in excinfos:
                     _delayedraise(excinfo)
-                yield finish(results)
+                yield oldstart, oldstop, finish(results)
 
             results = [None] * len(compiled)
             arrays = tuple(arrays)
@@ -211,15 +214,15 @@ class ChainStep(object):
                 excinfos = ()
             else:
                 excinfos = calcexecutor.map(calculate, range(len(compiled)))
+            oldstart, oldstop = start, stop
 
         if excinfos is not None:
             for excinfo in excinfos:
                 _delayedraise(excinfo)
-            yield finish(results)
+            yield oldstart, oldstop, finish(results)
 
-    def iterate_newarrays(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+    def iterate_newarrays(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         compilefcn = self._compilefcn(numba)
-
         define = Define(self, exprs)
 
         branchnames = []
@@ -231,60 +234,47 @@ class ChainStep(object):
         for dictname in define.order:
             compiled.append(define._argfcn(dictname, branchnames, entryvar, aliases, compilefcn))
 
-        return self._iterateapply(define.order, compiled, branchnames, entryvars, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
+        iterator = self._iterateapply(define.order, compiled, branchnames, entryvars, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
+        if reportentries:
+            for start, stop, results in iterator:
+                yield start, stop, results
+        else:
+            for start, stop, results in iterator:
+                yield results
 
-#         compilefcn = self._compilefcn(numba)
+    def newarrays(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        entrystart, entrystop = self.source.tree._normalize_entrystartstop(entrystart, entrystop)
+        outarrays = [(dictname, numpy.empty(entrystop - entrystart, dtype=self.NEW_ARRAY_DTYPE)) for fcn, requirements, cacheid, dictname in self._tofcns(exprs)]
 
-#         fcns = []
-#         for fcn, requirements, cacheid, dictname in self._tofcns(exprs):
-#             if len(requirements) == 0:
-#                 newfcn = compilefcn(fcn)
-#             else:
-#                 names = self._generatenames(["afcn", "out", "empty", "dtype", "i", "fcn"] + [req + "_i" for req in requirements], requirements)
-#                 source = """
-# def {afcn}({params}):
-#     {out} = {empty}(len({one}), {dtype})
-#     for {i} in range(len({one})):
-#         {itemdefs}
-#         {out}[{i}] = {fcn}({items})
-#     return {out}
-# """.format(afcn = names["afcn"],
-#            params = ", ".join(requirements),
-#            out = names["out"],
-#            empty = names["empty"],
-#            one = requirements[0],
-#            dtype = names["dtype"],
-#            i = names["i"],
-#            itemdefs = "\n        ".join("{0} = {1}[{2}]".format(names[req + "_i"], req, names["i"]) for req in requirements),
-#            fcn = names["fcn"],
-#            items = ", ".join(names[req + "_i"] for req in requirements))
+        if outputtype == namedtuple:
+            for dictname, outarray in outarrays:
+                if not self._isidentifier(dictname):
+                    raise ValueError("illegal field name for namedtuple: {0}".format(repr(dictname)))
+            outputtype = namedtuple("Arrays", dictnames)
 
-#                 newfcn = self._makefcn(compile(ast.parse(source), dictname, "exec"), {"fcn": compilefcn(fcn), "empty": numpy.empty, "dtype": numpy.dtype(numpy.float64)}, names["afcn"], source)
+        compilefcn = self._compilefcn(numba)
+        define = Define(self, exprs)
 
-#             fcns.append((newfcn, requirements, cacheid, dictname))
-            
-#         branchnames = []
-#         entryvars = set()
-#         for fcn, requirements, cacheid, dictname in fcns:
-#             for requirement in requirements:
-#                 self._satisfy(requirement, branchnames, entryvars, entryvar, aliases)
+        branchnames = []
+        entryvars = set()
+        for dictname in define.order:
+            define._satisfy(dictname, branchnames, entryvars, entryvar, aliases)
 
-#         compiled = []
-#         for fcn, requirements, cacheid, dictname in fcns:
-#             argstrs = []
-#             argfcns = []
-#             env = {"fcn": compilefcn(fcn)}
-#             for i, requirement in enumerate(requirements):
-#                 argstrs.append("arg{0}(start, stop, arrays)".format(i))
-#                 argfcn = self._argfcn(requirement, branchnames, entryvar, aliases, compilefcn)
-#                 argfcns.append(argfcn)
-#                 env["arg{0}".format(i)] = argfcn
+        compiled = []
+        for dictname in define.order:
+            compiled.append(define._argfcn(dictname, branchnames, entryvar, aliases, compilefcn))
 
-#             source = "def cfcn(start, stop, arrays): return fcn({0})".format(", ".join(argstrs))
-#             compiled.append(compilefcn(self._makefcn(compile(ast.parse(source), str(dictname), "exec"), env, "cfcn", source)))
+        for start, stop, results in self._iterateapply(define.order, compiled, branchnames, entryvars, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, tuple, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
+            for (dictname, outarray), result in zip(outarrays, results):
+                outarray[start:stop] = result
 
-#         return self._iterateapply(fcns, compiled, branchnames, entryvars, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
-    
+        if issubclass(outputtype, dict):
+            return outputtype(outarrays)
+        elif outputtype == tuple or outputtype == list:
+            return outputtype([outarray for name, outarray in outarrays])
+        else:
+            return outputtype(*[outarray for name, outarray in outarrays])
+
     def define(self, exprs={}, **more_exprs):
         return Define._create(self, exprs, **more_exprs)
 
@@ -298,8 +288,8 @@ class Define(ChainStep):
 
         out = Define(previous, exprs)
 
-        if any(not isinstance(x, parsable) or not out._isidentifier(x) or keyword.iskeyword(x) for x in exprs):
-            raise TypeError("all names in exprs must be identifiers (and strings!)")
+        if any(not isinstance(x, parsable) or not out._isidentifier(x) for x in exprs):
+            raise TypeError("all names in exprs must be identifiers")
 
         return out
 
@@ -322,7 +312,7 @@ class Define(ChainStep):
 
     def _argfcn(self, requirement, branchnames, entryvar, aliases, compilefcn):
         if requirement in self.requirements:
-            env = {"fcn": compilefcn(self.fcn[requirement]), "empty": numpy.empty, "dtype": numpy.dtype(numpy.float64)}
+            env = {"fcn": compilefcn(self.fcn[requirement]), "empty": numpy.empty, "dtype": self.NEW_ARRAY_DTYPE}
             itemdefs = []
             itemis = []
             for i, req in enumerate(self.requirements[requirement]):
@@ -400,11 +390,11 @@ class TTreeFunctionalMethods(uproot.tree.TTreeMethods):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (uproot.tree.TTreeMethods.__metaclass__,), {})
 
-    def iterate_newarrays(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        return ChainSource(self).iterate_newarrays(exprs, entrystepsize=entrystepsize, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
+    def iterate_newarrays(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        return ChainSource(self).iterate_newarrays(exprs, entrystepsize=entrystepsize, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, reportentries=reportentries, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
 
-    def newarrays(self):
-        raise NotImplementedError
+    def newarrays(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        return ChainSource(self).newarrays(exprs, entrystepsize=entrystepsize, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
 
     def newarray(self):
         raise NotImplementedError
