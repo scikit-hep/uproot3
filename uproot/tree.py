@@ -286,6 +286,7 @@ class TTreeMethods(object):
             return True
 
     def clusters(self, branches=None, entrystart=None, entrystop=None, strict=True):
+        # normalize the "branches" argument (note that this is different from arrays(branches))
         if branches is None:
             active = self.allvalues()
             if len(active) == 0:
@@ -315,16 +316,15 @@ class TTreeMethods(object):
             if len(branches) > 0:
                 raise KeyError("could not find the following branches: {0}".format(", ".join(repr(x) for x in branches)))
 
+        # convenience class; simplifies presentation of the algorithm
         class BranchCursor(object):
             def __init__(self, branch):
                 self.branch = branch
                 self.basketstart = 0
                 self.basketstop = 0
-
             @property
             def entrystart(self):
                 return self.branch.basket_entrystart(self.basketstart)
-
             @property
             def entrystop(self):
                 return self.branch.basket_entrystop(self.basketstop)
@@ -342,13 +342,17 @@ class TTreeMethods(object):
 
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
 
+        # move all cursors forward, yielding a (start, stop) pair if their baskets line up
         while any(cursor.basketstop < cursor.branch.numbaskets for cursor in cursors):
+            # move all subleading baskets forward until they are no longer subleading
             leadingstop = max(cursor.entrystop for cursor in cursors)
             for cursor in cursors:
                 while cursor.entrystop < leadingstop:
                     cursor.basketstop += 1
 
+            # if they all line up, this is a good cluster
             if all(cursor.entrystop == leadingstop for cursor in cursors):
+                # check to see if it's within the bounds the user requested (strictly or not strictly)
                 if strict:
                     if entrystart <= leadingstart and leadingstop <= entrystop:
                         yield leadingstart, leadingstop
@@ -356,10 +360,15 @@ class TTreeMethods(object):
                     if entrystart < leadingstop and leadingstart < entrystop:
                         yield leadingstart, leadingstop
 
+                # anyway, move all the starts to the new stopping position and move all stops forward by one
                 leadingstart = leadingstop
                 for cursor in cursors:
                     cursor.basketstart = cursor.basketstop
                     cursor.basketstop += 1
+
+            # stop iterating if we're past all acceptable clusters
+            if leadingstart >= entrystop:
+                break
 
     def array(self, branch, interpretation=None, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         return self.get(branch).array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
@@ -452,7 +461,7 @@ class TTreeMethods(object):
             else:
                 yield out
 
-    def iterate(self, branches=None, entrystepsize=100000, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+    def iterate(self, branches=None, entrysteps=100000, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         if not isinstance(entrystepsize, numbers.Integral) or entrystepsize <= 0:
             raise ValueError("'entrystepsize' must be a positive integer")
 
