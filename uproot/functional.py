@@ -121,15 +121,8 @@ class ChainStep(object):
             out[name] = newname
         return out
 
-    class _Reuse(object):
-        def __init__(self, fcns):
-            self.fcns = fcns
-
     def _tofcns(self, exprs):
-        if isinstance(exprs, ChainStep._Reuse):
-            return exprs.fcns
-
-        elif isinstance(exprs, parsable):
+        if isinstance(exprs, parsable):
             return [self._tofcn(exprs) + (exprs, exprs)]
 
         elif callable(exprs) and hasattr(exprs, "__code__"):
@@ -199,11 +192,7 @@ class ChainStep(object):
             import numba as nb
             return lambda f: nb.jit(**numba)(f)
 
-    def _iterateapply(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        compilefcn = self._compilefcn(numba)
-
-        fcns = self._tofcns(exprs)
-
+    def _iterateapply(self, fcns, compiled, branchnames, entryvars, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
         dictnames = [dictname for fcn, requirements, cacheid, dictname in fcns]
         if outputtype == namedtuple:
             for dictname in dictnames:
@@ -220,8 +209,6 @@ class ChainStep(object):
         else:
             def finish(results):
                 return outputtype(*results)
-
-        compiled, branchnames, entryvars = self._compilefcns(fcns, entryvar, aliases, compilefcn)
 
         excinfos = None
         for start, stop, arrays in self.source._iterate(branchnames, len(entryvars) > 0, interpretations, entrystepsize, entrystart, entrystop, cache, basketcache, keycache, readexecutor):
@@ -285,9 +272,8 @@ def {afcn}({params}):
 
             fcns.append((newfcn, requirements, cacheid, dictname))
             
-        exprs = ChainStep._Reuse(fcns)
-
-        return self._iterateapply(exprs, entrystepsize=entrystepsize, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
+        compiled, branchnames, entryvars = self._compilefcns(fcns, entryvar, aliases, compilefcn)
+        return self._iterateapply(fcns, compiled, branchnames, entryvars, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
     
     def define(self, exprs={}, **more_exprs):
         return Define(self, exprs, **more_exprs)
