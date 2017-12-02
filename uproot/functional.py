@@ -45,7 +45,7 @@ def ifinstalled(f):
     except ImportError:
         return f
     else:
-        return numba.njit()(f)
+        return numba.jit()(f)
 
 if sys.version_info[0] <= 2:
     parsable = (unicode, str)
@@ -165,12 +165,12 @@ class ChainStep(object):
             argfcns = []
             env = {"fcn": compilefcn(fcn)}
             for i, requirement in enumerate(requirements):
-                argstrs.append("arg{0}(arrays)".format(i))
+                argstrs.append("arg{0}(start, stop, arrays)".format(i))
                 argfcn = self._argfcn(requirement, branchnames, entryvar, aliases, compilefcn)
                 argfcns.append(argfcn)
                 env["arg{0}".format(i)] = argfcn
 
-            source = "def cfcn(arrays): return fcn({0})".format(", ".join(argstrs))
+            source = "def cfcn(start, stop, arrays): return fcn({0})".format(", ".join(argstrs))
             compiled.append(compilefcn(self._makefcn(compile(ast.parse(source), str(dictname), "exec"), env, "cfcn", source)))
 
         return compiled, branchnames, entryvars
@@ -197,7 +197,7 @@ class ChainStep(object):
 
         else:
             import numba as nb
-            return lambda f: nb.njit(**numba)(f)
+            return lambda f: nb.jit(**numba)(f)
 
     def _iterateapply(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         compilefcn = self._compilefcn(numba)
@@ -224,7 +224,7 @@ class ChainStep(object):
         compiled, branchnames, entryvars = self._compilefcns(fcns, entryvar, aliases, compilefcn)
 
         excinfos = None
-        for arrays in self.source._iterate(branchnames, len(entryvars) > 0, interpretations, entrystepsize, entrystart, entrystop, cache, basketcache, keycache, readexecutor):
+        for start, stop, arrays in self.source._iterate(branchnames, len(entryvars) > 0, interpretations, entrystepsize, entrystart, entrystop, cache, basketcache, keycache, readexecutor):
             if excinfos is not None:
                 for excinfo in excinfos:
                     _delayedraise(excinfo)
@@ -235,7 +235,7 @@ class ChainStep(object):
 
             def calculate(i):
                 try:
-                    out = compiled[i](arrays)
+                    out = compiled[i](start, stop, arrays)
                 except:
                     return sys.exc_info()
                 else:
@@ -347,12 +347,12 @@ def {afcn}({params}):
             argfcns = []
             env = {"fcn": compilefcn(newfcn)}
             for i, req in enumerate(self.requirements[requirement]):
-                argstrs.append("arg{0}(arrays)".format(i))
+                argstrs.append("arg{0}(start, stop, arrays)".format(i))
                 argfcn = self.previous._argfcn(req, branchnames, entryvar, aliases, compilefcn)
                 argfcns.append(argfcn)
                 env["arg{0}".format(i)] = argfcn
 
-            source2 = "def cfcn(arrays): return fcn({0})".format(", ".join(argstrs))
+            source2 = "def cfcn(start, stop, arrays): return fcn({0})".format(", ".join(argstrs))
             return compilefcn(self._makefcn(compile(ast.parse(source2), str(requirement), "exec"), env, "cfcn", source2))
 
         else:
@@ -383,7 +383,7 @@ class ChainSource(ChainStep):
                                                                blocking = True):
             if hasentryvar:
                 arrays.append(numpy.arange(entrystart, entrystop))
-            yield arrays
+            yield entrystart, entrystop, arrays
 
     @property
     def source(self):
@@ -407,7 +407,7 @@ class ChainSource(ChainStep):
         else:
             branchname = aliases.get(requirement, requirement)
             index = branchnames.index(branchname)
-        return compilefcn(lambda arrays: arrays[index])
+        return compilefcn(lambda start, stop, arrays: arrays[index])
 
 class TTreeFunctionalMethods(uproot.tree.TTreeMethods):
     # makes __doc__ attribute mutable before Python 3.3
@@ -420,6 +420,9 @@ class TTreeFunctionalMethods(uproot.tree.TTreeMethods):
         raise NotImplementedError
 
     def newarray(self):
+        raise NotImplementedError
+
+    def filter(self):
         raise NotImplementedError
 
     def aggregate(self):
