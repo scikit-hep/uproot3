@@ -285,10 +285,81 @@ class TTreeMethods(object):
         else:
             return True
 
-    def clusters(self):
-        # need to find an example of a file that has clusters!
-        # yield as a (start, stop) generator
-        raise NotImplementedError
+    def clusters(self, branches=None, entrystart=None, entrystop=None, strict=True):
+        if branches is None:
+            active = self.allvalues()
+            if len(active) == 0:
+                raise ValueError("tree contains no branches")
+
+        elif isinstance(branches, string_types):
+            branches = _bytesid(branches)
+            active = self.allvalues(lambda name: name == branches)
+            if len(active) == 0:
+                raise KeyError("could not find branch {0}".format(repr(branches)))
+
+        elif isinstance(branches, TBranchMethods):
+            active = [branches]
+
+        else:
+            try:
+                assert all(isinstance(x, string_types + (TBranchMethods,)) for x in branches)
+            except (TypeError, AssertionError):
+                raise TypeError("branches must be None, a string, a branch, or an iterable of strings or branches")
+
+            active = [x for x in branches if isinstance(x, TBranchMethods)]
+            branches = [_bytesid(x) for x in branches if isinstance(x, string_types)]
+            for branch in self.allvalues():
+                if branch.name in branches:
+                    active.append(branch)
+                    branches.remove(branch.name)
+            if len(branches) > 0:
+                raise KeyError("could not find the following branches: {0}".format(", ".join(repr(x) for x in branches)))
+
+        class BranchCursor(object):
+            def __init__(self, branch):
+                self.branch = branch
+                self.basketstart = 0
+                self.basketstop = 0
+
+            @property
+            def entrystart(self):
+                return self.branch.basket_entrystart(self.basketstart)
+
+            @property
+            def entrystop(self):
+                return self.branch.basket_entrystop(self.basketstop)
+
+        cursors = [BranchCursor(x) for x in active]
+
+        # everybody starts at the same entry number; if there is no such place before someone runs out of baskets, there will be an exception
+        leadingstart = max(cursor.entrystart for cursor in cursors)
+        while not all(cursor.entrystart == leadingstart for cursor in cursors):
+            for cursor in cursors:
+                while cursor.entrystart < leadingstart:
+                    cursor.basketstart += 1
+                    cursor.basketstop += 1
+            leadingstart = max(cursor.entrystart for cursor in cursors)
+
+        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+
+        while any(cursor.basketstop < cursor.branch.numbaskets for cursor in cursors):
+            leadingstop = max(cursor.entrystop for cursor in cursors)
+            for cursor in cursors:
+                while cursor.entrystop < leadingstop:
+                    cursor.basketstop += 1
+
+            if all(cursor.entrystop == leadingstop for cursor in cursors):
+                if strict:
+                    if entrystart <= leadingstart and leadingstop <= entrystop:
+                        yield leadingstart, leadingstop
+                else:
+                    if entrystart < leadingstop and leadingstart < entrystop:
+                        yield leadingstart, leadingstop
+
+                leadingstart = leadingstop
+                for cursor in cursors:
+                    cursor.basketstart = cursor.basketstop
+                    cursor.basketstop += 1
 
     def array(self, branch, interpretation=None, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         return self.get(branch).array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
