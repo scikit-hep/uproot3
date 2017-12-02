@@ -172,7 +172,7 @@ class ChainStep(object):
             import numba as nb
             return lambda f: nb.jit(**numba)(f)
 
-    def _iterateapply(self, dictnames, compiled, branchnames, entryvars, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
+    def _iterateapply(self, dictnames, compiled, branchnames, entryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
         if outputtype == namedtuple:
             for dictname in dictnames:
                 if not self._isidentifier(dictname):
@@ -190,7 +190,7 @@ class ChainStep(object):
                 return outputtype(*results)
 
         excinfos, oldstart, oldstop = None, None, None
-        for start, stop, arrays in self.source._iterate(branchnames, len(entryvars) > 0, interpretations, entrystepsize, entrystart, entrystop, cache, basketcache, keycache, readexecutor):
+        for start, stop, arrays in self.source._iterate(branchnames, len(entryvars) > 0, interpretations, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor):
             if excinfos is not None:
                 for excinfo in excinfos:
                     _delayedraise(excinfo)
@@ -221,7 +221,7 @@ class ChainStep(object):
                 _delayedraise(excinfo)
             yield oldstart, oldstop, finish(results)
 
-    def iterate_newarrays(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+    def iterate_newarrays(self, exprs, entrysteps=None, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         compilefcn = self._compilefcn(numba)
         define = Define(self, exprs)
 
@@ -234,7 +234,7 @@ class ChainStep(object):
         for dictname in define.order:
             compiled.append(define._argfcn(dictname, branchnames, entryvar, aliases, compilefcn))
 
-        iterator = self._iterateapply(define.order, compiled, branchnames, entryvars, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
+        iterator = self._iterateapply(define.order, compiled, branchnames, entryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
         if reportentries:
             for start, stop, results in iterator:
                 yield start, stop, results
@@ -242,7 +242,7 @@ class ChainStep(object):
             for start, stop, results in iterator:
                 yield results
 
-    def newarrays(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+    def newarrays(self, exprs, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         entrystart, entrystop = self.source.tree._normalize_entrystartstop(entrystart, entrystop)
         outarrays = [(dictname, numpy.empty(entrystop - entrystart, dtype=self.NEW_ARRAY_DTYPE)) for fcn, requirements, cacheid, dictname in self._tofcns(exprs)]
 
@@ -264,7 +264,7 @@ class ChainStep(object):
         for dictname in define.order:
             compiled.append(define._argfcn(dictname, branchnames, entryvar, aliases, compilefcn))
 
-        for start, stop, results in self._iterateapply(define.order, compiled, branchnames, entryvars, entrystepsize, entrystart, entrystop, aliases, interpretations, entryvar, tuple, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
+        for start, stop, results in self._iterateapply(define.order, compiled, branchnames, entryvars, None, entrystart, entrystop, aliases, interpretations, entryvar, tuple, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
             for (dictname, outarray), result in zip(outarrays, results):
                 outarray[start:stop] = result
 
@@ -275,14 +275,14 @@ class ChainStep(object):
         else:
             return outputtype(*[outarray for name, outarray in outarrays])
 
-    def newarray(self, expr, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+    def newarray(self, expr, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         if isinstance(expr, parsable):
             pass
         elif callable(expr) and hasattr(expr, "__code__"):
             pass
         else:
             raise TypeError("expr must be a single string or function")
-        return self.newarrays(expr, entrystepsize=entrystepsize, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=tuple, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)[0]
+        return self.newarrays(expr, entrysteps=None, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=tuple, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)[0]
 
     def define(self, exprs={}, **more_exprs):
         return Define._create(self, exprs, **more_exprs)
@@ -348,7 +348,7 @@ class ChainSource(ChainStep):
     def __init__(self, tree):
         self.tree = tree
 
-    def _iterate(self, branchnames, hasentryvar, interpretations, entrystepsize, entrystart, entrystop, cache, basketcache, keycache, readexecutor):
+    def _iterate(self, branchnames, hasentryvar, interpretations, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor):
         branches = {}
         for branchname in branchnames:
             if branchname in interpretations:
@@ -356,7 +356,7 @@ class ChainSource(ChainStep):
             else:
                 branches[branchname] = uproot.interp.auto.interpret(self.tree[branchname])
 
-        for entrystart, entrystop, arrays in self.tree.iterate(entrystepsize = entrystepsize,
+        for entrystart, entrystop, arrays in self.tree.iterate(entrysteps = entrysteps,
                                                                branches = branches,
                                                                outputtype = list,
                                                                reportentries = True,
@@ -399,14 +399,14 @@ class TTreeFunctionalMethods(uproot.tree.TTreeMethods):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (uproot.tree.TTreeMethods.__metaclass__,), {})
 
-    def iterate_newarrays(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        return ChainSource(self).iterate_newarrays(exprs, entrystepsize=entrystepsize, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, reportentries=reportentries, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
+    def iterate_newarrays(self, exprs, entrysteps=None, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        return ChainSource(self).iterate_newarrays(exprs, entrysteps=entrysteps, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, reportentries=reportentries, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
 
-    def newarrays(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        return ChainSource(self).newarrays(exprs, entrystepsize=entrystepsize, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
+    def newarrays(self, exprs, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        return ChainSource(self).newarrays(exprs, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
 
-    def newarray(self, expr, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        return ChainSource(self).newarrays(expr, entrystepsize=entrystepsize, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
+    def newarray(self, expr, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        return ChainSource(self).newarrays(expr, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
 
     def filter(self):
         raise NotImplementedError
