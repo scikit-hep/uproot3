@@ -434,8 +434,8 @@ tree_fragments = {
         entry at which reading stops (exclusive). If ``None`` *(default)*, stop at the end of the branch.""",
 
     # entrysteps
-    "entrysteps": u"""entrysteps : positive int
-        number of entries to provide in each step of iteration except the last in each file (unless it exactly divides the number of entries in the file). Default is 100000, which is about 1 MB of double-precision array.""",
+    "entrysteps": u"""entrysteps : ``None``, positive int, or iterable of *(int, int)* pairs
+        if ``None`` *(default)*, iterate in steps of TTree clusters (number of entries for which all branches' baskets align); if an integer, iterate in steps of equal numbers of entries (except at the end of a file); otherwise, iterate in explicit, user-specified *(start, stop)* intervals ("start" is inclusive and "stop" is exclusive).""",
 
     # branch
     "branch": u"""branch : str
@@ -502,6 +502,8 @@ tree_fragments = {
 
 uproot.tree.iterate.__doc__ = \
 u"""Opens a series of ROOT files (local or remote), yielding the same number of entries from all selected branches in each step.
+
+    Depending on the "entrysteps" parameter, the number of entries in one step may differ from the number of entries in the next step, but in every step, the same number of entries is retrieved from all *baskets.*
 
     All but the first two parameters are identical to :py:meth:`uproot.tree.TreeMethods.iterate`.
 
@@ -882,6 +884,8 @@ u"""Create many lazy arrays.
 
 _method(uproot.tree.TTreeMethods.iterate).__doc__ = \
 u"""Iterate over many arrays at once, yielding the same number of entries from all selected branches in each step.
+
+    Depending on the "entrysteps" parameter, the number of entries in one step may differ from the number of entries in the next step, but in every step, the same number of entries is retrieved from all *baskets.*
 
     Parameters
     ----------
