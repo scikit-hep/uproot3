@@ -275,6 +275,15 @@ class ChainStep(object):
         else:
             return outputtype(*[outarray for name, outarray in outarrays])
 
+    def newarray(self, expr, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        if isinstance(expr, parsable):
+            pass
+        elif callable(expr) and hasattr(expr, "__code__"):
+            pass
+        else:
+            raise TypeError("expr must be a single string or function")
+        return self.newarrays(expr, entrystepsize=entrystepsize, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=tuple, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)[0]
+
     def define(self, exprs={}, **more_exprs):
         return Define._create(self, exprs, **more_exprs)
 
@@ -396,8 +405,8 @@ class TTreeFunctionalMethods(uproot.tree.TTreeMethods):
     def newarrays(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         return ChainSource(self).newarrays(exprs, entrystepsize=entrystepsize, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
 
-    def newarray(self):
-        raise NotImplementedError
+    def newarray(self, expr, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        return ChainSource(self).newarrays(expr, entrystepsize=entrystepsize, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
 
     def filter(self):
         raise NotImplementedError
