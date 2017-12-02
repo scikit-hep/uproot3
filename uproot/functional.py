@@ -99,9 +99,11 @@ class ChainStep(object):
             body[-1].lineno = body[-1].value.lineno
             body[-1].col_offset = body[-1].value.col_offset
 
-        module = ast.parse("def fcn({0}): pass".format(", ".join(sorted(insymbols))))
+        names = self._generatenames(["fcn"], insymbols)
+
+        module = ast.parse("def {fcn}({args}): pass".format(fcn=names["fcn"], args=", ".join(sorted(insymbols))))
         module.body[0].body = body
-        return self._makefcn(compile(module, string, "exec"), math.__dict__, "fcn", string)
+        return self._makefcn(compile(module, string, "exec"), math.__dict__, names["fcn"], string)
 
     def _tofcn(self, expr):
         if isinstance(expr, parsable):
@@ -197,7 +199,7 @@ class ChainStep(object):
             import numba as nb
             return lambda f: nb.njit(**numba)(f)
 
-    def iterate_arrayapply(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+    def _iterateapply(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         compilefcn = self._compilefcn(numba)
 
         fcns = self._tofcns(exprs)
@@ -252,18 +254,7 @@ class ChainStep(object):
                 _delayedraise(excinfo)
             yield finish(results)
 
-    def arrayapply(self, exprs, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        entrystart, entrystop = self.source.tree._normalize_entrystartstop(entrystart, entrystop)
-        if entrystop <= entrystart:
-            raise ValueError("empty entry range: from {0} (inclusive) to {1} (exclusive)".format(entrystart, entrystop))
-        entrystepsize = entrystop - entrystart
-        for results in self.iterate_arrayapply(exprs, entrystepsize=entrystepsize, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba):
-            return results
-
-    def iterate_apply(self, exprs, dtype=numpy.float64, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        if not isinstance(dtype, numpy.dtype):
-            dtype = numpy.dtype(dtype)
-
+    def iterate_newarrays(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         compilefcn = self._compilefcn(numba)
 
         fcns = []
@@ -271,7 +262,7 @@ class ChainStep(object):
             if len(requirements) == 0:
                 newfcn = compilefcn(fcn)
             else:
-                names = self._generatenames(["afcn", "fcn", "out", "empty", "dtype", "i"] + [req + "_i" for req in requirements], requirements)
+                names = self._generatenames(["afcn", "out", "empty", "dtype", "i", "fcn"] + [req + "_i" for req in requirements], requirements)
                 source = """
 def {afcn}({params}):
     {out} = {empty}(len({one}), {dtype})
@@ -282,26 +273,26 @@ def {afcn}({params}):
 """.format(afcn = names["afcn"],
            params = ", ".join(requirements),
            out = names["out"],
-           one = requirements[0],
            empty = names["empty"],
+           one = requirements[0],
            dtype = names["dtype"],
            i = names["i"],
            itemdefs = "\n        ".join("{0} = {1}[{2}]".format(names[req + "_i"], req, names["i"]) for req in requirements),
            fcn = names["fcn"],
            items = ", ".join(names[req + "_i"] for req in requirements))
 
-                newfcn = self._makefcn(compile(ast.parse(source), dictname, "exec"), {"fcn": compilefcn(fcn), "empty": numpy.empty, "dtype": dtype}, names["afcn"], source)
+                newfcn = self._makefcn(compile(ast.parse(source), dictname, "exec"), {"fcn": compilefcn(fcn), "empty": numpy.empty, "dtype": numpy.dtype(numpy.float64)}, names["afcn"], source)
 
             fcns.append((newfcn, requirements, cacheid, dictname))
             
         exprs = ChainStep._Reuse(fcns)
 
-        return self.iterate_arrayapply(exprs, entrystepsize=entrystepsize, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
+        return self._iterateapply(exprs, entrystepsize=entrystepsize, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
     
-    def arraydefine(self, exprs={}, **more_exprs):
-        return ArrayDefine(self, exprs, **more_exprs)
+    def define(self, exprs={}, **more_exprs):
+        return Define(self, exprs, **more_exprs)
 
-class ArrayDefine(ChainStep):
+class Define(ChainStep):
     def __init__(self, previous, exprs={}, **more_exprs):
         self.previous = previous
 
@@ -328,17 +319,41 @@ class ArrayDefine(ChainStep):
 
     def _argfcn(self, requirement, branchnames, entryvar, aliases, compilefcn):
         if requirement in self.requirements:
+            if len(self.requirements[requirement]) == 0:
+                newfcn = self.fcn[requirement]
+            else:
+                names = self._generatenames(["afcn", "out", "empty", "dtype", "i", "fcn"] + [req + "_i" for req in self.requirements[requirement]], self.requirements[requirement])
+                source1 = """
+def {afcn}({params}):
+    {out} = {empty}(len({one}), {dtype})
+    for {i} in range(len({one})):
+        {itemdefs}
+        {out}[{i}] = {fcn}({items})
+    return {out}
+""".format(afcn = names["afcn"],
+           params = ", ".join(self.requirements[requirement]),
+           out = names["out"],
+           empty = names["empty"],
+           one = self.requirements[requirement][0],
+           dtype = names["dtype"],
+           i = names["i"],
+           itemdefs = "\n        ".join("{0} = {1}[{2}]".format(names[req + "_i"], req, names["i"]) for req in self.requirements[requirement]),
+           fcn = names["fcn"],
+           items = ", ".join(names[req + "_i"] for req in self.requirements[requirement]))
+
+                newfcn = self._makefcn(compile(ast.parse(source1), requirement, "exec"), {"fcn": compilefcn(self.fcn[requirement]), "empty": numpy.empty, "dtype": numpy.dtype(numpy.float64)}, names["afcn"], source1)
+
             argstrs = []
             argfcns = []
-            env = {"fcn": compilefcn(self.fcn[requirement])}
+            env = {"fcn": compilefcn(newfcn)}
             for i, req in enumerate(self.requirements[requirement]):
                 argstrs.append("arg{0}(arrays)".format(i))
                 argfcn = self.previous._argfcn(req, branchnames, entryvar, aliases, compilefcn)
                 argfcns.append(argfcn)
                 env["arg{0}".format(i)] = argfcn
 
-            source = "def cfcn(arrays): return fcn({0})".format(", ".join(argstrs))
-            return compilefcn(self._makefcn(compile(ast.parse(source), str(requirement), "exec"), env, "cfcn", source))
+            source2 = "def cfcn(arrays): return fcn({0})".format(", ".join(argstrs))
+            return compilefcn(self._makefcn(compile(ast.parse(source2), str(requirement), "exec"), env, "cfcn", source2))
 
         else:
             return self.previous._argfcn(requirement, branchnames, entryvar, aliases, compilefcn)
@@ -398,31 +413,25 @@ class TTreeFunctionalMethods(uproot.tree.TTreeMethods):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (uproot.tree.TTreeMethods.__metaclass__,), {})
 
-    def iterate_arrayapply(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        return ChainSource(self).iterate_arrayapply(exprs, entrystepsize=entrystepsize, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
+    def iterate_newarrays(self, exprs, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        return ChainSource(self).iterate_newarrays(exprs, entrystepsize=entrystepsize, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
 
-    def arrayapply(self, exprs, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        return ChainSource(self).arrayapply(exprs, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
-
-    def iterate_apply(self, exprs, dtype=numpy.float64, entrystepsize=100000, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        return ChainSource(self).iterate_apply(exprs, dtype=dtype, entrystepsize=entrystepsize, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
-
-    def apply(self):
+    def newarrays(self):
         raise NotImplementedError
 
-    def arrayhist(self, numbins, low, high, expr):
+    def newarray(self):
+        raise NotImplementedError
+
+    def aggregate(self):
         raise NotImplementedError
 
     def hist(self, numbins, low, high, expr):
         raise NotImplementedError
 
-    def arraydefine(self, exprs={}, **more_exprs):
-        return ChainSource(self).arraydefine(exprs, **more_exprs)
+    def define(self, exprs={}, **more_exprs):
+        return ChainSource(self).define(exprs, **more_exprs)
 
-    def define(self):
-        raise NotImplementedError
-
-    def bundle(self):
+    def fork(self):
         raise NotImplementedError
 
 uproot.rootio.methods["TTree"] = TTreeFunctionalMethods
