@@ -99,7 +99,7 @@ class ChainStep(object):
             body[-1].lineno = body[-1].value.lineno
             body[-1].col_offset = body[-1].value.col_offset
 
-        names = self._generatenames(["fcn"], insymbols)
+        names = self._generatenames(["fcn"], insymbols.union(outsymbols))
 
         module = ast.parse("def {fcn}({args}): pass".format(fcn=names["fcn"], args=", ".join(sorted(insymbols))))
         module.body[0].body = body
@@ -319,41 +319,25 @@ class Define(ChainStep):
 
     def _argfcn(self, requirement, branchnames, entryvar, aliases, compilefcn):
         if requirement in self.requirements:
-            if len(self.requirements[requirement]) == 0:
-                newfcn = self.fcn[requirement]
-            else:
-                names = self._generatenames(["afcn", "out", "empty", "dtype", "i", "fcn"] + [req + "_i" for req in self.requirements[requirement]], self.requirements[requirement])
-                source1 = """
-def {afcn}({params}):
-    {out} = {empty}(len({one}), {dtype})
-    for {i} in range(len({one})):
-        {itemdefs}
-        {out}[{i}] = {fcn}({items})
-    return {out}
-""".format(afcn = names["afcn"],
-           params = ", ".join(self.requirements[requirement]),
-           out = names["out"],
-           empty = names["empty"],
-           one = self.requirements[requirement][0],
-           dtype = names["dtype"],
-           i = names["i"],
-           itemdefs = "\n        ".join("{0} = {1}[{2}]".format(names[req + "_i"], req, names["i"]) for req in self.requirements[requirement]),
-           fcn = names["fcn"],
-           items = ", ".join(names[req + "_i"] for req in self.requirements[requirement]))
-
-                newfcn = self._makefcn(compile(ast.parse(source1), requirement, "exec"), {"fcn": compilefcn(self.fcn[requirement]), "empty": numpy.empty, "dtype": numpy.dtype(numpy.float64)}, names["afcn"], source1)
-
-            argstrs = []
-            argfcns = []
-            env = {"fcn": compilefcn(newfcn)}
+            env = {"fcn": compilefcn(self.fcn[requirement]), "empty": numpy.empty, "dtype": numpy.dtype(numpy.float64)}
+            itemdefs = []
+            itemis = []
             for i, req in enumerate(self.requirements[requirement]):
-                argstrs.append("arg{0}(start, stop, arrays)".format(i))
                 argfcn = self.previous._argfcn(req, branchnames, entryvar, aliases, compilefcn)
-                argfcns.append(argfcn)
                 env["arg{0}".format(i)] = argfcn
+                itemdefs.append("item{0} = arg{0}(start, stop, arrays)".format(i))
+                itemis.append("item{0}[i]".format(i))
 
-            source2 = "def cfcn(start, stop, arrays): return fcn({0})".format(", ".join(argstrs))
-            return compilefcn(self._makefcn(compile(ast.parse(source2), str(requirement), "exec"), env, "cfcn", source2))
+            source = """
+def afcn(start, stop, arrays):
+    {itemdefs}
+    out = empty(stop - start, dtype)
+    for i in range(stop - start):
+        out[i] = fcn({itemis})
+    return out
+""".format(itemdefs="\n    ".join(itemdefs), itemis=", ".join(itemis))
+
+            return compilefcn(self._makefcn(compile(ast.parse(source), requirement, "exec"), env, "afcn", source))
 
         else:
             return self.previous._argfcn(requirement, branchnames, entryvar, aliases, compilefcn)
