@@ -141,11 +141,11 @@ class ChainStep(object):
             else:
                 return [self._tofcn(x) + ((x, x) if isinstance(x, parsable) else (id(x), getattr(x, "__name__", None))) for i, x in enumerate(exprs)]
 
-    def _satisfy(self, requirement, branchnames, entryvars, entryvar, aliases):
-        self.previous._satisfy(requirement, branchnames, entryvars, entryvar, aliases)
+    def _satisfy(self, requirement, branchnames, intermediatenames, entryvars, entryvar, aliases):
+        self.previous._satisfy(requirement, branchnames, intermediatenames, entryvars, entryvar, aliases)
 
-    def _argfcn(self, requirement, branchnames, entryvar, aliases, compilefcn):
-        return self.previous._argfcn(requirement, branchnames, entryvar, aliases, compilefcn)
+    def _argfcn(self, requirement, branchnames, intermediatenames, entryvar, aliases, compilefcn):
+        return self.previous._argfcn(requirement, branchnames, intermediatenames, entryvar, aliases, compilefcn)
 
     def _isidentifier(self, dictname):
         try:
@@ -172,7 +172,7 @@ class ChainStep(object):
             import numba as nb
             return lambda f: nb.jit(**numba)(f)
 
-    def _iterateapply(self, dictnames, compiled, branchnames, entryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
+    def _iterateapply(self, dictnames, compiled, branchnames, intermediatenames, entryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
         if outputtype == namedtuple:
             for dictname in dictnames:
                 if not self._isidentifier(dictname):
@@ -190,17 +190,18 @@ class ChainStep(object):
                 return outputtype(*results)
 
         excinfos, oldstart, oldstop = None, None, None
-        for start, stop, arrays in self.source._iterate(branchnames, len(entryvars) > 0, interpretations, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor):
+        for start, stop, arrays in self.source._iterate(branchnames, intermediatenames, len(entryvars) > 0, interpretations, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor):
             if excinfos is not None:
                 for excinfo in excinfos:
                     _delayedraise(excinfo)
                 yield oldstart, oldstop, finish(results)
 
             results = [None] * len(compiled)
-            arrays = tuple(arrays)
 
             def calculate(i):
                 try:
+                    # for intermediate in reversed(intermediatenames):
+                    #     intermediate(start, stop, arrays)
                     out = compiled[i](start, stop, arrays)
                 except:
                     return sys.exc_info()
@@ -223,18 +224,19 @@ class ChainStep(object):
 
     def iterate_newarrays(self, exprs, entrysteps=None, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         compilefcn = self._compilefcn(numba)
-        define = Define(self, exprs)
+        intermediate = Intermediate(self, exprs)
 
         branchnames = []
+        intermediatenames = []
         entryvars = set()
-        for dictname in define.order:
-            define._satisfy(dictname, branchnames, entryvars, entryvar, aliases)
+        for dictname in intermediate.order:
+            intermediate._satisfy(dictname, branchnames, intermediatenames, entryvars, entryvar, aliases)
 
         compiled = []
-        for dictname in define.order:
-            compiled.append(define._argfcn(dictname, branchnames, entryvar, aliases, compilefcn))
+        for dictname in intermediate.order:
+            compiled.append(intermediate._argfcn(dictname, branchnames, intermediatenames, entryvar, aliases, compilefcn))
 
-        iterator = self._iterateapply(define.order, compiled, branchnames, entryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
+        iterator = self._iterateapply(intermediate.order, compiled, branchnames, intermediatenames, entryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
         if reportentries:
             for start, stop, results in iterator:
                 yield start, stop, results
@@ -253,18 +255,19 @@ class ChainStep(object):
             outputtype = namedtuple("Arrays", dictnames)
 
         compilefcn = self._compilefcn(numba)
-        define = Define(self, exprs)
+        intermediate = Intermediate(self, exprs)
 
         branchnames = []
+        intermediatenames = []
         entryvars = set()
-        for dictname in define.order:
-            define._satisfy(dictname, branchnames, entryvars, entryvar, aliases)
+        for dictname in intermediate.order:
+            intermediate._satisfy(dictname, branchnames, intermediatenames, entryvars, entryvar, aliases)
 
         compiled = []
-        for dictname in define.order:
-            compiled.append(define._argfcn(dictname, branchnames, entryvar, aliases, compilefcn))
+        for dictname in intermediate.order:
+            compiled.append(intermediate._argfcn(dictname, branchnames, intermediatenames, entryvar, aliases, compilefcn))
 
-        for start, stop, results in self._iterateapply(define.order, compiled, branchnames, entryvars, None, entrystart, entrystop, aliases, interpretations, entryvar, tuple, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
+        for start, stop, results in self._iterateapply(intermediate.order, compiled, branchnames, intermediatenames, entryvars, None, entrystart, entrystop, aliases, interpretations, entryvar, tuple, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
             for (dictname, outarray), result in zip(outarrays, results):
                 outarray[start:stop] = result
 
@@ -284,10 +287,10 @@ class ChainStep(object):
             raise TypeError("expr must be a single string or function")
         return self.newarrays(expr, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=tuple, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)[0]
 
-    def define(self, exprs={}, **more_exprs):
-        return Define._create(self, exprs, **more_exprs)
+    def intermediate(self, exprs={}, **more_exprs):
+        return Intermediate._create(self, exprs, **more_exprs)
 
-class Define(ChainStep):
+class Intermediate(ChainStep):
     @staticmethod
     def _create(previous, exprs={}, **more_exprs):
         if not isinstance(exprs, dict):
@@ -295,7 +298,7 @@ class Define(ChainStep):
         exprs = dict(exprs)
         exprs.update(more_exprs)
 
-        out = Define(previous, exprs)
+        out = Intermediate(previous, exprs)
 
         if any(not isinstance(x, parsable) or not out._isidentifier(x) for x in exprs):
             raise TypeError("all names in exprs must be identifiers")
@@ -312,20 +315,25 @@ class Define(ChainStep):
             self.requirements[dictname] = requirements
             self.order.append(dictname)
 
-    def _satisfy(self, requirement, branchnames, entryvars, entryvar, aliases):
+    def _satisfy(self, requirement, branchnames, intermediatenames, entryvars, entryvar, aliases):
         if requirement in self.requirements:
-            for req in self.requirements[requirement]:
-                self.previous._satisfy(req, branchnames, entryvars, entryvar, aliases)
-        else:
-            self.previous._satisfy(requirement, branchnames, entryvars, entryvar, aliases)
+            intermediatenames.append(requirement)
 
-    def _argfcn(self, requirement, branchnames, entryvar, aliases, compilefcn):
+            for req in self.requirements[requirement]:
+                self.previous._satisfy(req, branchnames, intermediatenames, entryvars, entryvar, aliases)
+
+        else:
+            self.previous._satisfy(requirement, branchnames, intermediatenames, entryvars, entryvar, aliases)
+
+    def _argfcn(self, requirement, branchnames, intermediatenames, entryvar, aliases, compilefcn):
         if requirement in self.requirements:
+            # HERE
+
             env = {"fcn": compilefcn(self.fcn[requirement]), "empty": numpy.empty, "dtype": self.NEW_ARRAY_DTYPE}
             itemdefs = []
             itemis = []
             for i, req in enumerate(self.requirements[requirement]):
-                argfcn = self.previous._argfcn(req, branchnames, entryvar, aliases, compilefcn)
+                argfcn = self.previous._argfcn(req, branchnames, intermediatenames, entryvar, aliases, compilefcn)
                 env["arg{0}".format(i)] = argfcn
                 itemdefs.append("item{0} = arg{0}(start, stop, arrays)".format(i))
                 itemis.append("item{0}[i]".format(i))
@@ -342,13 +350,13 @@ def afcn(start, stop, arrays):
             return compilefcn(self._makefcn(compile(ast.parse(source), requirement, "exec"), env, "afcn", source))
 
         else:
-            return self.previous._argfcn(requirement, branchnames, entryvar, aliases, compilefcn)
+            return self.previous._argfcn(requirement, branchnames, intermediatenames, entryvar, aliases, compilefcn)
 
 class ChainSource(ChainStep):
     def __init__(self, tree):
         self.tree = tree
 
-    def _iterate(self, branchnames, hasentryvar, interpretations, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor):
+    def _iterate(self, branchnames, intermediatenames, hasentryvar, interpretations, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor):
         branches = {}
         for branchname in branchnames:
             if branchname in interpretations:
@@ -367,15 +375,20 @@ class ChainSource(ChainStep):
                                                                keycache = keycache,
                                                                executor = readexecutor,
                                                                blocking = True):
+
+            for i in range(len(intermediatenames)):
+                arrays.append(numpy.empty(entrystop - entrystart, dtype=self.NEW_ARRAY_DTYPE))
+
             if hasentryvar:
                 arrays.append(numpy.arange(entrystart, entrystop))
-            yield entrystart, entrystop, arrays
+
+            yield entrystart, entrystop, tuple(arrays)
 
     @property
     def source(self):
         return self
 
-    def _satisfy(self, requirement, branchnames, entryvars, entryvar, aliases):
+    def _satisfy(self, requirement, branchnames, intermediatenames, entryvars, entryvar, aliases):
         if requirement == entryvar:
             entryvars.add(None)
 
@@ -387,9 +400,9 @@ class ChainSource(ChainStep):
                 index = len(branchnames)
                 branchnames.append(branchname)
 
-    def _argfcn(self, requirement, branchnames, entryvar, aliases, compilefcn):
+    def _argfcn(self, requirement, branchnames, intermediatenames, entryvar, aliases, compilefcn):
         if requirement == entryvar:
-            index = len(branchnames)
+            index = len(branchnames) + len(intermediatenames)
         else:
             branchname = aliases.get(requirement, requirement)
             index = branchnames.index(branchname)
@@ -417,8 +430,8 @@ class TTreeFunctionalMethods(uproot.tree.TTreeMethods):
     def hist(self, numbins, low, high, expr):
         raise NotImplementedError
 
-    def define(self, exprs={}, **more_exprs):
-        return ChainSource(self).define(exprs, **more_exprs)
+    def intermediate(self, exprs={}, **more_exprs):
+        return ChainSource(self).intermediate(exprs, **more_exprs)
 
     def fork(self):
         raise NotImplementedError
