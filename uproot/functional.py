@@ -355,6 +355,9 @@ class Define(ChainStep):
 
     def _satisfy(self, requirement, sourcenames, intermediates, entryvars, entryvar, aliases):
         if requirement in self.fcn:
+            if (self, requirement) not in intermediates:
+                intermediates.append((self, requirement))
+
             for req in self.requirements[requirement]:
                 self.previous._satisfy(req, sourcenames, intermediates, entryvars, entryvar, aliases)
 
@@ -363,9 +366,22 @@ class Define(ChainStep):
 
     def _argfcn(self, requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache):
         if requirement in self.fcn:
-            pass # HERE
+            env = {"fcn": compilefcn(self.fcn[requirement])}
+            args = []
+            for i, req in enumerate(self.requirements[requirement]):
+                argfcn = self.previous._argfcn(req, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache)
+                env["arg{0}".format(i)] = argfcn
+                args.append("arg{0}(arrays)".format(i))
 
+            source = """
+def afcn(arrays):
+    return fcn({args})
+""".format(args = ", ".join(args))
 
+            key = (id(self),)
+            if key not in fcncache:
+                fcncache[key] = compilefcn(self._makefcn(compile(ast.parse(source), requirement, "exec"), env, "afcn", source))
+            return fcncache[key]
 
 class Intermediate(ChainStep):
     @staticmethod
@@ -438,12 +454,14 @@ class Intermediate(ChainStep):
                     pass   # provided by source
                 else:
                     node = intermediate.previous
-                    while not isinstance(node, Intermediate) or name not in node.fcn:
+                    while not isinstance(node, (Intermediate, Define)) or name not in node.fcn:
                         node = node.previous
                     out.add((node, name))
             return out
         
-        return list(topological_sort([((intermediate, name), dependencies(intermediate, name)) for intermediate, name in intermediates]))
+        preprocessed = [((intermediate, name), dependencies(intermediate, name)) for intermediate, name in intermediates]
+        sorted = topological_sort(preprocessed)
+        return [(intermediate, name) for intermediate, name in sorted if isinstance(intermediate, Intermediate)]
 
     def _argfcn(self, requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache):
         if requirement in self.fcn:
