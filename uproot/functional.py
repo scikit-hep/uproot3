@@ -200,21 +200,22 @@ class ChainStep(object):
             def finish(results):
                 return outputtype(*results)
 
-        interleave = isinstance(self.source, ChainOrigin)
+        interleave = readexecutor is not None and calcexecutor is not None and isinstance(self.source, ChainOrigin)
 
-        excinfos, oldstart, oldstop, oldnumentries = None, None, None, None
+        await, oldstart, oldstop, oldnumentries = None, None, None, None
         for start, stop, numentries, arrays in self.source._iterate(sourcenames, compiledintermediates, len(entryvars) > 0, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
-            if interleave and excinfos is not None:
-                for excinfo in excinfos:
-                    _delayedraise(excinfo)
+            if interleave and await is not None:
+                await()
                 yield oldstart, oldstop, oldnumentries, finish(results)
 
-            results = [None] * len(compiled)
+            # do the intermediates synchronously because they have a dependency order
+            for compiledintermediate in compiledintermediates:
+                compiledintermediate(arrays)
 
+            # do the subexpressions asynchronously and in parallel
+            results = [None] * len(compiled)
             def calculate(i):
                 try:
-                    for compiledintermediate in compiledintermediates:
-                        compiledintermediate(arrays)
                     out = compiled[i](arrays)
                 except:
                     return sys.exc_info()
@@ -225,19 +226,23 @@ class ChainStep(object):
             if calcexecutor is None:
                 for i in range(len(compiled)):
                     uproot.tree._delayedraise(calculate(i))
-                excinfos = ()
+                def await():
+                    pass
+
             else:
-                excinfos = calcexecutor.map(calculate, range(len(compiled)))
+                execinfos = calcexecutor.map(calculate, range(len(compiled)))
+                def await():
+                    for excinfo in excinfos:
+                        uproot.tree._delayedraise(excinfo)
+
             oldstart, oldstop, oldnumentries = start, stop, numentries
 
             if not interleave:
-                for excinfo in excinfos:
-                    _delayedraise(excinfo)
+                await()
                 yield oldstart, oldstop, oldnumentries, finish(results)
                 
-        if interleave and excinfos is not None:
-            for excinfo in excinfos:
-                _delayedraise(excinfo)
+        if interleave and await is not None:
+            await()
             yield oldstart, oldstop, oldnumentries, finish(results)
 
     def _prepare(self, exprs, aliases, entryvar, numba):
@@ -485,7 +490,7 @@ class Filter(ChainStep):
     def _iterate(self, sourcenames, compiledintermediates, hasentryvar, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
         prevnames = self.requirements + sourcenames
         maskindex = len(prevnames)
-        prevnames, prevcompiled, prevsourcenames, prevcompiledintermediates, preventryvars, compilefcn = self.previous._prepare(prevnames, aliases, entryvar, numba)
+        prevdictnames, prevcompiled, prevsourcenames, prevcompiledintermediates, preventryvars, compilefcn = self.previous._prepare(prevnames, aliases, entryvar, numba)
 
         env = {"fcn": compilefcn(self.fcn), "getmask": compilefcn(lambda arrays: arrays[maskindex])}
 
@@ -508,7 +513,7 @@ def afcn(arrays):
 
         afcn = compilefcn(self._makefcn(compile(ast.parse(source), "<filter>", "exec"), env, "afcn", source))
 
-        previterator = self.previous._iterateapply(prevnames, prevcompiled, prevsourcenames, prevcompiledintermediates, preventryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, tuple, cache, basketcache, keycache, readexecutor, calcexecutor)
+        previterator = self.previous._iterateapply(prevdictnames, prevcompiled, prevsourcenames, prevcompiledintermediates, preventryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, list, cache, basketcache, keycache, readexecutor, calcexecutor)
         for prevstart, prevstop, prevnumentries, prevresults in iterator:
             pass
 
