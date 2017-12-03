@@ -141,11 +141,11 @@ class ChainStep(object):
             else:
                 return [self._tofcn(x) + ((x, x) if isinstance(x, parsable) else (id(x), getattr(x, "__name__", None))) for i, x in enumerate(exprs)]
 
-    def _satisfy(self, requirement, branchnames, intermediatenames, entryvars, entryvar, aliases):
-        self.previous._satisfy(requirement, branchnames, intermediatenames, entryvars, entryvar, aliases)
+    def _satisfy(self, requirement, branchnames, intermediates, entryvars, entryvar, aliases):
+        self.previous._satisfy(requirement, branchnames, intermediates, entryvars, entryvar, aliases)
 
-    def _argfcn(self, requirement, branchnames, intermediatenames, entryvar, aliases, compilefcn):
-        return self.previous._argfcn(requirement, branchnames, intermediatenames, entryvar, aliases, compilefcn)
+    def _argfcn(self, requirement, branchnames, intermediates, entryvar, aliases, compilefcn):
+        return self.previous._argfcn(requirement, branchnames, intermediates, entryvar, aliases, compilefcn)
 
     def _isidentifier(self, dictname):
         try:
@@ -172,7 +172,7 @@ class ChainStep(object):
             import numba as nb
             return lambda f: nb.jit(**numba)(f)
 
-    def _iterateapply(self, dictnames, compiled, branchnames, intermediatenames, entryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
+    def _iterateapply(self, dictnames, compiled, branchnames, compiledintermediates, entryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
         if outputtype == namedtuple:
             for dictname in dictnames:
                 if not self._isidentifier(dictname):
@@ -190,7 +190,7 @@ class ChainStep(object):
                 return outputtype(*results)
 
         excinfos, oldstart, oldstop = None, None, None
-        for start, stop, arrays in self.source._iterate(branchnames, intermediatenames, len(entryvars) > 0, interpretations, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor):
+        for start, stop, arrays in self.source._iterate(branchnames, compiledintermediates, len(entryvars) > 0, interpretations, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor):
             if excinfos is not None:
                 for excinfo in excinfos:
                     _delayedraise(excinfo)
@@ -200,8 +200,8 @@ class ChainStep(object):
 
             def calculate(i):
                 try:
-                    # for intermediate in reversed(intermediatenames):
-                    #     intermediate(start, stop, arrays)
+                    for compiledintermediate in reversed(compiledintermediates):
+                        compiledintermediate(start, stop, arrays)
                     out = compiled[i](start, stop, arrays)
                 except:
                     return sys.exc_info()
@@ -227,16 +227,18 @@ class ChainStep(object):
         intermediate = Intermediate(self, exprs)
 
         branchnames = []
-        intermediatenames = []
+        intermediates = []
         entryvars = set()
         for dictname in intermediate.order:
-            intermediate._satisfy(dictname, branchnames, intermediatenames, entryvars, entryvar, aliases)
+            intermediate._satisfy(dictname, branchnames, intermediates, entryvars, entryvar, aliases)
 
         compiled = []
         for dictname in intermediate.order:
-            compiled.append(intermediate._argfcn(dictname, branchnames, intermediatenames, entryvar, aliases, compilefcn))
+            compiled.append(intermediate._argfcn(dictname, branchnames, intermediates, entryvar, aliases, compilefcn))
 
-        iterator = self._iterateapply(intermediate.order, compiled, branchnames, intermediatenames, entryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
+        compiledintermediates = [intermediate._compileintermediate(requirement, branchnames, intermediates, entryvar, aliases, compilefcn) for intermediate, requirement in intermediates]
+
+        iterator = self._iterateapply(intermediate.order, compiled, branchnames, compiledintermediates, entryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
         if reportentries:
             for start, stop, results in iterator:
                 yield start, stop, results
@@ -258,16 +260,18 @@ class ChainStep(object):
         intermediate = Intermediate(self, exprs)
 
         branchnames = []
-        intermediatenames = []
+        intermediates = []
         entryvars = set()
         for dictname in intermediate.order:
-            intermediate._satisfy(dictname, branchnames, intermediatenames, entryvars, entryvar, aliases)
+            intermediate._satisfy(dictname, branchnames, intermediates, entryvars, entryvar, aliases)
 
         compiled = []
         for dictname in intermediate.order:
-            compiled.append(intermediate._argfcn(dictname, branchnames, intermediatenames, entryvar, aliases, compilefcn))
+            compiled.append(intermediate._argfcn(dictname, branchnames, intermediates, entryvar, aliases, compilefcn))
 
-        for start, stop, results in self._iterateapply(intermediate.order, compiled, branchnames, intermediatenames, entryvars, None, entrystart, entrystop, aliases, interpretations, entryvar, tuple, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
+        compiledintermediates = [intermediate._compileintermediate(requirement, branchnames, intermediates, entryvar, aliases, compilefcn) for intermediate, requirement in intermediates]
+
+        for start, stop, results in self._iterateapply(intermediate.order, compiled, branchnames, compiledintermediates, entryvars, None, entrystart, entrystop, aliases, interpretations, entryvar, tuple, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
             for (dictname, outarray), result in zip(outarrays, results):
                 outarray[start:stop] = result
 
@@ -315,48 +319,77 @@ class Intermediate(ChainStep):
             self.requirements[dictname] = requirements
             self.order.append(dictname)
 
-    def _satisfy(self, requirement, branchnames, intermediatenames, entryvars, entryvar, aliases):
-        if requirement in self.requirements:
-            intermediatenames.append(requirement)
+    def __eq__(self, other):
+        return self is other
+
+    def _satisfy(self, requirement, branchnames, intermediates, entryvars, entryvar, aliases):
+        if requirement in self.fcn:
+            try:
+                intermediates.index((self, requirement))
+            except ValueError:
+                intermediates.append((self, requirement))
 
             for req in self.requirements[requirement]:
-                self.previous._satisfy(req, branchnames, intermediatenames, entryvars, entryvar, aliases)
+                self.previous._satisfy(req, branchnames, intermediates, entryvars, entryvar, aliases)
 
         else:
-            self.previous._satisfy(requirement, branchnames, intermediatenames, entryvars, entryvar, aliases)
+            self.previous._satisfy(requirement, branchnames, intermediates, entryvars, entryvar, aliases)
 
-    def _argfcn(self, requirement, branchnames, intermediatenames, entryvar, aliases, compilefcn):
-        if requirement in self.requirements:
-            # HERE
+    def _argfcn(self, requirement, branchnames, intermediates, entryvar, aliases, compilefcn):
+        if requirement in self.fcn:
+            index = intermediates.index((self, requirement))
+            return compilefcn(lambda start, stop, arrays: arrays[index])
 
-            env = {"fcn": compilefcn(self.fcn[requirement]), "empty": numpy.empty, "dtype": self.NEW_ARRAY_DTYPE}
-            itemdefs = []
-            itemis = []
-            for i, req in enumerate(self.requirements[requirement]):
-                argfcn = self.previous._argfcn(req, branchnames, intermediatenames, entryvar, aliases, compilefcn)
-                env["arg{0}".format(i)] = argfcn
-                itemdefs.append("item{0} = arg{0}(start, stop, arrays)".format(i))
-                itemis.append("item{0}[i]".format(i))
+#             env = {"fcn": compilefcn(self.fcn[requirement]), "empty": numpy.empty, "dtype": self.NEW_ARRAY_DTYPE}
+#             itemdefs = []
+#             itemis = []
+#             for i, req in enumerate(self.requirements[requirement]):
+#                 argfcn = self.previous._argfcn(req, branchnames, intermediates, entryvar, aliases, compilefcn)
+#                 env["arg{0}".format(i)] = argfcn
+#                 itemdefs.append("item{0} = arg{0}(start, stop, arrays)".format(i))
+#                 itemis.append("item{0}[i]".format(i))
 
-            source = """
+#             source = """
+# def afcn(start, stop, arrays):
+#     {itemdefs}
+#     out = empty(stop - start, dtype)
+#     for i in range(stop - start):
+#         out[i] = fcn({itemis})
+#     return out
+# """.format(itemdefs="\n    ".join(itemdefs), itemis=", ".join(itemis))
+
+#             return compilefcn(self._makefcn(compile(ast.parse(source), requirement, "exec"), env, "afcn", source))
+
+        else:
+            return self.previous._argfcn(requirement, branchnames, intermediates, entryvar, aliases, compilefcn)
+
+    def _compileintermediate(self, requirement, branchnames, intermediates, entryvar, aliases, compilefcn):
+        env = {"fcn": compilefcn(self.fcn[requirement]), "getout": self._argfcn(requirement, branchnames, intermediates, entryvar, aliases, compilefcn)}
+
+        itemdefs = []
+        itemis = []
+        for i, req in enumerate(self.requirements[requirement]):
+            argfcn = self.previous._argfcn(req, branchnames, intermediates, entryvar, aliases, compilefcn)
+            env["arg{0}".format(i)] = argfcn
+            itemdefs.append("item{0} = arg{0}(start, stop, arrays)".format(i))
+            itemis.append("item{0}[i]".format(i))
+
+        source = """
 def afcn(start, stop, arrays):
     {itemdefs}
-    out = empty(stop - start, dtype)
-    for i in range(stop - start):
+    out = getout(start, stop, arrays)
+    for i in range(len(out)):
         out[i] = fcn({itemis})
     return out
 """.format(itemdefs="\n    ".join(itemdefs), itemis=", ".join(itemis))
 
-            return compilefcn(self._makefcn(compile(ast.parse(source), requirement, "exec"), env, "afcn", source))
-
-        else:
-            return self.previous._argfcn(requirement, branchnames, intermediatenames, entryvar, aliases, compilefcn)
+        return compilefcn(self._makefcn(compile(ast.parse(source), requirement, "exec"), env, "afcn", source))
 
 class ChainSource(ChainStep):
     def __init__(self, tree):
         self.tree = tree
 
-    def _iterate(self, branchnames, intermediatenames, hasentryvar, interpretations, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor):
+    def _iterate(self, branchnames, compiledintermediates, hasentryvar, interpretations, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor):
         branches = {}
         for branchname in branchnames:
             if branchname in interpretations:
@@ -376,7 +409,7 @@ class ChainSource(ChainStep):
                                                                executor = readexecutor,
                                                                blocking = True):
 
-            for i in range(len(intermediatenames)):
+            for i in range(len(compiledintermediates)):
                 arrays.append(numpy.empty(entrystop - entrystart, dtype=self.NEW_ARRAY_DTYPE))
 
             if hasentryvar:
@@ -388,21 +421,20 @@ class ChainSource(ChainStep):
     def source(self):
         return self
 
-    def _satisfy(self, requirement, branchnames, intermediatenames, entryvars, entryvar, aliases):
+    def _satisfy(self, requirement, branchnames, intermediates, entryvars, entryvar, aliases):
         if requirement == entryvar:
             entryvars.add(None)
 
         else:
             branchname = aliases.get(requirement, requirement)
             try:
-                index = branchnames.index(branchname)
+                branchnames.index(branchname)
             except ValueError:
-                index = len(branchnames)
                 branchnames.append(branchname)
 
-    def _argfcn(self, requirement, branchnames, intermediatenames, entryvar, aliases, compilefcn):
+    def _argfcn(self, requirement, branchnames, intermediates, entryvar, aliases, compilefcn):
         if requirement == entryvar:
-            index = len(branchnames) + len(intermediatenames)
+            index = len(branchnames) + len(intermediates)
         else:
             branchname = aliases.get(requirement, requirement)
             index = branchnames.index(branchname)
