@@ -200,7 +200,7 @@ class ChainStep(object):
 
             def calculate(i):
                 try:
-                    for compiledintermediate in reversed(compiledintermediates):
+                    for compiledintermediate in compiledintermediates:
                         compiledintermediate(start, stop, arrays)
                     out = compiled[i](start, stop, arrays)
                 except:
@@ -226,12 +226,18 @@ class ChainStep(object):
         compilefcn = self._compilefcn(numba)
         intermediate = Intermediate(self, exprs)
 
+        # find all the dependencies and put unique ones in lists
         branchnames = []
         intermediates = []
         entryvars = set()
         for dictname in intermediate.order:
             intermediate._satisfy(dictname, branchnames, intermediates, entryvars, entryvar, aliases)
 
+        # reorder the (Intermediate, name) pairs in order of increasing dependency (across all expressions)
+        # remember that intermediates[0] is special: its name might not be an identifier and we know for certain that it should go last
+        intermediates = Intermediate._dependencyorder(branchnames, intermediates[1:], entryvar, aliases) + [intermediates[0]]
+
+        # now compile them, using the HERE
         compiled = []
         for dictname in intermediate.order:
             compiled.append(intermediate._argfcn(dictname, branchnames, intermediates, entryvar, aliases, compilefcn))
@@ -265,6 +271,8 @@ class ChainStep(object):
         for dictname in intermediate.order:
             intermediate._satisfy(dictname, branchnames, intermediates, entryvars, entryvar, aliases)
 
+        intermediates = Intermediate._dependencyorder(branchnames, intermediates[1:], entryvar, aliases) + [intermediates[0]]
+
         compiled = []
         for dictname in intermediate.order:
             compiled.append(intermediate._argfcn(dictname, branchnames, intermediates, entryvar, aliases, compilefcn))
@@ -282,7 +290,7 @@ class ChainStep(object):
         else:
             return outputtype(*[outarray for name, outarray in outarrays])
 
-    def newarray(self, expr, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+    def newarray(self, expr, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         if isinstance(expr, parsable):
             pass
         elif callable(expr) and hasattr(expr, "__code__"):
@@ -322,6 +330,9 @@ class Intermediate(ChainStep):
     def __eq__(self, other):
         return self is other
 
+    def __hash__(self):
+        return id(self)
+
     def _satisfy(self, requirement, branchnames, intermediates, entryvars, entryvar, aliases):
         if requirement in self.fcn:
             try:
@@ -335,31 +346,46 @@ class Intermediate(ChainStep):
         else:
             self.previous._satisfy(requirement, branchnames, intermediates, entryvars, entryvar, aliases)
 
+    @staticmethod
+    def _dependencyorder(branchnames, intermediates, entryvar, aliases):
+        # https://stackoverflow.com/a/11564769/1623645
+        def topological_sort(items):
+            provided = set()
+            while len(items) > 0:
+                remaining_items = []
+                emitted = False
+
+                for item, dependencies in items:
+                    if dependencies.issubset(provided):
+                        yield item
+                        provided.add(item)
+                        emitted = True
+                    else:
+                        remaining_items.append((item, dependencies))
+
+                if not emitted:
+                    raise ValueError("could not sort intermediates in dependency order")
+
+                items = remaining_items
+
+        def dependencies(intermediate, names):
+            out = set()
+            for name in intermediate.requirements[names]:
+                if name == entryvar or aliases.get(name, name) in branchnames:
+                    pass   # provided by TTree
+                else:
+                    node = intermediate.previous
+                    while not isinstance(node, Intermediate) or name not in node.fcn:
+                        node = node.previous
+                    out.add((node, name))
+            return out
+        
+        return list(topological_sort([((intermediate, name), dependencies(intermediate, name)) for intermediate, name in intermediates]))
+
     def _argfcn(self, requirement, branchnames, intermediates, entryvar, aliases, compilefcn):
         if requirement in self.fcn:
-            index = intermediates.index((self, requirement))
+            index = len(branchnames) + intermediates.index((self, requirement))
             return compilefcn(lambda start, stop, arrays: arrays[index])
-
-#             env = {"fcn": compilefcn(self.fcn[requirement]), "empty": numpy.empty, "dtype": self.NEW_ARRAY_DTYPE}
-#             itemdefs = []
-#             itemis = []
-#             for i, req in enumerate(self.requirements[requirement]):
-#                 argfcn = self.previous._argfcn(req, branchnames, intermediates, entryvar, aliases, compilefcn)
-#                 env["arg{0}".format(i)] = argfcn
-#                 itemdefs.append("item{0} = arg{0}(start, stop, arrays)".format(i))
-#                 itemis.append("item{0}[i]".format(i))
-
-#             source = """
-# def afcn(start, stop, arrays):
-#     {itemdefs}
-#     out = empty(stop - start, dtype)
-#     for i in range(stop - start):
-#         out[i] = fcn({itemis})
-#     return out
-# """.format(itemdefs="\n    ".join(itemdefs), itemis=", ".join(itemis))
-
-#             return compilefcn(self._makefcn(compile(ast.parse(source), requirement, "exec"), env, "afcn", source))
-
         else:
             return self.previous._argfcn(requirement, branchnames, intermediates, entryvar, aliases, compilefcn)
 
@@ -450,8 +476,8 @@ class TTreeFunctionalMethods(uproot.tree.TTreeMethods):
     def newarrays(self, exprs, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         return ChainSource(self).newarrays(exprs, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
 
-    def newarray(self, expr, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        return ChainSource(self).newarrays(expr, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
+    def newarray(self, expr, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        return ChainSource(self).newarray(expr, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
 
     def filter(self):
         raise NotImplementedError
