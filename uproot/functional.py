@@ -201,8 +201,8 @@ class ChainStep(object):
             def calculate(i):
                 try:
                     for compiledintermediate in compiledintermediates:
-                        compiledintermediate(start, stop, arrays)
-                    out = compiled[i](start, stop, arrays)
+                        compiledintermediate(arrays)
+                    out = compiled[i](arrays)
                 except:
                     return sys.exc_info()
                 else:
@@ -392,7 +392,7 @@ class Intermediate(ChainStep):
         if requirement in self.fcn:
             index = len(branchnames) + intermediates.index((self, requirement))
             if index not in fcncache:
-                fcncache[index] = compilefcn(lambda start, stop, arrays: arrays[index])
+                fcncache[index] = compilefcn(lambda arrays: arrays[index])
             return fcncache[index]
         else:
             return self.previous._argfcn(requirement, branchnames, intermediates, entryvar, aliases, compilefcn, fcncache)
@@ -405,13 +405,13 @@ class Intermediate(ChainStep):
         for i, req in enumerate(self.requirements[requirement]):
             argfcn = self.previous._argfcn(req, branchnames, intermediates, entryvar, aliases, compilefcn, fcncache)
             env["arg{0}".format(i)] = argfcn
-            itemdefs.append("item{0} = arg{0}(start, stop, arrays)".format(i))
+            itemdefs.append("item{0} = arg{0}(arrays)".format(i))
             itemis.append("item{0}[i]".format(i))
 
         source = """
-def afcn(start, stop, arrays):
+def afcn(arrays):
     {itemdefs}
-    out = getout(start, stop, arrays)
+    out = getout(arrays)
     for i in range(len(out)):
         out[i] = fcn({itemis})
     return out
@@ -474,7 +474,7 @@ class ChainSource(ChainStep):
             index = branchnames.index(branchname)
 
         if index not in fcncache:
-            fcncache[index] = compilefcn(lambda start, stop, arrays: arrays[index])
+            fcncache[index] = compilefcn(lambda arrays: arrays[index])
         return fcncache[index]
 
 class TTreeFunctionalMethods(uproot.tree.TTreeMethods):
