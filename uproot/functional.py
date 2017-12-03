@@ -144,8 +144,8 @@ class ChainStep(object):
     def _satisfy(self, requirement, branchnames, intermediates, entryvars, entryvar, aliases):
         self.previous._satisfy(requirement, branchnames, intermediates, entryvars, entryvar, aliases)
 
-    def _argfcn(self, requirement, branchnames, intermediates, entryvar, aliases, compilefcn):
-        return self.previous._argfcn(requirement, branchnames, intermediates, entryvar, aliases, compilefcn)
+    def _argfcn(self, requirement, branchnames, intermediates, entryvar, aliases, compilefcn, fcncache):
+        return self.previous._argfcn(requirement, branchnames, intermediates, entryvar, aliases, compilefcn, fcncache)
 
     def _isidentifier(self, dictname):
         try:
@@ -234,15 +234,16 @@ class ChainStep(object):
             intermediate._satisfy(dictname, branchnames, intermediates, entryvars, entryvar, aliases)
 
         # reorder the (Intermediate, name) pairs in order of increasing dependency (across all expressions)
-        # remember that intermediates[0] is special: its name might not be an identifier and we know for certain that it should go last
-        intermediates = Intermediate._dependencyorder(branchnames, intermediates[1:], entryvar, aliases) + [intermediates[0]]
+        intermediates = Intermediate._dependencyorder(branchnames, intermediates, entryvar, aliases)
 
-        # now compile them, using the HERE
+        # now compile them, using the established "branchnames" and "intermediates" order to get arguments by tuple index (hard-compiled into functions)
+        fcncache = {}
         compiled = []
         for dictname in intermediate.order:
-            compiled.append(intermediate._argfcn(dictname, branchnames, intermediates, entryvar, aliases, compilefcn))
+            compiled.append(intermediate._argfcn(dictname, branchnames, intermediates, entryvar, aliases, compilefcn, fcncache))
 
-        compiledintermediates = [intermediate._compileintermediate(requirement, branchnames, intermediates, entryvar, aliases, compilefcn) for intermediate, requirement in intermediates]
+        # compile the intermediates in the same way
+        compiledintermediates = [intermediate._compileintermediate(requirement, branchnames, intermediates, entryvar, aliases, compilefcn, fcncache) for intermediate, requirement in intermediates]
 
         iterator = self._iterateapply(intermediate.order, compiled, branchnames, compiledintermediates, entryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
         if reportentries:
@@ -265,19 +266,24 @@ class ChainStep(object):
         compilefcn = self._compilefcn(numba)
         intermediate = Intermediate(self, exprs)
 
+        # find all the dependencies and put unique ones in lists
         branchnames = []
         intermediates = []
         entryvars = set()
         for dictname in intermediate.order:
             intermediate._satisfy(dictname, branchnames, intermediates, entryvars, entryvar, aliases)
 
-        intermediates = Intermediate._dependencyorder(branchnames, intermediates[1:], entryvar, aliases) + [intermediates[0]]
+        # reorder the (Intermediate, name) pairs in order of increasing dependency (across all expressions)
+        intermediates = Intermediate._dependencyorder(branchnames, intermediates, entryvar, aliases)
 
+        # now compile them, using the established "branchnames" and "intermediates" order to get arguments by tuple index (hard-compiled into functions)
+        fcncache = {}
         compiled = []
         for dictname in intermediate.order:
-            compiled.append(intermediate._argfcn(dictname, branchnames, intermediates, entryvar, aliases, compilefcn))
+            compiled.append(intermediate._argfcn(dictname, branchnames, intermediates, entryvar, aliases, compilefcn, fcncache))
 
-        compiledintermediates = [intermediate._compileintermediate(requirement, branchnames, intermediates, entryvar, aliases, compilefcn) for intermediate, requirement in intermediates]
+        # compile the intermediates in the same way
+        compiledintermediates = [intermediate._compileintermediate(requirement, branchnames, intermediates, entryvar, aliases, compilefcn, fcncache) for intermediate, requirement in intermediates]
 
         for start, stop, results in self._iterateapply(intermediate.order, compiled, branchnames, compiledintermediates, entryvars, None, entrystart, entrystop, aliases, interpretations, entryvar, tuple, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
             for (dictname, outarray), result in zip(outarrays, results):
@@ -382,20 +388,22 @@ class Intermediate(ChainStep):
         
         return list(topological_sort([((intermediate, name), dependencies(intermediate, name)) for intermediate, name in intermediates]))
 
-    def _argfcn(self, requirement, branchnames, intermediates, entryvar, aliases, compilefcn):
+    def _argfcn(self, requirement, branchnames, intermediates, entryvar, aliases, compilefcn, fcncache):
         if requirement in self.fcn:
             index = len(branchnames) + intermediates.index((self, requirement))
-            return compilefcn(lambda start, stop, arrays: arrays[index])
+            if index not in fcncache:
+                fcncache[index] = compilefcn(lambda start, stop, arrays: arrays[index])
+            return fcncache[index]
         else:
-            return self.previous._argfcn(requirement, branchnames, intermediates, entryvar, aliases, compilefcn)
+            return self.previous._argfcn(requirement, branchnames, intermediates, entryvar, aliases, compilefcn, fcncache)
 
-    def _compileintermediate(self, requirement, branchnames, intermediates, entryvar, aliases, compilefcn):
-        env = {"fcn": compilefcn(self.fcn[requirement]), "getout": self._argfcn(requirement, branchnames, intermediates, entryvar, aliases, compilefcn)}
+    def _compileintermediate(self, requirement, branchnames, intermediates, entryvar, aliases, compilefcn, fcncache):
+        env = {"fcn": compilefcn(self.fcn[requirement]), "getout": self._argfcn(requirement, branchnames, intermediates, entryvar, aliases, compilefcn, fcncache)}
 
         itemdefs = []
         itemis = []
         for i, req in enumerate(self.requirements[requirement]):
-            argfcn = self.previous._argfcn(req, branchnames, intermediates, entryvar, aliases, compilefcn)
+            argfcn = self.previous._argfcn(req, branchnames, intermediates, entryvar, aliases, compilefcn, fcncache)
             env["arg{0}".format(i)] = argfcn
             itemdefs.append("item{0} = arg{0}(start, stop, arrays)".format(i))
             itemis.append("item{0}[i]".format(i))
@@ -458,13 +466,16 @@ class ChainSource(ChainStep):
             except ValueError:
                 branchnames.append(branchname)
 
-    def _argfcn(self, requirement, branchnames, intermediates, entryvar, aliases, compilefcn):
+    def _argfcn(self, requirement, branchnames, intermediates, entryvar, aliases, compilefcn, fcncache):
         if requirement == entryvar:
             index = len(branchnames) + len(intermediates)
         else:
             branchname = aliases.get(requirement, requirement)
             index = branchnames.index(branchname)
-        return compilefcn(lambda start, stop, arrays: arrays[index])
+
+        if index not in fcncache:
+            fcncache[index] = compilefcn(lambda start, stop, arrays: arrays[index])
+        return fcncache[index]
 
 class TTreeFunctionalMethods(uproot.tree.TTreeMethods):
     # makes __doc__ attribute mutable before Python 3.3
