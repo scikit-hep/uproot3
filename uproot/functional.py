@@ -660,13 +660,13 @@ class TTreeFunctionalMethods(uproot.tree.TTreeMethods):
     def filter(self, expr):
         return ChainOrigin(self).filter(expr)
 
-    def aggregate(self):
+    def reduce(self):
+        raise NotImplementedError
+
+    def hists(self):
         raise NotImplementedError
 
     def hist(self, numbins, low, high, expr):
-        raise NotImplementedError
-
-    def fork(self):
         raise NotImplementedError
 
 uproot.rootio.methods["TTree"] = TTreeFunctionalMethods
