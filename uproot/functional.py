@@ -30,7 +30,6 @@
 
 import ast
 import keyword
-import math
 import sys
 from collections import namedtuple
 
@@ -111,7 +110,7 @@ class ChainStep(object):
 
         module = ast.parse("def {fcn}({args}): pass".format(fcn=names["fcn"], args=", ".join(sorted(insymbols))))
         module.body[0].body = body
-        return ChainStep._makefcn(compile(module, string, "exec"), math.__dict__, names["fcn"], string)
+        return ChainStep._makefcn(compile(module, string, "exec"), numpy.__dict__, names["fcn"], string)
 
     @staticmethod
     def _tofcn(expr):
@@ -337,20 +336,40 @@ class ChainStep(object):
         return Define(self, exprs)
 
     def intermediate(self, cache=None, **exprs):
-        return Intermediate._create(self, cache, **exprs)
+        return Intermediate._create(self, cache, exprs)
 
     def filter(self, expr):
         return Filter(self, expr)
 
 class Define(ChainStep):
     def __init__(self, previous, exprs):
-        raise NotImplementedError
+        self.previous = previous
 
-    # FIXME!!!
+        self.fcn = {}
+        self.requirements = {}
+        self.order = []
+        for fcn, requirements, identifier, cacheid, dictname in self._tofcns(exprs):
+            self.fcn[dictname] = fcn
+            self.requirements[dictname] = requirements
+            self.order.append(dictname)
+
+    def _satisfy(self, requirement, sourcenames, intermediates, entryvars, entryvar, aliases):
+        if requirement in self.fcn:
+            for req in self.requirements[requirement]:
+                self.previous._satisfy(req, sourcenames, intermediates, entryvars, entryvar, aliases)
+
+        else:
+            self.previous._satisfy(requirement, sourcenames, intermediates, entryvars, entryvar, aliases)
+
+    def _argfcn(self, requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache):
+        if requirement in self.fcn:
+            pass # HERE
+
+
 
 class Intermediate(ChainStep):
     @staticmethod
-    def _create(previous, cache, **exprs):
+    def _create(previous, cache, exprs):
         out = Intermediate(previous, cache, Intermediate._tofcns(exprs))
 
         if any(not isinstance(x, parsable) or not out._isidentifier(x) for x in exprs):

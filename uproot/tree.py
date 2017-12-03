@@ -385,6 +385,8 @@ class TTreeMethods(object):
             return outputtype(*[lazyarray for name, lazyarray in lazyarrays])
 
     def iterate(self, branches=None, entrysteps=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+
         if entrysteps is None:
             entrysteps = self.clusters(branches, entrystart=entrystart, entrystop=entrystop, strict=False)
 
@@ -393,13 +395,13 @@ class TTreeMethods(object):
             if entrystepsize <= 0:
                 raise ValueError("if an integer, entrysteps must be positive")
             
-            def startstop(entrystart, entrystop):
+            def startstop():
                 start = entrystart
                 while start < entrystop and start < self.numentries:
-                    stop = start + entrystepsize
+                    stop = min(start + entrystepsize, entrystop)
                     yield start, stop
                     start = stop
-            entrysteps = startstop(*self._normalize_entrystartstop(entrystart, entrystop))
+            entrysteps = startstop()
 
         else:
             try:
@@ -423,8 +425,13 @@ class TTreeMethods(object):
         else:
             explicit_basketcache = True
                 
-        for entrystart, entrystop in entrysteps:
-            futures = [(branch.name, interpretation, branch._step_array(interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, cache, basketcache, keycache, executor, explicit_basketcache)) for branch, interpretation, basket_itemoffset, basket_entryoffset in branchinfo]
+        for start, stop in entrysteps:
+            start = max(start, entrystart)
+            stop = min(stop, entrystop)
+            if start > stop:
+                continue
+
+            futures = [(branch.name, interpretation, branch._step_array(interpretation, basket_itemoffset, basket_entryoffset, start, stop, cache, basketcache, keycache, executor, explicit_basketcache)) for branch, interpretation, basket_itemoffset, basket_entryoffset in branchinfo]
 
             delayed = []
             for name, interpretation, future in futures:
@@ -449,7 +456,7 @@ class TTreeMethods(object):
                     out = lambda: outputtype(*[delay for name, delay in delayed])
 
             if reportentries:
-                yield max(0, entrystart), min(entrystop, self.numentries), out
+                yield start, stop, out
             else:
                 yield out
 
