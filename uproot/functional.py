@@ -516,17 +516,15 @@ def afcn(arrays):
 """.format(itemdefs="\n    ".join(itemdefs), itemis=", ".join(itemis))
 
         afcn = compilefcn(self._makefcn(compile(ast.parse(source), "<filter>", "exec"), env, "afcn", source))
-        
+
         previterator = self.previous._iterateapply(prevdictnames, prevcompiled, prevsourcenames, previntermediates, prevcompiledintermediates, preventryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, list, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
         for prevstart, prevstop, prevnumentries, arrays in previterator:
             # add the mask array
-            mask = numpy.zeros(prevnumentries, dtype=numpy.bool)
+            mask = numpy.empty(prevnumentries, dtype=numpy.bool)
             arrays.append(mask)
-            print "BEFORE", mask
 
             # evaluate the expression and fill the mask
-            afcn(arrays)
-            print "AFTER", mask
+            afcn(tuple(arrays))
 
             # apply the mask only to the sourcename arrays
             cutarrays = [array[mask] for array in arrays[:len(sourcenames)]]
