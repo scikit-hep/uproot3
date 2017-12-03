@@ -62,13 +62,15 @@ class ChainStep(object):
     def source(self):
         return self.previous.source
 
-    def _makefcn(self, code, env, name, source):
+    @staticmethod
+    def _makefcn(code, env, name, source):
         env = dict(env)
         exec(code, env)
         env[name].source = source
         return env[name]
 
-    def _string2fcn(self, string):
+    @staticmethod
+    def _string2fcn(string):
         insymbols = set()
         outsymbols = set()
 
@@ -101,18 +103,20 @@ class ChainStep(object):
             body[-1].lineno = body[-1].value.lineno
             body[-1].col_offset = body[-1].value.col_offset
 
-        names = self._generatenames(["fcn"], insymbols.union(outsymbols))
+        names = ChainStep._generatenames(["fcn"], insymbols.union(outsymbols))
 
         module = ast.parse("def {fcn}({args}): pass".format(fcn=names["fcn"], args=", ".join(sorted(insymbols))))
         module.body[0].body = body
-        return self._makefcn(compile(module, string, "exec"), math.__dict__, names["fcn"], string)
+        return ChainStep._makefcn(compile(module, string, "exec"), math.__dict__, names["fcn"], string)
 
-    def _tofcn(self, expr):
+    @staticmethod
+    def _tofcn(expr):
         if isinstance(expr, parsable):
-            expr = self._string2fcn(expr)
+            expr = ChainStep._string2fcn(expr)
         return expr, expr.__code__.co_varnames
 
-    def _generatenames(self, want, avoid):
+    @staticmethod
+    def _generatenames(want, avoid):
         disambigifier = 0
         out = {}
         for name in want:
@@ -123,15 +127,16 @@ class ChainStep(object):
             out[name] = newname
         return out
 
-    def _tofcns(self, exprs):
+    @staticmethod
+    def _tofcns(exprs):
         if isinstance(exprs, parsable):
-            return [self._tofcn(exprs) + (exprs, exprs)]
+            return [ChainStep._tofcn(exprs) + (exprs, exprs)]
 
         elif callable(exprs) and hasattr(exprs, "__code__"):
-            return [self._tofcn(exprs) + (id(exprs), getattr(exprs, "__name__", None))]
+            return [ChainStep._tofcn(exprs) + (id(exprs), getattr(exprs, "__name__", None))]
 
         elif isinstance(exprs, dict) and all(isinstance(x, parsable) or (callable(x) and hasattr(x, "__code__")) for x in exprs.values()):
-            return [self._tofcn(x) + (x if isinstance(x, parsable) else id(x), n) for n, x in exprs.items()]
+            return [ChainStep._tofcn(x) + (x if isinstance(x, parsable) else id(x), n) for n, x in exprs.items()]
 
         else:
             try:
@@ -139,15 +144,10 @@ class ChainStep(object):
             except (TypeError, AssertionError):
                 raise TypeError("exprs must be a dict of strings or functions, iterable of strings or functions, a single string, or a single function")
             else:
-                return [self._tofcn(x) + ((x, x) if isinstance(x, parsable) else (id(x), getattr(x, "__name__", None))) for i, x in enumerate(exprs)]
+                return [ChainStep._tofcn(x) + ((x, x) if isinstance(x, parsable) else (id(x), getattr(x, "__name__", None))) for i, x in enumerate(exprs)]
 
-    def _satisfy(self, requirement, sourcenames, intermediates, entryvars, entryvar, aliases):
-        self.previous._satisfy(requirement, sourcenames, intermediates, entryvars, entryvar, aliases)
-
-    def _argfcn(self, requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache):
-        return self.previous._argfcn(requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache)
-
-    def _isidentifier(self, dictname):
+    @staticmethod
+    def _isidentifier(dictname):
         try:
             assert not keyword.iskeyword(dictname)
             x = ast.parse(dictname)
@@ -157,7 +157,8 @@ class ChainStep(object):
         else:
             return True
 
-    def _compilefcn(self, numba):
+    @staticmethod
+    def _compilefcn(numba):
         if callable(numba):
             return numba
 
@@ -171,6 +172,12 @@ class ChainStep(object):
         else:
             import numba as nb
             return lambda f: nb.jit(**numba)(f)
+
+    def _satisfy(self, requirement, sourcenames, intermediates, entryvars, entryvar, aliases):
+        self.previous._satisfy(requirement, sourcenames, intermediates, entryvars, entryvar, aliases)
+
+    def _argfcn(self, requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache):
+        return self.previous._argfcn(requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache)
 
     def _iterateapply(self, dictnames, compiled, sourcenames, compiledintermediates, entryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
         if outputtype == namedtuple:
@@ -231,7 +238,7 @@ class ChainStep(object):
 
     def _prepare(self, exprs, aliases, entryvar, numba):
         compilefcn = self._compilefcn(numba)
-        intermediate = Intermediate(self, None, exprs)
+        intermediate = Intermediate(self, None, self._tofcns(exprs))
 
         # find all the dependencies and put unique ones in lists
         sourcenames = []
@@ -319,14 +326,14 @@ class Define(ChainStep):
 class Intermediate(ChainStep):
     @staticmethod
     def _create(previous, cache, **exprs):
-        out = Intermediate(previous, cache, exprs)
+        out = Intermediate(previous, cache, Intermediate._tofcns(exprs))
 
         if any(not isinstance(x, parsable) or not out._isidentifier(x) for x in exprs):
             raise TypeError("all names in exprs must be identifiers")
 
         return out
 
-    def __init__(self, previous, cache, exprs):
+    def __init__(self, previous, cache, fcns):
         self.previous = previous
         self.cache = cache
 
@@ -336,7 +343,7 @@ class Intermediate(ChainStep):
         self.fcn = {}
         self.requirements = {}
         self.order = []
-        for fcn, requirements, cacheid, dictname in self._tofcns(exprs):
+        for fcn, requirements, cacheid, dictname in fcns:
             self.fcn[dictname] = fcn
             self.requirements[dictname] = requirements
             self.order.append(dictname)

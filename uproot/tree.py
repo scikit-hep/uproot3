@@ -285,59 +285,60 @@ class TTreeMethods(object):
     def clusters(self, branches=None, entrystart=None, entrystop=None, strict=False):
         branches = list(self._normalize_branches(branches))
 
-        # convenience class; simplifies presentation of the algorithm
-        class BranchCursor(object):
-            def __init__(self, branch):
-                self.branch = branch
-                self.basketstart = 0
-                self.basketstop = 0
-            @property
-            def entrystart(self):
-                return self.branch.basket_entrystart(self.basketstart)
-            @property
-            def entrystop(self):
-                return self.branch.basket_entrystop(self.basketstop)
+        if len(branches) > 0:
+            # convenience class; simplifies presentation of the algorithm
+            class BranchCursor(object):
+                def __init__(self, branch):
+                    self.branch = branch
+                    self.basketstart = 0
+                    self.basketstop = 0
+                @property
+                def entrystart(self):
+                    return self.branch.basket_entrystart(self.basketstart)
+                @property
+                def entrystop(self):
+                    return self.branch.basket_entrystop(self.basketstop)
 
-        cursors = [BranchCursor(branch) for branch, interpretation in branches]
+            cursors = [BranchCursor(branch) for branch, interpretation in branches]
 
-        # everybody starts at the same entry number; if there is no such place before someone runs out of baskets, there will be an exception
-        leadingstart = max(cursor.entrystart for cursor in cursors)
-        while not all(cursor.entrystart == leadingstart for cursor in cursors):
-            for cursor in cursors:
-                while cursor.entrystart < leadingstart:
-                    cursor.basketstart += 1
-                    cursor.basketstop += 1
+            # everybody starts at the same entry number; if there is no such place before someone runs out of baskets, there will be an exception
             leadingstart = max(cursor.entrystart for cursor in cursors)
-
-        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
-
-        # move all cursors forward, yielding a (start, stop) pair if their baskets line up
-        while any(cursor.basketstop < cursor.branch.numbaskets for cursor in cursors):
-            # move all subleading baskets forward until they are no longer subleading
-            leadingstop = max(cursor.entrystop for cursor in cursors)
-            for cursor in cursors:
-                while cursor.entrystop < leadingstop:
-                    cursor.basketstop += 1
-
-            # if they all line up, this is a good cluster
-            if all(cursor.entrystop == leadingstop for cursor in cursors):
-                # check to see if it's within the bounds the user requested (strictly or not strictly)
-                if strict:
-                    if entrystart <= leadingstart and leadingstop <= entrystop:
-                        yield leadingstart, leadingstop
-                else:
-                    if entrystart < leadingstop and leadingstart < entrystop:
-                        yield leadingstart, leadingstop
-
-                # anyway, move all the starts to the new stopping position and move all stops forward by one
-                leadingstart = leadingstop
+            while not all(cursor.entrystart == leadingstart for cursor in cursors):
                 for cursor in cursors:
-                    cursor.basketstart = cursor.basketstop
-                    cursor.basketstop += 1
+                    while cursor.entrystart < leadingstart:
+                        cursor.basketstart += 1
+                        cursor.basketstop += 1
+                leadingstart = max(cursor.entrystart for cursor in cursors)
 
-            # stop iterating if we're past all acceptable clusters
-            if leadingstart >= entrystop:
-                break
+            entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+
+            # move all cursors forward, yielding a (start, stop) pair if their baskets line up
+            while any(cursor.basketstop < cursor.branch.numbaskets for cursor in cursors):
+                # move all subleading baskets forward until they are no longer subleading
+                leadingstop = max(cursor.entrystop for cursor in cursors)
+                for cursor in cursors:
+                    while cursor.entrystop < leadingstop:
+                        cursor.basketstop += 1
+
+                # if they all line up, this is a good cluster
+                if all(cursor.entrystop == leadingstop for cursor in cursors):
+                    # check to see if it's within the bounds the user requested (strictly or not strictly)
+                    if strict:
+                        if entrystart <= leadingstart and leadingstop <= entrystop:
+                            yield leadingstart, leadingstop
+                    else:
+                        if entrystart < leadingstop and leadingstart < entrystop:
+                            yield leadingstart, leadingstop
+
+                    # anyway, move all the starts to the new stopping position and move all stops forward by one
+                    leadingstart = leadingstop
+                    for cursor in cursors:
+                        cursor.basketstart = cursor.basketstop
+                        cursor.basketstop += 1
+
+                # stop iterating if we're past all acceptable clusters
+                if leadingstart >= entrystop:
+                    break
 
     def array(self, branch, interpretation=None, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         return self.get(branch).array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
