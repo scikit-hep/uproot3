@@ -111,9 +111,13 @@ class ChainStep(object):
 
     @staticmethod
     def _tofcn(expr):
+        identifier = None
         if isinstance(expr, parsable):
+            if ChainStep._isidentifier(expr):
+                identifier = expr
             expr = ChainStep._string2fcn(expr)
-        return expr, expr.__code__.co_varnames
+
+        return expr, expr.__code__.co_varnames, identifier
 
     @staticmethod
     def _generatenames(want, avoid):
@@ -238,14 +242,26 @@ class ChainStep(object):
 
     def _prepare(self, exprs, aliases, entryvar, numba):
         compilefcn = self._compilefcn(numba)
-        intermediate = Intermediate(self, None, self._tofcns(exprs))
+
+        dictnames = []
+        nonidentifiers = []
+        toresolve = []
+        for fcn, requirements, identifier, cacheid, dictname in self._tofcns(exprs):
+            dictnames.append(dictname)
+            if identifier is None:
+                nonidentifiers.append((fcn, requirements, identifier, cacheid, dictname))
+                toresolve.append(dictname)
+            else:
+                toresolve.append(identifier)
+
+        intermediate = Intermediate(self, None, nonidentifiers)
 
         # find all the dependencies and put unique ones in lists
         sourcenames = []
         intermediates = []
         entryvars = set()
-        for dictname in intermediate.order:
-            intermediate._satisfy(dictname, sourcenames, intermediates, entryvars, entryvar, aliases)
+        for name in toresolve:
+            intermediate._satisfy(name, sourcenames, intermediates, entryvars, entryvar, aliases)
 
         # reorder the (Intermediate, name) pairs in order of increasing dependency (across all expressions)
         intermediates = Intermediate._dependencyorder(sourcenames, intermediates, entryvar, aliases)
@@ -253,18 +269,18 @@ class ChainStep(object):
         # now compile them, using the established "sourcenames" and "intermediates" order to get arguments by tuple index (hard-compiled into functions)
         fcncache = {}
         compiled = []
-        for dictname in intermediate.order:
-            compiled.append(intermediate._argfcn(dictname, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache))
+        for name in toresolve:
+            compiled.append(intermediate._argfcn(name, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache))
 
         # compile the intermediates in the same way
         compiledintermediates = [intermediate._compileintermediate(requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache) for intermediate, requirement in intermediates]
 
-        return intermediate, compiled, sourcenames, compiledintermediates, entryvars, compilefcn
+        return dictnames, compiled, sourcenames, compiledintermediates, entryvars, compilefcn
 
     def iterate_newarrays(self, exprs, entrysteps=None, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        intermediate, compiled, sourcenames, compiledintermediates, entryvars, compilefcn = self._prepare(exprs, aliases, entryvar, numba)
+        dictnames, compiled, sourcenames, compiledintermediates, entryvars, compilefcn = self._prepare(exprs, aliases, entryvar, numba)
 
-        iterator = self._iterateapply(intermediate.order, compiled, sourcenames, compiledintermediates, entryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
+        iterator = self._iterateapply(dictnames, compiled, sourcenames, compiledintermediates, entryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
         if reportentries:
             for start, stop, numentries, results in iterator:
                 yield start, stop, numentries, results
@@ -274,7 +290,7 @@ class ChainStep(object):
 
     def newarrays(self, exprs, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         entrystart, entrystop = self.source.tree._normalize_entrystartstop(entrystart, entrystop)
-        outarrays = [(dictname, numpy.empty(entrystop - entrystart, dtype=self.NEW_ARRAY_DTYPE)) for fcn, requirements, cacheid, dictname in self._tofcns(exprs)]
+        outarrays = [(dictname, numpy.empty(entrystop - entrystart, dtype=self.NEW_ARRAY_DTYPE)) for fcn, requirements, identifier, cacheid, dictname in self._tofcns(exprs)]
 
         if outputtype == namedtuple:
             for dictname, outarray in outarrays:
@@ -282,10 +298,10 @@ class ChainStep(object):
                     raise ValueError("illegal field name for namedtuple: {0}".format(repr(dictname)))
             outputtype = namedtuple("Arrays", dictnames)
 
-        intermediate, compiled, sourcenames, compiledintermediates, entryvars, compilefcn = self._prepare(exprs, aliases, entryvar, numba)
+        dictnames, compiled, sourcenames, compiledintermediates, entryvars, compilefcn = self._prepare(exprs, aliases, entryvar, numba)
 
         index = 0
-        for start, stop, numentries, results in self._iterateapply(intermediate.order, compiled, sourcenames, compiledintermediates, entryvars, None, entrystart, entrystop, aliases, interpretations, entryvar, tuple, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
+        for start, stop, numentries, results in self._iterateapply(dictnames, compiled, sourcenames, compiledintermediates, entryvars, None, entrystart, entrystop, aliases, interpretations, entryvar, tuple, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
             for (dictname, outarray), result in zip(outarrays, results):
                 outarray[index : index + numentries] = result
                 index += numentries
@@ -343,7 +359,7 @@ class Intermediate(ChainStep):
         self.fcn = {}
         self.requirements = {}
         self.order = []
-        for fcn, requirements, cacheid, dictname in fcns:
+        for fcn, requirements, identifier, cacheid, dictname in fcns:
             self.fcn[dictname] = fcn
             self.requirements[dictname] = requirements
             self.order.append(dictname)
@@ -469,7 +485,7 @@ class Filter(ChainStep):
     def _iterate(self, sourcenames, compiledintermediates, hasentryvar, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
         prevnames = self.requirements + sourcenames
         maskindex = len(prevnames)
-        previntermediate, prevcompiled, prevsourcenames, prevcompiledintermediates, preventryvars, compilefcn = self.previous._prepare(prevnames, aliases, entryvar, numba)
+        prevnames, prevcompiled, prevsourcenames, prevcompiledintermediates, preventryvars, compilefcn = self.previous._prepare(prevnames, aliases, entryvar, numba)
 
         env = {"fcn": compilefcn(self.fcn), "getmask": compilefcn(lambda arrays: arrays[maskindex])}
 
@@ -492,7 +508,7 @@ def afcn(arrays):
 
         afcn = compilefcn(self._makefcn(compile(ast.parse(source), "<filter>", "exec"), env, "afcn", source))
 
-        previterator = self.previous._iterateapply(previntermediate.order, prevcompiled, prevsourcenames, prevcompiledintermediates, preventryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, tuple, cache, basketcache, keycache, readexecutor, calcexecutor)
+        previterator = self.previous._iterateapply(prevnames, prevcompiled, prevsourcenames, prevcompiledintermediates, preventryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, tuple, cache, basketcache, keycache, readexecutor, calcexecutor)
         for prevstart, prevstop, prevnumentries, prevresults in iterator:
             pass
 
