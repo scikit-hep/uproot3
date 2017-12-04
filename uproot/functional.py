@@ -83,6 +83,18 @@ class ChainStep(object):
         return env[name]
 
     @staticmethod
+    def _generatenames(want, avoid):
+        disambigifier = 0
+        out = {}
+        for name in want:
+            newname = name
+            while newname in avoid or newname in out or keyword.iskeyword(newname):
+                newname = "{0}_{1}".format(name, disambigifier)
+                disambigifier += 1
+            out[name] = newname
+        return out
+
+    @staticmethod
     def _string2fcn(string):
         insymbols = set()
         outsymbols = set()
@@ -139,18 +151,6 @@ class ChainStep(object):
     @staticmethod
     def _params(fcn):
         return fcn.__code__.co_varnames
-
-    @staticmethod
-    def _generatenames(want, avoid):
-        disambigifier = 0
-        out = {}
-        for name in want:
-            newname = name
-            while newname in avoid or newname in out or keyword.iskeyword(newname):
-                newname = "{0}_{1}".format(name, disambigifier)
-                disambigifier += 1
-            out[name] = newname
-        return out
 
     @staticmethod
     def _tofcns(exprs):
@@ -349,60 +349,86 @@ class ChainStep(object):
 
         return self.newarrays(expr, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=tuple, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, numba=numba)[0]
 
-    def reduce(self, init, increment, combine=lambda x, y: x + y, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        pass
+    def reduce(self, init, increment, combine=None, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        # a *lot* of argument handling (to ensure that init, increment, and combine are compatible)
+        if isinstance(init, parsable):
+            init = self._string2fcn(init)
+        if isinstance(increment, parsable):
+            increment = self._string2fcn(increment)
+        if isinstance(combine, parsable):
+            combine = self._string2fcn(combine)
+
+        if self._isfcn(init) and self._isfcn(increment) and self._isfcn(combine):
+            if len(self._params(increment)) == 0:
+                raise TypeError("increment function must have at least one parameter")
+
+            monoidvar = self._params(increment)[0]
+            init      = {monoidvar: init}
+            increment = {monoidvar: increment}
+            combine   = {monoidvar: combine}
+            monoidvars = {monoidvar: monoidvar}
+
+        if isinstance(increment, dict):
+            if not isinstance(init, dict):
+                raise TypeError("if increment is a dict of functions, init must be as well (to match up argument lists)")
+            if not isinstance(combine, dict):
+                raise TypeError("if increment is a dict of functions, combine must be as well (to match up argument lists)")
+
+            if len(increment) == 0 or not all(self._isfcn(x) for n, x in increment.items()):
+                raise TypeError("increment must be a (non-empty) dict of strings or functions, a (non-empty) iterable of strings or functions, a single string, or a single function")
+            increment = dict((n, string2fcn(x) if isinstance(x, parsable) else x) for n, x in increment.items())
+            monoidvars = dict((n, self._params(x)[0]) for n, x in increment.items())
+        else:
+            try:
+                assert len(increment) > 0 and all(self._isfcn(x) for x in increment)
+            except (TypeError, AssertionError):
+                raise TypeError("increment must be a (non-empty) dict of strings or functions, a (non-empty) iterable of strings or functions, a single string, or a single function")
+            else:
+                increment = [string2fcn(x) if isinstance(x, parsable) else x for x in increment]
+                monoidvars = [self._params(x)[0] for x in increment]
+                increment = dict(zip(monoidvars, increment))
+                if len(monoidvars) != len(increment):
+                    raise TypeError("if providing a list of increment functions, the aggregator (first argument) of each must be distinct")
+
+        if isinstance(init, dict):
+            if len(init) == 0 or not all(self._isfcn(x) for n, x in init.items()):
+                raise TypeError("init must be a (non-empty) dict of strings or functions, a (non-empty) iterable of strings or functions, a single string, or a single function")
+            init = dict((n, string2fcn(x) if isinstance(x, parsable) else x) for n, x in init.items())
+        else:
+            try:
+                assert len(init) > 0 and all(self._isfcn(x) for x in init)
+            except (TypeError, AssertionError):
+                raise TypeError("init must be a (non-empty) dict of strings or functions, a (non-empty) iterable of strings or functions, a single string, or a single function")
+            else:
+                init = dict(zip(monoidvars, [string2fcn(x) if isinstance(x, parsable) else x for x in init]))
+        if not all(self._params(x) == 0 for x in init.values()):
+            raise TypeError("init functions must have zero arguments")
+
+        if isinstance(combine, dict):
+            if len(combine) == 0 or not all(self._isfcn(x) for n, x in combine.items()):
+                raise TypeError("combine must be a (non-empty) dict of strings or functions, a (non-empty) iterable of strings or functions, a single string, or a single function")
+            combine = dict((n, string2fcn(x) if isinstance(x, parsable) else x) for n, x in combine.items())
+        else:
+            try:
+                assert len(combine) > 0 and all(self._isfcn(x) for x in combine)
+            except (TypeError, AssertionError):
+                raise TypeError("combine must be a (non-empty) dict of strings or functions, a (non-empty) iterable of strings or functions, a single string, or a single function")
+            else:
+                combine = dict(zip(monoidvars, [string2fcn(x) if isinstance(x, parsable) else x for x in combine]))
+        if not all(self._params(x) == 0 for x in combine.values()):
+            raise TypeError("combine functions must have zero arguments")
+
+        if not isinstance(monoidvars, dict):
+            monoidvars = dict(zip(monoidvars, monoidvars))
+
+        if not set(init.keys()) == set(increment.keys()) == set(combine.keys()):
+            raise TypeError("if init, increment, and combine are provided as dicts, they must have the same set of keys (to match up argument lists)")
+
+        # now actually do the calculation
+        compilefcn = self._compilefcn(numba)
 
 
 
-
-#     def reduce(self, init, increment, combine=lambda x, y: x + y, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-#         compilefcn = self._compilefcn(numba)
-
-#         if isinstance(init, parsable):
-#             init = self._string2fcn(init)
-#         if isinstance(increment, parsable):
-#             increment = self._string2fcn(increment)
-#         if isinstance(combine, parsable):
-#             combine = self._string2fcn(combine)
-
-#         if callable(init) and hasattr(init, "__code__") and callable(increment) and hasattr(increment, "__code__") and callable(combine) and hasattr(combine, "__code__"):
-#             if len(increment.__code__.co_varnames) == 0:
-#                 raise TypeError("increment function must have at least one parameter")
-
-#             monoidvars = [increment.__code__.co_varnames[0]]
-#             init       = {monoidvar[0]: init}
-#             increment  = {monoidvar[0]: increment}
-#             combine    = {monoidvar[0]: combine}
-
-#         if not isinstance(increment, dict):
-#             try:
-#                 assert all(isinstance(x, parsable) or (callable(x) and hasattr(x, "__code__")) for x in increment)
-#             except (TypeError, AssertionError):
-#                 raise TypeError("increment must be a dict of strings or functions, an iterable of strings or functions, a single string, or a single function")
-#             else:
-#                 increment = 
-
-
-#                 monoidvars = []
-#                 newincrement = {}
-#                 for expr in increment:
-#                     if isinstance(expr, parsable):
-#                         expr = self._string2fcn(expr)
-#                     if len(expr.__code__.co_varnames) == 0:
-#                         raise TypeError("increment functions must have at least one parameter")
-
-#                     monoidvars.append(expr)
-#                     newincrement
-
-
-                    
-#         if not isinstance(init, dict):
-#             try:
-#                 assert all(isinstance(x, parsable) or (callable(x) and hasattr(x, "__code__")) for x in init)
-#             except (TypeError, AssertionError):
-#                 raise TypeError("init must be a dict of strings or functions, an iterable of strings or functions, a single string, or a single function")
-#             else:
-                
             
 
 
