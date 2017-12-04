@@ -127,10 +127,6 @@ class ChainStep(object):
         return isinstance(expr, parsable) or (callable(expr) and hasattr(expr, "__code__"))
 
     @staticmethod
-    def _params(expr):
-        return expr.__code__.co_varnames
-
-    @staticmethod
     def _tofcn(expr):
         identifier = None
         if isinstance(expr, parsable):
@@ -139,6 +135,10 @@ class ChainStep(object):
             expr = ChainStep._string2fcn(expr)
 
         return expr, ChainStep._params(expr), identifier
+
+    @staticmethod
+    def _params(fcn):
+        return fcn.__code__.co_varnames
 
     @staticmethod
     def _generatenames(want, avoid):
@@ -154,11 +154,26 @@ class ChainStep(object):
 
     @staticmethod
     def _tofcns(exprs):
+        used = {}
+        def getname(fcn):
+            trial = getattr(fcn, "__name__", "<lambda>")
+            if trial == "<lambda>":
+                trial = "fcn"
+                if "fcn" not in used:
+                    used["fcn"] = 1
+            out = trial
+            while out in used:
+                out = "{0}{1}".format(trial, used[trial])
+                used[trial] += 1
+            if trial not in used:
+                used[trial] = 2
+            return out
+
         if isinstance(exprs, parsable):
             return [ChainStep._tofcn(exprs) + (exprs, exprs)]
 
         elif callable(exprs) and hasattr(exprs, "__code__"):
-            return [ChainStep._tofcn(exprs) + (id(exprs), getattr(exprs, "__name__", None))]
+            return [ChainStep._tofcn(exprs) + (id(exprs), getname(exprs))]
 
         elif isinstance(exprs, dict) and all(ChainStep._isfcn(x) for x in exprs.values()):
             return [ChainStep._tofcn(x) + (x if isinstance(x, parsable) else id(x), n) for n, x in exprs.items()]
@@ -169,7 +184,7 @@ class ChainStep(object):
             except (TypeError, AssertionError):
                 raise TypeError("exprs must be a dict of strings or functions, an iterable of strings or functions, a single string, or a single function")
             else:
-                return [ChainStep._tofcn(x) + ((x, x) if isinstance(x, parsable) else (id(x), getattr(x, "__name__", None))) for i, x in enumerate(exprs)]
+                return [ChainStep._tofcn(x) + ((x, x) if isinstance(x, parsable) else (id(x), getname(x))) for i, x in enumerate(exprs)]
 
     @staticmethod
     def _isidentifier(dictname):
@@ -333,6 +348,12 @@ class ChainStep(object):
             raise TypeError("expr must be a single string or function")
 
         return self.newarrays(expr, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=tuple, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, numba=numba)[0]
+
+    def reduce(self, init, increment, combine=lambda x, y: x + y, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        pass
+
+
+
 
 #     def reduce(self, init, increment, combine=lambda x, y: x + y, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
 #         compilefcn = self._compilefcn(numba)
