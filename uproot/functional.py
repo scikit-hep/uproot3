@@ -123,6 +123,14 @@ class ChainStep(object):
         return ChainStep._makefcn(compile(module, string, "exec"), math.__dict__, names["fcn"], string)
 
     @staticmethod
+    def _isfcn(expr):
+        return isinstance(expr, parsable) or (callable(expr) and hasattr(expr, "__code__"))
+
+    @staticmethod
+    def _params(expr):
+        return expr.__code__.co_varnames
+
+    @staticmethod
     def _tofcn(expr):
         identifier = None
         if isinstance(expr, parsable):
@@ -130,7 +138,7 @@ class ChainStep(object):
                 identifier = expr
             expr = ChainStep._string2fcn(expr)
 
-        return expr, expr.__code__.co_varnames, identifier
+        return expr, ChainStep._params(expr), identifier
 
     @staticmethod
     def _generatenames(want, avoid):
@@ -152,12 +160,12 @@ class ChainStep(object):
         elif callable(exprs) and hasattr(exprs, "__code__"):
             return [ChainStep._tofcn(exprs) + (id(exprs), getattr(exprs, "__name__", None))]
 
-        elif isinstance(exprs, dict) and all(isinstance(x, parsable) or (callable(x) and hasattr(x, "__code__")) for x in exprs.values()):
+        elif isinstance(exprs, dict) and all(ChainStep._isfcn(x) for x in exprs.values()):
             return [ChainStep._tofcn(x) + (x if isinstance(x, parsable) else id(x), n) for n, x in exprs.items()]
 
         else:
             try:
-                assert all(isinstance(x, parsable) or (callable(x) and hasattr(x, "__code__")) for x in exprs)
+                assert all(ChainStep._isfcn(x) for x in exprs)
             except (TypeError, AssertionError):
                 raise TypeError("exprs must be a dict of strings or functions, an iterable of strings or functions, a single string, or a single function")
             else:
@@ -321,12 +329,9 @@ class ChainStep(object):
             return outputtype(*outarrays)
 
     def newarray(self, expr, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, cache=None, basketcache=None, keycache=None, readexecutor=None, numba=ifinstalled):
-        if isinstance(expr, parsable):
-            pass
-        elif callable(expr) and hasattr(expr, "__code__"):
-            pass
-        else:
+        if not ChainStep._isfcn(expr):
             raise TypeError("expr must be a single string or function")
+
         return self.newarrays(expr, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=tuple, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, numba=numba)[0]
 
 #     def reduce(self, init, increment, combine=lambda x, y: x + y, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
@@ -608,15 +613,10 @@ def afcn(arrays):
 
 class Filter(ChainStep):
     def __init__(self, previous, expr):
-        self.previous = previous
-
-        if isinstance(expr, parsable):
-            pass
-        elif callable(expr) and hasattr(expr, "__code__"):
-            pass
-        else:
+        if not ChainStep._isfcn(expr):
             raise TypeError("expr must be a single string or function")
 
+        self.previous = previous
         self.fcn, self.requirements, identifier = self._tofcn(expr)
 
     @property
