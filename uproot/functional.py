@@ -31,6 +31,7 @@
 import ast
 import keyword
 import sys
+import math
 from collections import namedtuple
 
 import numpy
@@ -119,7 +120,7 @@ class ChainStep(object):
 
         module = ast.parse("def {fcn}({args}): pass".format(fcn=names["fcn"], args=", ".join(sorted(insymbols))))
         module.body[0].body = body
-        return ChainStep._makefcn(compile(module, string, "exec"), numpy.__dict__, names["fcn"], string)
+        return ChainStep._makefcn(compile(module, string, "exec"), math.__dict__, names["fcn"], string)
 
     @staticmethod
     def _tofcn(expr):
@@ -189,6 +190,9 @@ class ChainStep(object):
             import numba as nb
             return lambda f: nb.jit(**numba)(f)
 
+    def _wouldsatisfy(self, requirement, entryvar, aliases):
+        return self.previous._wouldsatisfy(requirement, entryvar, aliases)
+
     def _satisfy(self, requirement, sourcenames, intermediates, entryvars, entryvar, aliases):
         self.previous._satisfy(requirement, sourcenames, intermediates, entryvars, entryvar, aliases)
 
@@ -253,6 +257,8 @@ class ChainStep(object):
         # reorder the (Intermediate, name) pairs in order of increasing dependency (across all expressions)
         intermediates = Intermediate._dependencyorder(sourcenames, intermediates, entryvar, aliases)
 
+        print "B len(intermediates)", len(intermediates)
+
         # now compile them, using the established "sourcenames" and "intermediates" order to get arguments by tuple index (hard-compiled into functions)
         fcncache = {}
         compiled = []
@@ -261,6 +267,8 @@ class ChainStep(object):
 
         # compile the intermediates in the same way
         compiledintermediates = [intermediate._compileintermediate(requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache) for intermediate, requirement in intermediates]
+
+        print "C len(compiledintermediates)", len(compiledintermediates)
 
         return dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, compilefcn
 
@@ -297,9 +305,9 @@ class ChainStep(object):
             totalentries += numentries
 
         if len(partitions) == 0:
-            outarrays = [numpy.empty(0, dtype=self.NEW_ARRAY_DTYPE) for i in range(len(dictnames))]
+            outarrays = [numpy.ones(0, dtype=self.NEW_ARRAY_DTYPE)*222 for i in range(len(dictnames))]
         else:
-            outarrays = [numpy.empty(totalentries, dtype=result.dtype) for result in partitions[0][2]]
+            outarrays = [numpy.ones(totalentries, dtype=result.dtype)*333 for result in partitions[0][2]]
 
         for start, stop, results in partitions:
             for outarray, result in zip(outarrays, results):
@@ -438,6 +446,12 @@ class Define(ChainStep):
             self.requirements[dictname] = requirements
             self.order.append(dictname)
 
+    def _wouldsatisfy(self, requirement, entryvar, aliases):
+        if requirement in self.fcn:
+            return self
+        else:
+            return self.previous._wouldsatisfy(requirement, entryvar, aliases)
+
     def _satisfy(self, requirement, sourcenames, intermediates, entryvars, entryvar, aliases):
         if requirement in self.fcn:
             if (self, requirement) not in intermediates:
@@ -463,10 +477,15 @@ def afcn(arrays):
     return fcn({args})
 """.format(args = ", ".join(args))
 
+            print "_argfcn define", requirement
+
             key = (id(self),)
             if key not in fcncache:
                 fcncache[key] = compilefcn(self._makefcn(compile(ast.parse(source), requirement, "exec"), env, "afcn", source))
             return fcncache[key]
+
+        else:
+            return self.previous._argfcn(requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache)
 
 class Intermediate(ChainStep):
     @staticmethod
@@ -498,6 +517,12 @@ class Intermediate(ChainStep):
 
     def __hash__(self):
         return id(self)
+
+    def _wouldsatisfy(self, requirement, entryvar, aliases):
+        if requirement in self.fcn:
+            return self
+        else:
+            return self.previous._wouldsatisfy(requirement, entryvar, aliases)
 
     def _satisfy(self, requirement, sourcenames, intermediates, entryvars, entryvar, aliases):
         if requirement in self.fcn:
@@ -551,9 +576,13 @@ class Intermediate(ChainStep):
     def _argfcn(self, requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache):
         if requirement in self.fcn:
             index = len(sourcenames) + intermediates.index((self, requirement))
+
+            print "_argfcn intermediate", requirement, index
+
             if index not in fcncache:
                 fcncache[index] = compilefcn(lambda arrays: arrays[index])
             return fcncache[index]
+
         else:
             return self.previous._argfcn(requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache)
 
@@ -599,24 +628,49 @@ class Filter(ChainStep):
     def source(self):
         return self
 
+    def _wouldsatisfy(self, requirement, entryvar, aliases):
+        if self.previous._wouldsatisfy(requirement, entryvar, aliases) is None:
+            return None
+        else:
+            return self
+
     def _satisfy(self, requirement, sourcenames, intermediates, entryvars, entryvar, aliases):
-        if requirement not in sourcenames:
-            sourcenames.append(requirement)
+        sourcenames.append(requirement)
+        # if requirement not in sourcenames:
+        #     sourcenames.append(requirement)
 
     def _argfcn(self, requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache):
-        if requirement in sourcenames:
-            index = sourcenames.index(requirement)
-        else:
-            index = len(sourcenames) + [x for x in self.requirements if x not in sourcenames].index(requirement)
+        index = sourcenames.index(requirement)
+
+        print "_argfcn filter", requirement, index
 
         if index not in fcncache:
             fcncache[index] = compilefcn(lambda arrays: arrays[index])
         return fcncache[index]
 
+        # if requirement in sourcenames:
+        #     index = sourcenames.index(requirement)
+        # else:
+        #     index = len(sourcenames) + [x for x in self.requirements if x not in sourcenames].index(requirement)
+
+        # print "_argfcn filter", requirement, index
+
+        # if index not in fcncache:
+        #     fcncache[index] = compilefcn(lambda arrays: arrays[index])
+        # return fcncache[index]
+
     def _iterate(self, sourcenames, intermediates, compiledintermediates, hasentryvar, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
-        requests = sourcenames + [x for x in self.requirements if x not in sourcenames]
+        print "HERE", self.requirements, sourcenames
+
+        requests = sourcenames + [x for x in self.requirements if x not in sourcenames and not isinstance(self.previous._wouldsatisfy(x, entryvar, aliases), Define)]
+
+        print "requests", requests
+
         maskindex = len(requests)
         prevdictnames, prevcompiled, prevsourcenames, previntermediates, prevcompiledintermediates, preventryvars, compilefcn = self.previous._prepare(requests, aliases, entryvar, numba)
+
+        print "prevdictnames", prevdictnames, "len(prevcompiled)", len(prevcompiled), "prevsourcenames", prevsourcenames, "len(previntermediates)", len(previntermediates), "len(prevcompiledintermediates)", len(prevcompiledintermediates)
+
 
         env = {"fcn": compilefcn(self.fcn), "getmask": compilefcn(lambda arrays: arrays[maskindex])}
 
@@ -639,13 +693,21 @@ def afcn(arrays):
 
         afcn = compilefcn(self._makefcn(compile(ast.parse(source), "<filter>", "exec"), env, "afcn", source))
 
-        awaits = list(self.previous._iterateapply(prevdictnames, prevcompiled, prevsourcenames, previntermediates, prevcompiledintermediates, preventryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, list, cache, basketcache, keycache, readexecutor, calcexecutor, numba))
+        from collections import OrderedDict
+
+        awaits = list(self.previous._iterateapply(prevsourcenames, prevcompiled, prevsourcenames, previntermediates, prevcompiledintermediates, preventryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, OrderedDict, cache, basketcache, keycache, readexecutor, calcexecutor, numba))
+
+        written = [False]
 
         def calculate(await):
             start, stop, numentries, arrays = await()
 
+            if not written[0]:
+                print "arrays", arrays
+            arrays = list(arrays.values())
+
             # add the mask array
-            mask = numpy.empty(numentries, dtype=numpy.bool)
+            mask = numpy.ones(numentries, dtype=numpy.bool)
             arrays.append(mask)
 
             # evaluate the expression and fill the mask
@@ -655,9 +717,18 @@ def afcn(arrays):
             cutarrays = [array[mask] for array in arrays[:len(sourcenames)]]
             cutnumentries = mask.sum()
 
+            if not written[0]:
+                print "FILTER cutnumentries", cutnumentries
+                for i, array in enumerate(arrays):
+                    print "array", i, array
+                for i, array in enumerate(cutarrays):
+                    print "cutarray", i, len(array), array
+
+                written[0] = True
+
             for i in range(len(compiledintermediates)):
                 # for Intermediates that will be made *after* the filter
-                cutarrays.append(numpy.empty(cutnumentries, dtype=self.NEW_ARRAY_DTYPE))
+                cutarrays.append(numpy.ones(cutnumentries, dtype=self.NEW_ARRAY_DTYPE) * 888)
 
             if hasentryvar:
                 # same array, but putting it in the canonical position
@@ -682,6 +753,17 @@ class ChainOrigin(ChainStep):
     def tree(self):
         return self._tree
 
+    def _wouldsatisfy(self, requirement, entryvar, aliases):
+        if requirement == entryvar:
+            return self
+
+        else:
+            branchname = aliases.get(requirement, requirement)
+            if branchname in self.tree:
+                return self
+            else:
+                return None
+
     def _satisfy(self, requirement, sourcenames, intermediates, entryvars, entryvar, aliases):
         if requirement == entryvar:
             entryvars.add(None)
@@ -699,6 +781,8 @@ class ChainOrigin(ChainStep):
             branchname = aliases.get(requirement, requirement)
             index = sourcenames.index(branchname)
 
+        print "_argfcn origin", requirement, index
+
         if index not in fcncache:
             fcncache[index] = compilefcn(lambda arrays: arrays[index])
         return fcncache[index]
@@ -713,9 +797,15 @@ class ChainOrigin(ChainStep):
 
         awaits = list(self.tree.iterate(entrysteps=entrysteps, branches=branches, outputtype=list, reportentries=True, entrystart=entrystart, entrystop=entrystop, cache=cache, basketcache=basketcache, keycache=keycache, executor=readexecutor, blocking=False))
 
+        written = [False]
+
         def calculate(start, stop, await):
             numentries = stop - start
             arrays = await()
+
+            if not written[0]:
+                print "ORIGIN has", len(arrays), "arrays and", len(compiledintermediates), "intermediates"
+                written[0] = True
 
             for i in range(len(compiledintermediates)):
                 arrays.append(numpy.ones(numentries, dtype=self.NEW_ARRAY_DTYPE) * 999)
