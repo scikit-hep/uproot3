@@ -425,35 +425,26 @@ class TTreeMethods(object):
         else:
             explicit_basketcache = True
                 
+        if issubclass(outputtype, dict):
+            def wrap_for_python_scope(futures):
+                return lambda: outputtype([(name, interpretation.finalize(future())) for name, interpretation, future in futures])
+        elif outputtype == tuple or outputtype == list:
+            def wrap_for_python_scope(futures):
+                return lambda: outputtype([interpretation.finalize(future()) for name, interpretation, future in futures])
+        else:
+            def wrap_for_python_scope(futures):
+                return lambda: outputtype(*[interpretation.finalize(future()) for name, interpretation, future in futures])
+
         for start, stop in entrysteps:
             start = max(start, entrystart)
             stop = min(stop, entrystop)
             if start > stop:
                 continue
 
-            futures = [(branch.name, interpretation, branch._step_array(interpretation, basket_itemoffset, basket_entryoffset, start, stop, cache, basketcache, keycache, executor, explicit_basketcache)) for branch, interpretation, basket_itemoffset, basket_entryoffset in branchinfo]
-
-            delayed = []
-            for name, interpretation, future in futures:
-                def wrap_for_python_scope(future):
-                    return lambda: interpretation.finalize(future())
-                delayed.append((name, wrap_for_python_scope(future)))
+            out = wrap_for_python_scope([(branch.name, interpretation, branch._step_array(interpretation, basket_itemoffset, basket_entryoffset, start, stop, cache, basketcache, keycache, executor, explicit_basketcache)) for branch, interpretation, basket_itemoffset, basket_entryoffset in branchinfo])
 
             if blocking:
-                if issubclass(outputtype, dict):
-                    out = outputtype([(name, delay()) for name, delay in delayed])
-                elif outputtype == tuple or outputtype == list:
-                    out = outputtype([delay() for name, delay in delayed])
-                else:
-                    out = outputtype(*[delay() for name, delay in delayed])
-
-            else:
-                if issubclass(outputtype, dict):
-                    out = lambda: outputtype(delayed)
-                elif outputtype == tuple or outputtype == list:
-                    out = lambda: outputtype([delay for name, delay in delayed])
-                else:
-                    out = lambda: outputtype(*[delay for name, delay in delayed])
+                out = out()
 
             if reportentries:
                 yield start, stop, out

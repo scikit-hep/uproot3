@@ -57,6 +57,15 @@ class ChainStep(object):
     def __init__(self, previous):
         self.previous = previous
 
+    def define(self, **exprs):
+        return Define(self, exprs)
+
+    def intermediate(self, cache=None, **exprs):
+        return Intermediate._create(self, cache, exprs)
+
+    def filter(self, expr):
+        return Filter(self, expr)
+
     @property
     def source(self):
         return self.previous.source
@@ -149,7 +158,7 @@ class ChainStep(object):
             try:
                 assert all(isinstance(x, parsable) or (callable(x) and hasattr(x, "__code__")) for x in exprs)
             except (TypeError, AssertionError):
-                raise TypeError("exprs must be a dict of strings or functions, iterable of strings or functions, a single string, or a single function")
+                raise TypeError("exprs must be a dict of strings or functions, an iterable of strings or functions, a single string, or a single function")
             else:
                 return [ChainStep._tofcn(x) + ((x, x) if isinstance(x, parsable) else (id(x), getattr(x, "__name__", None))) for i, x in enumerate(exprs)]
 
@@ -203,50 +212,20 @@ class ChainStep(object):
             def finish(results):
                 return outputtype(*results)
 
-        interleave = readexecutor is not None and calcexecutor is not None and isinstance(self.source, ChainOrigin)
+        awaits = list(self.source._iterate(sourcenames, intermediates, compiledintermediates, len(entryvars) > 0, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba))
 
-        await, oldstart, oldstop, oldnumentries = None, None, None, None
-        for start, stop, numentries, arrays in self.source._iterate(sourcenames, intermediates, compiledintermediates, len(entryvars) > 0, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
-            if interleave and await is not None:
-                await()
-                yield oldstart, oldstop, oldnumentries, finish(results)
+        def calculate(await):
+            start, stop, numentries, arrays = await()
 
-            # do the intermediates synchronously because they have a dependency order
             for compiledintermediate in compiledintermediates:
                 compiledintermediate(arrays)
 
-            # do the subexpressions asynchronously and in parallel
-            results = [None] * len(compiled)
-            def calculate(i):
-                try:
-                    out = compiled[i](arrays)
-                except:
-                    return sys.exc_info()
-                else:
-                    results[i] = out
-                    return None
+            return start, stop, numentries, finish([x(arrays) for x in compiled])
 
-            if calcexecutor is None:
-                for i in range(len(compiled)):
-                    uproot.tree._delayedraise(calculate(i))
-                def await():
-                    pass
+        def wrap_for_python_scope(await):
+            return lambda: calculate(await)
 
-            else:
-                execinfos = calcexecutor.map(calculate, range(len(compiled)))
-                def await():
-                    for excinfo in excinfos:
-                        uproot.tree._delayedraise(excinfo)
-
-            oldstart, oldstop, oldnumentries = start, stop, numentries
-
-            if not interleave:
-                await()
-                yield oldstart, oldstop, oldnumentries, finish(results)
-                
-        if interleave and await is not None:
-            await()
-            yield oldstart, oldstop, oldnumentries, finish(results)
+        return [wrap_for_python_scope(await) for await in awaits]
 
     def _prepare(self, exprs, aliases, entryvar, numba):
         compilefcn = self._compilefcn(numba)
@@ -288,40 +267,50 @@ class ChainStep(object):
     def iterate_newarrays(self, exprs, entrysteps=None, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, compilefcn = self._prepare(exprs, aliases, entryvar, numba)
 
-        iterator = self._iterateapply(dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
-        if reportentries:
-            for start, stop, numentries, results in iterator:
-                yield start, stop, numentries, results
-        else:
-            for start, stop, numentries, results in iterator:
-                yield results
+        for await in self._iterateapply(dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
+            start, stop, numentries, arrays = await()
+            if reportentries:
+                yield start, stop, numentries, arrays
+            else:
+                yield arrays
 
     def newarrays(self, exprs, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        entrystart, entrystop = self.tree._normalize_entrystartstop(entrystart, entrystop)
-        outarrays = [(dictname, numpy.empty(entrystop - entrystart, dtype=self.NEW_ARRAY_DTYPE)) for fcn, requirements, identifier, cacheid, dictname in self._tofcns(exprs)]
+        dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, compilefcn = self._prepare(exprs, aliases, entryvar, numba)
 
         if outputtype == namedtuple:
-            for dictname, outarray in outarrays:
+            for dictname in dictnames:
                 if not self._isidentifier(dictname):
                     raise ValueError("illegal field name for namedtuple: {0}".format(repr(dictname)))
             outputtype = namedtuple("Arrays", dictnames)
 
-        dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, compilefcn = self._prepare(exprs, aliases, entryvar, numba)
+        partitions = []
+        totalentries = 0
+        for await in self._iterateapply(dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, None, entrystart, entrystop, aliases, interpretations, entryvar, tuple, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
+            start, stop, numentries, results = await()
 
-        index = 0
-        for start, stop, numentries, results in self._iterateapply(dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, None, entrystart, entrystop, aliases, interpretations, entryvar, tuple, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
-            for (dictname, outarray), result in zip(outarrays, results):
-                outarray[index : index + numentries] = result
-                index += numentries
+            assert len(dictnames) == len(results)
+            if len(results) > 0:
+                for result in results:
+                    assert numentries == len(result)
 
-        outarrays = [(dictname, outarray[:index].copy()) for dictname, outarray in outarrays]
+            partitions.append((totalentries, totalentries + numentries, results))
+            totalentries += numentries
+
+        if len(partitions) == 0:
+            outarrays = [numpy.empty(0, dtype=self.NEW_ARRAY_DTYPE) for i in range(len(dictnames))]
+        else:
+            outarrays = [numpy.empty(totalentries, dtype=result.dtype) for result in partitions[0][2]]
+
+        for start, stop, results in partitions:
+            for outarray, result in zip(outarrays, results):
+                outarray[start:stop] = result
             
         if issubclass(outputtype, dict):
-            return outputtype(outarrays)
+            return outputtype(zip(dictnames, outarrays))
         elif outputtype == tuple or outputtype == list:
-            return outputtype([outarray for name, outarray in outarrays])
+            return outputtype(outarrays)
         else:
-            return outputtype(*[outarray for name, outarray in outarrays])
+            return outputtype(*outarrays)
 
     def newarray(self, expr, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         if isinstance(expr, parsable):
@@ -332,14 +321,110 @@ class ChainStep(object):
             raise TypeError("expr must be a single string or function")
         return self.newarrays(expr, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=tuple, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)[0]
 
-    def define(self, **exprs):
-        return Define(self, exprs)
+#     def reduce(self, init, increment, combine=lambda x, y: x + y, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+#         compilefcn = self._compilefcn(numba)
 
-    def intermediate(self, cache=None, **exprs):
-        return Intermediate._create(self, cache, exprs)
+#         if isinstance(init, parsable):
+#             init = self._string2fcn(init)
+#         if isinstance(increment, parsable):
+#             increment = self._string2fcn(increment)
+#         if isinstance(combine, parsable):
+#             combine = self._string2fcn(combine)
 
-    def filter(self, expr):
-        return Filter(self, expr)
+#         if callable(init) and hasattr(init, "__code__") and callable(increment) and hasattr(increment, "__code__") and callable(combine) and hasattr(combine, "__code__"):
+#             if len(increment.__code__.co_varnames) == 0:
+#                 raise TypeError("increment function must have at least one parameter")
+
+#             monoidvars = [increment.__code__.co_varnames[0]]
+#             init       = {monoidvar[0]: init}
+#             increment  = {monoidvar[0]: increment}
+#             combine    = {monoidvar[0]: combine}
+
+#         if not isinstance(increment, dict):
+#             try:
+#                 assert all(isinstance(x, parsable) or (callable(x) and hasattr(x, "__code__")) for x in increment)
+#             except (TypeError, AssertionError):
+#                 raise TypeError("increment must be a dict of strings or functions, an iterable of strings or functions, a single string, or a single function")
+#             else:
+#                 increment = 
+
+
+#                 monoidvars = []
+#                 newincrement = {}
+#                 for expr in increment:
+#                     if isinstance(expr, parsable):
+#                         expr = self._string2fcn(expr)
+#                     if len(expr.__code__.co_varnames) == 0:
+#                         raise TypeError("increment functions must have at least one parameter")
+
+#                     monoidvars.append(expr)
+#                     newincrement
+
+
+                    
+#         if not isinstance(init, dict):
+#             try:
+#                 assert all(isinstance(x, parsable) or (callable(x) and hasattr(x, "__code__")) for x in init)
+#             except (TypeError, AssertionError):
+#                 raise TypeError("init must be a dict of strings or functions, an iterable of strings or functions, a single string, or a single function")
+#             else:
+                
+            
+
+
+
+
+#         if isinstance(init, parsable):
+#             init = self._string2fcn(init)
+#         if not (callable(init) and hasattr(init, "__code__") and init.__code__.co_varnames == 0):
+#             raise TypeError("init must be a zero-argument function")
+
+#         if isinstance(increment) or (callable(increment) and hasattr(increment, "__code__")):
+#             increment, dependencies, identifier = self._tofcn(increment)
+#         else:
+#             raise TypeError("increment must be a string or function")
+
+#         if isinstance(combine, parsable):
+#             combine = self._string2fcn(combine)
+#         if not (callable(combine) and hasattr(combine, "__code__") and combine.__code__.co_varnames) == 2:
+#             raise TypeError("combine must be a two-argument function")
+
+#         sourcenames = []
+#         intermediates = []
+#         entryvars = set()
+#         for name in dependencies:
+#             self._satisfy(name, sourcenames, intermediates, entryvars, entryvar, aliases)
+
+#         intermediates = Intermediate._dependencyorder(sourcenames, intermediates, entryvar, aliases)
+
+#         fcncache = {}
+#         compiled = []
+#         for name in dependencies:
+#             compiled.append(self._argfcn(name, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache))
+
+#         compiledintermediates = [intermediate._compileintermediate(requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache) for intermediate, requirement in intermediates]
+
+#         init = compilefcn(init)
+#         combine = compilefcn(combine)
+
+#         env = {"fcn": compilefcn(increment)}
+
+
+#         source = """
+# def rfcn(monoid, numentries, arrays):
+#     {itemdefs}
+#     for i in range(numentries):
+#         fcn({itemis})
+
+
+# """
+
+
+
+
+#         iterator = self._iterateapply(HERE)
+
+
 
 class Define(ChainStep):
     def __init__(self, previous, exprs):
@@ -554,10 +639,13 @@ def afcn(arrays):
 
         afcn = compilefcn(self._makefcn(compile(ast.parse(source), "<filter>", "exec"), env, "afcn", source))
 
-        previterator = self.previous._iterateapply(prevdictnames, prevcompiled, prevsourcenames, previntermediates, prevcompiledintermediates, preventryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, list, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
-        for prevstart, prevstop, prevnumentries, arrays in previterator:
+        awaits = list(self.previous._iterateapply(prevdictnames, prevcompiled, prevsourcenames, previntermediates, prevcompiledintermediates, preventryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, list, cache, basketcache, keycache, readexecutor, calcexecutor, numba))
+
+        def calculate(await):
+            start, stop, numentries, arrays = await()
+
             # add the mask array
-            mask = numpy.empty(prevnumentries, dtype=numpy.bool)
+            mask = numpy.empty(numentries, dtype=numpy.bool)
             arrays.append(mask)
 
             # evaluate the expression and fill the mask
@@ -568,14 +656,19 @@ def afcn(arrays):
             cutnumentries = mask.sum()
 
             for i in range(len(compiledintermediates)):
-                # for Intermediates (post-filter)
+                # for Intermediates that will be made *after* the filter
                 cutarrays.append(numpy.empty(cutnumentries, dtype=self.NEW_ARRAY_DTYPE))
 
             if hasentryvar:
                 # same array, but putting it in the canonical position
                 cutarrays.append(cutarrays[sourcenames.index(entryvar)])
 
-            yield prevstart, prevstop, cutnumentries, tuple(cutarrays)
+            return start, stop, cutnumentries, tuple(cutarrays)
+
+        def wrap_for_python_scope(await):
+            return lambda: calculate(await)
+
+        return [wrap_for_python_scope(await) for await in awaits]
 
 class ChainOrigin(ChainStep):
     def __init__(self, tree):
@@ -618,38 +711,28 @@ class ChainOrigin(ChainStep):
             else:
                 branches[branchname] = uproot.interp.auto.interpret(self.tree[branchname])
 
-        for entrystart, entrystop, arrays in self.tree.iterate(entrysteps = entrysteps,
-                                                               branches = branches,
-                                                               outputtype = list,
-                                                               reportentries = True,
-                                                               entrystart = entrystart,
-                                                               entrystop = entrystop,
-                                                               cache = cache,
-                                                               basketcache = basketcache,
-                                                               keycache = keycache,
-                                                               executor = readexecutor,
-                                                               blocking = True):
+        awaits = list(self.tree.iterate(entrysteps=entrysteps, branches=branches, outputtype=list, reportentries=True, entrystart=entrystart, entrystop=entrystop, cache=cache, basketcache=basketcache, keycache=keycache, executor=readexecutor, blocking=False))
+
+        def calculate(start, stop, await):
+            numentries = stop - start
+            arrays = await()
 
             for i in range(len(compiledintermediates)):
-                arrays.append(numpy.empty(entrystop - entrystart, dtype=self.NEW_ARRAY_DTYPE))
+                arrays.append(numpy.ones(numentries, dtype=self.NEW_ARRAY_DTYPE) * 999)
 
             if hasentryvar:
-                arrays.append(numpy.arange(entrystart, entrystop))
+                arrays.append(numpy.arange(start, stop))
 
-            yield entrystart, entrystop, entrystop - entrystart, tuple(arrays)
+            return start, stop, numentries, tuple(arrays)
+
+        def wrap_for_python_scope(start, stop, await):
+            return lambda: calculate(start, stop, await)
+
+        return [wrap_for_python_scope(start, stop, await) for start, stop, await in awaits]
 
 class TTreeFunctionalMethods(uproot.tree.TTreeMethods):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (uproot.tree.TTreeMethods.__metaclass__,), {})
-
-    def iterate_newarrays(self, exprs, entrysteps=None, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        return ChainOrigin(self).iterate_newarrays(exprs, entrysteps=entrysteps, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, reportentries=reportentries, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
-
-    def newarrays(self, exprs, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        return ChainOrigin(self).newarrays(exprs, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
-
-    def newarray(self, expr, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        return ChainOrigin(self).newarray(expr, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
 
     def define(self, **exprs):
         return ChainOrigin(self).define(**exprs)
@@ -660,8 +743,17 @@ class TTreeFunctionalMethods(uproot.tree.TTreeMethods):
     def filter(self, expr):
         return ChainOrigin(self).filter(expr)
 
-    def reduce(self):
-        raise NotImplementedError
+    def iterate_newarrays(self, exprs, entrysteps=None, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        return ChainOrigin(self).iterate_newarrays(exprs, entrysteps=entrysteps, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, reportentries=reportentries, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
+
+    def newarrays(self, exprs, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        return ChainOrigin(self).newarrays(exprs, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
+
+    def newarray(self, expr, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        return ChainOrigin(self).newarray(expr, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
+
+    def reduce(self, init, increment, combine=lambda x, y: x + y, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        return ChainOrigin(self).reduce(init, increment, combine=combine)
 
     def hists(self):
         raise NotImplementedError
