@@ -236,27 +236,11 @@ class ChainStep(object):
     def _argfcn(self, requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache):
         return self.previous._argfcn(requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache)
 
-    def _chain(self, sourcenames, intermediates, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
-        return self.previous._chain(sourcenames, intermediates, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
+    def _chain(self, sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, numba):
+        return self.previous._chain(sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, numba)
 
-    def _iterateapply(self, dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
-        if outputtype == namedtuple:
-            for dictname in dictnames:
-                if not self._isidentifier(dictname):
-                    raise ValueError("illegal field name for namedtuple: {0}".format(repr(dictname)))
-            outputtype = namedtuple("Arrays", dictnames)
-
-        if issubclass(outputtype, dict):
-            def finish(results):
-                return outputtype(zip(dictnames, results))
-        elif outputtype == tuple or outputtype == list:
-            def finish(results):
-                return outputtype(results)
-        else:
-            def finish(results):
-                return outputtype(*results)
-
-        awaits = self.source._chain(sourcenames, intermediates, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
+    def _endchain(self, compiled, sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
+        awaits = self.source._chain(sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, numba)
 
         def calculate(await):
             start, stop, numentries, arrays = await()
@@ -264,22 +248,41 @@ class ChainStep(object):
             for compiledintermediate in compiledintermediates:
                 compiledintermediate(arrays)
 
-            return start, stop, numentries, finish([x(arrays) for x in compiled])
+            return start, stop, numentries, [x(arrays) for x in compiled]
 
-        def wrap_for_python_scope(await):
-            return lambda: calculate(await)
+        if calcexecutor is None:
+            for await in awaits:
+                start, stop, numentries, arrays = calculate(await)
+                yield start, stop, numentries, arrays
 
-        return [wrap_for_python_scope(await) for await in awaits]
-
+        else:
+            for start, stop, numentries, arrays in calcexecutor.map(calculate, awaits):
+                yield start, stop, numentries, arrays
+            
     def iterate_newarrays(self, exprs, entrysteps=None, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         tmpnode, dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, compilefcn = self._prepare(exprs, aliases, entryvar, numba)
 
-        for await in tmpnode._iterateapply(dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
-            start, stop, numentries, arrays = await()
+        if outputtype == namedtuple:
+            for dictname in dictnames:
+                if not self._isidentifier(dictname):
+                    raise ValueError("illegal field name for namedtuple: {0}".format(repr(dictname)))
+            outputtype = namedtuple("Arrays", dictnames)
+
+        if issubclass(outputtype, dict):
+            def finish(arrays):
+                return outputtype(zip(dictnames, arrays))
+        elif outputtype == tuple or outputtype == list:
+            def finish(arrays):
+                return outputtype(arrays)
+        else:
+            def finish(arrays):
+                return outputtype(*arrays)
+
+        for start, stop, numentries, arrays in tmpnode._endchain(compiled, sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
             if reportentries:
-                yield start, stop, numentries, arrays
+                yield start, stop, numentries, finish(arrays)
             else:
-                yield arrays
+                yield finish(arrays)
 
     def newarrays(self, exprs, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         tmpnode, dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, compilefcn = self._prepare(exprs, aliases, entryvar, numba)
@@ -292,25 +295,23 @@ class ChainStep(object):
 
         partitions = []
         totalentries = 0
-        for await in tmpnode._iterateapply(dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, None, entrystart, entrystop, aliases, interpretations, entryvar, tuple, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
-            start, stop, numentries, results = await()
+        for start, stop, numentries, arrays in tmpnode._endchain(compiled, sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, None, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
+            assert len(dictnames) == len(arrays)
+            if len(arrays) > 0:
+                for array in arrays:
+                    assert numentries == len(array)
 
-            assert len(dictnames) == len(results)
-            if len(results) > 0:
-                for result in results:
-                    assert numentries == len(result)
-
-            partitions.append((totalentries, totalentries + numentries, results))
+            partitions.append((totalentries, totalentries + numentries, arrays))
             totalentries += numentries
 
         if len(partitions) == 0:
             outarrays = [numpy.ones(0, dtype=self.NEW_ARRAY_DTYPE)*222 for i in range(len(dictnames))]
         else:
-            outarrays = [numpy.ones(totalentries, dtype=result.dtype)*333 for result in partitions[0][2]]
+            outarrays = [numpy.ones(totalentries, dtype=array.dtype)*333 for array in partitions[0][2]]
 
-        for start, stop, results in partitions:
-            for outarray, result in zip(outarrays, results):
-                outarray[start:stop] = result
+        for start, stop, arrays in partitions:
+            for outarray, array in zip(outarrays, arrays):
+                outarray[start:stop] = array
             
         if issubclass(outputtype, dict):
             return outputtype(zip(dictnames, outarrays))
@@ -319,14 +320,14 @@ class ChainStep(object):
         else:
             return outputtype(*outarrays)
 
-    def newarray(self, expr, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+    def newarray(self, expr, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, cache=None, basketcache=None, keycache=None, readexecutor=None, numba=ifinstalled):
         if isinstance(expr, parsable):
             pass
         elif callable(expr) and hasattr(expr, "__code__"):
             pass
         else:
             raise TypeError("expr must be a single string or function")
-        return self.newarrays(expr, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=tuple, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)[0]
+        return self.newarrays(expr, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=tuple, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, numba=numba)[0]
 
 #     def reduce(self, init, increment, combine=lambda x, y: x + y, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
 #         compilefcn = self._compilefcn(numba)
@@ -646,7 +647,7 @@ class Filter(ChainStep):
                 fcncache[index] = compilefcn(lambda arrays: arrays[index])
             return fcncache[index]
 
-    def _chain(self, sourcenames, intermediates, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
+    def _chain(self, sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, numba):
         requests = sourcenames + [x for x in self.requirements if x not in sourcenames and not isinstance(self.previous._wouldsatisfy(x, entryvar, aliases), Define)]
 
         tmpnode, prevdictnames, prevcompiled, prevsourcenames, previntermediates, prevcompiledintermediates, preventryvars, compilefcn = self.previous._prepare(requests, aliases, entryvar, numba)
@@ -673,7 +674,7 @@ def afcn(arrays):
 
         afcn = compilefcn(self._makefcn(compile(ast.parse(source), "<filter>", "exec"), env, "afcn", source))
 
-        awaits = tmpnode._chain(prevsourcenames, previntermediates, prevcompiledintermediates, preventryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
+        awaits = tmpnode._chain(prevsourcenames, prevcompiledintermediates, preventryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, numba)
 
         prevsources = prevsourcenames + [req for node, req in previntermediates]
 
@@ -754,7 +755,7 @@ class ChainOrigin(ChainStep):
             fcncache[index] = compilefcn(lambda arrays: arrays[index])
         return fcncache[index]
 
-    def _chain(self, sourcenames, intermediates, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
+    def _chain(self, sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, numba):
         branches = {}
         for branchname in sourcenames:
             if branchname in interpretations:
