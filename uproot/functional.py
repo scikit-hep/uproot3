@@ -258,21 +258,11 @@ class ChainStep(object):
 
         awaits = self.source._chain(sourcenames, intermediates, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
 
-        written = [False]
-
         def calculate(await):
             start, stop, numentries, arrays = await()
 
             for compiledintermediate in compiledintermediates:
                 compiledintermediate(arrays)
-
-
-
-            if not written[0]:
-                print "LAST has", len(arrays)
-                for i, array in enumerate(arrays):
-                    print "array", i, len(array), array
-                written[0] = True
 
             return start, stop, numentries, finish([x(arrays) for x in compiled])
 
@@ -292,11 +282,7 @@ class ChainStep(object):
                 yield arrays
 
     def newarrays(self, exprs, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        print "newarrays _prepare"
-
         tmpnode, dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, compilefcn = self._prepare(exprs, aliases, entryvar, numba)
-
-        print "newarrays _prepare DONE"
 
         if outputtype == namedtuple:
             for dictname in dictnames:
@@ -490,8 +476,6 @@ def afcn(arrays):
     return fcn({args})
 """.format(args = ", ".join(args))
 
-            print "_argfcn define", requirement
-
             key = (id(self),)
             if key not in fcncache:
                 fcncache[key] = compilefcn(self._makefcn(compile(ast.parse(source), requirement, "exec"), env, "afcn", source))
@@ -589,9 +573,6 @@ class Intermediate(ChainStep):
     def _argfcn(self, requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache):
         if requirement in self.fcn:
             index = len(sourcenames) + intermediates.index((self, requirement))
-
-            print "_argfcn intermediate", requirement, index
-
             if index not in fcncache:
                 fcncache[index] = compilefcn(lambda arrays: arrays[index])
             return fcncache[index]
@@ -661,9 +642,6 @@ class Filter(ChainStep):
 
         else:
             index = sourcenames.index(requirement)
-
-            print "_argfcn filter", requirement, index
-
             if index not in fcncache:
                 fcncache[index] = compilefcn(lambda arrays: arrays[index])
             return fcncache[index]
@@ -671,12 +649,8 @@ class Filter(ChainStep):
     def _chain(self, sourcenames, intermediates, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
         requests = sourcenames + [x for x in self.requirements if x not in sourcenames and not isinstance(self.previous._wouldsatisfy(x, entryvar, aliases), Define)]
 
-        print "BEFORE", requests
-
-        maskindex = len(requests)
         tmpnode, prevdictnames, prevcompiled, prevsourcenames, previntermediates, prevcompiledintermediates, preventryvars, compilefcn = self.previous._prepare(requests, aliases, entryvar, numba)
-
-        print "AFTER"
+        maskindex = len(prevsourcenames) + len(prevcompiledintermediates) + len(preventryvars)
 
         env = {"fcn": compilefcn(self.fcn), "getmask": compilefcn(lambda arrays: arrays[maskindex])}
 
@@ -684,7 +658,7 @@ class Filter(ChainStep):
         itemis = []
         prevfcncache = {}
         for i, req in enumerate(self.requirements):
-            argfcn = self.previous._argfcn(req, prevsourcenames, previntermediates, entryvar, aliases, compilefcn, prevfcncache)
+            argfcn = tmpnode._argfcn(req, prevsourcenames, previntermediates, entryvar, aliases, compilefcn, prevfcncache)
             env["arg{0}".format(i)] = argfcn
             itemdefs.append("item{0} = arg{0}(arrays)".format(i))
             itemis.append("item{0}[i]".format(i))
@@ -699,11 +673,9 @@ def afcn(arrays):
 
         afcn = compilefcn(self._makefcn(compile(ast.parse(source), "<filter>", "exec"), env, "afcn", source))
 
-        print "AFTER AFTER"
-
         awaits = tmpnode._chain(prevsourcenames, previntermediates, prevcompiledintermediates, preventryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
 
-        written = [False]
+        prevsources = prevsourcenames + [req for node, req in previntermediates]
 
         def calculate(await):
             start, stop, numentries, arrays = await()
@@ -719,18 +691,9 @@ def afcn(arrays):
             afcn(arrays + (mask,))
 
             # apply the mask only to the sourcename arrays
-            cutarrays = [array[mask] for array in arrays[:len(sourcenames)]]
+            # cutarrays = [array[mask] for array in arrays[:len(sourcenames)]]
+            cutarrays = [arrays[prevsources.index(name)][mask] for name in sourcenames]
             cutnumentries = mask.sum()
-
-            if not written[0]:
-                print "FILTER has", len(arrays)
-                print "cutnumentries", cutnumentries
-                for i, array in enumerate(arrays):
-                    print "array", i, len(array), array
-                for i, array in enumerate(cutarrays):
-                    print "cutarray", i, len(array), array
-
-                written[0] = True
 
             for i in range(len(compiledintermediates)):
                 # for Intermediates that will be made *after* the filter
@@ -787,8 +750,6 @@ class ChainOrigin(ChainStep):
             branchname = aliases.get(requirement, requirement)
             index = sourcenames.index(branchname)
 
-        print "_argfcn origin", requirement, index
-
         if index not in fcncache:
             fcncache[index] = compilefcn(lambda arrays: arrays[index])
         return fcncache[index]
@@ -803,15 +764,9 @@ class ChainOrigin(ChainStep):
 
         awaits = list(self.tree.iterate(entrysteps=entrysteps, branches=branches, outputtype=list, reportentries=True, entrystart=entrystart, entrystop=entrystop, cache=cache, basketcache=basketcache, keycache=keycache, executor=readexecutor, blocking=False))
 
-        written = [False]
-
         def calculate(start, stop, await):
             numentries = stop - start
             arrays = await()
-
-            if not written[0]:
-                print "ORIGIN has", len(arrays)
-                written[0] = True
 
             for i in range(len(compiledintermediates)):
                 arrays.append(numpy.ones(numentries, dtype=self.NEW_ARRAY_DTYPE) * 999)
