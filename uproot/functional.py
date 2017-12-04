@@ -87,7 +87,10 @@ class ChainStep(object):
         disambigifier = 0
         out = {}
         for name in want:
-            newname = name
+            if ChainStep._isidentifier(name):
+                newname = name
+            else:
+                newname = "tmp"
             while newname in avoid or newname in out or keyword.iskeyword(newname):
                 newname = "{0}_{1}".format(name, disambigifier)
                 disambigifier += 1
@@ -163,7 +166,7 @@ class ChainStep(object):
                     used["fcn"] = 1
             out = trial
             while out in used:
-                out = "{0}{1}".format(trial, used[trial])
+                out = "{0}_{1}".format(trial, used[trial])
                 used[trial] += 1
             if trial not in used:
                 used[trial] = 2
@@ -415,8 +418,8 @@ class ChainStep(object):
                 raise TypeError("combine must be a (non-empty) dict of strings or functions, a (non-empty) iterable of strings or functions, a single string, or a single function")
             else:
                 combine = dict(zip(monoidvars, [string2fcn(x) if isinstance(x, parsable) else x for x in combine]))
-        if not all(self._params(x) == 0 for x in combine.values()):
-            raise TypeError("combine functions must have zero arguments")
+        if not all(self._params(x) == 2 for x in combine.values()):
+            raise TypeError("combine functions must have two arguments")
 
         if not isinstance(monoidvars, dict):
             monoidvars = dict(zip(monoidvars, monoidvars))
@@ -427,47 +430,38 @@ class ChainStep(object):
         # now actually do the calculation
         compilefcn = self._compilefcn(numba)
 
+        dependencies = []
+        for inc in increment.values():
+            dependencies.extend(self._params(inc)[1:])
+
+        sourcenames = []
+        intermediates = []
+        entryvars = set()
+        for name in dependencies:
+            self._satisfy(name, sourcenames, intermediates, entryvars, entryvar, aliases)
+
+        intermediates = Intermediate._dependencyorder(sourcenames, intermediates, entryvar, aliases)
+
+        fcncache = {}
+        compiled = []
+        for name in dependencies:
+            compiled.append(self._argfcn(name, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache))
+
+        compiledintermediates = [intermediate._compileintermediate(requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache) for intermediate, requirement in intermediates]
+
+        names = ChainStep._generatenames(["rfcn"] + list(monoidvars), set(dependencies))
+
+        env = dict((names[x], compilefcn(increment[x])) for x in monoidvars)
+
+        source = """
+def {rfcn}(arrays, numentries{monoidargs})
 
 
-            
 
 
+""".format(rfcn=names["rfcn"], monoidargs="".join(", " + names[x] for x in monoidvars))
 
 
-#         if isinstance(init, parsable):
-#             init = self._string2fcn(init)
-#         if not (callable(init) and hasattr(init, "__code__") and init.__code__.co_varnames == 0):
-#             raise TypeError("init must be a zero-argument function")
-
-#         if isinstance(increment) or (callable(increment) and hasattr(increment, "__code__")):
-#             increment, dependencies, identifier = self._tofcn(increment)
-#         else:
-#             raise TypeError("increment must be a string or function")
-
-#         if isinstance(combine, parsable):
-#             combine = self._string2fcn(combine)
-#         if not (callable(combine) and hasattr(combine, "__code__") and combine.__code__.co_varnames) == 2:
-#             raise TypeError("combine must be a two-argument function")
-
-#         sourcenames = []
-#         intermediates = []
-#         entryvars = set()
-#         for name in dependencies:
-#             self._satisfy(name, sourcenames, intermediates, entryvars, entryvar, aliases)
-
-#         intermediates = Intermediate._dependencyorder(sourcenames, intermediates, entryvar, aliases)
-
-#         fcncache = {}
-#         compiled = []
-#         for name in dependencies:
-#             compiled.append(self._argfcn(name, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache))
-
-#         compiledintermediates = [intermediate._compileintermediate(requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache) for intermediate, requirement in intermediates]
-
-#         init = compilefcn(init)
-#         combine = compilefcn(combine)
-
-#         env = {"fcn": compilefcn(increment)}
 
 
 #         source = """
