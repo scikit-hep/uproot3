@@ -190,6 +190,43 @@ class ChainStep(object):
             import numba as nb
             return lambda f: nb.jit(**numba)(f)
 
+    def _prepare(self, exprs, aliases, entryvar, numba):
+        compilefcn = self._compilefcn(numba)
+
+        dictnames = []
+        nonidentifiers = []
+        toresolve = []
+        for fcn, requirements, identifier, cacheid, dictname in self._tofcns(exprs):
+            dictnames.append(dictname)
+            if identifier is None:
+                nonidentifiers.append((fcn, requirements, identifier, cacheid, dictname))
+                toresolve.append(dictname)
+            else:
+                toresolve.append(identifier)
+
+        tmpnode = Intermediate(self, None, nonidentifiers)
+
+        # find all the dependencies and put unique ones in lists
+        sourcenames = []
+        intermediates = []
+        entryvars = set()
+        for name in toresolve:
+            tmpnode._satisfy(name, sourcenames, intermediates, entryvars, entryvar, aliases)
+
+        # reorder the (Intermediate, name) pairs in order of increasing dependency (across all expressions)
+        intermediates = Intermediate._dependencyorder(sourcenames, intermediates, entryvar, aliases)
+
+        # now compile them, using the established "sourcenames" and "intermediates" order to get arguments by tuple index (hard-compiled into functions)
+        fcncache = {}
+        compiled = []
+        for name in toresolve:
+            compiled.append(tmpnode._argfcn(name, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache))
+
+        # compile the intermediates in the same way
+        compiledintermediates = [intermediate._compileintermediate(requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache) for intermediate, requirement in intermediates]
+
+        return tmpnode, dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, compilefcn
+
     def _wouldsatisfy(self, requirement, entryvar, aliases):
         return self.previous._wouldsatisfy(requirement, entryvar, aliases)
 
@@ -198,6 +235,9 @@ class ChainStep(object):
 
     def _argfcn(self, requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache):
         return self.previous._argfcn(requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache)
+
+    def _chain(self, sourcenames, intermediates, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
+        return self.previous._chain(sourcenames, intermediates, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
 
     def _iterateapply(self, dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
         if outputtype == namedtuple:
@@ -216,13 +256,23 @@ class ChainStep(object):
             def finish(results):
                 return outputtype(*results)
 
-        awaits = list(self.source._iterate(sourcenames, intermediates, compiledintermediates, len(entryvars) > 0, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba))
+        awaits = self.source._chain(sourcenames, intermediates, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
+
+        written = [False]
 
         def calculate(await):
             start, stop, numentries, arrays = await()
 
             for compiledintermediate in compiledintermediates:
                 compiledintermediate(arrays)
+
+
+
+            if not written[0]:
+                print "LAST has", len(arrays)
+                for i, array in enumerate(arrays):
+                    print "array", i, len(array), array
+                written[0] = True
 
             return start, stop, numentries, finish([x(arrays) for x in compiled])
 
@@ -231,51 +281,10 @@ class ChainStep(object):
 
         return [wrap_for_python_scope(await) for await in awaits]
 
-    def _prepare(self, exprs, aliases, entryvar, numba):
-        compilefcn = self._compilefcn(numba)
-
-        dictnames = []
-        nonidentifiers = []
-        toresolve = []
-        for fcn, requirements, identifier, cacheid, dictname in self._tofcns(exprs):
-            dictnames.append(dictname)
-            if identifier is None:
-                nonidentifiers.append((fcn, requirements, identifier, cacheid, dictname))
-                toresolve.append(dictname)
-            else:
-                toresolve.append(identifier)
-
-        intermediate = Intermediate(self, None, nonidentifiers)
-
-        # find all the dependencies and put unique ones in lists
-        sourcenames = []
-        intermediates = []
-        entryvars = set()
-        for name in toresolve:
-            intermediate._satisfy(name, sourcenames, intermediates, entryvars, entryvar, aliases)
-
-        # reorder the (Intermediate, name) pairs in order of increasing dependency (across all expressions)
-        intermediates = Intermediate._dependencyorder(sourcenames, intermediates, entryvar, aliases)
-
-        print "B len(intermediates)", len(intermediates)
-
-        # now compile them, using the established "sourcenames" and "intermediates" order to get arguments by tuple index (hard-compiled into functions)
-        fcncache = {}
-        compiled = []
-        for name in toresolve:
-            compiled.append(intermediate._argfcn(name, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache))
-
-        # compile the intermediates in the same way
-        compiledintermediates = [intermediate._compileintermediate(requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache) for intermediate, requirement in intermediates]
-
-        print "C len(compiledintermediates)", len(compiledintermediates)
-
-        return dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, compilefcn
-
     def iterate_newarrays(self, exprs, entrysteps=None, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, compilefcn = self._prepare(exprs, aliases, entryvar, numba)
+        tmpnode, dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, compilefcn = self._prepare(exprs, aliases, entryvar, numba)
 
-        for await in self._iterateapply(dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
+        for await in tmpnode._iterateapply(dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
             start, stop, numentries, arrays = await()
             if reportentries:
                 yield start, stop, numentries, arrays
@@ -283,7 +292,11 @@ class ChainStep(object):
                 yield arrays
 
     def newarrays(self, exprs, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, compilefcn = self._prepare(exprs, aliases, entryvar, numba)
+        print "newarrays _prepare"
+
+        tmpnode, dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, compilefcn = self._prepare(exprs, aliases, entryvar, numba)
+
+        print "newarrays _prepare DONE"
 
         if outputtype == namedtuple:
             for dictname in dictnames:
@@ -293,7 +306,7 @@ class ChainStep(object):
 
         partitions = []
         totalentries = 0
-        for await in self._iterateapply(dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, None, entrystart, entrystop, aliases, interpretations, entryvar, tuple, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
+        for await in tmpnode._iterateapply(dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, None, entrystart, entrystop, aliases, interpretations, entryvar, tuple, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
             start, stop, numentries, results = await()
 
             assert len(dictnames) == len(results)
@@ -635,42 +648,35 @@ class Filter(ChainStep):
             return self
 
     def _satisfy(self, requirement, sourcenames, intermediates, entryvars, entryvar, aliases):
-        sourcenames.append(requirement)
-        # if requirement not in sourcenames:
-        #     sourcenames.append(requirement)
+        what = self.previous._wouldsatisfy(requirement, entryvar, aliases)
+        if isinstance(what, Define):
+            return what._satisfy(requirement, sourcenames, intermediates, entryvars, entryvar, aliases)
+        else:
+            sourcenames.append(requirement)
 
     def _argfcn(self, requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache):
-        index = sourcenames.index(requirement)
+        what = self.previous._wouldsatisfy(requirement, entryvar, aliases)
+        if isinstance(what, Define):
+            return what._argfcn(requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache)
 
-        print "_argfcn filter", requirement, index
+        else:
+            index = sourcenames.index(requirement)
 
-        if index not in fcncache:
-            fcncache[index] = compilefcn(lambda arrays: arrays[index])
-        return fcncache[index]
+            print "_argfcn filter", requirement, index
 
-        # if requirement in sourcenames:
-        #     index = sourcenames.index(requirement)
-        # else:
-        #     index = len(sourcenames) + [x for x in self.requirements if x not in sourcenames].index(requirement)
+            if index not in fcncache:
+                fcncache[index] = compilefcn(lambda arrays: arrays[index])
+            return fcncache[index]
 
-        # print "_argfcn filter", requirement, index
-
-        # if index not in fcncache:
-        #     fcncache[index] = compilefcn(lambda arrays: arrays[index])
-        # return fcncache[index]
-
-    def _iterate(self, sourcenames, intermediates, compiledintermediates, hasentryvar, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
-        print "HERE", self.requirements, sourcenames
-
+    def _chain(self, sourcenames, intermediates, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
         requests = sourcenames + [x for x in self.requirements if x not in sourcenames and not isinstance(self.previous._wouldsatisfy(x, entryvar, aliases), Define)]
 
-        print "requests", requests
+        print "BEFORE", requests
 
         maskindex = len(requests)
-        prevdictnames, prevcompiled, prevsourcenames, previntermediates, prevcompiledintermediates, preventryvars, compilefcn = self.previous._prepare(requests, aliases, entryvar, numba)
+        tmpnode, prevdictnames, prevcompiled, prevsourcenames, previntermediates, prevcompiledintermediates, preventryvars, compilefcn = self.previous._prepare(requests, aliases, entryvar, numba)
 
-        print "prevdictnames", prevdictnames, "len(prevcompiled)", len(prevcompiled), "prevsourcenames", prevsourcenames, "len(previntermediates)", len(previntermediates), "len(prevcompiledintermediates)", len(prevcompiledintermediates)
-
+        print "AFTER"
 
         env = {"fcn": compilefcn(self.fcn), "getmask": compilefcn(lambda arrays: arrays[maskindex])}
 
@@ -693,34 +699,34 @@ def afcn(arrays):
 
         afcn = compilefcn(self._makefcn(compile(ast.parse(source), "<filter>", "exec"), env, "afcn", source))
 
-        from collections import OrderedDict
+        print "AFTER AFTER"
 
-        awaits = list(self.previous._iterateapply(prevsourcenames, prevcompiled, prevsourcenames, previntermediates, prevcompiledintermediates, preventryvars, entrysteps, entrystart, entrystop, aliases, interpretations, entryvar, OrderedDict, cache, basketcache, keycache, readexecutor, calcexecutor, numba))
+        awaits = tmpnode._chain(prevsourcenames, previntermediates, prevcompiledintermediates, preventryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
 
         written = [False]
 
         def calculate(await):
             start, stop, numentries, arrays = await()
 
-            if not written[0]:
-                print "arrays", arrays
-            arrays = list(arrays.values())
+            # calculate upstream intermediates
+            for prevcompiledintermediate in prevcompiledintermediates:
+                prevcompiledintermediate(arrays)
 
             # add the mask array
             mask = numpy.ones(numentries, dtype=numpy.bool)
-            arrays.append(mask)
 
             # evaluate the expression and fill the mask
-            afcn(tuple(arrays))
+            afcn(arrays + (mask,))
 
             # apply the mask only to the sourcename arrays
             cutarrays = [array[mask] for array in arrays[:len(sourcenames)]]
             cutnumentries = mask.sum()
 
             if not written[0]:
-                print "FILTER cutnumentries", cutnumentries
+                print "FILTER has", len(arrays)
+                print "cutnumentries", cutnumentries
                 for i, array in enumerate(arrays):
-                    print "array", i, array
+                    print "array", i, len(array), array
                 for i, array in enumerate(cutarrays):
                     print "cutarray", i, len(array), array
 
@@ -730,7 +736,7 @@ def afcn(arrays):
                 # for Intermediates that will be made *after* the filter
                 cutarrays.append(numpy.ones(cutnumentries, dtype=self.NEW_ARRAY_DTYPE) * 888)
 
-            if hasentryvar:
+            if len(entryvars) > 0:
                 # same array, but putting it in the canonical position
                 cutarrays.append(cutarrays[sourcenames.index(entryvar)])
 
@@ -787,7 +793,7 @@ class ChainOrigin(ChainStep):
             fcncache[index] = compilefcn(lambda arrays: arrays[index])
         return fcncache[index]
 
-    def _iterate(self, sourcenames, intermediates, compiledintermediates, hasentryvar, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
+    def _chain(self, sourcenames, intermediates, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
         branches = {}
         for branchname in sourcenames:
             if branchname in interpretations:
@@ -804,13 +810,13 @@ class ChainOrigin(ChainStep):
             arrays = await()
 
             if not written[0]:
-                print "ORIGIN has", len(arrays), "arrays and", len(compiledintermediates), "intermediates"
+                print "ORIGIN has", len(arrays)
                 written[0] = True
 
             for i in range(len(compiledintermediates)):
                 arrays.append(numpy.ones(numentries, dtype=self.NEW_ARRAY_DTYPE) * 999)
 
-            if hasentryvar:
+            if len(entryvars) > 0:
                 arrays.append(numpy.arange(start, stop))
 
             return start, stop, numentries, tuple(arrays)
