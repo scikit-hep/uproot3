@@ -728,8 +728,6 @@ def {rfcn}({arrays}, {numentries}, {monoidargs}):
 
         return self._finishreduce(rfcn, identity, combine, order, sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrystart, entrystop, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
 
-        return self._finishreduce(rfcn, identity, combine, order, sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrystart, entrystop, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
-
     def hist(self, numbins, low, high, dataexpr, weightexpr=None, name=None, title=None, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         return self.hists([(numbins, low, high, dataexpr, weightexpr, name, title)], entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=tuple, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)[0]
 
