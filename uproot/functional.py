@@ -45,7 +45,7 @@ def ifinstalled(f):
     except ImportError:
         return f
     else:
-        return numba.jit()(f)
+        return numba.jit(nogil=True)(f)
 
 if sys.version_info[0] <= 2:
     parsable = (unicode, str)
@@ -212,7 +212,7 @@ class ChainStep(object):
 
         elif numba is True:
             import numba as nb
-            return lambda f: nb.njit()(f)
+            return lambda f: nb.njit(nogil=True)(f)
 
         else:
             import numba as nb
@@ -509,7 +509,7 @@ class ChainStep(object):
         for n in dependencies:
             argfcn = self._argfcn(n, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache)
             env[getternames[n]] = argfcn
-            itemdefs.append("{0} = {1}({2})".format(itemnames[n], getternames[n], builtins["arrays"]))
+            itemdefs.append("{0} = {1}({2})[{3}]".format(itemnames[n], getternames[n], builtins["arrays"], builtins["i"]))
 
         # call each increment function on its parameters (per item), in declaration or sorted order (not that it matters)
         incfcns = ["{0} = {1}({0}{2})".format(monoidnames[monoidvars[n]], incnames[n], "".join(", " + itemnames[x] for x in self._params(increment[n])[1:])) for n in order]
@@ -524,12 +524,6 @@ def {rfcn}({arrays}, {numentries}, {monoidargs}):
         {incfcns}
     return ({monoidargs},)
 """.format(rfcn=builtins["rfcn"], arrays=builtins["arrays"], numentries=builtins["numentries"], monoidargs=", ".join(monoidargs), i=builtins["i"], range=builtins["range"], itemdefs="\n        ".join(itemdefs), incfcns="\n        ".join(incfcns))
-
-        print
-        print source
-        print
-        print env
-        print
 
         rfcn = compilefcn(self._makefcn(compile(ast.parse(source), "<reduce>", "exec"), env, builtins["rfcn"], source))
 
@@ -567,7 +561,7 @@ def {rfcn}({arrays}, {numentries}, {monoidargs}):
         # MAYBEFIXME: could combine in O(log_2(N)) steps rather than O(N) if combining is ever resource-heavy
         for i in range(1, len(awaits)):
             for j in range(len(order)):
-                results[0][j] = combine(results[0][j], results[i][j])
+                results[0][j] = combine[order[j]](results[0][j], results[i][j])
 
         if issubclass(outputtype, dict):
             return outputtype(zip(order, results[0]))
