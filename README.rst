@@ -2,6 +2,7 @@ uproot
 ======
 
 .. image:: https://travis-ci.org/scikit-hep/uproot.svg?branch=master
+   :target: https://travis-ci.org/scikit-hep/uproot
 
 ROOT I/O in pure Python and Numpy.
 
