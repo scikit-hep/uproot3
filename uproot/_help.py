@@ -433,9 +433,9 @@ tree_fragments = {
     "entrystop": u"""entrystop : ``None`` or int
         entry at which reading stops (exclusive). If ``None`` *(default)*, stop at the end of the branch.""",
 
-    # entrystepsize
-    "entrystepsize": u"""entrystepsize : positive int
-        number of entries to provide in each step of iteration except the last in each file (unless it exactly divides the number of entries in the file).""",
+    # entrysteps
+    "entrysteps": u"""entrysteps : ``None``, positive int, or iterable of *(int, int)* pairs
+        if ``None`` *(default)*, iterate in steps of TTree clusters (number of entries for which all branches' baskets align); if an integer, iterate in steps of equal numbers of entries (except at the end of a file); otherwise, iterate in explicit, user-specified *(start, stop)* intervals ("start" is inclusive and "stop" is exclusive).""",
 
     # branch
     "branch": u"""branch : str
@@ -501,7 +501,9 @@ tree_fragments = {
 ################################################################ uproot.tree.iterate
 
 uproot.tree.iterate.__doc__ = \
-u"""Opens a series of ROOT files (local or remote), iterating over events in chunks of ``entrystepsize``.
+u"""Opens a series of ROOT files (local or remote), yielding the same number of entries from all selected branches in each step.
+
+    Depending on the "entrysteps" parameter, the number of entries in one step may differ from the number of entries in the next step, but in every step, the same number of entries is retrieved from all *baskets.*
 
     All but the first two parameters are identical to :py:meth:`uproot.tree.TreeMethods.iterate`.
 
@@ -513,17 +515,23 @@ u"""Opens a series of ROOT files (local or remote), iterating over events in chu
     treepath : str
         path within each ROOT file to find the TTree (may include "``/``" for subdirectories or "``;``" for cycle numbers).
 
-    {entrystepsize}
-
     {branches}
+
+    {entrysteps}
 
     {outputtype}
 
     {reportentries}
 
+    {cache}
+
     {basketcache}
 
     {keycache}
+
+    {executor}
+
+    {blocking}
 
     {localsource}
 
@@ -562,7 +570,7 @@ u"""Adds array reading methods to TTree objects that have been streamed from a R
 
     - square brackets (``__getitem__``) returns a branch by name (see :py:meth:`get <uproot.tree.TTreeMethods.get>`).
     - the ``len`` function (``__len__``) returns the number of entries (same as ``numentries``).
-    - iteration (``__iter__``) has no implementation. This is to avoid confusion between iterating over all branches (probably not what you want, but fitting the pattern set by :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` and ``dict``) and iterating over the data. Also, iteration over data requires a user-provided ``entrystepsize``, so it must be started with a function (see :py:meth:`iterate <uproot.tree.TTreeMethods.iterate>`).
+    - iteration (``__iter__``) has no implementation. This is to avoid confusion between iterating over all branches (probably not what you want, but fitting the pattern set by :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` and ``dict``) and iterating over the data.
 
     **Attributes, properties, and methods:**
 
@@ -591,8 +599,7 @@ u"""Adds array reading methods to TTree objects that have been streamed from a R
     - :py:meth:`lazyarray <uproot.tree.TTreeMethods.lazyarray>` create a lazy array that would read the branch as needed.
     - :py:meth:`arrays <uproot.tree.TTreeMethods.arrays>` read many branches into arrays (or other objects if provided alternate *interpretations*).
     - :py:meth:`lazyarrays <uproot.tree.TTreeMethods.lazyarrays>` create many lazy arrays.
-    - :py:meth:`iterate <uproot.tree.TTreeMethods.iterate>` iterate over many arrays at once, yielding a fixed number of entries at a time in all the arrays.
-    - :py:meth:`iterate_clusters <uproot.tree.TTreeMethods.iterate_clusters>` iterate at cluster boundaries, which are more efficient but not necessarily a fixed number of entries *(not implemented)*.
+    - :py:meth:`iterate <uproot.tree.TTreeMethods.iterate>` iterate over many arrays at once, yielding the same number of entries from all selected branches in each step.
 """
 
 _method(uproot.tree.TTreeMethods.get).__doc__ = \
@@ -876,13 +883,15 @@ u"""Create many lazy arrays.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.iterate).__doc__ = \
-u"""Iterate over many arrays at once, yielding a fixed number of entries at a time in all the arrays.
+u"""Iterate over many arrays at once, yielding the same number of entries from all selected branches in each step.
+
+    Depending on the "entrysteps" parameter, the number of entries in one step may differ from the number of entries in the next step, but in every step, the same number of entries is retrieved from all *baskets.*
 
     Parameters
     ----------
-    {entrystepsize}
-
     {branches}
+
+    {entrysteps}
 
     {outputtype}
 
@@ -892,40 +901,15 @@ u"""Iterate over many arrays at once, yielding a fixed number of entries at a ti
 
     {entrystop}
 
-    {basketcache}
-
-    {keycache}
-
-    {executor}
-
-    Returns
-    -------
-    iterator over (int, int, outputtype) (if *reportentries*) or just outputtype (otherwise)
-        aligned array segments from the TTree.
-""".format(**tree_fragments)
-
-_method(uproot.tree.TTreeMethods.iterate_clusters).__doc__ = \
-u"""Iterate at cluster boundaries, which are more efficient but not necessarily a fixed number of entries.
-
-    .. todo:: Not implemented.
-
-    Parameters
-    ----------
-    {branches}
-
-    {outputtype}
-
-    {reportentries}
-
-    {entrystart}
-
-    {entrystop}
+    {cache}
 
     {basketcache}
 
     {keycache}
 
     {executor}
+
+    {blocking}
 
     Returns
     -------

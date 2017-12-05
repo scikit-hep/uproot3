@@ -28,10 +28,13 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import re
+import numpy
 
-__version__ = "2.5.0"
-version = __version__
-version_info = tuple(re.split(r"[-\.]", __version__))
+class TH1Methods_holoviews(object):
+    def __init__(self, hist):
+        self._hist = hist
 
-del re
+    def plot(self, *args, **kwds):
+        import holoviews
+        freq, edges = self._hist.numpy
+        return holoviews.Spread((edges[numpy.repeat(numpy.arange(len(freq) + 1), 2)[1:-1]],) + (freq[numpy.repeat(numpy.arange(len(freq)), 2)]/2.0,) * 2)

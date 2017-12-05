@@ -90,6 +90,8 @@ class ROOTDirectory(object):
     def read(source, *args, **options):
         # make sure that all methods classes have been loaded
         import uproot.tree
+        import uproot.functional
+        import uproot.hist
 
         if len(args) == 0:
             try:
@@ -206,8 +208,13 @@ class ROOTDirectory(object):
     def _withcycle(key):
         return "{0};{1}".format(key.fName.decode("ascii"), key.fCycle).encode("ascii")
 
-    def formatstreamers(self, filtername=nofilter):
-        return "\n".join(x.format() for x in self._context.streamerinfos if filtername(x.fName))
+    def showstreamers(self, filtername=nofilter, stream=sys.stdout):
+        if stream is None:
+            return "\n".join(x.show(stream=stream) for x in self._context.streamerinfos if filtername(x.fName))
+        else:
+            for x in self._context.streamerinfos:
+                if filtername(x.fName):
+                    x.show(stream=stream)
 
     def _classof(self, classname):
         if classname == b"TDirectory":
@@ -302,6 +309,14 @@ class ROOTDirectory(object):
                     if cycle is None or key.fCycle == cycle:
                         return key.get()
             raise KeyError("not found: {0}".format(repr(name)))
+
+    def __contains__(self, name):
+        try:
+            self.get(name)
+        except KeyError:
+            return False
+        else:
+            return True
 
     def __enter__(self, *args, **kwds):
         return self
@@ -687,6 +702,7 @@ def _defineclasses(streamerinfos):
             code.insert(0, "    _fields = [{0}]".format(", ".join(repr(x) for x in fields)))
             code.insert(0, "class {0}({1}):".format(_safename(streamerinfo.fName), ", ".join(bases)))
             classes[_safename(streamerinfo.fName)] = _makeclass(streamerinfo.fName, id(streamerinfo), "\n".join(code), classes)
+            classes[_safename(streamerinfo.fName)]._streamerinfo = streamerinfo
 
     return classes
 
@@ -797,8 +813,13 @@ class TStreamerInfo(ROOTObject):
 
     _format = struct.Struct(">Ii")
 
-    def format(self):
-        return "StreamerInfo for class: {0}, version={1}, checksum=0x{2:08x}\n{3}{4}".format(self.fName, self.fClassVersion, self.fCheckSum, "\n".join("  " + x.format() for x in self.fElements), "\n" if len(self.fElements) > 0 else "")
+    def show(self, stream=sys.stdout):
+        out = "StreamerInfo for class: {0}, version={1}, checksum=0x{2:08x}\n{3}{4}".format(self.fName, self.fClassVersion, self.fCheckSum, "\n".join("  " + x.show(stream=None) for x in self.fElements), "\n" if len(self.fElements) > 0 else "")
+        if stream is None:
+            return out
+        else:
+            stream.write(out)
+            stream.write("\n")
 
 class TStreamerElement(ROOTObject):
     @classmethod
@@ -841,8 +862,13 @@ class TStreamerElement(ROOTObject):
     _format2 = struct.Struct(">i")
     _format3 = struct.Struct(">ddd")
 
-    def format(self):
-        return "{0:15s} {1:15s} offset={2:3d} type={3:2d} {4}".format(self.fName, self.fTypeName, self.fOffset, self.fType, self.fTitle)
+    def show(self, stream=sys.stdout):
+        out = "{0:15s} {1:15s} offset={2:3d} type={3:2d} {4}".format(self.fName, self.fTypeName, self.fOffset, self.fType, self.fTitle)
+        if stream is None:
+            return out
+        else:
+            stream.write(out)
+            stream.write("\n")
 
 class TStreamerArtificial(TStreamerElement):
     @classmethod

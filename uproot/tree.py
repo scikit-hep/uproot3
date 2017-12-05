@@ -93,12 +93,9 @@ def _delayedraise(excinfo):
 
 ################################################################ high-level interface
 
-def iterate(path, treepath, entrystepsize, branches=None, outputtype=dict, reportentries=False, basketcache=None, keycache=None, executor=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, **options):
-    if not isinstance(entrystepsize, numbers.Integral) or entrystepsize <= 0:
-        raise ValueError("'entrystepsize' must be a positive integer")
-
+def iterate(path, treepath, branches=None, entrysteps=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, **options):
     for tree, newbranches, globalentrystart in _iterate(path, treepath, branches, localsource, xrootdsource, **options):
-        for start, stop, arrays in tree.iterate(entrystepsize, branches=newbranches, outputtype=outputtype, reportentries=True, entrystart=0, entrystop=tree.numentries, basketcache=basketcache, keycache=keycache, executor=executor):
+        for start, stop, arrays in tree.iterate(branches=newbranches, entrysteps=entrysteps, outputtype=outputtype, reportentries=True, entrystart=0, entrystop=tree.numentries, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking):
             if reportentries:
                 yield globalentrystart + start, globalentrystart + stop, arrays
             else:
@@ -277,10 +274,74 @@ class TTreeMethods(object):
                 pass
         raise KeyError("not found: {0}".format(repr(name)))
 
-    def clusters(self):
-        # need to find an example of a file that has clusters!
-        # yield as a (start, stop) generator
-        raise NotImplementedError
+    def __contains__(self, name):
+        try:
+            self.get(name)
+        except KeyError:
+            return False
+        else:
+            return True
+
+    def clusters(self, branches=None, entrystart=None, entrystop=None, strict=False):
+        branches = list(self._normalize_branches(branches))
+
+        if len(branches) == 0:
+            yield self._normalize_entrystartstop(entrystart, entrystop)
+
+        else:
+            # convenience class; simplifies presentation of the algorithm
+            class BranchCursor(object):
+                def __init__(self, branch):
+                    self.branch = branch
+                    self.basketstart = 0
+                    self.basketstop = 0
+                @property
+                def entrystart(self):
+                    return self.branch.basket_entrystart(self.basketstart)
+                @property
+                def entrystop(self):
+                    return self.branch.basket_entrystop(self.basketstop)
+
+            cursors = [BranchCursor(branch) for branch, interpretation in branches]
+
+            # everybody starts at the same entry number; if there is no such place before someone runs out of baskets, there will be an exception
+            leadingstart = max(cursor.entrystart for cursor in cursors)
+            while not all(cursor.entrystart == leadingstart for cursor in cursors):
+                for cursor in cursors:
+                    while cursor.entrystart < leadingstart:
+                        cursor.basketstart += 1
+                        cursor.basketstop += 1
+                leadingstart = max(cursor.entrystart for cursor in cursors)
+
+            entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+
+            # move all cursors forward, yielding a (start, stop) pair if their baskets line up
+            while any(cursor.basketstop < cursor.branch.numbaskets for cursor in cursors):
+                # move all subleading baskets forward until they are no longer subleading
+                leadingstop = max(cursor.entrystop for cursor in cursors)
+                for cursor in cursors:
+                    while cursor.entrystop < leadingstop:
+                        cursor.basketstop += 1
+
+                # if they all line up, this is a good cluster
+                if all(cursor.entrystop == leadingstop for cursor in cursors):
+                    # check to see if it's within the bounds the user requested (strictly or not strictly)
+                    if strict:
+                        if entrystart <= leadingstart and leadingstop <= entrystop:
+                            yield leadingstart, leadingstop
+                    else:
+                        if entrystart < leadingstop and leadingstart < entrystop:
+                            yield leadingstart, leadingstop
+
+                    # anyway, move all the starts to the new stopping position and move all stops forward by one
+                    leadingstart = leadingstop
+                    for cursor in cursors:
+                        cursor.basketstart = cursor.basketstop
+                        cursor.basketstop += 1
+
+                # stop iterating if we're past all acceptable clusters
+                if leadingstart >= entrystop:
+                    break
 
     def array(self, branch, interpretation=None, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         return self.get(branch).array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
@@ -326,7 +387,31 @@ class TTreeMethods(object):
         else:
             return outputtype(*[lazyarray for name, lazyarray in lazyarrays])
 
-    def _iterate(self, startstop, branches, outputtype, reportentries, basketcache, keycache, executor, finalize):
+    def iterate(self, branches=None, entrysteps=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+
+        if entrysteps is None:
+            entrysteps = self.clusters(branches, entrystart=entrystart, entrystop=entrystop, strict=False)
+
+        elif isinstance(entrysteps, numbers.Integral):
+            entrystepsize = entrysteps
+            if entrystepsize <= 0:
+                raise ValueError("if an integer, entrysteps must be positive")
+            
+            def startstop():
+                start = entrystart
+                while start < entrystop and start < self.numentries:
+                    stop = min(start + entrystepsize, entrystop)
+                    yield start, stop
+                    start = stop
+            entrysteps = startstop()
+
+        else:
+            try:
+                iter(entrysteps)
+            except TypeError:
+                raise TypeError("entrysteps must be None for cluster iteration, a positive integer for equal steps in number of entries, or an iterable of 2-tuples for explicit entry starts (inclusive) and stops (exclusive)")
+
         branches = list(self._normalize_branches(branches))
 
         if outputtype == namedtuple:
@@ -342,47 +427,32 @@ class TTreeMethods(object):
             explicit_basketcache = False
         else:
             explicit_basketcache = True
-
-        if finalize:
-            finish = lambda interpretation, array: interpretation.finalize(array)
-        else:
-            finish = lambda interpretation, array: array
                 
-        for entrystart, entrystop in startstop:
-            futures = [(branch.name, interpretation, branch._step_array(interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, basketcache, keycache, executor, explicit_basketcache)) for branch, interpretation, basket_itemoffset, basket_entryoffset in branchinfo]
+        if issubclass(outputtype, dict):
+            def wrap_for_python_scope(futures):
+                return lambda: outputtype([(name, interpretation.finalize(future())) for name, interpretation, future in futures])
+        elif outputtype == tuple or outputtype == list:
+            def wrap_for_python_scope(futures):
+                return lambda: outputtype([interpretation.finalize(future()) for name, interpretation, future in futures])
+        else:
+            def wrap_for_python_scope(futures):
+                return lambda: outputtype(*[interpretation.finalize(future()) for name, interpretation, future in futures])
 
-            if issubclass(outputtype, dict):
-                out = outputtype([(name, finish(interpretation, future())) for name, interpretation, future in futures])
-            elif outputtype == tuple or outputtype == list:
-                out = outputtype([finish(interpretation, future()) for name, interpretation, future in futures])
-            else:
-                out = outputtype(*[finish(interpretation, future()) for name, interpretation, future in futures])
+        for start, stop in entrysteps:
+            start = max(start, entrystart)
+            stop = min(stop, entrystop)
+            if start > stop:
+                continue
+
+            out = wrap_for_python_scope([(branch.name, interpretation, branch._step_array(interpretation, basket_itemoffset, basket_entryoffset, start, stop, cache, basketcache, keycache, executor, explicit_basketcache)) for branch, interpretation, basket_itemoffset, basket_entryoffset in branchinfo])
+
+            if blocking:
+                out = out()
 
             if reportentries:
-                yield max(0, entrystart), min(entrystop, self.numentries), out
+                yield start, stop, out
             else:
                 yield out
-
-    def iterate(self, entrystepsize, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, basketcache=None, keycache=None, executor=None):
-        if not isinstance(entrystepsize, numbers.Integral) or entrystepsize <= 0:
-            raise ValueError("'entrystepsize' must be a positive integer")
-
-        if entrystart is None:
-            entrystart = 0
-        if entrystop is None:
-            entrystop = self.numentries
-
-        def startstop():
-            start = entrystart
-            while start < entrystop and start < self.numentries:
-                stop = start + entrystepsize
-                yield start, stop
-                start = stop
-
-        return self._iterate(startstop(), branches, outputtype, reportentries, basketcache, keycache, executor, True)
-
-    def iterate_clusters(self, branches=None, outputtype=dict, reportentries=False, entrystart=None, entrystop=None, basketcache=None, keycache=None, executor=None):
-        return self._iterate(self.clusters(), branches, outputtype, reportentries, basketcache, keycache, executor, True)
 
     def _format(self, indent=""):
         # TODO: add TTree data to the bottom of this
@@ -391,8 +461,13 @@ class TTreeMethods(object):
             out.extend(branch._format(indent))
         return out
 
-    def format(self, foldnames=False):
-        return "\n".join(self._format(foldnames))
+    def show(self, foldnames=False, stream=sys.stdout):
+        if stream is None:
+            return "\n".join(self._format(foldnames))
+        else:
+            for line in self._format(foldnames):
+                stream.write(line)
+                stream.write("\n")
 
     def recover(self):
         for branch in self.allvalues():
@@ -471,29 +546,6 @@ class TTreeMethods(object):
     def pandas(self):
         import uproot._connect.to_pandas
         return uproot._connect.to_pandas.TTreeMethods_pandas(self)
-
-    # @property
-    # def numba(self):
-    #     import uproot._connect.to_numba
-    #     connector = self._Connector()
-    #     connector.run       = uproot._connect.to_numba.run
-    #     connector.foreach   = uproot._connect.to_numba.foreach
-    #     connector.map       = uproot._connect.to_numba.map
-    #     connector.filter    = uproot._connect.to_numba.filter
-    #     connector.aggregate = uproot._connect.to_numba.aggregate
-    #     return connector
-
-    # @property
-    # def oamap(self):
-    #     import uproot._connect.to_oamap
-    #     connector = self._Connector()
-    #     connector.schema  = uproot._connect.to_oamap.schema
-    #     connector.proxy   = uproot._connect.to_oamap.proxy
-    #     connector.run     = uproot._connect.to_oamap.run
-    #     connector.compile = uproot._connect.to_oamap.compile
-    #     return connector
-
-uproot.rootio.methods["TTree"] = TTreeMethods
 
 ################################################################ methods for TBranch
 
@@ -966,7 +1018,12 @@ class TBranchMethods(object):
         else:
             return await
 
-    def _step_array(self, interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, basketcache, keycache, executor, explicit_basketcache):
+    def _step_array(self, interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, cache, basketcache, keycache, executor, explicit_basketcache):
+        if cache is not None:
+            out = cache.get(self._cachekey(interpretation, entrystart, entrystop), None)
+            if out is not None:
+                return lambda: out
+
         basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
 
         if basketstart is None:
@@ -1224,7 +1281,7 @@ class TBranchMethods(object):
         if len(name) > 26:
             out = [indent + name, indent + "{0:26s} {1:26s} {2}".format("", self._streamer.__class__.__name__, interpret(self))]
         else:
-            out = [indent + "{0:26s} {1:26s} {2}".format(name, self._streamer.__class__.__name__, interpret(self))]
+            out = [indent + "{0:26s} {1:26s} {2}".format(name, "(no streamer)" if self._streamer is None else self._streamer.__class__.__name__, interpret(self))]
 
         for branch in self.fBranches:
             out.extend(branch._format(foldnames, indent + "  " if foldnames else indent, self.fName))
@@ -1232,9 +1289,14 @@ class TBranchMethods(object):
             out.append("")
 
         return out
-        
-    def format(self, foldnames=False):
-        return "\n".join(self._format(foldnames))
+
+    def show(self, foldnames=False, stream=sys.stdout):
+        if stream is None:
+            return "\n".join(self._format(foldnames))
+        else:
+            for line in self._format(foldnames):
+                stream.write(line)
+                stream.write("\n")
 
     def __len__(self):
         return self.numentries
