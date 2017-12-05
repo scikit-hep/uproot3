@@ -568,10 +568,11 @@ def _ftype2struct(fType):
         raise NotImplementedError(fType)
 
 def _safename(name):
-    out = re.sub(b"[^a-zA-Z0-9]+", lambda bad: b"_" + b"".join(b"%02x" % ord(x) for x in bad.group(0)) + b"_", name).decode("ascii")
+    out = _safename._pattern.sub(lambda bad: "_" + "".join("{0:02x}".format(ord(x)) for x in bad.group(0)) + "_", name.decode("ascii"))
     if keyword.iskeyword(out):
         out = out + "__"
     return out
+_safename._pattern = re.compile("[^a-zA-Z0-9]+")
 
 def _raise_notimplemented(streamertype, streamerdict, source, cursor):
     raise NotImplementedError("\n\nUnimplemented streamer type: {0}\n\nmembers: {1}\n\nfile contents:\n\n{2}".format(streamertype, streamerdict, cursor.hexdump(source)))
