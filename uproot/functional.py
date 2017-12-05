@@ -52,7 +52,11 @@ if sys.version_info[0] <= 2:
 else:
     parsable = (str,)
 
-stringenv = dict(math.__dict__.items() + [(x, eval(x)) for x in ("round", "min", "max")])
+stringenv = dict(list(math.__dict__.items()) + {
+    "min": min,
+    "max": max,
+    "round": round,
+    }.items())
 
 class ChainStep(object):
     NEW_ARRAY_DTYPE = numpy.dtype(numpy.float64)
