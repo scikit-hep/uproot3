@@ -52,6 +52,8 @@ if sys.version_info[0] <= 2:
 else:
     parsable = (str,)
 
+stringenv = dict(math.__dict__.items() + [(x, eval(x)) for x in ("round", "min", "max")])
+
 class ChainStep(object):
     NEW_ARRAY_DTYPE = numpy.dtype(numpy.float64)
 
@@ -99,7 +101,7 @@ class ChainStep(object):
 
     @staticmethod
     def _string2fcn(string):
-        insymbols = set()
+        insymbols = []
         outsymbols = set()
 
         def recurse(node):
@@ -108,8 +110,8 @@ class ChainStep(object):
 
             elif isinstance(node, ast.Name):
                 if isinstance(node.ctx, ast.Load):
-                    if node.id not in outsymbols:
-                        insymbols.add(node.id)
+                    if node.id not in outsymbols and node.id not in stringenv:
+                        insymbols.append(node.id)
                 elif isinstance(node.ctx, ast.Store):
                     outsymbols.add(node.id)
 
@@ -131,11 +133,11 @@ class ChainStep(object):
             body[-1].lineno = body[-1].value.lineno
             body[-1].col_offset = body[-1].value.col_offset
 
-        names = ChainStep._generatenames(["fcn"], insymbols.union(outsymbols))
+        names = ChainStep._generatenames(["fcn"], set(insymbols).union(outsymbols))
 
-        module = ast.parse("def {fcn}({args}): pass".format(fcn=names["fcn"], args=", ".join(sorted(insymbols))))
+        module = ast.parse("def {fcn}({args}): pass".format(fcn=names["fcn"], args=", ".join(insymbols)))
         module.body[0].body = body
-        return ChainStep._makefcn(compile(module, string, "exec"), math.__dict__, names["fcn"], string)
+        return ChainStep._makefcn(compile(module, string, "exec"), stringenv, names["fcn"], string)
 
     @staticmethod
     def _isfcn(expr):
@@ -424,7 +426,8 @@ class ChainStep(object):
                 raise TypeError("identity must be a (non-empty) dict of strings or functions, a (non-empty) iterable of strings or functions, a single string, or a single function")
             else:
                 identity = dict(zip(order, [string2fcn(x) if isinstance(x, parsable) else x for x in identity]))
-        if not all(self._params(x) == 0 for x in identity.values()):
+
+        if not all(len(self._params(x)) == 0 for x in identity.values()):
             raise TypeError("identity functions must have zero arguments")
 
         if combine is None:
@@ -440,7 +443,7 @@ class ChainStep(object):
                 raise TypeError("combine must be None, a (non-empty) dict of strings or functions, a (non-empty) iterable of strings or functions, a single string, or a single function")
             else:
                 combine = dict(zip(order, [string2fcn(x) if isinstance(x, parsable) else x for x in combine]))
-        if not all(self._params(x) == 2 for x in combine.values()):
+        if not all(len(self._params(x)) == 2 for x in combine.values()):
             raise TypeError("combine functions must have two arguments")
 
         monoidvars = dict((n, self._params(x)[0]) for n, x in increment.items())
@@ -479,24 +482,24 @@ class ChainStep(object):
         avoid = set(dependencies)
 
         # unique names for dependency getters
-        getternames = self._generate(dependencies, avoid)
-        avoid = avoid.union(getternames)
+        getternames = self._generatenames(dependencies, avoid)
+        avoid = avoid.union(getternames.values())
 
         # unique names for dependency items
-        itemnames = self._generate(dependencies, avoid)
-        avoid = avoid.union(itemnames)
+        itemnames = self._generatenames(dependencies, avoid)
+        avoid = avoid.union(itemnames.values())
 
         # unique names for monoids
         monoidnames = self._generatenames(monoidvars.values(), avoid)
-        avoid = avoid.union(monoidnames)
+        avoid = avoid.union(monoidnames.values())
 
         # unique names for increment functions
         incnames = self._generatenames(increment, avoid)
-        avoid = avoid.union(incnames)
+        avoid = avoid.union(incnames.values())
 
         # unique names for builtins and dummy variables
         builtins = self._generatenames(["rfcn", "arrays", "numentries", "i", "range"], avoid)
-        avoid = avoid.union(builtins)
+        avoid = avoid.union(builtins.values())
 
         env = dict([("range", range)] + [(incnames[n], compilefcn(x)) for n, x in increment.items()])
 
@@ -506,10 +509,10 @@ class ChainStep(object):
         for n in dependencies:
             argfcn = self._argfcn(n, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache)
             env[getternames[n]] = argfcn
-            itemdefs.append("{0} = {1}({2})".format(itemnames[n], getternames[n], builtins["array"]))
+            itemdefs.append("{0} = {1}({2})".format(itemnames[n], getternames[n], builtins["arrays"]))
 
         # call each increment function on its parameters (per item), in declaration or sorted order (not that it matters)
-        increments = ["{0} = {1}({0}, {2})".format(monoidnames[monoidvars[n]], incnames[n], ", ".join(itemnames[x] for x in self._params(increment[n])[1:])) for n in order]
+        incfcns = ["{0} = {1}({0}{2})".format(monoidnames[monoidvars[n]], incnames[n], "".join(", " + itemnames[x] for x in self._params(increment[n])[1:])) for n in order]
 
         # input parameters and output tuple
         monoidargs = [monoidnames[monoidvars[n]] for n in order]
@@ -518,16 +521,19 @@ class ChainStep(object):
 def {rfcn}({arrays}, {numentries}, {monoidargs}):
     for {i} in {range}({numentries}):
         {itemdefs}
-        {increments}
-    return {monoidargs}
-""".format(rfcn=names["rfcn"], arrays=names["arrays"], numentries=names["numentries"], monoidargs=", ".join(names[x] for x in monoidvars.values()), i=names["i"], range=names["range"], itemdefs="\n        ".join(itemdefs), incs="\n        ".join(incs))
+        {incfcns}
+    return ({monoidargs},)
+""".format(rfcn=builtins["rfcn"], arrays=builtins["arrays"], numentries=builtins["numentries"], monoidargs=", ".join(monoidargs), i=builtins["i"], range=builtins["range"], itemdefs="\n        ".join(itemdefs), incfcns="\n        ".join(incfcns))
 
+        print
         print source
-        raise Exception
+        print
+        print env
+        print
 
         rfcn = compilefcn(self._makefcn(compile(ast.parse(source), "<reduce>", "exec"), env, builtins["rfcn"], source))
 
-        awaits = self._chain(sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, numba)
+        awaits = self._chain(sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, None, entrystart, entrystop, cache, basketcache, keycache, readexecutor, numba)
 
         results = [[None for j in range(len(order))] for i in range(len(awaits))]
 
@@ -571,9 +577,9 @@ def {rfcn}({arrays}, {numentries}, {monoidargs}):
             return outputtype(*results[0])
 
     def reduce(self, identity, increment, combine=None, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        if not self._isfcn(identity)
+        if not self._isfcn(identity):
             raise TypeError("identity must be a string or a function")
-        if not self._isfcn(increment)
+        if not self._isfcn(increment):
             raise TypeError("increment must be a string or a function")
         if not (combine is None or self._isfcn(combine)):
             raise TypeError("combine must be None, a string, or a function")
@@ -903,7 +909,7 @@ class ChainOrigin(ChainStep):
             else:
                 branches[branchname] = uproot.interp.auto.interpret(self.tree[branchname])
 
-        awaits = list(self.tree.iterate(entrysteps=entrysteps, branches=branches, outputtype=list, reportentries=True, entrystart=entrystart, entrystop=entrystop, cache=cache, basketcache=basketcache, keycache=keycache, executor=readexecutor, blocking=False))
+        awaits = list(self.tree.iterate(branches=branches, entrysteps=entrysteps, outputtype=list, reportentries=True, entrystart=entrystart, entrystop=entrystop, cache=cache, basketcache=basketcache, keycache=keycache, executor=readexecutor, blocking=False))
 
         def calculate(start, stop, await):
             numentries = stop - start

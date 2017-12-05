@@ -285,7 +285,10 @@ class TTreeMethods(object):
     def clusters(self, branches=None, entrystart=None, entrystop=None, strict=False):
         branches = list(self._normalize_branches(branches))
 
-        if len(branches) > 0:
+        if len(branches) == 0:
+            yield self._normalize_entrystartstop(entrystart, entrystop)
+
+        else:
             # convenience class; simplifies presentation of the algorithm
             class BranchCursor(object):
                 def __init__(self, branch):
