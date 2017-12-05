@@ -351,6 +351,7 @@ if numba is not None:
         pythontype_obj = c.pyapi.unserialize(c.pyapi.serialize_object(typ.pythontype))
         array_obj = c.pyapi.call_function_objargs(array_fcn, (obj, pythontype_obj))
 
+        c.pyapi.incref(obj)
         struct.obj = obj
         struct.numbins = c.pyapi.long_as_longlong(numbins_obj)
         struct.low = c.pyapi.float_as_double(low_obj)
@@ -381,7 +382,6 @@ if numba is not None:
         c.pyapi.call_function_objargs(merge_fcn, (obj, array_obj))
 
         c.pyapi.decref(array_obj)
-
         return obj
 
     def th1_fill(th1, datum):

@@ -83,7 +83,7 @@ class ChainStep(object):
         return env[name]
 
     @staticmethod
-    def _generatenames(want, avoid):
+    def _generatenames(want, avoid=set()):
         disambigifier = 0
         out = {}
         for name in want:
@@ -269,21 +269,29 @@ class ChainStep(object):
         awaits = self.source._chain(sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, numba)
 
         def calculate(await):
-            start, stop, numentries, arrays = await()
+            try:
+                start, stop, numentries, arrays = await()
 
-            for compiledintermediate in compiledintermediates:
-                compiledintermediate(arrays)
+                for compiledintermediate in compiledintermediates:
+                    compiledintermediate(arrays)
 
-            return start, stop, numentries, [x(arrays) for x in compiled]
+                out = start, stop, numentries, [x(arrays) for x in compiled]
+
+            except:
+                return sys.exc_info(), None
+            else:
+                return None, out
 
         if calcexecutor is None:
             for await in awaits:
-                start, stop, numentries, arrays = calculate(await)
-                yield start, stop, numentries, arrays
+                excinfo, result = calculate(await)
+                uproot.tree._delayedraise(excinfo)
+                yield result
 
         else:
-            for start, stop, numentries, arrays in calcexecutor.map(calculate, awaits):
-                yield start, stop, numentries, arrays
+            for excinfo, result in calcexecutor.map(calculate, awaits):
+                uproot.tree._delayedraise(excinfo)
+                yield result
             
     def iterate_newarrays(self, exprs, entrysteps=None, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         tmpnode, dictnames, compiled, sourcenames, intermediates, compiledintermediates, entryvars, compilefcn = self._prepare(exprs, aliases, entryvar, numba)
@@ -352,88 +360,112 @@ class ChainStep(object):
 
         return self.newarrays(expr, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=tuple, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, numba=numba)[0]
 
-    def reduce(self, init, increment, combine=None, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        # a *lot* of argument handling (to ensure that init, increment, and combine are compatible)
-        if isinstance(init, parsable):
-            init = self._string2fcn(init)
+    def _normalize_reduceargs(self, identity, increment, combine):
+        if isinstance(identity, parsable):
+            identity = self._string2fcn(identity)
         if isinstance(increment, parsable):
             increment = self._string2fcn(increment)
         if isinstance(combine, parsable):
             combine = self._string2fcn(combine)
 
-        if self._isfcn(init) and self._isfcn(increment) and self._isfcn(combine):
+        if self._isfcn(identity) and self._isfcn(increment) and (combine is None or self._isfcn(combine)):
             if len(self._params(increment)) == 0:
                 raise TypeError("increment function must have at least one parameter")
 
+            if combine is None:
+                combine = lambda x, y: x + y
+
             monoidvar = self._params(increment)[0]
-            init      = {monoidvar: init}
+            identity  = {monoidvar: identity}
             increment = {monoidvar: increment}
             combine   = {monoidvar: combine}
-            monoidvars = {monoidvar: monoidvar}
+            order     = [monoidvar]
 
         if isinstance(increment, dict):
-            if not isinstance(init, dict):
-                raise TypeError("if increment is a dict of functions, init must be as well (to match up argument lists)")
-            if not isinstance(combine, dict):
+            if not isinstance(identity, dict):
+                raise TypeError("if increment is a dict of functions, identity must be as well (to match up argument lists)")
+            if not combine is None and not isinstance(combine, dict):
                 raise TypeError("if increment is a dict of functions, combine must be as well (to match up argument lists)")
 
             if len(increment) == 0 or not all(self._isfcn(x) for n, x in increment.items()):
                 raise TypeError("increment must be a (non-empty) dict of strings or functions, a (non-empty) iterable of strings or functions, a single string, or a single function")
             increment = dict((n, string2fcn(x) if isinstance(x, parsable) else x) for n, x in increment.items())
-            monoidvars = dict((n, self._params(x)[0]) for n, x in increment.items())
+            if increment == dict:
+                order = sorted(increment)
+            else:
+                order = list(increment)   # may be an OrderedDict; preserve whatever order it has
         else:
             try:
                 assert len(increment) > 0 and all(self._isfcn(x) for x in increment)
             except (TypeError, AssertionError):
                 raise TypeError("increment must be a (non-empty) dict of strings or functions, a (non-empty) iterable of strings or functions, a single string, or a single function")
             else:
+                # define as a list first so that we get the order
                 increment = [string2fcn(x) if isinstance(x, parsable) else x for x in increment]
-                monoidvars = [self._params(x)[0] for x in increment]
-                increment = dict(zip(monoidvars, increment))
-                if len(monoidvars) != len(increment):
+                order = []
+                for x in increment:
+                    params = self._params(x)
+                    if len(params) == 0:
+                        raise TypeError("increment functions must have at least one argument (the aggregator)")
+                    order.append(params[0])
+                if len(order) != len(set(order)):
                     raise TypeError("if providing a list of increment functions, the aggregator (first argument) of each must be distinct")
+                # redefine as a dict
+                increment = dict(zip(order, increment))
 
-        if isinstance(init, dict):
-            if len(init) == 0 or not all(self._isfcn(x) for n, x in init.items()):
-                raise TypeError("init must be a (non-empty) dict of strings or functions, a (non-empty) iterable of strings or functions, a single string, or a single function")
-            init = dict((n, string2fcn(x) if isinstance(x, parsable) else x) for n, x in init.items())
+        if isinstance(identity, dict):
+            if not all(self._isfcn(x) for n, x in identity.items()):
+                raise TypeError("identity must be a (non-empty) dict of strings or functions, a (non-empty) iterable of strings or functions, a single string, or a single function")
+            identity = dict((n, string2fcn(x) if isinstance(x, parsable) else x) for n, x in identity.items())
         else:
             try:
-                assert len(init) > 0 and all(self._isfcn(x) for x in init)
+                assert all(self._isfcn(x) for x in identity)
             except (TypeError, AssertionError):
-                raise TypeError("init must be a (non-empty) dict of strings or functions, a (non-empty) iterable of strings or functions, a single string, or a single function")
+                raise TypeError("identity must be a (non-empty) dict of strings or functions, a (non-empty) iterable of strings or functions, a single string, or a single function")
             else:
-                init = dict(zip(monoidvars, [string2fcn(x) if isinstance(x, parsable) else x for x in init]))
-        if not all(self._params(x) == 0 for x in init.values()):
-            raise TypeError("init functions must have zero arguments")
+                identity = dict(zip(order, [string2fcn(x) if isinstance(x, parsable) else x for x in identity]))
+        if not all(self._params(x) == 0 for x in identity.values()):
+            raise TypeError("identity functions must have zero arguments")
 
-        if isinstance(combine, dict):
-            if len(combine) == 0 or not all(self._isfcn(x) for n, x in combine.items()):
-                raise TypeError("combine must be a (non-empty) dict of strings or functions, a (non-empty) iterable of strings or functions, a single string, or a single function")
+        if combine is None:
+            combine = dict((n, lambda x, y: x + y) for n in order)
+        elif isinstance(combine, dict):
+            if not all(self._isfcn(x) for n, x in combine.items()):
+                raise TypeError("combine must be None, a (non-empty) dict of strings or functions, a (non-empty) iterable of strings or functions, a single string, or a single function")
             combine = dict((n, string2fcn(x) if isinstance(x, parsable) else x) for n, x in combine.items())
         else:
             try:
-                assert len(combine) > 0 and all(self._isfcn(x) for x in combine)
+                assert all(self._isfcn(x) for x in combine)
             except (TypeError, AssertionError):
-                raise TypeError("combine must be a (non-empty) dict of strings or functions, a (non-empty) iterable of strings or functions, a single string, or a single function")
+                raise TypeError("combine must be None, a (non-empty) dict of strings or functions, a (non-empty) iterable of strings or functions, a single string, or a single function")
             else:
-                combine = dict(zip(monoidvars, [string2fcn(x) if isinstance(x, parsable) else x for x in combine]))
+                combine = dict(zip(order, [string2fcn(x) if isinstance(x, parsable) else x for x in combine]))
         if not all(self._params(x) == 2 for x in combine.values()):
             raise TypeError("combine functions must have two arguments")
 
-        if not isinstance(monoidvars, dict):
-            monoidvars = dict(zip(monoidvars, monoidvars))
+        monoidvars = dict((n, self._params(x)[0]) for n, x in increment.items())
 
-        if not set(init.keys()) == set(increment.keys()) == set(combine.keys()):
-            raise TypeError("if init, increment, and combine are provided as dicts, they must have the same set of keys (to match up argument lists)")
+        if not set(identity.keys()) == set(increment.keys()) == set(combine.keys()):
+            raise TypeError("if identity, increment, and combine are provided as dicts, they must have the same set of keys (to match up argument lists)")
 
-        # now actually do the calculation
+        return identity, increment, combine, order, monoidvars
+
+    def reduceall(self, identity, increment, combine=None, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        identity, increment, combine, order, monoidvars = self._normalize_reduceargs(identity, increment, combine)
+
+        if outputtype == namedtuple:
+            for name in order:
+                if not self._isidentifier(name):
+                    raise ValueError("illegal field name for namedtuple: {0}".format(repr(name)))
+            outputtype = namedtuple("Reduced", order)
+
         compilefcn = self._compilefcn(numba)
 
         dependencies = []
         for inc in increment.values():
             dependencies.extend(self._params(inc)[1:])
 
+        # normal preparations for calculating dependencies
         sourcenames = []
         intermediates = []
         entryvars = set()
@@ -441,44 +473,111 @@ class ChainStep(object):
             self._satisfy(name, sourcenames, intermediates, entryvars, entryvar, aliases)
 
         intermediates = Intermediate._dependencyorder(sourcenames, intermediates, entryvar, aliases)
-
-        fcncache = {}
-        compiled = []
-        for name in dependencies:
-            compiled.append(self._argfcn(name, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache))
-
         compiledintermediates = [intermediate._compileintermediate(requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache) for intermediate, requirement in intermediates]
 
-        names = ChainStep._generatenames(["rfcn"] + list(monoidvars), set(dependencies))
+        # dependencies are unique strings
+        avoid = set(dependencies)
 
-        env = dict((names[x], compilefcn(increment[x])) for x in monoidvars)
+        # unique names for dependency getters
+        getternames = self._generate(dependencies, avoid)
+        avoid = avoid.union(getternames)
+
+        # unique names for dependency items
+        itemnames = self._generate(dependencies, avoid)
+        avoid = avoid.union(itemnames)
+
+        # unique names for monoids
+        monoidnames = self._generatenames(monoidvars.values(), avoid)
+        avoid = avoid.union(monoidnames)
+
+        # unique names for increment functions
+        incnames = self._generatenames(increment, avoid)
+        avoid = avoid.union(incnames)
+
+        # unique names for builtins and dummy variables
+        builtins = self._generatenames(["rfcn", "arrays", "numentries", "i", "range"], avoid)
+        avoid = avoid.union(builtins)
+
+        env = dict([("range", range)] + [(incnames[n], compilefcn(x)) for n, x in increment.items()])
+
+        # getter -> item for each dependency
+        fcncache = {}
+        itemdefs = []
+        for n in dependencies:
+            argfcn = self._argfcn(n, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache)
+            env[getternames[n]] = argfcn
+            itemdefs.append("{0} = {1}({2})".format(itemnames[n], getternames[n], builtins["array"]))
+
+        # call each increment function on its parameters (per item), in declaration or sorted order (not that it matters)
+        increments = ["{0} = {1}({0}, {2})".format(monoidnames[monoidvars[n]], incnames[n], ", ".join(itemnames[x] for x in self._params(increment[n])[1:])) for n in order]
+
+        # input parameters and output tuple
+        monoidargs = [monoidnames[monoidvars[n]] for n in order]
 
         source = """
-def {rfcn}(arrays, numentries{monoidargs})
+def {rfcn}({arrays}, {numentries}, {monoidargs}):
+    for {i} in {range}({numentries}):
+        {itemdefs}
+        {increments}
+    return {monoidargs}
+""".format(rfcn=names["rfcn"], arrays=names["arrays"], numentries=names["numentries"], monoidargs=", ".join(names[x] for x in monoidvars.values()), i=names["i"], range=names["range"], itemdefs="\n        ".join(itemdefs), incs="\n        ".join(incs))
 
+        print source
+        raise Exception
 
+        rfcn = compilefcn(self._makefcn(compile(ast.parse(source), "<reduce>", "exec"), env, builtins["rfcn"], source))
 
+        awaits = self._chain(sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, numba)
 
-""".format(rfcn=names["rfcn"], monoidargs="".join(", " + names[x] for x in monoidvars))
+        results = [[None for j in range(len(order))] for i in range(len(awaits))]
 
+        def calculate(i):
+            try:
+                start, stop, numentries, arrays = awaits[i]()
 
+                for compiledintermediate in compiledintermediates:
+                    compiledintermediate(arrays)
 
+                inmonoids  = [identity[n]() for n in order]
 
-#         source = """
-# def rfcn(monoid, numentries, arrays):
-#     {itemdefs}
-#     for i in range(numentries):
-#         fcn({itemis})
+                outmonoids = rfcn(arrays, numentries, *inmonoids)
 
+                for j, monoid in enumerate(outmonoids):
+                    results[i][j] = monoid
 
-# """
+            except:
+                return sys.exc_info()
+            else:
+                return None
 
+        if calcexecutor is None:
+            for i in range(len(awaits)):
+                uproot.tree._delayedraise(calculate(i))
+        else:
+            excinfos = calcexecutor.map(calculate, range(len(awaits)))
+            for excinfo in excinfos:
+                uproot.tree._delayedraise(excinfo)
 
+        # MAYBEFIXME: could combine in O(log_2(N)) steps rather than O(N) if combining is ever resource-heavy
+        for i in range(1, len(awaits)):
+            for j in range(len(order)):
+                results[0][j] = combine(results[0][j], results[i][j])
 
+        if issubclass(outputtype, dict):
+            return outputtype(zip(order, results[0]))
+        elif outputtype == tuple or outputtype == list:
+            return outputtype(results[0])
+        else:
+            return outputtype(*results[0])
 
-#         iterator = self._iterateapply(HERE)
-
-
+    def reduce(self, identity, increment, combine=None, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        if not self._isfcn(identity)
+            raise TypeError("identity must be a string or a function")
+        if not self._isfcn(increment)
+            raise TypeError("increment must be a string or a function")
+        if not (combine is None or self._isfcn(combine)):
+            raise TypeError("combine must be None, a string, or a function")
+        return self.reduceall(identity, increment, combine=combine, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=tuple, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)[0]
 
 class Define(ChainStep):
     def __init__(self, previous, exprs):
@@ -845,8 +944,11 @@ class TTreeFunctionalMethods(uproot.tree.TTreeMethods):
     def newarray(self, expr, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         return ChainOrigin(self).newarray(expr, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
 
-    def reduce(self, init, increment, combine=lambda x, y: x + y, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        return ChainOrigin(self).reduce(init, increment, combine=combine)
+    def reduceall(self, identity, increment, combine=None, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        return ChainOrigin(self).reduceall(identity, increment, combine=combine, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
+
+    def reduce(self, identity, increment, combine=None, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        return ChainOrigin(self).reduce(identity, increment, combine=combine, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
 
     def hists(self):
         raise NotImplementedError
