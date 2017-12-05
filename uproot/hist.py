@@ -175,6 +175,21 @@ class TH1Methods(object):
         self[0] += weights[data < low].sum()
         self[-1] += weights[data >= high].sum()
 
+    def __add__(self, other):
+        if not isinstance(other, TH1Methods) or self.numbins != other.numbins or self.low != other.low or self.high != other.high:
+            raise TypeError("TH1 histograms can only be combined with other TH1 histograms")
+        return hist(self.numbins, self.low, self.high, name=(self.name if self.name is not None else other.name), title=(self.title if self.title is not None else other.title), values=[x + y for x, y in zip(self.values, other.values)])
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __iadd__(self, other):
+        if not isinstance(other, TH1Methods) or self.numbins != other.numbins or self.low != other.low or self.high != other.high:
+            raise TypeError("TH1 histograms can only be combined with other TH1 histograms")
+        for i in range(len(self)):
+            self[i] = other[i]
+        return self
+
     def show(self, width=80, minimum=None, maximum=None, stream=sys.stdout):
         if minimum is None:
             minimum = min(self)
@@ -276,7 +291,7 @@ class TH1(TH1Methods, list):
 class TAxis(object):
     classname = "TAxis"
 
-def hist(numbins, low, high, name=None, title=None):
+def hist(numbins, low, high, name=None, title=None, values=None, allvalues=None, filldata=None):
     out = TH1()
     out.fXaxis = TAxis()
     out.fXaxis.fNbins = int(numbins)
@@ -284,7 +299,29 @@ def hist(numbins, low, high, name=None, title=None):
     out.fXaxis.fXmax = float(high)
     out.fName = name
     out.fTitle = title
-    out.extend([0] * (numbins + 2))
+
+    if values is None and allvalues is None:
+        out.extend([0] * (numbins + 2))
+
+    if values is not None:
+        try:
+            assert len(values) == numbins and all(isinstance(x, numbers.Real) for x in values)
+        except (TypeError, AssertionError):
+            raise ValueError("values must be an iterable of numbers with length numbins")
+        out.extend([0] + values + [0])
+
+    # allvalues takes precedence
+    if allvalues is not None:
+        try:
+            assert len(allvalues) == numbins + 2 and all(isinstance(x, numbers.Real) for x in allvalues)
+        except (TypeError, AssertionError):
+            raise ValueError("allvalues must be an iterable of numbers with length numbins")
+        out.extend(allvalues)
+
+    # and filldata is accumulated on top of any values/allvalues
+    if filldata is not None:
+        out.fillall(filldata)
+
     return out
 
 if numba is not None:

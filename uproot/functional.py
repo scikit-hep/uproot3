@@ -32,11 +32,13 @@ import ast
 import keyword
 import sys
 import math
+import numbers
 from collections import namedtuple
 
 import numpy
 
 import uproot.tree
+import uproot.hist
 import uproot.interp.auto
 
 def ifinstalled(f):
@@ -457,79 +459,12 @@ class ChainStep(object):
 
         return identity, increment, combine, order, monoidvars
 
-    def reduceall(self, identity, increment, combine=None, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
-        identity, increment, combine, order, monoidvars = self._normalize_reduceargs(identity, increment, combine)
-
+    def _finishreduce(self, rfcn, identity, combine, order, sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrystart, entrystop, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
         if outputtype == namedtuple:
             for name in order:
                 if not self._isidentifier(name):
                     raise ValueError("illegal field name for namedtuple: {0}".format(repr(name)))
             outputtype = namedtuple("Reduced", order)
-
-        compilefcn = self._compilefcn(numba)
-
-        dependencies = []
-        for inc in increment.values():
-            dependencies.extend(self._params(inc)[1:])
-
-        # normal preparations for calculating dependencies
-        sourcenames = []
-        intermediates = []
-        entryvars = set()
-        for name in dependencies:
-            self._satisfy(name, sourcenames, intermediates, entryvars, entryvar, aliases)
-
-        intermediates = Intermediate._dependencyorder(sourcenames, intermediates, entryvar, aliases)
-        compiledintermediates = [intermediate._compileintermediate(requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache) for intermediate, requirement in intermediates]
-
-        # dependencies are unique strings
-        avoid = set(dependencies)
-
-        # unique names for dependency getters
-        getternames = self._generatenames(dependencies, avoid)
-        avoid = avoid.union(getternames.values())
-
-        # unique names for dependency items
-        itemnames = self._generatenames(dependencies, avoid)
-        avoid = avoid.union(itemnames.values())
-
-        # unique names for monoids
-        monoidnames = self._generatenames(monoidvars.values(), avoid)
-        avoid = avoid.union(monoidnames.values())
-
-        # unique names for increment functions
-        incnames = self._generatenames(increment, avoid)
-        avoid = avoid.union(incnames.values())
-
-        # unique names for builtins and dummy variables
-        builtins = self._generatenames(["rfcn", "arrays", "numentries", "i", "range"], avoid)
-        avoid = avoid.union(builtins.values())
-
-        env = dict([("range", range)] + [(incnames[n], compilefcn(x)) for n, x in increment.items()])
-
-        # getter -> item for each dependency
-        fcncache = {}
-        itemdefs = []
-        for n in dependencies:
-            argfcn = self._argfcn(n, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache)
-            env[getternames[n]] = argfcn
-            itemdefs.append("{0} = {1}({2})[{3}]".format(itemnames[n], getternames[n], builtins["arrays"], builtins["i"]))
-
-        # call each increment function on its parameters (per item), in declaration or sorted order (not that it matters)
-        incfcns = ["{0} = {1}({0}{2})".format(monoidnames[monoidvars[n]], incnames[n], "".join(", " + itemnames[x] for x in self._params(increment[n])[1:])) for n in order]
-
-        # input parameters and output tuple
-        monoidargs = [monoidnames[monoidvars[n]] for n in order]
-
-        source = """
-def {rfcn}({arrays}, {numentries}, {monoidargs}):
-    for {i} in {range}({numentries}):
-        {itemdefs}
-        {incfcns}
-    return ({monoidargs},)
-""".format(rfcn=builtins["rfcn"], arrays=builtins["arrays"], numentries=builtins["numentries"], monoidargs=", ".join(monoidargs), i=builtins["i"], range=builtins["range"], itemdefs="\n        ".join(itemdefs), incfcns="\n        ".join(incfcns))
-
-        rfcn = compilefcn(self._makefcn(compile(ast.parse(source), "<reduce>", "exec"), env, builtins["rfcn"], source))
 
         awaits = self._chain(sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, None, entrystart, entrystop, cache, basketcache, keycache, readexecutor, numba)
 
@@ -574,6 +509,76 @@ def {rfcn}({arrays}, {numentries}, {monoidargs}):
         else:
             return outputtype(*results[0])
 
+    def reduceall(self, identity, increment, combine=None, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        identity, increment, combine, order, monoidvars = self._normalize_reduceargs(identity, increment, combine)
+
+        compilefcn = self._compilefcn(numba)
+
+        dependencies = []
+        for n in order:
+            dependencies.extend(self._params(increment[n])[1:])
+
+        # normal preparations for calculating dependencies
+        sourcenames = []
+        intermediates = []
+        entryvars = set()
+        fcncache = {}
+        for name in dependencies:
+            self._satisfy(name, sourcenames, intermediates, entryvars, entryvar, aliases)
+
+        intermediates = Intermediate._dependencyorder(sourcenames, intermediates, entryvar, aliases)
+        compiledintermediates = [intermediate._compileintermediate(requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache) for intermediate, requirement in intermediates]
+
+        # dependencies are unique strings
+        avoid = set(dependencies)
+
+        # unique names for dependency getters
+        getternames = self._generatenames(dependencies, avoid)
+        avoid = avoid.union(getternames.values())
+
+        # unique names for dependency items
+        itemnames = self._generatenames(dependencies, avoid)
+        avoid = avoid.union(itemnames.values())
+
+        # unique names for monoids
+        monoidnames = self._generatenames(monoidvars.values(), avoid)
+        avoid = avoid.union(monoidnames.values())
+
+        # unique names for increment functions
+        incnames = self._generatenames(increment, avoid)
+        avoid = avoid.union(incnames.values())
+
+        # unique names for builtins and dummy variables
+        builtins = self._generatenames(["rfcn", "arrays", "numentries", "i", "range"], avoid)
+        avoid = avoid.union(builtins.values())
+
+        env = dict([("range", range)] + [(incnames[n], compilefcn(x)) for n, x in increment.items()])
+
+        # getter -> item for each dependency
+        itemdefs = []
+        for n in dependencies:
+            argfcn = self._argfcn(n, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache)
+            env[getternames[n]] = argfcn
+            itemdefs.append("{0} = {1}({2})[{3}]".format(itemnames[n], getternames[n], builtins["arrays"], builtins["i"]))
+
+        # call each increment function on its parameters (per item), in declaration or sorted order (not that it matters)
+        incfcns = ["{0} = {1}({0}{2})".format(monoidnames[monoidvars[n]], incnames[n], "".join(", " + itemnames[x] for x in self._params(increment[n])[1:])) for n in order]
+
+        # input parameters and output tuple
+        monoidargs = [monoidnames[monoidvars[n]] for n in order]
+
+        source = """
+def {rfcn}({arrays}, {numentries}, {monoidargs}):
+    for {i} in {range}({numentries}):
+        {itemdefs}
+        {incfcns}
+    return ({monoidargs},)
+""".format(rfcn=builtins["rfcn"], arrays=builtins["arrays"], numentries=builtins["numentries"], monoidargs=", ".join(monoidargs), i=builtins["i"], range=builtins["range"], itemdefs="\n        ".join(itemdefs), incfcns="\n        ".join(incfcns))
+
+        rfcn = compilefcn(self._makefcn(compile(ast.parse(source), "<reduce>", "exec"), env, builtins["rfcn"], source))
+
+        return self._finishreduce(rfcn, identity, combine, order, sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrystart, entrystop, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
+
     def reduce(self, identity, increment, combine=None, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         if not self._isfcn(identity):
             raise TypeError("identity must be a string or a function")
@@ -582,6 +587,151 @@ def {rfcn}({arrays}, {numentries}, {monoidargs}):
         if not (combine is None or self._isfcn(combine)):
             raise TypeError("combine must be None, a string, or a function")
         return self.reduceall(identity, increment, combine=combine, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=tuple, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)[0]
+
+    def hists(self, specs, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        identity = {}
+        datarule = {}
+        weightrule = {}
+        combine = {}
+        monoidvars = {}
+        order = []
+
+        def handle(spec, defaultname):
+            if not 4 <= len(spec) <= 7:
+                raise ValueError("histogram specifications must have 4-7 arguments (inclusive):\n\n    (numbins, low, high, dataexpr[, weightexpr[, name[, title]]])")
+            numbins, low, high, dataexpr = spec[:4]
+            weightexpr = spec[4] if len(spec) > 4 else None
+            name       = spec[5] if len(spec) > 5 else defaultname
+            title      = spec[6] if len(spec) > 6 else None
+
+            if not isinstance(numbins, numbers.Integral) or numbins <= 0:
+                raise TypeError("numbins must be a positive integer, not {0}".format(repr(numbins)))
+            if not isinstance(low, numbers.Real):
+                raise TypeError("low must be a number, not {0}".format(repr(low)))
+            if not isinstance(high, numbers.Real):
+                raise TypeError("high must be a number, not {0}".format(repr(high)))
+            if low >= high:
+                raise TypeError("low must be less than high, but low={0} and high={1}".format(low, high))
+            if not self._isfcn(dataexpr):
+                raise TypeError("dataexpr must be a function, not {0}".format(repr(dataexpr)))
+            elif isinstance(dataexpr, parsable):
+                dataexpr = self._string2fcn(dataexpr)
+            if weightexpr is not None and not self._isfcn(weightexpr):
+                raise TypeError("weightexpr must be a function, not {0}".format(repr(weightexpr)))
+            elif isinstance(weightexpr, parsable):
+                weightexpr = self._string2fcn(weightexpr)
+
+            identity[defaultname]   = lambda: uproot.hist(numbins, low, high, name=name, title=title)
+            datarule[defaultname]   = dataexpr
+            weightrule[defaultname] = weightexpr
+            combine[defaultname]    = lambda x, y: x + y
+            monoidvars[defaultname] = self._generatenames([defaultname], avoid=monoidvars.values())[defaultname]
+            order.append(defaultname)
+
+        if isinstance(specs, dict):
+            for defaultname, spec in specs.items():
+                handle(spec, defaultname)
+        else:
+            try:
+                iter(specs)
+            except TypeError:
+                raise TypeError("specs must be a list of\n\n    (numbins, low, high, dataexpr[, weightexpr[, name[, title]]])\n\nor a dict from names to such specifications")
+            else:
+                for i, spec in enumerate(specs):
+                    handle(spec, "h{0}".format(i + 1))
+
+        if outputtype == namedtuple:
+            for name in order:
+                if not self._isidentifier(name):
+                    raise ValueError("illegal field name for namedtuple: {0}".format(repr(name)))
+            outputtype = namedtuple("Reduced", order)
+
+        compilefcn = self._compilefcn(numba)
+
+        dependencies = []
+        for n in order:
+            dependencies.extend(self._params(datarule[n]))
+            if weightrule[n] is not None:
+                dependencies.extend(self._params(weightrule[n]))
+
+        # normal preparations for calculating dependencies
+        sourcenames = []
+        intermediates = []
+        entryvars = set()
+        fcncache = {}
+        for name in dependencies:
+            self._satisfy(name, sourcenames, intermediates, entryvars, entryvar, aliases)
+
+        intermediates = Intermediate._dependencyorder(sourcenames, intermediates, entryvar, aliases)
+        compiledintermediates = [intermediate._compileintermediate(requirement, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache) for intermediate, requirement in intermediates]
+
+        # dependencies are unique strings
+        avoid = set(dependencies)
+
+        # unique names for dependency getters
+        getternames = self._generatenames(dependencies, avoid)
+        avoid = avoid.union(getternames.values())
+
+        # unique names for dependency items
+        itemnames = self._generatenames(dependencies, avoid)
+        avoid = avoid.union(itemnames.values())
+
+        # unique names for monoids
+        monoidnames = self._generatenames(monoidvars.values(), avoid)
+        avoid = avoid.union(monoidnames.values())
+
+        # unique names for datarules
+        datanames = self._generatenames(datarule, avoid)
+        avoid = avoid.union(datanames.values())
+
+        # unique names for weightrules
+        weightnames = self._generatenames([n for n, x in weightrule.items() if x is not None], avoid)
+        avoid = avoid.union(weightnames.values())
+
+        # unique names for builtins and dummy variables
+        builtins = self._generatenames(["rfcn", "arrays", "numentries", "i", "range"], avoid)
+        avoid = avoid.union(builtins.values())
+
+        env = dict([("range", range)])
+
+        # getter -> item for each dependency
+        itemdefs = []
+        for n in dependencies:
+            argfcn = self._argfcn(n, sourcenames, intermediates, entryvar, aliases, compilefcn, fcncache)
+            env[getternames[n]] = argfcn
+            itemdefs.append("{0} = {1}({2})[{3}]".format(itemnames[n], getternames[n], builtins["arrays"], builtins["i"]))
+
+        # call each increment function on its parameters (per item), in declaration or sorted order (not that it matters)
+        incfcns = []
+        for n in order:
+            dataasarg = "{0}({1})".format(datanames[n], ", ".join(itemnames[x] for x in self._params(datarule[n])))
+            env[datanames[n]] = compilefcn(datarule[n])
+            if weightrule[n] is None:
+                incfcns.append("{0}.fill({1})".format(monoidnames[monoidvars[n]], dataasarg))
+            else:
+                weightasarg = "{0}({1})".format(weightnames[n], ", ".join(itemnames[x] for x in self._params(weightrule[n])))
+                env[weightnames[n]] = compilefcn(weightrule[n])
+                incfcns.append("{0}.fillw({1}, {2})".format(monoidnames[monoidvars[n]], dataasarg, weightasarg))
+
+        # input parameters and output tuple
+        monoidargs = [monoidnames[monoidvars[n]] for n in order]
+
+        source = """
+def {rfcn}({arrays}, {numentries}, {monoidargs}):
+    for {i} in {range}({numentries}):
+        {itemdefs}
+        {incfcns}
+    return ({monoidargs},)
+""".format(rfcn=builtins["rfcn"], arrays=builtins["arrays"], numentries=builtins["numentries"], monoidargs=", ".join(monoidargs), i=builtins["i"], range=builtins["range"], itemdefs="\n        ".join(itemdefs), incfcns="\n        ".join(incfcns))
+
+        rfcn = compilefcn(self._makefcn(compile(ast.parse(source), "<reduce>", "exec"), env, builtins["rfcn"], source))
+
+        return self._finishreduce(rfcn, identity, combine, order, sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrystart, entrystop, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
+
+        return self._finishreduce(rfcn, identity, combine, order, sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrystart, entrystop, outputtype, cache, basketcache, keycache, readexecutor, calcexecutor, numba)
+
+    def hist(self, numbins, low, high, dataexpr, weightexpr=None, name=None, title=None, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        return self.hists([(numbins, low, high, dataexpr, weightexpr, name, title)], entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=tuple, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)[0]
 
 class Define(ChainStep):
     def __init__(self, previous, exprs):
@@ -624,7 +774,7 @@ class Define(ChainStep):
             source = """
 def afcn(arrays):
     return fcn({args})
-""".format(args = ", ".join(args))
+""".format(args=", ".join(args))
 
             key = (id(self),)
             if key not in fcncache:
@@ -954,10 +1104,10 @@ class TTreeFunctionalMethods(uproot.tree.TTreeMethods):
     def reduce(self, identity, increment, combine=None, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         return ChainOrigin(self).reduce(identity, increment, combine=combine, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
 
-    def hists(self):
-        raise NotImplementedError
+    def hists(self, specs, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, outputtype=dict, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        return ChainOrigin(self).hists(specs, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=outputtype, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
 
-    def hist(self, numbins, low, high, expr):
-        raise NotImplementedError
+    def hist(self, numbins, low, high, dataexpr, weightexpr=None, name=None, title=None, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
+        return ChainOrigin(self).hist(numbins, low, high, dataexpr, weightexpr=weightexpr, name=name, title=title, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)
 
 uproot.rootio.methods["TTree"] = TTreeFunctionalMethods
