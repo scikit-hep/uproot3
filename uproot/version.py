@@ -30,7 +30,7 @@
 
 import re
 
-__version__ = "2.5.2"
+__version__ = "2.5.3"
 version = __version__
 version_info = tuple(re.split(r"[-\.]", __version__))
 

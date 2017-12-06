@@ -147,7 +147,7 @@ def interpret(branch, classes=None, swapbytes=True):
     except _NotNumerical:
         if len(branch.fLeaves) == 1:
             if branch.fLeaves[0].__class__.__name__ == "TLeafC":
-                return asstrings
+                return asstrings(1)
 
             elif branch.fLeaves[0].__class__.__name__ == "TLeafElement":
                 if getattr(branch._streamer, "fSTLtype", None) == uproot.const.kSTLvector:
@@ -160,6 +160,11 @@ def interpret(branch, classes=None, swapbytes=True):
                         return asstlvector(ascontents)
                     except _NotNumerical:
                         pass
+
+                elif getattr(branch._streamer, "fType", None) == uproot.const.kCharStar:
+                    return asstrings(4)
+
+                # ...
 
         return None
 

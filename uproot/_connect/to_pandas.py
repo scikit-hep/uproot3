@@ -51,7 +51,7 @@ class TTreeMethods_pandas(object):
                 initialcolumns[branch.name] = interpretation.todtype.type(0)
             elif isinstance(interpretation, asjagged):
                 pass
-            elif interpretation is asstrings:
+            elif isinstance(interpretation, asstrings):
                 pass
             else:
                 raise TypeError("cannot convert interpretation {0} to DataFrame".format(interpretation))
@@ -77,7 +77,7 @@ class TTreeMethods_pandas(object):
                 out[branch.name] = arrays[branch.name]
             elif isinstance(interpretation, asjagged):
                 out[branch.name] = list(arrays[branch.name])
-            elif interpretation is asstrings:
+            elif isinstance(interpretation, asstrings):
                 out[branch.name] = list(arrays[branch.name])
             else:
                 raise AssertionError

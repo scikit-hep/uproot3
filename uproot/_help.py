@@ -1733,14 +1733,14 @@ u"""Create a :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>` from Pyt
 
 ################################################################ uproot.interp.strings.asstrings
 
-uproot.interp.strings._asstrings.__doc__ = \
+uproot.interp.strings.asstrings.__doc__ = \
 u"""Interpret branch as a collection of strings (via a :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>` of ``numpy.uint8``).
 
     This interpretation directs branch-reading to fill a contiguous array of characters and string byte offsets, presenting them to the user as a :py:class:`Strings <uproot.interp.strings.Strings>` interface. Such an object behaves as though it were an array of non-uniformly sized strings, but it is more memory and cache-line efficient because the underlying data are contiguous. Numpy's string-handling options either force fixed-size strings (the ``"S"`` dtype) or non-contiguous Python objects (the ``"O"`` dtype).
 
     In this interpretation, "items" (for ``numitems``, ``itemstart``, ``itemstop``, etc.) are characters and "entries" are strings.
 
-    The **asstrings** object is a singleton with no parameters. Do not create new objects from the :py:class:`_asstrings <uproot.interp.strings._asstrings>` class.
+    The optional *sizebytes* (int) parameter controls how many bytes are used to encode the size of each string. If 1 *(default)*, a single byte is read as the size, and if that byte is 255, the next four bytes are read as the size. If 4, four bytes are always read as the size. No other values of *sizebytes* are valid.
 """
 
 _method(uproot.interp.strings.asstrings.empty).__doc__ = interp_fragments["see1"]

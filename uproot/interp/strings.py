@@ -45,7 +45,7 @@ from uproot.interp.jagged import sizes2offsets
 
 CHARTYPE = numpy.dtype(numpy.uint8)
 
-def _asstrings_fromroot(data, offsets, local_entrystart, local_entrystop):
+def _asstrings_fromroot1(data, offsets, local_entrystart, local_entrystop):
     if local_entrystart < 0 or local_entrystop >= len(offsets) or local_entrystart > local_entrystop:
         raise ValueError("illegal local_entrystart or local_entrystop in asstrings.fromroot")
 
@@ -71,31 +71,67 @@ def _asstrings_fromroot(data, offsets, local_entrystart, local_entrystop):
 
     return contents[:stop], newoffsets[:-1], newoffsets[1:]
 
-if numba is not None:
-    _asstrings_fromroot = numba.njit(_asstrings_fromroot)
+def _asstrings_fromroot4(data, offsets, local_entrystart, local_entrystop):
+    if local_entrystart < 0 or local_entrystop >= len(offsets) or local_entrystart > local_entrystop:
+        raise ValueError("illegal local_entrystart or local_entrystop in asstrings.fromroot")
 
-class _asstrings(Interpretation):
+    contents = numpy.empty(offsets[local_entrystop] - offsets[local_entrystart] - (local_entrystop - local_entrystart), dtype=CHARTYPE)
+    newoffsets  = numpy.empty(1 + local_entrystop - local_entrystart, dtype=offsets.dtype)
+    newoffsets[0] = 0
+
+    start = stop = 0
+    for entry in range(local_entrystart, local_entrystop):
+        datastart = offsets[entry] + 4
+        datastop = offsets[entry + 1]
+        stop = start + (datastop - datastart)
+
+        contents[start:stop] = data[datastart:datastop]
+        newoffsets[1 + entry - local_entrystart] = stop
+
+        start = stop
+
+    return contents[:stop], newoffsets[:-1], newoffsets[1:]
+
+if numba is not None:
+    _asstrings_fromroot1 = numba.njit(_asstrings_fromroot1)
+    _asstrings_fromroot4 = numba.njit(_asstrings_fromroot4)
+
+class asstrings(Interpretation):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (Interpretation.__metaclass__,), {})
 
+    def __init__(self, sizebytes=1):
+        self.sizebytes = sizebytes
+
     @property
     def identifier(self):
-        return "asstrings"
+        if self.sizebytes == 1:
+            return "asstrings()"
+        else:
+            return "asstrings({0})".format(self.sizebytes)
 
     def empty(self):
         return Strings(JaggedArray(numpy.empty(0, dtype=CHARTYPE), numpy.empty(0, dtype=numpy.int64)))
 
     def compatible(self, other):
-        return self is other
+        return isinstance(other, asstrings) and self.sizebytes == other.sizebytes
 
     def numitems(self, numbytes, numentries):
-        return numbytes - numentries              # an overestimate if there are any individual strings with > 255 bytes
+        if self.sizebytes == 1:
+            return numbytes - numentries          # an overestimate if there are any individual strings with > 255 bytes
+        else:
+            return numbytes - 4*numentries        # not an overestimate
 
     def source_numitems(self, source):
-        return len(source.jaggedarray.contents)   # not an overestimate; refines the above after opening the data
+        return len(source.jaggedarray.contents)   # not an overestimate
 
     def fromroot(self, data, offsets, local_entrystart, local_entrystop):
-        return Strings(JaggedArray(*_asstrings_fromroot(data, offsets, local_entrystart, local_entrystop)))
+        if self.sizebytes == 1:
+            return Strings(JaggedArray(*_asstrings_fromroot1(data, offsets, local_entrystart, local_entrystop)))
+        elif self.sizebytes == 4:
+            return Strings(JaggedArray(*_asstrings_fromroot4(data, offsets, local_entrystart, local_entrystop)))
+        else:
+            raise ValueError("unrecognized asstring sizebytes: {0}".format(self.sizebytes))
 
     def destination(self, numitems, numentries):
         contents = numpy.empty(numitems, dtype=CHARTYPE)
@@ -117,8 +153,6 @@ class _asstrings(Interpretation):
         starts = offsets[:-1]
         stops  = offsets[1:]
         return Strings(JaggedArray(contents, starts, stops))
-
-asstrings = _asstrings()
 
 class Strings(object):
     # makes __doc__ attribute mutable before Python 3.3

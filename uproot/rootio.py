@@ -512,7 +512,7 @@ def _ftype2dtype(fType):
         return "numpy.dtype(numpy.bool_)"
     elif fType == uproot.const.kChar:
         return "numpy.dtype('i1')"
-    elif fType == uproot.const.kUChar:
+    elif fType in (uproot.const.kUChar, uproot.const.kCharStar):
         return "numpy.dtype('u1')"
     elif fType == uproot.const.kShort:
         return "numpy.dtype('>i2')"
@@ -535,14 +535,14 @@ def _ftype2dtype(fType):
     elif fType in (uproot.const.kDouble, uproot.const.kDouble32):
         return "numpy.dtype('>f8')"
     else:
-        raise NotImplementedError(fType)
+        return "None"
 
 def _ftype2struct(fType):
     if fType == uproot.const.kBool:
         return "?"
     elif fType == uproot.const.kChar:
         return "b"
-    elif fType == uproot.const.kUChar:
+    elif fType in (uproot.const.kUChar, uproot.const.kCharStar):
         return "B"
     elif fType == uproot.const.kShort:
         return "h"
