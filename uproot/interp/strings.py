@@ -104,7 +104,7 @@ class asstrings(Interpretation):
         self.sizebytes = sizebytes
 
     def __repr__(self):
-        return repr(self)
+        return self.identifier
 
     @property
     def identifier(self):
