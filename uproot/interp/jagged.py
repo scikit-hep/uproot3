@@ -393,7 +393,7 @@ if numba is not None:
             @numba.njit([sig])
             def _jaggedarray_len(jaggedarray):
                 return len(jaggedarray.stops)
-            cres = _jaggedarray_len.overloads.values()[0]
+            cres, = _jaggedarray_len.overloads.values()
             len_imp = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
             del cres.target_context._defns[cres.entry_point]
             jaggedarray_len.cache[sig.args] = len_imp
@@ -416,7 +416,7 @@ if numba is not None:
             getitem_imp = jaggedarray_getitem.cache[sig.args]
         except KeyError:
             getitem = numba.njit([sig])(_jaggedarray_getitem)
-            cres = getitem.overloads.values()[0]
+            cres, = getitem.overloads.values()
             getitem_imp = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
             del cres.target_context._defns[cres.entry_point]
             jaggedarray_getitem.cache[sig.args] = getitem_imp
@@ -470,7 +470,7 @@ if numba is not None:
             @numba.njit([jaggedarraytype.contents(jaggedarraytype, JaggedArrayIteratorModel.integertype)])
             def _jaggedarray_getitem(a, i):
                 return a.contents[a.starts[i]:a.stops[i]]
-            cres = _jaggedarray_getitem.overloads.values()[0]
+            cres, = _jaggedarray_getitem.overloads.values()
             getitem_imp = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
             del cres.target_context._defns[cres.entry_point]
             jaggedarray_getitem_foriter.cache = getitem_imp

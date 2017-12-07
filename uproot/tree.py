@@ -1279,7 +1279,7 @@ class TBranchMethods(object):
             name = name[len(strip) + 1:]
 
         if len(name) > 26:
-            out = [indent + name, indent + "{0:26s} {1:26s} {2}".format("", self._streamer.__class__.__name__, interpret(self))]
+            out = [indent + name, indent + "{0:26s} {1:26s} {2}".format("", "(no streamer)" if self._streamer is None else self._streamer.__class__.__name__, interpret(self))]
         else:
             out = [indent + "{0:26s} {1:26s} {2}".format(name, "(no streamer)" if self._streamer is None else self._streamer.__class__.__name__, interpret(self))]
 
