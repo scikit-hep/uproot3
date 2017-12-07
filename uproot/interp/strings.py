@@ -103,6 +103,9 @@ class asstrings(Interpretation):
     def __init__(self, sizebytes=1):
         self.sizebytes = sizebytes
 
+    def __repr__(self):
+        return repr(self)
+
     @property
     def identifier(self):
         if self.sizebytes == 1:
