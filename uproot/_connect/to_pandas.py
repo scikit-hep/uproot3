@@ -38,7 +38,7 @@ class TTreeMethods_pandas(object):
     def __init__(self, tree):
         self._tree = tree
 
-    def df(self, branches=None, entrystart=None, entrystop=None, cache=None, rawcache=None, keycache=None, executor=None):
+    def df(self, branches=None, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None):
         import pandas
 
         branches = list(self._tree._normalize_branches(branches))
@@ -69,7 +69,7 @@ class TTreeMethods_pandas(object):
                     newbranches[branch.name] = interpretation
 
         # actually read all the data, possibly in parallel
-        arrays = self._tree.arrays(newbranches, entrystart=entrystart, entrystop=entrystop, cache=cache, rawcache=rawcache, keycache=keycache, executor=executor)
+        arrays = self._tree.arrays(newbranches, entrystart=entrystart, entrystop=entrystop, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor)
 
         # numerical data are already in the DataFrame, but the others have to be merged in
         for branch, interpretation in branches:

@@ -205,6 +205,10 @@ class ROOTDirectory(object):
         return self.keys()
 
     @staticmethod
+    def _withoutcycle(key):
+        return "{0}".format(key.fName.decode("ascii")).encode("ascii")
+
+    @staticmethod
     def _withcycle(key):
         return "{0};{1}".format(key.fName.decode("ascii"), key.fCycle).encode("ascii")
 
@@ -233,7 +237,7 @@ class ROOTDirectory(object):
 
             if recursive and key.fClassName == b"TDirectory":
                 for name in key.get().iterkeys(recursive, filtername, filterclass):
-                    yield "{0}/{1}".format(self._withcycle(key).decode("ascii"), name.decode("ascii")).encode("ascii")
+                    yield "{0}/{1}".format(self._withoutcycle(key).decode("ascii"), name.decode("ascii")).encode("ascii")
 
     def itervalues(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         for key in self._keys:
@@ -253,7 +257,7 @@ class ROOTDirectory(object):
 
             if recursive and key.fClassName == b"TDirectory":
                 for name, value in key.get().iteritems(recursive, filtername, filterclass):
-                    yield "{0}/{1}".format(self._withcycle(key).decode("ascii"), name.decode("ascii")).encode("ascii"), value
+                    yield "{0}/{1}".format(self._withoutcycle(key).decode("ascii"), name.decode("ascii")).encode("ascii"), value
 
     def iterclasses(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         for key in self._keys:
@@ -263,7 +267,7 @@ class ROOTDirectory(object):
 
             if recursive and key.fClassName == b"TDirectory":
                 for name, classname in key.get().iterclasses(recursive, filtername, filterclass):
-                    yield "{0}/{1}".format(self._withcycle(key).decode("ascii"), name.decode("ascii")).encode("ascii"), classname
+                    yield "{0}/{1}".format(self._withoutcycle(key).decode("ascii"), name.decode("ascii")).encode("ascii"), classname
 
     def keys(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         return list(self.iterkeys(recursive=recursive, filtername=filtername, filterclass=filterclass))

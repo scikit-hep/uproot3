@@ -161,7 +161,7 @@ class ChainStep(object):
 
     @staticmethod
     def _params(fcn):
-        return fcn.__code__.co_varnames
+        return fcn.__code__.co_varnames[:fcn.__code__.co_argcount]
 
     @staticmethod
     def _tofcns(exprs):
@@ -347,9 +347,9 @@ class ChainStep(object):
             totalentries += numentries
 
         if len(partitions) == 0:
-            outarrays = [numpy.ones(0, dtype=self.NEW_ARRAY_DTYPE)*222 for i in range(len(dictnames))]
+            outarrays = [numpy.empty(0, dtype=self.NEW_ARRAY_DTYPE) for i in range(len(dictnames))]
         else:
-            outarrays = [numpy.ones(totalentries, dtype=array.dtype)*333 for array in partitions[0][2]]
+            outarrays = [numpy.empty(totalentries, dtype=array.dtype) for array in partitions[0][2]]
 
         for start, stop, arrays in partitions:
             for outarray, array in zip(outarrays, arrays):
@@ -362,11 +362,11 @@ class ChainStep(object):
         else:
             return outputtype(*outarrays)
 
-    def newarray(self, expr, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, cache=None, basketcache=None, keycache=None, readexecutor=None, numba=ifinstalled):
+    def newarray(self, expr, entrystart=None, entrystop=None, aliases={}, interpretations={}, entryvar=None, cache=None, basketcache=None, keycache=None, readexecutor=None, calcexecutor=None, numba=ifinstalled):
         if not ChainStep._isfcn(expr):
             raise TypeError("expr must be a single string or function")
 
-        return self.newarrays(expr, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=tuple, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, numba=numba)[0]
+        return self.newarrays(expr, entrystart=entrystart, entrystop=entrystop, aliases=aliases, interpretations=interpretations, entryvar=entryvar, outputtype=tuple, cache=cache, basketcache=basketcache, keycache=keycache, readexecutor=readexecutor, calcexecutor=calcexecutor, numba=numba)[0]
 
     def _normalize_reduceargs(self, identity, increment, combine):
         if isinstance(identity, parsable):
@@ -978,7 +978,7 @@ def afcn(arrays):
                 prevcompiledintermediate(arrays)
 
             # add the mask array
-            mask = numpy.ones(numentries, dtype=numpy.bool)
+            mask = numpy.empty(numentries, dtype=numpy.bool)
 
             # evaluate the expression and fill the mask
             afcn(arrays + (mask,))
@@ -990,7 +990,7 @@ def afcn(arrays):
 
             for i in range(len(compiledintermediates)):
                 # for Intermediates that will be made *after* the filter
-                cutarrays.append(numpy.ones(cutnumentries, dtype=self.NEW_ARRAY_DTYPE) * 888)
+                cutarrays.append(numpy.empty(cutnumentries, dtype=self.NEW_ARRAY_DTYPE))
 
             if len(entryvars) > 0:
                 # same array, but putting it in the canonical position
@@ -1048,7 +1048,7 @@ class ChainOrigin(ChainStep):
         return fcncache[index]
 
     def _chain(self, sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, numba):
-        branches = {}
+        branches = uproot.tree.OrderedDict()
         for branchname in sourcenames:
             if branchname in interpretations:
                 branches[branchname] = interpretations[branchname]
@@ -1062,7 +1062,7 @@ class ChainOrigin(ChainStep):
             arrays = await()
 
             for i in range(len(compiledintermediates)):
-                arrays.append(numpy.ones(numentries, dtype=self.NEW_ARRAY_DTYPE) * 999)
+                arrays.append(numpy.empty(numentries, dtype=self.NEW_ARRAY_DTYPE))
 
             if len(entryvars) > 0:
                 arrays.append(numpy.arange(start, stop))
