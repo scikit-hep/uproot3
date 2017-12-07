@@ -46,7 +46,7 @@ uproot.interp.jagged.JaggedArray
 uproot.interp.asstrings
 -----------------------
 
-.. autoclass:: uproot.interp.strings._asstrings
+.. autoclass:: uproot.interp.strings.asstrings
 
 uproot.interp.strings.Strings
 -----------------------------
