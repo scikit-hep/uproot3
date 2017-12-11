@@ -190,6 +190,10 @@ class TH1Methods(object):
             self[i] = other[i]
         return self
 
+    @property
+    def xlabels(self):
+        return self.fXaxis.fLabels
+
     def show(self, width=80, minimum=None, maximum=None, stream=sys.stdout):
         if minimum is None:
             minimum = min(self)
@@ -206,15 +210,19 @@ class TH1Methods(object):
             minimum = average - 0.5
             maximum = average + 0.5
 
-        intervals = ["[{0:<.4g}, {1:<.4g})".format(l, h) for l, h in [self.interval(i) for i in range(len(self))]]
-        intervals[-1] = intervals[-1][:-1] + "]"   # last interval is closed on top edge
+        if self.xlabels is None:
+            intervals = ["[{0:<.5g}, {1:<.5g})".format(l, h) for l, h in [self.interval(i) for i in range(len(self))]]
+            intervals[-1] = intervals[-1][:-1] + "]"   # last interval is closed on top edge
+        else:
+            intervals = ["(underflow)"] + [self.xlabels[i] if i < len(self.xlabels) else self.interval(i+1) for i in range(self.numbins)] + ["(overflow)"]
+
         intervalswidth = max(len(x) for x in intervals)
 
-        values = ["{0:<.4g}".format(float(x)) for x in self]
+        values = ["{0:<.5g}".format(float(x)) for x in self]
         valueswidth = max(len(x) for x in values)
 
-        minimumtext = "{0:<.4g}".format(minimum)
-        maximumtext = "{0:<.4g}".format(maximum)
+        minimumtext = "{0:<.5g}".format(minimum)
+        maximumtext = "{0:<.5g}".format(maximum)
 
         plotwidth = max(len(minimumtext) + len(maximumtext), width - (intervalswidth + 1 + valueswidth + 1 + 2))
         scale = minimumtext + " "*(plotwidth + 2 - len(minimumtext) - len(maximumtext)) + maximumtext

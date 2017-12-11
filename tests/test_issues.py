@@ -54,3 +54,7 @@ class TestIssues(unittest.TestCase):
     def test_issue31(self):
         t = uproot.open("tests/samples/issue31.root")["T"]
         self.assertEqual(t.array("name").tolist(), [b"one", b"two", b"three", b"four", b"five"])
+
+    def test_issue33(self):
+        h = uproot.open("tests/samples/issue33.root")["cutflow"]
+        self.assertEqual(h.xlabels, ["Dijet", "MET", "MuonVeto", "IsoMuonTrackVeto", "ElectronVeto", "IsoElectronTrackVeto", "IsoPionTrackVeto"])
