@@ -583,7 +583,8 @@ def _raise_notimplemented(streamertype, streamerdict, source, cursor):
     raise NotImplementedError("\n\nUnimplemented streamer type: {0}\n\nmembers: {1}\n\nfile contents:\n\n{2}".format(streamertype, streamerdict, cursor.hexdump(source)))
 
 def _defineclasses(streamerinfos):
-    classes = dict(builtin_classes)
+    classes = dict(globals())
+    classes.update(builtin_classes)
     skip = dict(builtin_skip)
     # rename = dict((streamerinfo.fName, _safename(streamerinfo.fName)) for streamerinfo in streamerinfos)
 
@@ -713,13 +714,10 @@ def _defineclasses(streamerinfos):
     return classes
 
 def _makeclass(classname, id, codestr, classes):
-    env = {}
-    env.update(globals())
-    env.update(classes)
     for methodclass in methods.values():
-        env[methodclass.__name__] = methodclass
-    exec(compile(codestr, "<generated from TStreamerInfo {0} at 0x{1:012x}>".format(repr(classname), id), "exec"), env)
-    out = env[_safename(classname)]
+        classes[methodclass.__name__] = methodclass
+    exec(compile(codestr, "<generated from TStreamerInfo {0} at 0x{1:012x}>".format(repr(classname), id), "exec"), classes)
+    out = classes[_safename(classname)]
     out._codestr = codestr
     return out
 

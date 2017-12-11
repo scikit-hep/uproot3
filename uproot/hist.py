@@ -124,23 +124,23 @@ class TH1Methods(object):
         numbins = self.fXaxis.fNbins
         low = self.fXaxis.fXmin
         high = self.fXaxis.fXmax
-        if data < low:
+        if datum < low:
             self[0] += 1
-        elif data >= high:
+        elif datum >= high:
             self[-1] += 1
         else:
-            self[int(math.floor(numbins * (data - low) / (high - low))) + 1] += 1
+            self[int(math.floor(numbins * (datum - low) / (high - low))) + 1] += 1
 
     def fillw(self, datum, weight):
         numbins = self.fXaxis.fNbins
         low = self.fXaxis.fXmin
         high = self.fXaxis.fXmax
-        if data < low:
+        if datum < low:
             self[0] += weight
-        elif data >= high:
+        elif datum >= high:
             self[-1] += weight
         else:
-            self[int(math.floor(numbins * (data - low) / (high - low))) + 1] += weight
+            self[int(math.floor(numbins * (datum - low) / (high - low))) + 1] += weight
 
     def fillall(self, data):
         numbins = self.fXaxis.fNbins
