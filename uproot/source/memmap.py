@@ -49,6 +49,9 @@ class MemmapSource(uproot.source.source.Source):
     def parent(self):
         return self
 
+    def size(self):
+        return len(self._source)
+
     def threadlocal(self):
         return self
 

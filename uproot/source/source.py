@@ -37,6 +37,9 @@ class Source(object):
     def parent(self):
         raise NotImplementedError
 
+    def size(self):
+        raise NotImplementedError
+
     def threadlocal(self):
         raise NotImplementedError
 

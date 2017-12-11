@@ -647,26 +647,28 @@ class TBranchMethods(object):
         if basketstop is None:
             basketstop = self.numbaskets
 
+        done = False
         if keycache is not None:
             keys = [keycache.get(self._keycachekey(i), None) for i in range(basketstart, basketstop)]
             if all(x is not None for x in keys):
                 for key in keys:
                     yield key
-                raise StopIteration
+                done = True
 
-        keysource = self._source.threadlocal()
-        try:
-            for i in range(basketstart, basketstop):
-                key = None if keycache is None else keycache.get(self._keycachekey(i), None)
-                if key is None:
-                    key = self._basketkey(keysource, i, complete)
-                    if keycache is not None:
-                        keycache[self._keycachekey(i)] = key
-                    yield key
-                else:
-                    yield key
-        finally:
-            keysource.dismiss()
+        if not done:
+            keysource = self._source.threadlocal()
+            try:
+                for i in range(basketstart, basketstop):
+                    key = None if keycache is None else keycache.get(self._keycachekey(i), None)
+                    if key is None:
+                        key = self._basketkey(keysource, i, complete)
+                        if keycache is not None:
+                            keycache[self._keycachekey(i)] = key
+                        yield key
+                    else:
+                        yield key
+            finally:
+                keysource.dismiss()
 
     def uncompressedbytes(self, keycache=None):
         return sum(key.fObjlen for key in self._threadsafe_iterate_keys(keycache, False))
@@ -1206,6 +1208,9 @@ class TBranchMethods(object):
                 self.fVersion, self.fBufferSize, self.fNevBufSize, self.fNevBuf, self.fLast = cursor.fields(source, TBranchMethods._BasketKey._format_complete)
 
                 self.border = self.fLast - self.fKeylen
+
+                if source.size() - self.fSeekKey < self.fNbytes:
+                    raise ValueError("TKey declares that object {0} has {1} bytes but only {2} remain in the file".format(repr(self.fName), self.fNbytes, source.size() - self.fSeekKey))
 
                 if self.fObjlen != self.fNbytes - self.fKeylen:
                     self.source = uproot.source.compressed.CompressedSource(compression, source, Cursor(self.fSeekKey + self.fKeylen), self.fNbytes - self.fKeylen, self.fObjlen)

@@ -766,6 +766,9 @@ class TKey(ROOTObject):
         self.fName = cursor.string(source)
         self.fTitle = cursor.string(source)
 
+        if source.size() - self.fSeekKey < self.fNbytes:
+            raise ValueError("TKey declares that object {0} has {1} bytes but only {2} remain in the file".format(repr(self.fName), self.fNbytes, source.size() - self.fSeekKey))
+
         # object size != compressed size means it's compressed
         if self.fObjlen != self.fNbytes - self.fKeylen:
             self._source = uproot.source.compressed.CompressedSource(context.compression, source, Cursor(self.fSeekKey + self.fKeylen), self.fNbytes - self.fKeylen, self.fObjlen)
@@ -819,7 +822,7 @@ class TStreamerInfo(ROOTObject):
     _format = struct.Struct(">Ii")
 
     def show(self, stream=sys.stdout):
-        out = "StreamerInfo for class: {0}, version={1}, checksum=0x{2:08x}\n{3}{4}".format(self.fName, self.fClassVersion, self.fCheckSum, "\n".join("  " + x.show(stream=None) for x in self.fElements), "\n" if len(self.fElements) > 0 else "")
+        out = "StreamerInfo for class: {0}, version={1}, checksum=0x{2:08x}\n{3}{4}".format(self.fName.decode("ascii"), self.fClassVersion, self.fCheckSum, "\n".join("  " + x.show(stream=None) for x in self.fElements), "\n" if len(self.fElements) > 0 else "")
         if stream is None:
             return out
         else:
@@ -868,7 +871,7 @@ class TStreamerElement(ROOTObject):
     _format3 = struct.Struct(">ddd")
 
     def show(self, stream=sys.stdout):
-        out = "{0:15s} {1:15s} offset={2:3d} type={3:2d} {4}".format(self.fName, self.fTypeName, self.fOffset, self.fType, self.fTitle)
+        out = "{0:15s} {1:15s} offset={2:3d} type={3:2d} {4}".format(self.fName.decode("ascii"), self.fTypeName.decode("ascii"), self.fOffset, self.fType, self.fTitle.decode("ascii"))
         if stream is None:
             return out
         else:

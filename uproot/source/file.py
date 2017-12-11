@@ -44,7 +44,13 @@ class FileSource(uproot.source.chunked.ChunkedSource):
         return FileSource(path, chunkbytes=8*1024, limitbytes=1024**2)
 
     def __init__(self, path, *args, **kwds):
+        self._size = None
         super(FileSource, self).__init__(os.path.expanduser(path), *args, **kwds)
+
+    def size(self):
+        if self._size is None:
+            self._size = os.path.getsize()
+        return self._size
 
     def threadlocal(self):
         out = FileSource.__new__(self.__class__)

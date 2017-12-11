@@ -122,7 +122,7 @@ class CompressedSource(uproot.source.source.Source):
     def threadlocal(self):
         return self
 
-    def data(self, start, stop, dtype=None):
+    def _prepare(self):
         if self._uncompressed is None:
             cursor = self._cursor.copied()
             algo = self._compressed.data(cursor.index, cursor.index + 2).tostring()
@@ -145,12 +145,22 @@ class CompressedSource(uproot.source.source.Source):
             else:
                 raise ValueError("unrecognized compression algorithm: {0}".format(algo))
 
-            self._uncompressed = numpy.frombuffer(compression.decompress(self._compressed, cursor.skipped(skip), self._compressedbytes - skip, self._uncompressedbytes), dtype=numpy.uint8)
+            header = cursor.bytes(self._compressed, skip).tostring()
+            asstr = compression.decompress(self._compressed, cursor, self._compressedbytes - skip, self._uncompressedbytes)
+            if len(asstr) != self._uncompressedbytes:
+                raise ValueError("block with header {0} ({1}) decompressed to {2} bytes, but the object key says the decompressed size should be {3} bytes".format(repr(header), compression.algoname, len(asstr), self._uncompressedbytes))
+            self._uncompressed = numpy.frombuffer(asstr, dtype=numpy.uint8)
 
+    def size(self):
+        self._prepare()
+        return len(self._uncompressed)
+
+    def data(self, start, stop, dtype=None):
         # assert start >= 0
         # assert stop >= 0
         # assert stop >= start
 
+        self._prepare()
         if dtype is None:
             return self._uncompressed[start:stop]
         else:

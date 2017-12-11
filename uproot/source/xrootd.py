@@ -38,6 +38,10 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (uproot.source.chunked.ChunkedSource.__metaclass__,), {})
 
+    def __init__(self, path, *args, **kwds):
+        self._size = None
+        super(XRootDSource, self).__init__(path, *args, **kwds)
+    
     @staticmethod
     def defaults(path):
         return XRootDSource(path, chunkbytes=8*1024, limitbytes=1024**2)
@@ -51,8 +55,17 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
         if self._source is None:
             self._source = pyxrootd.client.File()
             status, dummy = self._source.open(self.path)
-            if status.get("error", None) is not None:
+            if status.get("error", None):
                 raise OSError(status["message"])
+            status, info = self._source.stat()
+            if status.get("error", None):
+                raise OSError(status["message"])
+            self._size = info["size"]
+
+    def size(self):
+        if self._size is None:
+            self._open()
+        return self._size
 
     def threadlocal(self):
         out = XRootDSource.__new__(self.__class__)
@@ -67,7 +80,7 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
 
     def _read(self, chunkindex):
         status, data = self._source.read(chunkindex * self._chunkbytes, self._chunkbytes)
-        if status.get("error", None) is not None:
+        if status.get("error", None):
             raise OSError(status["message"])
         return numpy.frombuffer(data, dtype=numpy.uint8)
 
