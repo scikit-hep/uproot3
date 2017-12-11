@@ -467,8 +467,8 @@ def _readstreamers(source, cursor, context):
             for element in obj.fElements:
                 if isinstance(element, TStreamerBase):
                     dependencies.add(element.fName)
-                if isinstance(element, (TStreamerObject, TStreamerObjectAny, TStreamerString)) or (isinstance(element, TStreamerObjectPointer) and element.fType == uproot.const.kObjectp):
-                    dependencies.add(element.fTypeName.rstrip(b"*"))
+                # if isinstance(element, (TStreamerObject, TStreamerObjectAny, TStreamerString)) or (isinstance(element, TStreamerObjectPointer) and element.fType == uproot.const.kObjectp):
+                #     dependencies.add(element.fTypeName.rstrip(b"*"))
             streamerinfos.append((obj, dependencies))
 
         elif isinstance(obj, TList) and all(isinstance(x, TObjString) for x in obj):
@@ -493,7 +493,7 @@ def _readstreamers(source, cursor, context):
                     remaining_items.append((item, dependencies))
 
             if not emitted:
-                raise ValueError("cannot sort TStreamerInfos into dependency order:\n\n{0}".format("\n".join("{0:20s} requires {1}".format(item.fName, " ".join(dependencies)) for item, dependencies in items)))
+                raise ValueError("cannot sort TStreamerInfos into dependency order:\n\n{0}".format("\n".join("{0:20s} requires {1}".format(item.fName.decode("ascii"), " ".join(x.decode("ascii") for x in dependencies)) for item, dependencies in items)))
 
             items = remaining_items
 
@@ -584,7 +584,7 @@ def _raise_notimplemented(streamertype, streamerdict, source, cursor):
 def _defineclasses(streamerinfos):
     classes = dict(builtin_classes)
     skip = dict(builtin_skip)
-    rename = dict((streamerinfo.fName, _safename(streamerinfo.fName)) for streamerinfo in streamerinfos)
+    # rename = dict((streamerinfo.fName, _safename(streamerinfo.fName)) for streamerinfo in streamerinfos)
 
     for streamerinfo in streamerinfos:
         if isinstance(streamerinfo, TStreamerInfo) and _safename(streamerinfo.fName) not in classes:
@@ -605,8 +605,8 @@ def _defineclasses(streamerinfos):
                     code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
 
                 elif isinstance(element, TStreamerBase):
-                    code.append("        {0}._readinto(self, source, cursor, context)".format(rename.get(element.fName, element.fName)))
-                    bases.append(rename.get(element.fName, element.fName))
+                    code.append("        {0}._readinto(self, source, cursor, context)".format(_safename(element.fName)))   # rename.get(element.fName, element.fName)))
+                    bases.append(_safename(element.fName))   # rename.get(element.fName, element.fName))
 
                 elif isinstance(element, TStreamerBasicPointer):
                     code.append("        cursor.skip(1)")
@@ -659,7 +659,7 @@ def _defineclasses(streamerinfos):
                         if _safename(streamerinfo.fName) in skip and _safename(element.fName) in skip[_safename(streamerinfo.fName)]:
                             code.append("        Undefined.read(source, cursor, context)")
                         else:
-                            code.append("        self.{0} = {1}.read(source, cursor, context)".format(_safename(element.fName), rename.get(element.fTypeName, element.fTypeName.decode("ascii")).rstrip("*")))
+                            code.append("        self.{0} = {1}.read(source, cursor, context)".format(_safename(element.fName), _safename(element.fTypeName.rstrip(b"*"))))   # rename.get(element.fTypeName, element.fTypeName.decode("ascii")).rstrip("*")))
                             fields.append(_safename(element.fName))
                     elif element.fType == uproot.const.kObjectP:
                         if _safename(streamerinfo.fName) in skip and _safename(element.fName) in skip[_safename(streamerinfo.fName)]:
@@ -680,7 +680,7 @@ def _defineclasses(streamerinfos):
                     if _safename(streamerinfo.fName) in skip and _safename(element.fName) in skip[_safename(streamerinfo.fName)]:
                         code.append("        self.{0} = Undefined.read(source, cursor, context)".format(_safename(element.fName)))
                     else:
-                        code.append("        self.{0} = {1}.read(source, cursor, context)".format(_safename(element.fName), rename.get(element.fTypeName, element.fTypeName.decode("ascii"))))
+                        code.append("        self.{0} = {1}.read(source, cursor, context)".format(_safename(element.fName), _safename(element.fTypeName)))   # rename.get(element.fTypeName, element.fTypeName.decode("ascii"))))
                         fields.append(_safename(element.fName))
 
                 else:
@@ -995,9 +995,9 @@ class TStreamerSTL(TStreamerElement):
         self.fSTLtype, self.fCtype = cursor.fields(source, TStreamerSTL._format)
 
         if self.fSTLtype == uproot.const.kSTLmultimap or self.fSTLtype == uproot.const.kSTLset:
-            if self.fTypeName.startswith("std::set") or self.fTypeName.startswith("set"):
+            if self.fTypeName.startswith(b"std::set") or self.fTypeName.startswith(b"set"):
                 self.fSTLtype = uproot.const.kSTLset
-            elif self.fTypeName.startswith("std::multimap") or self.fTypeName.startswith("multimap"):
+            elif self.fTypeName.startswith(b"std::multimap") or self.fTypeName.startswith(b"multimap"):
                 self.fSTLtype = uproot.const.kSTLmultimap
 
         _endcheck(start, cursor, cnt)
