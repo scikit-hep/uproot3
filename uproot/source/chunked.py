@@ -41,9 +41,9 @@ class ChunkedSource(uproot.source.source.Source):
         self.path = path
         self._chunkbytes = chunkbytes
         if limitbytes is None:
-            self._cache = uproot.cache.memorycache.ThreadSafeDict()
+            self.cache = uproot.cache.memorycache.ThreadSafeDict()
         else:
-            self._cache = uproot.cache.memorycache.ThreadSafeMemoryCache(limitbytes)
+            self.cache = uproot.cache.memorycache.ThreadSafeMemoryCache(limitbytes)
         self._source = None
 
     def parent(self):
@@ -81,10 +81,10 @@ class ChunkedSource(uproot.source.source.Source):
 
         for chunkindex in range(chunkstart, chunkstop):
             try:
-                chunk = self._cache[chunkindex]
+                chunk = self.cache[chunkindex]
             except KeyError:
                 self._open()
-                chunk = self._cache[chunkindex] = self._read(chunkindex)
+                chunk = self.cache[chunkindex] = self._read(chunkindex)
 
             cstart = 0
             cstop = self._chunkbytes

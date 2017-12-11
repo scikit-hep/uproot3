@@ -172,6 +172,7 @@ class ROOTDirectory(object):
                 out = ROOTDirectory(mykey.fName, context, keys)
                 out.fVersion, out.fDatimeC, out.fDatimeM, out.fNbytesKeys, out.fNbytesName, out.fSeekDir, out.fSeekParent, out.fSeekKeys = fVersion, fDatimeC, fDatimeM, fNbytesKeys, fNbytesName, fSeekDir, fSeekParent, fSeekKeys
                 out._headerkey = headerkey
+                out.source = source
                 return out
 
             finally:

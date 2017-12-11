@@ -71,10 +71,10 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
         out = XRootDSource.__new__(self.__class__)
         out.path = self.path
         out._chunkbytes = self._chunkbytes
-        if isinstance(self._cache, (uproot.cache.memorycache.ThreadSafeMemoryCache, uproot.cache.memorycache.ThreadSafeDict)):
-            out._cache = self._cache
+        if isinstance(self.cache, (uproot.cache.memorycache.ThreadSafeMemoryCache, uproot.cache.memorycache.ThreadSafeDict)):
+            out.cache = self.cache
         else:
-            out._cache = {}
+            out.cache = {}
         out._source = self._source     # XRootD connections are *shared* among threads (I'm assuming they're thread-safe)
         return out
 

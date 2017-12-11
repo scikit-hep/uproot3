@@ -56,10 +56,10 @@ class FileSource(uproot.source.chunked.ChunkedSource):
         out = FileSource.__new__(self.__class__)
         out.path = self.path
         out._chunkbytes = self._chunkbytes
-        if isinstance(self._cache, (uproot.cache.memorycache.ThreadSafeMemoryCache, uproot.cache.memorycache.ThreadSafeDict)):
-            out._cache = self._cache
+        if isinstance(self.cache, (uproot.cache.memorycache.ThreadSafeMemoryCache, uproot.cache.memorycache.ThreadSafeDict)):
+            out.cache = self.cache
         else:
-            out._cache = {}
+            out.cache = {}
         out._source = None             # local file connections are *not shared* among threads (they're *not* thread-safe)
         return out
 
