@@ -28,6 +28,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import struct
+
 import numpy
 
 import uproot.const
@@ -122,34 +124,53 @@ class CompressedSource(uproot.source.source.Source):
     def threadlocal(self):
         return self
 
+    _header = struct.Struct("2sBBBBBBB")
+
     def _prepare(self):
         if self._uncompressed is None:
             cursor = self._cursor.copied()
-            algo = self._compressed.data(cursor.index, cursor.index + 2).tostring()
 
-            if algo == b"ZL":
-                compression = self.compression.copy(uproot.const.kZLIB)
-                skip = 9        # https://github.com/root-project/root/blob/master/core/zip/src/RZip.cxx#L217
+            start = cursor.index
+            filled = 0
+            numblocks = 0
+            while cursor.index - start < self._compressedbytes:
+                # https://github.com/root-project/root/blob/master/core/zip/src/RZip.cxx#L217
+                # https://github.com/root-project/root/blob/master/core/lzma/src/ZipLZMA.c#L81
+                # https://github.com/root-project/root/blob/master/core/lz4/src/ZipLZ4.cxx#L38
+                algo, method, c1, c2, c3, u1, u2, u3 = cursor.fields(self._compressed, self._header)
+                compressedbytes = c1 + (c2 << 8) + (c3 << 16)
+                uncompressedbytes = u1 + (u2 << 8) + (u3 << 16)
 
-            elif algo == b"XZ":
-                compression = self.compression.copy(uproot.const.kLZMA)
-                skip = 9        # https://github.com/root-project/root/blob/master/core/lzma/src/ZipLZMA.c#L81
+                if algo == b"ZL":
+                    compression = self.compression.copy(uproot.const.kZLIB)
+                elif algo == b"XZ":
+                    compression = self.compression.copy(uproot.const.kLZMA)
+                elif algo == b"L4":
+                    compression = self.compression.copy(uproot.const.kLZ4)
+                    cursor.skip(8)        # FIXME: use this checksum!
+                    compressedbytes -= 8
+                elif algo == b"CS":
+                    raise ValueError("unsupported compression algorithm: 'old' (according to ROOT comments, hasn't been used in 20+ years!)")
+                else:
+                    raise ValueError("unrecognized compression algorithm: {0}".format(algo))
 
-            elif algo == b"L4":
-                compression = self.compression.copy(uproot.const.kLZ4)
-                skip = 9 + 8    # https://github.com/root-project/root/blob/master/core/lz4/src/ZipLZ4.cxx#L38
+                asstr = compression.decompress(self._compressed, cursor, compressedbytes, uncompressedbytes)
+                numblocks += 1
 
-            elif algo == b"CS":
-                raise ValueError("unsupported compression algorithm: 'old' (according to ROOT comments, hasn't been used in 20+ years!)")
+                if len(asstr) != uncompressedbytes:
+                    raise ValueError("block with header {0} ({1}) decompressed to {2} bytes, but the object key says the decompressed size should be {3} bytes".format(repr(header), compression.algoname, len(asstr), self._uncompressedbytes))
+                if filled + uncompressedbytes > self._uncompressedbytes:
+                    raise ValueError("uncompressed {0} bytes in {1} blocks so far, but expected only {2} bytes".format(filled + uncompressedbytes, numblocks, self._uncompressedbytes))
 
-            else:
-                raise ValueError("unrecognized compression algorithm: {0}".format(algo))
+                if filled == 0:
+                    if uncompressedbytes == self._uncompressedbytes:  # usual case: only one block
+                        self._uncompressed = numpy.frombuffer(asstr, dtype=numpy.uint8)
+                        return
+                    else:
+                        self._uncompressed = numpy.empty(self._uncompressedbytes, dtype=numpy.uint8)
 
-            header = cursor.bytes(self._compressed, skip).tostring()
-            asstr = compression.decompress(self._compressed, cursor, self._compressedbytes - skip, self._uncompressedbytes)
-            if len(asstr) != self._uncompressedbytes:
-                raise ValueError("block with header {0} ({1}) decompressed to {2} bytes, but the object key says the decompressed size should be {3} bytes".format(repr(header), compression.algoname, len(asstr), self._uncompressedbytes))
-            self._uncompressed = numpy.frombuffer(asstr, dtype=numpy.uint8)
+                self._uncompressed[filled : filled + uncompressedbytes] = numpy.frombuffer(asstr, dtype=numpy.uint8)
+                filled += uncompressedbytes
 
     def size(self):
         self._prepare()

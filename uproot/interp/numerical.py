@@ -74,18 +74,9 @@ class asdtype(Interpretation):
         return asarray(self.fromdtype, array, self.fromdims)
 
     def __repr__(self):
-        args = []
-
-        if self.fromdtype.byteorder == ">":
-            args.append(repr(str(self.fromdtype)))
-        else:
-            args.append(repr(self.fromdtype))
-
+        args = [repr(str(self.fromdtype))]
         if self.todtype.newbyteorder(">") != self.fromdtype.newbyteorder(">"):
-            if self.todtype.byteorder == "=":
-                args.append(repr(str(self.todtype)))
-            else:
-                args.append(repr(self.todtype))
+            args.append(repr(str(self.todtype)))
 
         if self.fromdims != ():
             args.append(repr(self.fromdims))
@@ -174,18 +165,7 @@ class asarray(asdtype):
         return self.toarray.shape[1:]
 
     def __repr__(self):
-        args = []
-
-        if self.fromdtype.byteorder == ">":
-            args.append(repr(str(self.fromdtype)))
-        else:
-            args.append(repr(self.fromdtype))
-
-        if self.todtype.byteorder == "=":
-            args.append("<array dtype={0} at 0x{1:012x}>".format(repr(str(self.todtype)), id(self.todtype)))
-        else:
-            args.append("<array dtype={0} at 0x{1:012x}>".format(repr(self.todtype), id(self.todtype)))
-
+        args = [repr(str(self.fromdtype)), "<array dtype={0} at 0x{1:012x}>".format(repr(str(self.todtype)), id(self.todtype))]
         return "asarray(" + ", ".join(args) + ")"
 
     @property
