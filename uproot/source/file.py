@@ -49,7 +49,7 @@ class FileSource(uproot.source.chunked.ChunkedSource):
 
     def size(self):
         if self._size is None:
-            self._size = os.path.getsize()
+            self._size = os.path.getsize(self.path)
         return self._size
 
     def threadlocal(self):
@@ -64,7 +64,7 @@ class FileSource(uproot.source.chunked.ChunkedSource):
         return out
 
     def _open(self):
-        if self._source is None:
+        if self._source is None or self._source.closed:
             self._source = open(self.path, "rb")
 
     def _read(self, chunkindex):

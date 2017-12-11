@@ -322,10 +322,10 @@ class ThreadSafeMemoryCache(MemoryCache):
 
     __slots__ = ("limitbytes", "numevicted", "_order", "_lookup", "_numbytes", "_lock")
 
-    def __init__(self, limitbytes, items=(), **kwds):
+    def __init__(self, limitbytes, spillover=None, spill_immediately=False, items=(), **kwds):
         self._lock = threading.RLock()
         with self._lock:
-            super(ThreadSafeMemoryCache, self).__init__(limitbytes, items, **kwds)
+            super(ThreadSafeMemoryCache, self).__init__(limitbytes, spillover=spillover, spill_immediately=spill_immediately, items=items, **kwds)
 
     def index(self, key):
         with self._lock:
