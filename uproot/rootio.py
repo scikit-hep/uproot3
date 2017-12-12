@@ -1045,6 +1045,9 @@ class TString(bytes, ROOTStreamedObject):
     def _readinto(cls, self, source, cursor, context):
         return TString(cursor.string(source))
 
+    def __str__(self):
+        return self.decode("utf-8", "replace")
+
 class TNamed(TObject):
     @classmethod
     def _readinto(cls, self, source, cursor, context):
@@ -1075,7 +1078,7 @@ class TObjArray(list, ROOTStreamedObject):
         _endcheck(start, cursor, cnt)
         return self
 
-class TObjString(str, ROOTStreamedObject):
+class TObjString(bytes, ROOTStreamedObject):
     @classmethod
     def _readinto(cls, self, source, cursor, context):
         start, cnt, self.classversion = _startcheck(source, cursor)
@@ -1083,6 +1086,9 @@ class TObjString(str, ROOTStreamedObject):
         string = cursor.string(source)
         _endcheck(start, cursor, cnt)
         return TObjString(string)
+
+    def __str__(self):
+        return self.decode("utf-8", "replace")
 
 class TList(list, ROOTStreamedObject):
     @classmethod
