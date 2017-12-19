@@ -58,3 +58,16 @@ class TestIssues(unittest.TestCase):
     def test_issue33(self):
         h = uproot.open("tests/samples/issue33.root")["cutflow"]
         self.assertEqual(h.xlabels, ["Dijet", "MET", "MuonVeto", "IsoMuonTrackVeto", "ElectronVeto", "IsoElectronTrackVeto", "IsoPionTrackVeto"])
+
+    def test_issue38(self):
+        before_hadd = uproot.open("tests/samples/issue38a.root")["ntupler/tree"]
+        after_hadd  = uproot.open("tests/samples/issue38b.root")["ntupler/tree"]
+
+        before = before_hadd.arrays()
+        after = after_hadd.arrays()
+
+        self.assertEqual(set(before.keys()), set([b"v_int16", b"v_int32", b"v_int64", b"v_uint16", b"v_uint32", b"v_uint64", b"v_bool", b"v_float", b"v_double"]))
+        self.assertEqual(set(after.keys()),  set([b"v_int16", b"v_int32", b"v_int64", b"v_uint16", b"v_uint32", b"v_uint64", b"v_bool", b"v_float", b"v_double"]))
+
+        for key in before.keys():
+            self.assertEqual(before[key].tolist() * 3, after[key].tolist())

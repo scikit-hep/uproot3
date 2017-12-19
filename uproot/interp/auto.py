@@ -166,6 +166,30 @@ def interpret(branch, classes=None, swapbytes=True):
 
                 # ...
 
+                # desperation cases, usually because streamer info was dropped by hadd
+                elif branch.fClassName == b"vector<bool>":
+                    return asstlvector(asdtype("bool"))
+                elif branch.fClassName == b"vector<char>":
+                    return asstlvector(asdtype("i1"))
+                elif branch.fClassName == b"vector<unsigned char>":
+                    return asstlvector(asdtype("u1"))
+                elif branch.fClassName == b"vector<short>":
+                    return asstlvector(asdtype("i2"))
+                elif branch.fClassName == b"vector<unsigned short>":
+                    return asstlvector(asdtype("u2"))
+                elif branch.fClassName == b"vector<int>":
+                    return asstlvector(asdtype("i4"))
+                elif branch.fClassName == b"vector<unsigned int>":
+                    return asstlvector(asdtype("u4"))
+                elif branch.fClassName == b"vector<long>":
+                    return asstlvector(asdtype("i8"))
+                elif branch.fClassName == b"vector<unsigned long>":
+                    return asstlvector(asdtype("u8"))
+                elif branch.fClassName == b"vector<float>":
+                    return asstlvector(asdtype("f4"))
+                elif branch.fClassName == b"vector<double>":
+                    return asstlvector(asdtype("f8"))
+
         return None
 
 interpret._titlehasdims = re.compile(br"^([^\[\]]+)(\[[^\[\]]+\])+")
