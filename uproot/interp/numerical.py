@@ -86,7 +86,7 @@ class asdtype(Interpretation):
 
         return "asdtype(" + ", ".join(args) + ")"
 
-    _byteorder_transform = {"!": "B", ">": "B", "<": "L", "=": "B" if numpy.dtype(">f8").isnative else "L"}
+    _byteorder_transform = {"!": "B", ">": "B", "<": "L", "|": "L", "=": "B" if numpy.dtype(">f8").isnative else "L"}
 
     @property
     def identifier(self):
