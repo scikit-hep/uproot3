@@ -58,7 +58,7 @@ setup(name = "uproot",
       install_requires = ["numpy"],
       tests_require = ["lz4", "backports.lzma", "futures"] if sys.version_info[0] <= 2 else ["lz4"],
       classifiers = [
-          "Development Status :: 4 - Beta",
+          "Development Status :: 5 - Production/Stable",
           "Intended Audience :: Developers",
           "Intended Audience :: Information Technology",
           "Intended Audience :: Science/Research",
