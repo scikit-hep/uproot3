@@ -55,7 +55,7 @@ except ImportError:
             return [self[k] for k in self._order]
         def items(self):
             return [(k, self[k]) for k in self._order]
-        def __setitem__(self, name, order):
+        def __setitem__(self, name, value):
             if name not in self._order:
                 self._order.append(name)
             super(OrderedDict, self).__setitem__(name, value)

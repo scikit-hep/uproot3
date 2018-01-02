@@ -284,6 +284,9 @@ class JaggedArray(object):
     def tolist(self):
         return [x.tolist() for x in self]
 
+    def __array__(self):
+        return self.contents
+
 if numba is not None:
     class JaggedArrayType(numba.types.Type):
         concrete = {}
