@@ -284,8 +284,16 @@ class JaggedArray(object):
     def tolist(self):
         return [x.tolist() for x in self]
 
-    def __array__(self):
-        return self.contents
+    def __array__(self, dtype=None, copy=False, order="K", subok=False, ndmin=0):
+        if dtype is None:
+            dtype = self.contents.dtype
+        elif not isinstance(dtype, numpy.dtype):
+            dtype = numpy.dtype(dtype)
+
+        if dtype == self.contents.dtype and not copy and not subok and ndmin == 0:
+            return self.contents
+        else:
+            return numpy.array(self.contents, dtype=dtype, copy=copy, order=order, subok=subok, ndmin=ndmin)
 
 if numba is not None:
     class JaggedArrayType(numba.types.Type):
