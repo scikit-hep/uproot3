@@ -63,7 +63,7 @@ class asjagged(Interpretation):
         return "asjagged(" + self.asdtype.identifier + ")"
 
     def empty(self):
-        return JaggedArray(self.asdtype.empty(), numpy.empty(0, dtype=numpy.int64), numpy.empty(0, dtype=numpy.int64))
+        return JaggedArray._Prep(self.asdtype.empty(), numpy.empty(0, dtype=numpy.int64))
 
     def compatible(self, other):
         return isinstance(other, asjagged) and self.asdtype.compatible(other.asdtype)
