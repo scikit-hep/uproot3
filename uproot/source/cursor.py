@@ -127,6 +127,5 @@ class Cursor(object):
                 diff = 16 - len(line)
                 line.extend(["  "] * diff)
                 text.extend([" "] * diff)
-            print(linepos - self.index - offset)
             out.append("{0:08o}  {1}  {2}  |{3}|".format(linepos, " ".join(line[:8]), " ".join(line[8:]), "".join(text)))
         return "\n".join(out)

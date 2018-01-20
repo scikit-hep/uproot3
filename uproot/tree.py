@@ -93,15 +93,15 @@ def _delayedraise(excinfo):
 
 ################################################################ high-level interface
 
-def iterate(path, treepath, branches=None, entrysteps=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, **options):
-    for tree, newbranches, globalentrystart in _iterate(path, treepath, branches, localsource, xrootdsource, **options):
+def iterate(path, treepath, branches=None, entrysteps=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, recover=False, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, **options):
+    for tree, newbranches, globalentrystart in _iterate(path, treepath, branches, recover, localsource, xrootdsource, **options):
         for start, stop, arrays in tree.iterate(branches=newbranches, entrysteps=entrysteps, outputtype=outputtype, reportentries=True, entrystart=0, entrystop=tree.numentries, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking):
             if reportentries:
                 yield globalentrystart + start, globalentrystart + stop, arrays
             else:
                 yield arrays
         
-def _iterate(path, treepath, branches, localsource, xrootdsource, **options):
+def _iterate(path, treepath, branches, recover, localsource, xrootdsource, **options):
     def explode(x):
         parsed = urlparse(x)
         if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0:
@@ -122,6 +122,9 @@ def _iterate(path, treepath, branches, localsource, xrootdsource, **options):
     globalentrystart = 0
     for path in paths:
         tree = uproot.rootio.open(path, localsource=localsource, xrootdsource=xrootdsource, **options)[treepath]
+        if recover:
+            tree.recover()
+
         listbranches = list(tree._normalize_branches(branches))
 
         newbranches = OrderedDict((branch.name, interpretation) for branch, interpretation in listbranches)
@@ -546,6 +549,8 @@ class TTreeMethods(object):
     def pandas(self):
         import uproot._connect.to_pandas
         return uproot._connect.to_pandas.TTreeMethods_pandas(self)
+
+uproot.rootio.methods["TTree"] = TTreeMethods
 
 ################################################################ methods for TBranch
 
@@ -1240,18 +1245,30 @@ class TBranchMethods(object):
             cursor.index = start + self.fKeylen - cls._format2.size - 1
             self.fVersion, self.fBufferSize, self.fNevBufSize, self.fNevBuf, self.fLast = cursor.fields(source, cls._format2)
 
-            # there's a one-byte terminator and then another TKey, this one with less detail than the first
-            cursor.skip(1 + self.fKeylen)
+            # one-byte terminator
+            cursor.skip(1)
+
+            # then if you have offsets data, read them in
+            if self.fNevBufSize > 8:
+                offsets = cursor.bytes(source, self.fNevBuf * 4 + 8)
+                cursor.skip(-4)
+
+            # there's a second TKey here, but it doesn't contain any new information (in fact, less)
+            cursor.skip(self.fKeylen)
 
             size = self.border = self.fLast - self.fKeylen
 
+            # the data (not including offsets)
+            self.contents = cursor.bytes(source, size)
+
+            # put the offsets back in, in the way that we expect it
             if self.fNevBufSize > 8:
-                size += self.fNevBufSize
+                self.contents = numpy.concatenate((self.contents, offsets))
+                size += offsets.nbytes
 
             self.fObjlen = size
             self.fNbytes = self.fObjlen + self.fKeylen
-                
-            self.contents = cursor.bytes(source, size)
+
             return self
 
         _format1 = struct.Struct(">ihiIhh")

@@ -215,7 +215,7 @@ class MemoryCache(dict):
             self[key] = value
 
     def pop(self, **args):
-        return self.popitem()[1]
+        return self.popitem(**args)[1]
 
     def popitem(self, **args):
         if len(args) == 0:
@@ -234,7 +234,7 @@ class MemoryCache(dict):
             out = (key, self._lookup[key])
             del self[key]
             return out
-        elif "default" in locals():
+        elif len(args) == 2:
             return default
         else:
             raise KeyError(repr(key))
