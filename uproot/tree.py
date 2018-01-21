@@ -361,19 +361,19 @@ class TTreeMethods(object):
         futures = [(branch.name, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=False)) for branch, interpretation in branches]
 
         if issubclass(outputtype, dict):
-            def await():
+            def wait():
                 return outputtype([(name, future()) for name, future in futures])
         elif outputtype == tuple or outputtype == list:
-            def await():
+            def wait():
                 return outputtype([future() for name, future in futures])
         else:
-            def await():
+            def wait():
                 return outputtype(*[future() for name, future in futures])
 
         if blocking:
-            return await()
+            return wait()
         else:
-            return await
+            return wait
         
     def lazyarrays(self, branches=None, outputtype=dict, cache=None, basketcache=None, keycache=None, executor=None):
         branches = list(self._normalize_branches(branches))
@@ -866,9 +866,9 @@ class TBranchMethods(object):
             if blocking:
                 return []
             else:
-                def await():
+                def wait():
                     return []
-                return await
+                return wait
 
         out = [None] * (basketstop - basketstart)
 
@@ -898,11 +898,11 @@ class TBranchMethods(object):
                 _delayedraise(excinfo)
             return out
         else:
-            def await():
+            def wait():
                 for excinfo in excinfos:
                     _delayedraise(excinfo)
                 return out
-            return await
+            return wait
 
     def iterate_baskets(self, interpretation=None, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, reportentries=False):
         interpretation = self._normalize_interpretation(interpretation)
@@ -952,9 +952,9 @@ class TBranchMethods(object):
             if blocking:
                 return interpretation.empty()
             else:
-                def await():
+                def wait():
                     return interpretation.empty()
-                return await
+                return wait
 
         if keycache is None:
             keycache = uproot.cache.memorycache.ThreadSafeDict()
@@ -1005,7 +1005,7 @@ class TBranchMethods(object):
         else:
             excinfos = executor.map(fill, range(basketstop - basketstart))
 
-        def await():
+        def wait():
             for excinfo in excinfos:
                 _delayedraise(excinfo)
 
@@ -1021,9 +1021,9 @@ class TBranchMethods(object):
             return out
 
         if blocking:
-            return await()
+            return wait()
         else:
-            return await
+            return wait
 
     def _step_array(self, interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, cache, basketcache, keycache, executor, explicit_basketcache):
         if cache is not None:
@@ -1085,7 +1085,7 @@ class TBranchMethods(object):
         else:
             excinfos = executor.map(fill, range(basketstop - basketstart))
 
-        def await():
+        def wait():
             for excinfo in excinfos:
                 _delayedraise(excinfo)
 
@@ -1102,7 +1102,7 @@ class TBranchMethods(object):
                                        basket_entryoffset[0],
                                        basket_entryoffset[-1])
 
-        return await
+        return wait
 
     def lazyarray(self, interpretation=None, cache=None, basketcache=None, keycache=None, executor=None):
         interpretation = self._normalize_interpretation(interpretation)

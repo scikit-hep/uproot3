@@ -274,11 +274,11 @@ class ChainStep(object):
         return self.previous._chain(sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, numba)
 
     def _endchain(self, compiled, sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, calcexecutor, numba):
-        awaits = self.source._chain(sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, numba)
+        waits = self.source._chain(sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, numba)
 
-        def calculate(await):
+        def calculate(wait):
             try:
-                start, stop, numentries, arrays = await()
+                start, stop, numentries, arrays = wait()
 
                 for compiledintermediate in compiledintermediates:
                     compiledintermediate(arrays)
@@ -291,13 +291,13 @@ class ChainStep(object):
                 return None, out
 
         if calcexecutor is None:
-            for await in awaits:
-                excinfo, result = calculate(await)
+            for wait in waits:
+                excinfo, result = calculate(wait)
                 uproot.tree._delayedraise(excinfo)
                 yield result
 
         else:
-            for excinfo, result in calcexecutor.map(calculate, awaits):
+            for excinfo, result in calcexecutor.map(calculate, waits):
                 uproot.tree._delayedraise(excinfo)
                 yield result
             
@@ -466,13 +466,13 @@ class ChainStep(object):
                     raise ValueError("illegal field name for namedtuple: {0}".format(repr(name)))
             outputtype = namedtuple("Reduced", order)
 
-        awaits = self._chain(sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, None, entrystart, entrystop, cache, basketcache, keycache, readexecutor, numba)
+        waits = self._chain(sourcenames, compiledintermediates, entryvars, aliases, interpretations, entryvar, None, entrystart, entrystop, cache, basketcache, keycache, readexecutor, numba)
 
-        results = [[None for j in range(len(order))] for i in range(len(awaits))]
+        results = [[None for j in range(len(order))] for i in range(len(waits))]
 
         def calculate(i):
             try:
-                start, stop, numentries, arrays = awaits[i]()
+                start, stop, numentries, arrays = waits[i]()
 
                 for compiledintermediate in compiledintermediates:
                     compiledintermediate(arrays)
@@ -490,15 +490,15 @@ class ChainStep(object):
                 return None
 
         if calcexecutor is None:
-            for i in range(len(awaits)):
+            for i in range(len(waits)):
                 uproot.tree._delayedraise(calculate(i))
         else:
-            excinfos = calcexecutor.map(calculate, range(len(awaits)))
+            excinfos = calcexecutor.map(calculate, range(len(waits)))
             for excinfo in excinfos:
                 uproot.tree._delayedraise(excinfo)
 
         # MAYBEFIXME: could combine in O(log_2(N)) steps rather than O(N) if combining is ever resource-heavy
-        for i in range(1, len(awaits)):
+        for i in range(1, len(waits)):
             for j in range(len(order)):
                 results[0][j] = combine[order[j]](results[0][j], results[i][j])
 
@@ -966,12 +966,12 @@ def afcn(arrays):
 
         afcn = compilefcn(self._makefcn(compile(ast.parse(source), "<filter>", "exec"), env, "afcn", source))
 
-        awaits = tmpnode._chain(prevsourcenames, prevcompiledintermediates, preventryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, numba)
+        waits = tmpnode._chain(prevsourcenames, prevcompiledintermediates, preventryvars, aliases, interpretations, entryvar, entrysteps, entrystart, entrystop, cache, basketcache, keycache, readexecutor, numba)
 
         prevsources = prevsourcenames + [req for node, req in previntermediates]
 
-        def calculate(await):
-            start, stop, numentries, arrays = await()
+        def calculate(wait):
+            start, stop, numentries, arrays = wait()
 
             # calculate upstream intermediates
             for prevcompiledintermediate in prevcompiledintermediates:
@@ -998,10 +998,10 @@ def afcn(arrays):
 
             return start, stop, cutnumentries, tuple(cutarrays)
 
-        def wrap_for_python_scope(await):
-            return lambda: calculate(await)
+        def wrap_for_python_scope(wait):
+            return lambda: calculate(wait)
 
-        return [wrap_for_python_scope(await) for await in awaits]
+        return [wrap_for_python_scope(wait) for wait in waits]
 
 class ChainOrigin(ChainStep):
     def __init__(self, tree):
@@ -1055,11 +1055,11 @@ class ChainOrigin(ChainStep):
             else:
                 branches[branchname] = uproot.interp.auto.interpret(self.tree[branchname])
 
-        awaits = list(self.tree.iterate(branches=branches, entrysteps=entrysteps, outputtype=list, reportentries=True, entrystart=entrystart, entrystop=entrystop, cache=cache, basketcache=basketcache, keycache=keycache, executor=readexecutor, blocking=False))
+        waits = list(self.tree.iterate(branches=branches, entrysteps=entrysteps, outputtype=list, reportentries=True, entrystart=entrystart, entrystop=entrystop, cache=cache, basketcache=basketcache, keycache=keycache, executor=readexecutor, blocking=False))
 
-        def calculate(start, stop, await):
+        def calculate(start, stop, wait):
             numentries = stop - start
-            arrays = await()
+            arrays = wait()
 
             for i in range(len(compiledintermediates)):
                 arrays.append(numpy.empty(numentries, dtype=self.NEW_ARRAY_DTYPE))
@@ -1069,10 +1069,10 @@ class ChainOrigin(ChainStep):
 
             return start, stop, numentries, tuple(arrays)
 
-        def wrap_for_python_scope(start, stop, await):
-            return lambda: calculate(start, stop, await)
+        def wrap_for_python_scope(start, stop, wait):
+            return lambda: calculate(start, stop, wait)
 
-        return [wrap_for_python_scope(start, stop, await) for start, stop, await in awaits]
+        return [wrap_for_python_scope(start, stop, wait) for start, stop, wait in waits]
 
 class TTreeFunctionalMethods(uproot.tree.TTreeMethods):
     # makes __doc__ attribute mutable before Python 3.3
