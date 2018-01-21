@@ -10,11 +10,6 @@ python:
   - 3.5
   - 3.6
 
-addons:
-  apt:
-    packages:
-      - python-setuptools
-
 install:
   - pip install --upgrade pip
   - pip install --upgrade setuptools
