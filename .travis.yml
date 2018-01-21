@@ -17,6 +17,7 @@ addons:
 
 install:
   - pip install --upgrade pip
+  - pip install --upgrade setuptools
 
 script:
   python setup.py test
