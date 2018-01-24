@@ -161,13 +161,13 @@ def interpret(branch, classes=None, swapbytes=True):
                     except _NotNumerical:
                         pass
 
-                elif getattr(branch._streamer, "fType", None) == uproot.const.kCharStar:
+                if getattr(branch._streamer, "fType", None) == uproot.const.kCharStar:
                     return asstrings(4)
 
                 # ...
 
                 # desperation cases, usually because streamer info was dropped by hadd
-                elif branch.fClassName == b"vector<bool>":
+                if branch.fClassName == b"vector<bool>":
                     return asstlvector(asdtype("bool"))
                 elif branch.fClassName == b"vector<char>":
                     return asstlvector(asdtype("i1"))
