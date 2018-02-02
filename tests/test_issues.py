@@ -71,3 +71,7 @@ class TestIssues(unittest.TestCase):
 
         for key in before.keys():
             self.assertEqual(before[key].tolist() * 3, after[key].tolist())
+
+    def test_issue49(self):
+        t = uproot.open("tests/samples/issue49.root")["nllscan"]
+        t.arrays()

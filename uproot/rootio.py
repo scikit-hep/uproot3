@@ -494,7 +494,10 @@ def _readstreamers(source, cursor, context):
                     remaining_items.append((item, dependencies))
 
             if not emitted:
-                raise ValueError("cannot sort TStreamerInfos into dependency order:\n\n{0}".format("\n".join("{0:20s} requires {1}".format(item.fName.decode("ascii"), " ".join(x.decode("ascii") for x in dependencies)) for item, dependencies in items)))
+                for pair in items:
+                    if pair in remaining_items:
+                        remaining_items.remove(pair)
+                # raise ValueError("cannot sort TStreamerInfos into dependency order:\n\n{0}".format("\n".join("{0:20s} requires {1}".format(item.fName.decode("ascii"), " ".join(x.decode("ascii") for x in dependencies)) for item, dependencies in items)))
 
             items = remaining_items
 
