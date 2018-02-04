@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import re
+from functools import reduce
 
 import numpy
 
@@ -151,6 +152,15 @@ def interpret(branch, classes=None, swapbytes=True):
                        # asstrings(1)
 
             elif branch.fLeaves[0].__class__.__name__ == "TLeafElement":
+                if isinstance(branch._streamer, uproot.rootio.TStreamerBasicType):
+                    dtype = _ftype2dtype(branch._streamer.fType)
+                    fromdims, remainder = divmod(branch._streamer.fSize, dtype.itemsize)
+                    if remainder == 0:
+                        todims = tuple(int(x) for x in re.findall(b"\[([1-9][0-9]*)\]", branch.title))
+                        if reduce(lambda x, y: x * y, todims, 1) != fromdims:
+                            todims = (fromdims,)
+                        return asdtype(dtype, fromdims=(fromdims,), todims=todims)
+
                 if isinstance(branch._streamer, uproot.rootio.TStreamerString):
                     return asstrings(bytes_to_skip=1, skip4_if_255=True)
                            # asstrings()

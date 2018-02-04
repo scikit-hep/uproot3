@@ -33,3 +33,5 @@ from uproot.interp.numerical import asarray
 from uproot.interp.jagged import asjagged
 from uproot.interp.jagged import asstlvector
 from uproot.interp.strings import asstrings
+
+asdebug = asjagged(asdtype("u1"))
