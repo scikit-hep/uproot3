@@ -45,7 +45,7 @@ from uproot.interp.jagged import sizes2offsets
 
 CHARTYPE = numpy.dtype(numpy.uint8)
 
-def _asstrings_fromroot1(data, offsets, local_entrystart, local_entrystop):
+def _asstrings_fromroot(data, offsets, local_entrystart, local_entrystop, bytes_to_skip, skip4_if_255):
     if local_entrystart < 0 or local_entrystop >= len(offsets) or local_entrystart > local_entrystop:
         raise ValueError("illegal local_entrystart or local_entrystop in asstrings.fromroot")
 
@@ -55,34 +55,11 @@ def _asstrings_fromroot1(data, offsets, local_entrystart, local_entrystop):
 
     start = stop = 0
     for entry in range(local_entrystart, local_entrystop):
-        datastart = offsets[entry]
+        datastart = offsets[entry] + bytes_to_skip
         datastop = offsets[entry + 1]
-        if data[datastart] == 255:
-            datastart += 5
-        else:
-            datastart += 1
+        if skip4_if_255 and data[datastart - 1] == 255:
+            datastart += 4
 
-        stop = start + (datastop - datastart)
-
-        contents[start:stop] = data[datastart:datastop]
-        newoffsets[1 + entry - local_entrystart] = stop
-
-        start = stop
-
-    return contents[:stop], newoffsets[:-1], newoffsets[1:]
-
-def _asstrings_fromroot4(data, offsets, local_entrystart, local_entrystop):
-    if local_entrystart < 0 or local_entrystop >= len(offsets) or local_entrystart > local_entrystop:
-        raise ValueError("illegal local_entrystart or local_entrystop in asstrings.fromroot")
-
-    contents = numpy.empty(offsets[local_entrystop] - offsets[local_entrystart] - (local_entrystop - local_entrystart), dtype=CHARTYPE)
-    newoffsets  = numpy.empty(1 + local_entrystop - local_entrystart, dtype=offsets.dtype)
-    newoffsets[0] = 0
-
-    start = stop = 0
-    for entry in range(local_entrystart, local_entrystop):
-        datastart = offsets[entry] + 4
-        datastop = offsets[entry + 1]
         stop = start + (datastop - datastart)
 
         contents[start:stop] = data[datastart:datastop]
@@ -93,48 +70,37 @@ def _asstrings_fromroot4(data, offsets, local_entrystart, local_entrystop):
     return contents[:stop], newoffsets[:-1], newoffsets[1:]
 
 if numba is not None:
-    _asstrings_fromroot1 = numba.njit(_asstrings_fromroot1)
-    _asstrings_fromroot4 = numba.njit(_asstrings_fromroot4)
+    _asstrings_fromroot = numba.njit(_asstrings_fromroot)
 
 class asstrings(Interpretation):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (Interpretation.__metaclass__,), {})
 
-    def __init__(self, sizebytes=1):
-        self.sizebytes = sizebytes
+    def __init__(self, bytes_to_skip=1, skip4_if_255=True):
+        self.bytes_to_skip = bytes_to_skip
+        self.skip4_if_255 = skip4_if_255
 
     def __repr__(self):
         return self.identifier
 
     @property
     def identifier(self):
-        if self.sizebytes == 1:
-            return "asstrings()"
-        else:
-            return "asstrings({0})".format(self.sizebytes)
+        return "asstrings(bytes_to_skip={0}, skip4_if_255={1})".format(self.bytes_to_skip, self.skip4_if_255)
 
     def empty(self):
         return Strings(JaggedArray(numpy.empty(0, dtype=CHARTYPE), numpy.empty(0, dtype=numpy.int64)))
 
     def compatible(self, other):
-        return isinstance(other, asstrings) and self.sizebytes == other.sizebytes
+        return isinstance(other, asstrings) and self.bytes_to_skip == other.bytes_to_skip and self.skip4_if_255 == other.skip4_if_255
 
     def numitems(self, numbytes, numentries):
-        if self.sizebytes == 1:
-            return numbytes - numentries          # an overestimate if there are any individual strings with > 255 bytes
-        else:
-            return numbytes - 4*numentries        # not an overestimate
+        return numbytes - self.bytes_to_skip*numentries  # an overestimate if skip4_if_255 and there are any individual strings with > 255 bytes
 
     def source_numitems(self, source):
-        return len(source.jaggedarray.contents)   # not an overestimate
+        return len(source.jaggedarray.contents)          # not an overestimate
 
     def fromroot(self, data, offsets, local_entrystart, local_entrystop):
-        if self.sizebytes == 1:
-            return Strings(JaggedArray(*_asstrings_fromroot1(data, offsets, local_entrystart, local_entrystop)))
-        elif self.sizebytes == 4:
-            return Strings(JaggedArray(*_asstrings_fromroot4(data, offsets, local_entrystart, local_entrystop)))
-        else:
-            raise ValueError("unrecognized asstring sizebytes: {0}".format(self.sizebytes))
+        return Strings(JaggedArray(*_asstrings_fromroot(data, offsets, local_entrystart, local_entrystop, self.bytes_to_skip, self.skip4_if_255)))
 
     def destination(self, numitems, numentries):
         contents = numpy.empty(numitems, dtype=CHARTYPE)

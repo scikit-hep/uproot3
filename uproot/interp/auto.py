@@ -147,9 +147,18 @@ def interpret(branch, classes=None, swapbytes=True):
     except _NotNumerical:
         if len(branch.fLeaves) == 1:
             if branch.fLeaves[0].__class__.__name__ == "TLeafC":
-                return asstrings(1)
+                return asstrings(bytes_to_skip=1, skip4_if_255=True)
+                       # asstrings(1)
 
             elif branch.fLeaves[0].__class__.__name__ == "TLeafElement":
+                if isinstance(branch._streamer, uproot.rootio.TStreamerString):
+                    return asstrings(bytes_to_skip=1, skip4_if_255=True)
+                           # asstrings()
+
+                if isinstance(branch._streamer, uproot.rootio.TStreamerSTLstring):
+                    return asstrings(bytes_to_skip=7, skip4_if_255=True)   # FIXME: not sure about skip4_if_255
+                           # asstrings(7)
+
                 if getattr(branch._streamer, "fSTLtype", None) == uproot.const.kSTLvector:
                     try:
                         fromdtype = _ftype2dtype(branch._streamer.fCtype)
@@ -162,7 +171,8 @@ def interpret(branch, classes=None, swapbytes=True):
                         pass
 
                 if getattr(branch._streamer, "fType", None) == uproot.const.kCharStar:
-                    return asstrings(4)
+                    return asstrings(bytes_to_skip=4, skip4_if_255=False)
+                           # asstrings(4)
 
                 # ...
 

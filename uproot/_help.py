@@ -1740,7 +1740,7 @@ u"""Interpret branch as a collection of strings (via a :py:class:`JaggedArray <u
 
     In this interpretation, "items" (for ``numitems``, ``itemstart``, ``itemstop``, etc.) are characters and "entries" are strings.
 
-    The optional *sizebytes* (int) parameter controls how many bytes are used to encode the size of each string. If 1 *(default)*, a single byte is read as the size, and if that byte is 255, the next four bytes are read as the size. If 4, four bytes are always read as the size. No other values of *sizebytes* are valid.
+    The *bytes_to_skip* and *skip4_if_255* parameters control how data from a TBasket buffer are ingested into strings. See the internal *uproot.interp.strings._asstrings_fromroot* implementation for details.
 """
 
 _method(uproot.interp.strings.asstrings.empty).__doc__ = interp_fragments["see1"]
