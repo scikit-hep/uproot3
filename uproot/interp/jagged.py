@@ -284,9 +284,10 @@ class JaggedArray(object):
             return numpy.array(self.content, dtype=dtype, copy=copy, order=order, subok=subok, ndmin=ndmin)
 
 class asvar(asjagged):
-    def __init__(self, genclass, skip_bytes=0):
+    def __init__(self, genclass, skip_bytes=0, args=()):
         self.genclass = genclass
         super(asvar, self).__init__(asdtype(numpy.dtype(numpy.uint8)), skip_bytes=skip_bytes)
+        self.args = args
     
     def __repr__(self):
         return self.identifier
@@ -299,22 +300,22 @@ class asvar(asjagged):
         return "asvar({0}{1})".format(self.genclass.__name__, "".join(args))
 
     def empty(self):
-        return self.genclass(super(asvar, self).empty())
+        return self.genclass(*((super(asvar, self).empty(),) + self.args))
 
     def compatible(self, other):
-        return isinstance(other, asvar) and self.genclass is other.genclass and super(asvar, self).compatible(other)
+        return isinstance(other, asvar) and self.genclass is other.genclass and super(asvar, self).compatible(other) and self.args == other.args
 
     def source_numitems(self, source):
         return super(asvar, self).source_numitems(source.jaggedarray)
 
     def fromroot(self, data, offsets, local_entrystart, local_entrystop):
-        return self.genclass(super(asvar, self).fromroot(data, offsets, local_entrystart, local_entrystop))
+        return self.genclass(*((super(asvar, self).fromroot(data, offsets, local_entrystart, local_entrystop),) + self.args))
 
     def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
         return super(asvar, self).fill(source.jaggedarray, destination, itemstart, itemstop, entrystart, entrystop)
 
     def finalize(self, destination):
-        return self.genclass(super(asvar, self).finalize(destination))
+        return self.genclass(*((super(asvar, self).finalize(destination),) + self.args))
 
 class VariableLength(object):
     def __init__(self, jaggedarray):
@@ -351,6 +352,35 @@ class VariableLength(object):
     @staticmethod
     def interpret(item):
         raise NotImplementedError
+
+def asstlvectorvector(fromdtype):
+    return asvar(JaggedJaggedArray, skip_bytes=6, args=(numpy.dtype(fromdtype),))
+
+class JaggedJaggedArray(VariableLength):
+    def __init__(self, jaggedarray, fromdtype):
+        super(JaggedJaggedArray, self).__init__(jaggedarray)
+        self.fromdtype = fromdtype
+
+    indexdtype = numpy.dtype(">i4")
+
+    def interpret(self, item):
+        i = 0
+        out = []
+        while i < len(item):
+            size, = item[i : i + 4].view(JaggedJaggedArray.indexdtype)
+            i += 4
+            outi = []
+            for j in range(size):
+                size, = item[i : i + 4].view(JaggedJaggedArray.indexdtype)
+                i += 4
+                numbytes = size*self.fromdtype.itemsize
+                outi.append(item[i : i + numbytes].view(self.fromdtype).tolist())
+                i += numbytes
+            out.append(outi)
+        return out
+
+    def __repr__(self):
+        return "jaggedjaggedarray({0})".format(str(self))
 
 if numba is not None:
     class JaggedArrayType(numba.types.Type):

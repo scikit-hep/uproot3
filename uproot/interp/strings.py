@@ -139,19 +139,21 @@ class ListStrings(VariableLength):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (type,), {})
 
+    indexdtype = numpy.dtype(">i4")
+
     @staticmethod
-    def interpret(data):
+    def interpret(item):
         i = 0
         out = []
-        while i < len(data):
-            if data[i] < 255:
-                size = data[i]
+        while i < len(item):
+            if item[i] < 255:
+                size = item[i]
                 i += 1
             else:
                 i += 1
-                size = data[i : i + 4].view(">i4")
+                size, = item[i : i + 4].view(ListStrings.indexdtype)
                 i += 4
-            out.append(data[i : i + size].tostring())
+            out.append(item[i : i + size].tostring())
             i += size
         return out
 

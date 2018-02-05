@@ -38,6 +38,7 @@ from uproot.interp.numerical import asdtype
 from uproot.interp.numerical import asarray
 from uproot.interp.jagged import asjagged
 from uproot.interp.jagged import asstlvector
+from uproot.interp.jagged import asstlvectorvector
 from uproot.interp.strings import asstrings
 from uproot.interp.strings import asstlvecstrings
 
@@ -228,6 +229,29 @@ def interpret(branch, classes=None, swapbytes=True):
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<string>":
                     return asstlvecstrings()
 
+                if getattr(branch._streamer, "fTypeName", None) == b"vector<vector<bool> >":
+                    return asstlvectorvector(">bool")
+                elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<char> >":
+                    return asstlvectorvector(">i1")
+                elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<unsigned char> >":
+                    return asstlvectorvector(">u1")
+                elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<short> >":
+                    return asstlvectorvector(">i2")
+                elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<unsigned short> >":
+                    return asstlvectorvector(">u2")
+                elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<int> >":
+                    return asstlvectorvector(">i4")
+                elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<unsigned int> >":
+                    return asstlvectorvector(">u4")
+                elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<long> >":
+                    return asstlvectorvector(">i8")
+                elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<unsigned long> >":
+                    return asstlvectorvector(">u8")
+                elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<float> >":
+                    return asstlvectorvector(">f4")
+                elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<double> >":
+                    return asstlvectorvector(">f8")
+
                 if branch.fClassName == b"vector<bool>":
                     return asstlvector(asdtype("bool"))
                 elif branch.fClassName == b"vector<char>":
@@ -252,6 +276,29 @@ def interpret(branch, classes=None, swapbytes=True):
                     return asstlvector(asdtype("f8"))
                 elif branch.fClassName == b"vector<string>":
                     return asstlvecstrings()
+
+                if branch.fClassName == b"vector<vector<bool> >":
+                    return asstlvectorvector(">bool")
+                elif branch.fClassName == b"vector<vector<char> >":
+                    return asstlvectorvector(">i1")
+                elif branch.fClassName == b"vector<vector<unsigned char> >":
+                    return asstlvectorvector(">u1")
+                elif branch.fClassName == b"vector<vector<short> >":
+                    return asstlvectorvector(">i2")
+                elif branch.fClassName == b"vector<vector<unsigned short> >":
+                    return asstlvectorvector(">u2")
+                elif branch.fClassName == b"vector<vector<int> >":
+                    return asstlvectorvector(">i4")
+                elif branch.fClassName == b"vector<vector<unsigned int> >":
+                    return asstlvectorvector(">u4")
+                elif branch.fClassName == b"vector<vector<long> >":
+                    return asstlvectorvector(">i8")
+                elif branch.fClassName == b"vector<vector<unsigned long> >":
+                    return asstlvectorvector(">u8")
+                elif branch.fClassName == b"vector<vector<float> >":
+                    return asstlvectorvector(">f4")
+                elif branch.fClassName == b"vector<vector<double> >":
+                    return asstlvectorvector(">f8")
 
         return None
 
