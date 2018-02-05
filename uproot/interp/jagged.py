@@ -45,22 +45,38 @@ def sizes2offsets(sizes):
     sizes.cumsum(out=out[1:])
     return out
 
+def _compactify(fromdata, fromstarts, fromstops, todata, tostarts, tostops):
+    for i in range(len(fromstarts)):
+        todata[tostarts[i]:tostops[i]] = fromdata[fromstarts[i]:fromstops[i]]
+
+if numba is not None:
+    _compactify = numba.njit(_compactify)
+
 class asjagged(Interpretation):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (Interpretation.__metaclass__,), {})
 
-    def __init__(self, asdtype):
+    def __init__(self, asdtype, skip_bytes=0):
         self.asdtype = asdtype
+        self.skip_bytes = skip_bytes
 
     def __repr__(self):
-        return "asjagged(" + repr(self.asdtype) + ")"
+        if self.skip_bytes == 0:
+            return "asjagged({0})".format(repr(self.asdtype))
+        else:
+            return "asjagged({0}, skip_bytes={1})".format(repr(self.asdtype), self.skip_bytes)
 
-    def to(self, todtype=None, todims=None):
-        return asjagged(self.asdtype.to(todtype, todims))
+    def to(self, todtype=None, todims=None, skip_bytes=None):
+        if skip_bytes is None:
+            skip_bytes = self.skip_bytes
+        return asjagged(self.asdtype.to(todtype, todims), skip_bytes)
 
     @property
     def identifier(self):
-        return "asjagged(" + self.asdtype.identifier + ")"
+        if self.skip_bytes == 0:
+            return "asjagged({0})".format(self.asdtype.identifier)
+        else:
+            return "asjagged({0}, {1})".format(self.asdtype.identifier, self.skip_bytes)
 
     def empty(self):
         return JaggedArray._Prep(self.asdtype.empty(), numpy.empty(0, dtype=numpy.int64))
@@ -69,20 +85,33 @@ class asjagged(Interpretation):
         return isinstance(other, asjagged) and self.asdtype.compatible(other.asdtype)
 
     def numitems(self, numbytes, numentries):
-        return self.asdtype.numitems(numbytes, numentries)
+        return self.asdtype.numitems(numbytes - numentries*self.skip_bytes, numentries)
 
     def source_numitems(self, source):
         return self.asdtype.source_numitems(source.contents)
 
     def fromroot(self, data, offsets, local_entrystart, local_entrystop):
-        numpy.floor_divide(offsets, self.asdtype.fromdtype.itemsize, offsets)
-        starts = offsets[local_entrystart     : local_entrystop    ]
-        stops  = offsets[local_entrystart + 1 : local_entrystop + 1]
         if local_entrystart == local_entrystop:
             contents = self.asdtype.fromroot(data, None, 0, 0)
         else:
-            contents = self.asdtype.fromroot(data, None, starts[0], stops[-1])
-        return JaggedArray(contents, starts, stops)
+            if self.skip_bytes == 0:
+                numpy.floor_divide(offsets, self.asdtype.fromdtype.itemsize, offsets)
+                starts = offsets[local_entrystart     : local_entrystop    ]
+                stops  = offsets[local_entrystart + 1 : local_entrystop + 1]
+                contents = self.asdtype.fromroot(data, None, starts[0], stops[-1])
+            else:
+                fromstarts = offsets[local_entrystart     : local_entrystop    ] + self.skip_bytes
+                fromstops  = offsets[local_entrystart + 1 : local_entrystop + 1]
+                newoffsets = numpy.empty(1 + local_entrystop - local_entrystart, dtype=offsets.dtype)
+                newoffsets[0] = 0
+                numpy.cumsum(fromstops - fromstarts, out=newoffsets[1:])
+                newdata = numpy.empty(newoffsets[-1], dtype=data.dtype)
+                _compactify(data, fromstarts, fromstops, newdata, newoffsets[:-1], newoffsets[1:])
+                numpy.floor_divide(newoffsets, self.asdtype.fromdtype.itemsize, newoffsets)
+                starts = newoffsets[:-1]
+                stops = newoffsets[1:]
+                contents = self.asdtype.fromroot(newdata, None, 0, stops[-1])
+            return JaggedArray(contents, starts, stops)
 
     def destination(self, numitems, numentries):
         contents = self.asdtype.destination(numitems, numentries)

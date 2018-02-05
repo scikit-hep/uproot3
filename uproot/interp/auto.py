@@ -153,17 +153,35 @@ def interpret(branch, classes=None, swapbytes=True):
             elif branch.fLeaves[0].__class__.__name__ == "TLeafElement":
                 if isinstance(branch._streamer, uproot.rootio.TStreamerBasicType):
                     try:
-                        dtype = _ftype2dtype(branch._streamer.fType)
+                        fromdtype = _ftype2dtype(branch._streamer.fType)
                     except _NotNumerical:
                         pass
                     else:
-                        fromdims, remainder = divmod(branch._streamer.fSize, dtype.itemsize)
+                        if swapbytes:
+                            todtype = fromdtype.newbyteorder("=")
+                        else:
+                            todtype = fromdtype
+                        fromdims, remainder = divmod(branch._streamer.fSize, fromdtype.itemsize)
                         if remainder == 0:
-                            todims = tuple(int(x) for x in re.findall(b"\[([1-9][0-9]*)\]", branch.title))
+                            todims = dims
                             if reduce(lambda x, y: x * y, todims, 1) != fromdims:
                                 todims = (fromdims,)
-                            return asdtype(dtype, fromdims=(fromdims,), todims=todims)
+                            return asdtype(fromdtype, todtype, (fromdims,), todims)
 
+                if isinstance(branch._streamer, uproot.rootio.TStreamerBasicPointer):
+                    if uproot.const.kOffsetP < branch._streamer.fType < uproot.const.kOffsetP + 20:
+                        try:
+                            fromdtype = _ftype2dtype(branch._streamer.fType - uproot.const.kOffsetP)
+                        except _NotNumerical:
+                            pass
+                        else:
+                            if swapbytes:
+                                todtype = fromdtype.newbyteorder("=")
+                            else:
+                                todtype = fromdtype
+                            if len(branch.fLeaves) == 1 and branch.fLeaves[0].fLeafCount is not None:
+                                return asjagged(asdtype(fromdtype, todtype), skip_bytes=1)
+                            
                 if isinstance(branch._streamer, uproot.rootio.TStreamerString):
                     return asstrings(bytes_to_skip=1, skip4_if_255=True)
 
