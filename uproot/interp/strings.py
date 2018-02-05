@@ -40,13 +40,14 @@ except ImportError:
     numba = None
 
 from uproot.interp.interp import Interpretation
+from uproot.interp.jagged import asvar
 from uproot.interp.jagged import JaggedArray
 from uproot.interp.jagged import sizes2offsets
 from uproot.interp.jagged import VariableLength
 
 CHARTYPE = numpy.dtype(numpy.uint8)
 
-def _asstrings_fromroot(data, offsets, local_entrystart, local_entrystop, bytes_to_skip, skip4_if_255):
+def _asstrings_fromroot(data, offsets, local_entrystart, local_entrystop, skip_bytes, skip4_if_255):
     if local_entrystart < 0 or local_entrystop >= len(offsets) or local_entrystart > local_entrystop:
         raise ValueError("illegal local_entrystart or local_entrystop in asstrings.fromroot")
 
@@ -56,7 +57,7 @@ def _asstrings_fromroot(data, offsets, local_entrystart, local_entrystop, bytes_
 
     start = stop = 0
     for entry in range(local_entrystart, local_entrystop):
-        datastart = offsets[entry] + bytes_to_skip
+        datastart = offsets[entry] + skip_bytes
         datastop = offsets[entry + 1]
         if skip4_if_255 and data[datastart - 1] == 255:
             datastart += 4
@@ -73,56 +74,25 @@ def _asstrings_fromroot(data, offsets, local_entrystart, local_entrystop, bytes_
 if numba is not None:
     _asstrings_fromroot = numba.njit(_asstrings_fromroot)
 
-class asstrings(Interpretation):
-    # makes __doc__ attribute mutable before Python 3.3
-    __metaclass__ = type.__new__(type, "type", (Interpretation.__metaclass__,), {})
-
-    def __init__(self, bytes_to_skip=1, skip4_if_255=True):
-        self.bytes_to_skip = bytes_to_skip
+class asstrings(asvar):
+    def __init__(self, skip_bytes=1, skip4_if_255=True):
+        super(asstrings, self).__init__(Strings, skip_bytes=skip_bytes)
         self.skip4_if_255 = skip4_if_255
-
-    def __repr__(self):
-        return self.identifier
 
     @property
     def identifier(self):
-        return "asstrings(bytes_to_skip={0}, skip4_if_255={1})".format(self.bytes_to_skip, self.skip4_if_255)
-
-    def empty(self):
-        return Strings(JaggedArray(numpy.empty(0, dtype=CHARTYPE), numpy.empty(0, dtype=numpy.int64)))
+        args = []
+        if self.skip_bytes != 1:
+            args.append("skip_bytes={0}".format(self.skip_bytes))
+        if self.skip4_if_255 is not True:
+            args.append("skip4_if_255={0}".format(self.skip4_if_255))
+        return "asstrings({0})".format(", ".join(args))
 
     def compatible(self, other):
-        return isinstance(other, asstrings) and self.bytes_to_skip == other.bytes_to_skip and self.skip4_if_255 == other.skip4_if_255
-
-    def numitems(self, numbytes, numentries):
-        return numbytes - self.bytes_to_skip*numentries  # an overestimate if skip4_if_255 and there are any individual strings with > 255 bytes
-
-    def source_numitems(self, source):
-        return len(source.jaggedarray.content)          # not an overestimate
+        return isinstance(other, asstrings) and self.skip4_if_255 == other.skip4_if_255 and super(asstrings, self).compatible(other)
 
     def fromroot(self, data, offsets, local_entrystart, local_entrystop):
-        return Strings(JaggedArray(*_asstrings_fromroot(data, offsets, local_entrystart, local_entrystop, self.bytes_to_skip, self.skip4_if_255)))
-
-    def destination(self, numitems, numentries):
-        content = numpy.empty(numitems, dtype=CHARTYPE)
-        sizes = numpy.empty(numentries, dtype=numpy.int64)
-        return JaggedArray._Prep(content, sizes)
-
-    def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
-        destination.content[itemstart:itemstop] = source.jaggedarray.content
-        destination.sizes[entrystart:entrystop] = source.jaggedarray.stops - source.jaggedarray.starts
-        
-    def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
-        destination.content = destination.content[itemstart:itemstop]
-        destination.sizes = destination.sizes[entrystart:entrystop]
-        return destination
-
-    def finalize(self, destination):
-        content = destination.content
-        offsets = sizes2offsets(destination.sizes)
-        starts = offsets[:-1]
-        stops  = offsets[1:]
-        return Strings(JaggedArray(content, starts, stops))
+        return Strings(JaggedArray(*_asstrings_fromroot(data, offsets, local_entrystart, local_entrystop, self.skip_bytes, self.skip4_if_255)))
 
 class Strings(VariableLength):
     # makes __doc__ attribute mutable before Python 3.3

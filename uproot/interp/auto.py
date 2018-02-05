@@ -148,7 +148,7 @@ def interpret(branch, classes=None, swapbytes=True):
     except _NotNumerical:
         if len(branch.fLeaves) == 1:
             if branch.fLeaves[0].__class__.__name__ == "TLeafC":
-                return asstrings(bytes_to_skip=1, skip4_if_255=True)
+                return asstrings(skip_bytes=1, skip4_if_255=True)
 
             elif branch.fLeaves[0].__class__.__name__ == "TLeafElement":
                 if isinstance(branch._streamer, uproot.rootio.TStreamerBasicType):
@@ -183,13 +183,13 @@ def interpret(branch, classes=None, swapbytes=True):
                                 return asjagged(asdtype(fromdtype, todtype), skip_bytes=1)
                             
                 if isinstance(branch._streamer, uproot.rootio.TStreamerString):
-                    return asstrings(bytes_to_skip=1, skip4_if_255=True)
+                    return asstrings(skip_bytes=1, skip4_if_255=True)
 
                 if isinstance(branch._streamer, uproot.rootio.TStreamerSTLstring):
-                    return asstrings(bytes_to_skip=7, skip4_if_255=True)   # FIXME: not sure about skip4_if_255
+                    return asstrings(skip_bytes=7, skip4_if_255=True)   # FIXME: not sure about skip4_if_255
 
                 if getattr(branch._streamer, "fType", None) == uproot.const.kCharStar:
-                    return asstrings(bytes_to_skip=4, skip4_if_255=False)
+                    return asstrings(skip_bytes=4, skip4_if_255=False)
 
                 if getattr(branch._streamer, "fSTLtype", None) == uproot.const.kSTLvector:
                     try:

@@ -1731,28 +1731,6 @@ u"""Create a :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>` from Pyt
         the jagged array.
 """
 
-################################################################ uproot.interp.strings.asstrings
-
-uproot.interp.strings.asstrings.__doc__ = \
-u"""Interpret branch as a collection of strings (via a :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>` of ``numpy.uint8``).
-
-    This interpretation directs branch-reading to fill a contiguous array of characters and string byte offsets, presenting them to the user as a :py:class:`Strings <uproot.interp.strings.Strings>` interface. Such an object behaves as though it were an array of non-uniformly sized strings, but it is more memory and cache-line efficient because the underlying data are contiguous. Numpy's string-handling options either force fixed-size strings (the ``"S"`` dtype) or non-contiguous Python objects (the ``"O"`` dtype).
-
-    In this interpretation, "items" (for ``numitems``, ``itemstart``, ``itemstop``, etc.) are characters and "entries" are strings.
-
-    The *bytes_to_skip* and *skip4_if_255* parameters control how data from a TBasket buffer are ingested into strings. See the internal *uproot.interp.strings._asstrings_fromroot* implementation for details.
-"""
-
-_method(uproot.interp.strings.asstrings.empty).__doc__ = interp_fragments["see1"]
-_method(uproot.interp.strings.asstrings.compatible).__doc__ = interp_fragments["see1"]
-_method(uproot.interp.strings.asstrings.numitems).__doc__ = interp_fragments["see1"]
-_method(uproot.interp.strings.asstrings.source_numitems).__doc__ = interp_fragments["see1"]
-_method(uproot.interp.strings.asstrings.fromroot).__doc__ = interp_fragments["see1"]
-_method(uproot.interp.strings.asstrings.destination).__doc__ = interp_fragments["see1"]
-_method(uproot.interp.strings.asstrings.fill).__doc__ = interp_fragments["see1"]
-_method(uproot.interp.strings.asstrings.clip).__doc__ = interp_fragments["see1"]
-_method(uproot.interp.strings.asstrings.finalize).__doc__ = interp_fragments["see1"]
-
 ################################################################ uproot.interp.strings.Strings
 
 uproot.interp.strings.Strings.__doc__ = \

@@ -38,6 +38,7 @@ except ImportError:
     numba = None
 
 from uproot.interp.interp import Interpretation
+from uproot.interp.numerical import asdtype
 
 def sizes2offsets(sizes):
     out = numpy.empty(len(sizes) + 1, dtype=sizes.dtype)
@@ -281,6 +282,39 @@ class JaggedArray(object):
             return self.content
         else:
             return numpy.array(self.content, dtype=dtype, copy=copy, order=order, subok=subok, ndmin=ndmin)
+
+class asvar(asjagged):
+    def __init__(self, genclass, skip_bytes=0):
+        self.genclass = genclass
+        super(asvar, self).__init__(asdtype(numpy.dtype(numpy.uint8)), skip_bytes=skip_bytes)
+    
+    def __repr__(self):
+        return self.identifier
+
+    @property
+    def identifier(self):
+        args = []
+        if self.skip_bytes != 0:
+            args.append(", skip_bytes={0}".format(self.skip_bytes))
+        return "asvar({0}{1})".format(self.genclass, "".join(args))
+
+    def empty(self):
+        return self.genclass(super(asvar, self).empty())
+
+    def compatible(self, other):
+        return isinstance(other, asvar) and self.genclass is other.genclass and super(asvar, self).compatible(other)
+
+    def source_numitems(self, source):
+        return super(asvar, self).source_numitems(source.jaggedarray)
+
+    def fromroot(self, data, offsets, local_entrystart, local_entrystop):
+        return self.genclass(super(asvar, self).fromroot(data, offsets, local_entrystart, local_entrystop))
+
+    def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
+        return super(asvar, self).fill(source.jaggedarray, destination, itemstart, itemstop, entrystart, entrystop)
+
+    def finalize(self, destination):
+        return self.genclass(super(asvar, self).finalize(destination))
 
 class VariableLength(object):
     def __init__(self, jaggedarray):
