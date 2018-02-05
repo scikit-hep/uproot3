@@ -296,7 +296,7 @@ class asvar(asjagged):
         args = []
         if self.skip_bytes != 0:
             args.append(", skip_bytes={0}".format(self.skip_bytes))
-        return "asvar({0}{1})".format(self.genclass, "".join(args))
+        return "asvar({0}{1})".format(self.genclass.__name__, "".join(args))
 
     def empty(self):
         return self.genclass(super(asvar, self).empty())

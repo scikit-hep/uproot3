@@ -132,6 +132,9 @@ class Strings(VariableLength):
     def __repr__(self):
         return "strings({0})".format(str(self))
 
+def asstlvecstrings():
+    return asvar(ListStrings, skip_bytes=10)
+
 class ListStrings(VariableLength):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (type,), {})
