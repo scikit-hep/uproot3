@@ -54,7 +54,7 @@ class TestSTLVector(unittest.TestCase):
 
     def test_vector_of_vector_of_numbers(self):
         branch = uproot.open("tests/samples/vectorVectorDouble.root")["t"]["x"]
-        self.assertEqual(branch.array().tolist(), [[[]], [[[], []]], [[[10.0], [], [10.0, 20.0]]], [[[20.0, -21.0, -22.0]]], [[[200.0], [-201.0], [202.0]]]])
+        self.assertEqual(branch.array().tolist(), [[], [[], []], [[10.0], [], [10.0, 20.0]], [[20.0, -21.0, -22.0]], [[200.0], [-201.0], [202.0]]])
 
     def test_strings1(self):
         tree = uproot.open("tests/samples/small-evnt-tree-fullsplit.root")["tree"]

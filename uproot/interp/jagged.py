@@ -365,22 +365,28 @@ class JaggedJaggedArray(VariableLength):
 
     def interpret(self, item):
         i = 0
+        size, = item[i : i + 4].view(JaggedJaggedArray.indexdtype)
+        i += 4
         out = []
         while i < len(item):
             size, = item[i : i + 4].view(JaggedJaggedArray.indexdtype)
             i += 4
-            outi = []
-            for j in range(size):
-                size, = item[i : i + 4].view(JaggedJaggedArray.indexdtype)
-                i += 4
-                numbytes = size*self.fromdtype.itemsize
-                outi.append(item[i : i + numbytes].view(self.fromdtype).tolist())
-                i += numbytes
-            out.append(outi)
+            numbytes = size*self.fromdtype.itemsize
+            out.append(item[i : i + numbytes].view(self.fromdtype))
+            i += numbytes
         return out
+
+    def __str__(self):
+        if len(self) > 6:
+            return "[{0} ... {1}]".format(", ".join(repr([y.tolist() for y in self[i]]) for i in range(3)), ", ".join(repr([y.tolist() for y in self[i]]) for i in range(-3, 0)))
+        else:
+            return "[{0}]".format(", ".join(repr([y.tolist() for y in x]) for x in self))
 
     def __repr__(self):
         return "jaggedjaggedarray({0})".format(str(self))
+
+    def tolist(self):
+        return [[y.tolist() for y in x] for x in self]
 
 if numba is not None:
     class JaggedArrayType(numba.types.Type):
