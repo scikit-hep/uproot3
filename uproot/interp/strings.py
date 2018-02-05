@@ -42,6 +42,7 @@ except ImportError:
 from uproot.interp.interp import Interpretation
 from uproot.interp.jagged import JaggedArray
 from uproot.interp.jagged import sizes2offsets
+from uproot.interp.jagged import VariableLength
 
 CHARTYPE = numpy.dtype(numpy.uint8)
 
@@ -123,7 +124,7 @@ class asstrings(Interpretation):
         stops  = offsets[1:]
         return Strings(JaggedArray(content, starts, stops))
 
-class Strings(object):
+class Strings(VariableLength):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (type,), {})
 
@@ -154,39 +155,35 @@ class Strings(object):
             
         return Strings(uproot.types.jagged.JaggedArray(content, starts, stops))
 
-    def __init__(self, jaggedarray):
-        assert jaggedarray.content.dtype == CHARTYPE
-        assert len(jaggedarray.content.shape) == 1
-        self.jaggedarray = jaggedarray
-
-    def __len__(self):
-        return len(self.jaggedarray)
-
-    def __getitem__(self, index):
-        if isinstance(index, numbers.Integral):
-            return self.jaggedarray[index].tostring()
-
-        elif isinstance(index, slice):
-            return Strings(self.jaggedarray[slice])
-
-        else:
-            raise TypeError("Strings index must be an integer or a slice")
-
-    def __iter__(self):
-        for x in self.jaggedarray:
-            yield x.tostring()
+    @staticmethod
+    def interpret(item):
+        return item.tostring()
 
     def __repr__(self):
         return "strings({0})".format(str(self))
 
-    def __str__(self):
-        if len(self) > 6:
-            return "[{0} ... {1}]".format(" ".join(repr(self[i]) for i in range(3)), " ".join(repr(self[i]) for i in range(-3, 0)))
-        else:
-            return "[{0}]".format(" ".join(repr(x) for x in self))
+class ListStrings(VariableLength):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (type,), {})
 
-    def tolist(self):
-        return list(self)
+    @staticmethod
+    def interpret(data):
+        i = 0
+        out = []
+        while i < len(data):
+            if data[i] < 255:
+                size = data[i]
+                i += 1
+            else:
+                i += 1
+                size = data[i : i + 4].view(">i4")
+                i += 4
+            out.append(data[i : i + size].tostring())
+            i += size
+        return out
+
+    def __repr__(self):
+        return "liststrings({0})".format(str(self))
 
 if numba is not None:
     class StringsType(numba.types.Type):

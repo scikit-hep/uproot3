@@ -134,50 +134,8 @@ class asjagged(Interpretation):
         content = self.asdtype.finalize(destination.content)
         return JaggedArray(content, starts, stops)
 
-_STLVECTOR_HEADER = 10
-
-def _asstlvector_fromroot(data, offsets, local_entrystart, local_entrystop, itemsize):
-    numentries = local_entrystop - local_entrystart
-    content = numpy.empty(offsets[local_entrystop] - offsets[local_entrystart] - _STLVECTOR_HEADER*numentries, dtype=data.dtype)
-    newoffsets = numpy.empty(numentries + 1, dtype=offsets.dtype)
-    newoffsets[0] = 0
-
-    start = stop = 0
-    for entry in range(local_entrystart, local_entrystop):
-        datastart = offsets[entry] + _STLVECTOR_HEADER
-        datastop = offsets[entry + 1]
-
-        stop = start + (datastop - datastart)
-
-        content[start:stop] = data[datastart:datastop]
-        newoffsets[1 + entry - local_entrystart] = stop // itemsize
-
-        start = stop
-
-    return content, newoffsets[:-1], newoffsets[1:]
-
-if numba is not None:
-    _asstlvector_fromroot = numba.njit(_asstlvector_fromroot)
-
-class asstlvector(asjagged):
-    # makes __doc__ attribute mutable before Python 3.3
-    __metaclass__ = type.__new__(type, "type", (asjagged.__metaclass__,), {})
-
-    def __repr__(self):
-        return "asstlvector(" + repr(self.asdtype) + ")"
-
-    @property
-    def identifier(self):
-        return "asstlvector(" + self.asdtype.identifier + ")"
-
-    def numitems(self, numbytes, numentries):
-        return self.asdtype.numitems(numbytes - _STLVECTOR_HEADER*numentries, numentries)
-
-    def fromroot(self, data, offsets, local_entrystart, local_entrystop):
-        if local_entrystart < 0 or local_entrystop >= len(offsets) or local_entrystart > local_entrystop:
-            raise ValueError("illegal local_entrystart or local_entrystop in asstlvector.fromroot")
-        content, starts, stops = _asstlvector_fromroot(data, offsets, local_entrystart, local_entrystop, self.asdtype.fromdtype.itemsize)
-        return JaggedArray(content.view(self.asdtype.fromdtype), starts, stops)
+def asstlvector(asdtype):
+    return asjagged(asdtype, skip_bytes=10)
 
 def _jaggedarray_getitem(jaggedarray, index):
     stopslen = len(jaggedarray.stops)
@@ -323,6 +281,42 @@ class JaggedArray(object):
             return self.content
         else:
             return numpy.array(self.content, dtype=dtype, copy=copy, order=order, subok=subok, ndmin=ndmin)
+
+class VariableLength(object):
+    def __init__(self, jaggedarray):
+        assert jaggedarray.content.dtype.itemsize == 1
+        assert len(jaggedarray.content.shape) == 1
+        self.jaggedarray = jaggedarray
+
+    def __len__(self):
+        return len(self.jaggedarray)
+
+    def __getitem__(self, index):
+        if isinstance(index, numbers.Integral):
+            return self.interpret(self.jaggedarray[index])
+
+        elif isinstance(index, slice):
+            return self.__class__(self.jaggedarray[slice])
+
+        else:
+            raise TypeError("{0} index must be an integer or a slice".format(self.__class__.__name__))
+
+    def __iter__(self):
+        for x in self.jaggedarray:
+            yield self.interpret(x)
+
+    def __str__(self):
+        if len(self) > 6:
+            return "[{0} ... {1}]".format(" ".join(repr(self[i]) for i in range(3)), " ".join(repr(self[i]) for i in range(-3, 0)))
+        else:
+            return "[{0}]".format(" ".join(repr(x) for x in self))
+
+    def tolist(self):
+        return list(self)
+
+    @staticmethod
+    def interpret(item):
+        raise NotImplementedError
 
 if numba is not None:
     class JaggedArrayType(numba.types.Type):
