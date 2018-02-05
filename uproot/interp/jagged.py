@@ -88,17 +88,17 @@ class asjagged(Interpretation):
         return self.asdtype.numitems(numbytes - numentries*self.skip_bytes, numentries)
 
     def source_numitems(self, source):
-        return self.asdtype.source_numitems(source.contents)
+        return self.asdtype.source_numitems(source.content)
 
     def fromroot(self, data, offsets, local_entrystart, local_entrystop):
         if local_entrystart == local_entrystop:
-            contents = self.asdtype.fromroot(data, None, 0, 0)
+            content = self.asdtype.fromroot(data, None, 0, 0)
         else:
             if self.skip_bytes == 0:
                 numpy.floor_divide(offsets, self.asdtype.fromdtype.itemsize, offsets)
                 starts = offsets[local_entrystart     : local_entrystop    ]
                 stops  = offsets[local_entrystart + 1 : local_entrystop + 1]
-                contents = self.asdtype.fromroot(data, None, starts[0], stops[-1])
+                content = self.asdtype.fromroot(data, None, starts[0], stops[-1])
             else:
                 fromstarts = offsets[local_entrystart     : local_entrystop    ] + self.skip_bytes
                 fromstops  = offsets[local_entrystart + 1 : local_entrystop + 1]
@@ -110,20 +110,20 @@ class asjagged(Interpretation):
                 numpy.floor_divide(newoffsets, self.asdtype.fromdtype.itemsize, newoffsets)
                 starts = newoffsets[:-1]
                 stops = newoffsets[1:]
-                contents = self.asdtype.fromroot(newdata, None, 0, stops[-1])
-            return JaggedArray(contents, starts, stops)
+                content = self.asdtype.fromroot(newdata, None, 0, stops[-1])
+            return JaggedArray(content, starts, stops)
 
     def destination(self, numitems, numentries):
-        contents = self.asdtype.destination(numitems, numentries)
+        content = self.asdtype.destination(numitems, numentries)
         sizes = numpy.empty(numentries, dtype=numpy.int64)
-        return JaggedArray._Prep(contents, sizes)
+        return JaggedArray._Prep(content, sizes)
 
     def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
         destination.sizes[entrystart:entrystop] = source.stops - source.starts
-        self.asdtype.fill(source.contents, destination.contents, itemstart, itemstop, entrystart, entrystop)
+        self.asdtype.fill(source.content, destination.content, itemstart, itemstop, entrystart, entrystop)
 
     def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
-        destination.contents = self.asdtype.clip(destination.contents, itemstart, itemstop, entrystart, entrystop)
+        destination.content = self.asdtype.clip(destination.content, itemstart, itemstop, entrystart, entrystop)
         destination.sizes = destination.sizes[entrystart:entrystop]
         return destination
 
@@ -131,14 +131,14 @@ class asjagged(Interpretation):
         offsets = sizes2offsets(destination.sizes)
         starts = offsets[:-1]
         stops  = offsets[1:]
-        contents = self.asdtype.finalize(destination.contents)
-        return JaggedArray(contents, starts, stops)
+        content = self.asdtype.finalize(destination.content)
+        return JaggedArray(content, starts, stops)
 
 _STLVECTOR_HEADER = 10
 
 def _asstlvector_fromroot(data, offsets, local_entrystart, local_entrystop, itemsize):
     numentries = local_entrystop - local_entrystart
-    contents = numpy.empty(offsets[local_entrystop] - offsets[local_entrystart] - _STLVECTOR_HEADER*numentries, dtype=data.dtype)
+    content = numpy.empty(offsets[local_entrystop] - offsets[local_entrystart] - _STLVECTOR_HEADER*numentries, dtype=data.dtype)
     newoffsets = numpy.empty(numentries + 1, dtype=offsets.dtype)
     newoffsets[0] = 0
 
@@ -149,12 +149,12 @@ def _asstlvector_fromroot(data, offsets, local_entrystart, local_entrystop, item
 
         stop = start + (datastop - datastart)
 
-        contents[start:stop] = data[datastart:datastop]
+        content[start:stop] = data[datastart:datastop]
         newoffsets[1 + entry - local_entrystart] = stop // itemsize
 
         start = stop
 
-    return contents, newoffsets[:-1], newoffsets[1:]
+    return content, newoffsets[:-1], newoffsets[1:]
 
 if numba is not None:
     _asstlvector_fromroot = numba.njit(_asstlvector_fromroot)
@@ -176,8 +176,8 @@ class asstlvector(asjagged):
     def fromroot(self, data, offsets, local_entrystart, local_entrystop):
         if local_entrystart < 0 or local_entrystop >= len(offsets) or local_entrystart > local_entrystop:
             raise ValueError("illegal local_entrystart or local_entrystop in asstlvector.fromroot")
-        contents, starts, stops = _asstlvector_fromroot(data, offsets, local_entrystart, local_entrystop, self.asdtype.fromdtype.itemsize)
-        return JaggedArray(contents.view(self.asdtype.fromdtype), starts, stops)
+        content, starts, stops = _asstlvector_fromroot(data, offsets, local_entrystart, local_entrystop, self.asdtype.fromdtype.itemsize)
+        return JaggedArray(content.view(self.asdtype.fromdtype), starts, stops)
 
 def _jaggedarray_getitem(jaggedarray, index):
     stopslen = len(jaggedarray.stops)
@@ -186,7 +186,7 @@ def _jaggedarray_getitem(jaggedarray, index):
     if 0 <= index < stopslen:
         start = jaggedarray.starts[index]
         stop  = jaggedarray.stops[index]
-        return jaggedarray.contents[start:stop]
+        return jaggedarray.content[start:stop]
     else:
         raise IndexError("index out of range for JaggedArray")
 
@@ -195,8 +195,8 @@ class JaggedArray(object):
     __metaclass__ = type.__new__(type, "type", (type,), {})
 
     class _Prep(object):
-        def __init__(self, contents, sizes):
-            self.contents = contents
+        def __init__(self, content, sizes):
+            self.content = content
             self.sizes = sizes
 
     @staticmethod
@@ -243,20 +243,20 @@ class JaggedArray(object):
 
         starts = offsets[:-1]
         stops  = offsets[1:]
-        contents = numpy.empty(offsets[-1], dtype=dtype)
+        content = numpy.empty(offsets[-1], dtype=dtype)
 
         for i, x in enumerate(lists):
-            contents[starts[i]:stops[i]] = x
+            content[starts[i]:stops[i]] = x
 
-        return JaggedArray(contents, starts, stops)
+        return JaggedArray(content, starts, stops)
 
-    def __init__(self, contents, starts, stops):
-        assert isinstance(contents, numpy.ndarray)
+    def __init__(self, content, starts, stops):
+        assert isinstance(content, numpy.ndarray)
         assert isinstance(starts, numpy.ndarray) and issubclass(starts.dtype.type, numpy.integer)
         assert isinstance(stops, numpy.ndarray) and issubclass(stops.dtype.type, numpy.integer)
         assert len(stops.shape) == 1
         assert starts.shape == stops.shape
-        self.contents = contents
+        self.content = content
         self.starts = starts
         self.stops = stops
 
@@ -271,22 +271,22 @@ class JaggedArray(object):
             if index.step is not None and index.step != 1:
                 raise NotImplementedError("cannot slice a JaggedArray with step != 1")
             else:
-                return JaggedArray(self.contents, self.starts[index], self.stops[index])
+                return JaggedArray(self.content, self.starts[index], self.stops[index])
 
         else:
             raise TypeError("JaggedArray index must be an integer or a slice")
 
     def __iter__(self):
-        contents = self.contents
+        content = self.content
         starts = self.starts
         stops = self.stops
         for i in range(len(stops)):
-            yield contents[starts[i]:stops[i]]
+            yield content[starts[i]:stops[i]]
 
     def __repr__(self, indent="", linewidth=None):
         if linewidth is None:
             linewidth = numpy.get_printoptions()["linewidth"]
-        dtypestr = repr(self.contents.dtype).replace("(", "=").rstrip(")")
+        dtypestr = repr(self.content.dtype).replace("(", "=").rstrip(")")
         linewidth = linewidth - 12 - 2 - len(dtypestr)
         return "jaggedarray({0})".format(self.__str__(indent=" " * 12, linewidth=linewidth))
 
@@ -301,52 +301,52 @@ class JaggedArray(object):
                 return numpy.array_str(a, max_line_width=numpy.inf)
 
         if len(self) > 10:
-            contents = [single(self[i]) for i in range(3)] + ["..."] + [single(self[i]) for i in range(-3, 0)]
+            content = [single(self[i]) for i in range(3)] + ["..."] + [single(self[i]) for i in range(-3, 0)]
         else:
-            contents = [single(x) for x in self]
+            content = [single(x) for x in self]
 
-        if sum(len(x) for x in contents) + 2*(len(contents) - 1) + 2 <= linewidth:
-            return "[" + ", ".join(contents) + "]"
+        if sum(len(x) for x in content) + 2*(len(content) - 1) + 2 <= linewidth:
+            return "[" + ", ".join(content) + "]"
         else:
-            return "[" + (",\n " + indent).join(contents) + "]"
+            return "[" + (",\n " + indent).join(content) + "]"
 
     def tolist(self):
         return [x.tolist() for x in self]
 
     def __array__(self, dtype=None, copy=False, order="K", subok=False, ndmin=0):
         if dtype is None:
-            dtype = self.contents.dtype
+            dtype = self.content.dtype
         elif not isinstance(dtype, numpy.dtype):
             dtype = numpy.dtype(dtype)
 
-        if dtype == self.contents.dtype and not copy and not subok and ndmin == 0:
-            return self.contents
+        if dtype == self.content.dtype and not copy and not subok and ndmin == 0:
+            return self.content
         else:
-            return numpy.array(self.contents, dtype=dtype, copy=copy, order=order, subok=subok, ndmin=ndmin)
+            return numpy.array(self.content, dtype=dtype, copy=copy, order=order, subok=subok, ndmin=ndmin)
 
 if numba is not None:
     class JaggedArrayType(numba.types.Type):
         concrete = {}
 
-        def __init__(self, contents, starts, stops):
-            assert isinstance(contents, numba.types.Array)
+        def __init__(self, content, starts, stops):
+            assert isinstance(content, numba.types.Array)
             assert isinstance(starts, numba.types.Array)
             assert isinstance(stops, numba.types.Array)
             assert starts.ndim == 1
             assert stops.ndim == 1
-            self.contents = contents
+            self.content = content
             self.starts = starts
             self.stops = stops
-            if contents.name.startswith("array"):
-                name = "jagged" + contents.name
+            if content.name.startswith("array"):
+                name = "jagged" + content.name
             else:
-                name = "jaggedarray({0})".format(contents.name)
+                name = "jaggedarray({0})".format(content.name)
             super(JaggedArrayType, self).__init__(name=name)
 
-            @numba.extending.lower_getattr(JaggedArrayType, "contents")
-            def jaggedarray_getattr_contents_impl(context, builder, typ, val):
+            @numba.extending.lower_getattr(JaggedArrayType, "content")
+            def jaggedarray_getattr_content_impl(context, builder, typ, val):
                 res = builder.extract_value(val, 0)
-                return numba.targets.imputils.impl_ret_borrowed(context, builder, typ.contents, res)
+                return numba.targets.imputils.impl_ret_borrowed(context, builder, typ.content, res)
 
             @numba.extending.lower_getattr(JaggedArrayType, "starts")
             def jaggedarray_getattr_starts_impl(context, builder, typ, val):
@@ -359,27 +359,27 @@ if numba is not None:
                 return numba.targets.imputils.impl_ret_borrowed(context, builder, typ.stops, res)
 
         @staticmethod
-        def get(contents, starts, stops):
-            key = (contents, starts, stops)
+        def get(content, starts, stops):
+            key = (content, starts, stops)
             try:
                 return JaggedArrayType.concrete[key]
             except KeyError:
-                JaggedArrayType.concrete[key] = JaggedArrayType(contents, starts, stops)
+                JaggedArrayType.concrete[key] = JaggedArrayType(content, starts, stops)
                 return JaggedArrayType.concrete[key]
 
         def tupletype(self):
-            return numba.types.Tuple((self.contents, self.starts, self.stops))
+            return numba.types.Tuple((self.content, self.starts, self.stops))
 
     @numba.extending.typeof_impl.register(JaggedArray)
     def jaggedarray_typeof(val, c):
         assert isinstance(val, JaggedArray)
-        return JaggedArrayType.get(numba.typing.typeof._typeof_ndarray(val.contents, c),
+        return JaggedArrayType.get(numba.typing.typeof._typeof_ndarray(val.content, c),
                                    numba.typing.typeof._typeof_ndarray(val.starts, c),
                                    numba.typing.typeof._typeof_ndarray(val.stops, c))
 
     @numba.extending.type_callable(JaggedArray)
     def jaggedarray_type(context):
-        def typer(contents, starts, stops):
+        def typer(content, starts, stops):
             raise TypeError("cannot create JaggedArray object in compiled code (pass it into the function)")
         return typer
 
@@ -392,8 +392,8 @@ if numba is not None:
     class StructAttribute(numba.typing.templates.AttributeTemplate):
         key = JaggedArrayType
         def generic_resolve(self, typ, attr):
-            if attr == "contents":
-                return typ.contents
+            if attr == "content":
+                return typ.content
             elif attr == "starts":
                 return typ.starts
             elif attr == "stops":
@@ -401,11 +401,11 @@ if numba is not None:
 
     @numba.extending.unbox(JaggedArrayType)
     def jaggedarray_unbox(typ, obj, c):
-        contents_obj = c.pyapi.object_getattr_string(obj, "contents")
+        content_obj = c.pyapi.object_getattr_string(obj, "content")
         starts_obj = c.pyapi.object_getattr_string(obj, "starts")
         stops_obj = c.pyapi.object_getattr_string(obj, "stops")
         tuple_obj = c.pyapi.tuple_new(3)
-        c.pyapi.tuple_setitem(tuple_obj, 0, contents_obj)
+        c.pyapi.tuple_setitem(tuple_obj, 0, content_obj)
         c.pyapi.tuple_setitem(tuple_obj, 1, starts_obj)
         c.pyapi.tuple_setitem(tuple_obj, 2, stops_obj)
         out = c.unbox(typ.tupletype(), tuple_obj)
@@ -415,7 +415,7 @@ if numba is not None:
     @numba.extending.box(JaggedArrayType)
     def jaggedarray_box(typ, val, c):
         class_obj = c.pyapi.unserialize(c.pyapi.serialize_object(JaggedArray))
-        args = [c.box(typ.contents, c.builder.extract_value(val, 0)),
+        args = [c.box(typ.content, c.builder.extract_value(val, 0)),
                 c.box(typ.starts, c.builder.extract_value(val, 1)),
                 c.box(typ.stops, c.builder.extract_value(val, 2))]
         out = c.pyapi.call_function_objargs(class_obj, args)
@@ -451,7 +451,7 @@ if numba is not None:
             if isinstance(objtyp, JaggedArrayType):
                 idxtyp = numba.typing.builtins.normalize_1d_index(idxtyp)
                 if isinstance(idxtyp, numba.types.Integer):
-                    return numba.typing.templates.signature(objtyp.contents, objtyp, idxtyp)
+                    return numba.typing.templates.signature(objtyp.content, objtyp, idxtyp)
 
     @numba.extending.lower_builtin("getitem", JaggedArrayType, numba.types.Integer)
     def jaggedarray_getitem(context, builder, sig, args):
@@ -470,7 +470,7 @@ if numba is not None:
         def __init__(self, jaggedarraytype):
             self.jaggedarray = jaggedarraytype
             name = "iter({0})".format(jaggedarraytype.name)
-            super(JaggedArrayIteratorType, self).__init__(name, jaggedarraytype.contents)
+            super(JaggedArrayIteratorType, self).__init__(name, jaggedarraytype.content)
 
     @numba.datamodel.registry.register_default(JaggedArrayIteratorType)
     class JaggedArrayIteratorModel(numba.datamodel.models.StructModel):
@@ -510,14 +510,14 @@ if numba is not None:
 
     def jaggedarray_getitem_foriter(context, builder, jaggedarraytype, jaggedarray, index):
         if jaggedarray_getitem_foriter.cache is None:
-            @numba.njit([jaggedarraytype.contents(jaggedarraytype, JaggedArrayIteratorModel.integertype)])
+            @numba.njit([jaggedarraytype.content(jaggedarraytype, JaggedArrayIteratorModel.integertype)])
             def _jaggedarray_getitem(a, i):
-                return a.contents[a.starts[i]:a.stops[i]]
+                return a.content[a.starts[i]:a.stops[i]]
             cres, = _jaggedarray_getitem.overloads.values()
             getitem_imp = cres.target_context.get_function(cres.entry_point, cres.signature)._imp
             del cres.target_context._defns[cres.entry_point]
             jaggedarray_getitem_foriter.cache = getitem_imp
-        return jaggedarray_getitem_foriter.cache(context, builder, jaggedarraytype.contents(jaggedarraytype, JaggedArrayIteratorModel.integertype), (jaggedarray, index))
+        return jaggedarray_getitem_foriter.cache(context, builder, jaggedarraytype.content(jaggedarraytype, JaggedArrayIteratorModel.integertype), (jaggedarray, index))
     jaggedarray_getitem_foriter.cache = None
 
     @numba.extending.lower_builtin("iternext", JaggedArrayIteratorType)

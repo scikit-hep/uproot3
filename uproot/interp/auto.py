@@ -195,10 +195,10 @@ def interpret(branch, classes=None, swapbytes=True):
                     try:
                         fromdtype = _ftype2dtype(branch._streamer.fCtype)
                         if swapbytes:
-                            ascontents = asdtype(fromdtype, fromdtype.newbyteorder("="))
+                            ascontent = asdtype(fromdtype, fromdtype.newbyteorder("="))
                         else:
-                            ascontents = asdtype(fromdtype, fromdtype)
-                        return asstlvector(ascontents)
+                            ascontent = asdtype(fromdtype, fromdtype)
+                        return asstlvector(ascontent)
                     except _NotNumerical:
                         pass
 

@@ -1681,11 +1681,11 @@ _method(uproot.interp.jagged.asjagged.finalize).__doc__ = interp_fragments["see1
 ################################################################ uproot.interp.jagged.JaggedArray
 
 uproot.interp.jagged.JaggedArray.__doc__ = \
-u"""Array of non-uniformly sized arrays, implemented with contiguous *contents* and *offsets*.
+u"""Array of non-uniformly sized arrays, implemented with contiguous *content* and *offsets*.
 
     Objects of this type can be sliced and indexed as an array of arrays, where each of the interior arrays may have a different length, but it is stored as three contiguous arrays:
 
-    - *contents*: the interior data without array boundaries;
+    - *content*: the interior data without array boundaries;
     - *starts*: the starting index of each interior array (inclusive);
     - *stops*: the stopping index of each interior array (exclusive).
 
@@ -1693,7 +1693,7 @@ u"""Array of non-uniformly sized arrays, implemented with contiguous *contents* 
 
         starts, stops = offsets[:-1], offsets[1:]
 
-    Stored this way, memory usage and fragmentation are minimized, and sequential access is cache-efficient if *starts* is monotonic (the usual case). Providing both a *starts* and a *stops* array allows jagged arrays to be arbitrarily sliced or sorted without copying the *contents*.
+    Stored this way, memory usage and fragmentation are minimized, and sequential access is cache-efficient if *starts* is monotonic (the usual case). Providing both a *starts* and a *stops* array allows jagged arrays to be arbitrarily sliced or sorted without copying the *content*.
 
     This class has array-like semantics:
 
@@ -1705,8 +1705,8 @@ u"""Array of non-uniformly sized arrays, implemented with contiguous *contents* 
 
     Parameters
     ----------
-    contents : ``numpy.ndarray``
-        the *contents* array, as defined above.
+    content : ``numpy.ndarray``
+        the *content* array, as defined above.
 
     starts : ``numpy.ndarray``
         the *starts* array, as defined above. Must be one-dimensional with an integer dtype.
@@ -1718,7 +1718,7 @@ u"""Array of non-uniformly sized arrays, implemented with contiguous *contents* 
 _method(uproot.interp.jagged.JaggedArray.fromlists).__doc__ = \
 u"""Create a :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>` from Python iterables.
 
-    The Numpy types will be inferred from the contents.
+    The Numpy types will be inferred from the content.
 
     Parameters
     ----------
@@ -1756,7 +1756,7 @@ _method(uproot.interp.strings.asstrings.finalize).__doc__ = interp_fragments["se
 ################################################################ uproot.interp.strings.Strings
 
 uproot.interp.strings.Strings.__doc__ = \
-u"""Array of non-uniformly sized strings, implemented with contiguous *contents* and *offsets*.
+u"""Array of non-uniformly sized strings, implemented with contiguous *content* and *offsets*.
 
     Objects of this type can be sliced and indexed as an array of strings, where each of the strings may have a different length, but it is stored as a :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>` of ``numpy.uint8``.
 
@@ -1775,7 +1775,7 @@ u"""Array of non-uniformly sized strings, implemented with contiguous *contents*
     Parameters
     ----------
     jaggedarray : :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>`
-        a jagged array with one-dimensional ``numpy.uint8`` contents.
+        a jagged array with one-dimensional ``numpy.uint8`` content.
 """
 
 _method(uproot.interp.strings.Strings.fromstrs).__doc__ = \

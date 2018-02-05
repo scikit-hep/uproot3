@@ -102,7 +102,7 @@ class TestTree(unittest.TestCase):
         two = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None)
         self.assertTrue(numpy.array_equal(one[0], numpy.array([], dtype=">i8")))
         self.assertTrue(numpy.array_equal(one[1], numpy.array([-15], dtype=">i8")))
-        self.assertTrue(basest(one.contents) is basest(two.contents))
+        self.assertTrue(basest(one.content) is basest(two.content))
 
         three = branch.basket(0)
         self.assertTrue(numpy.array_equal(three[0], numpy.array([], dtype=">i8")))
@@ -117,7 +117,7 @@ class TestTree(unittest.TestCase):
         one = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None)
         two = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None)
         self.assertTrue(one.tolist() == [b"hey-0", b"hey-1", b"hey-2", b"hey-3", b"hey-4", b"hey-5"])
-        self.assertFalse(basest(one.jaggedarray.contents) is basest(two.jaggedarray.contents))
+        self.assertFalse(basest(one.jaggedarray.content) is basest(two.jaggedarray.content))
 
         three = branch.basket(0)
         self.assertTrue(three.tolist() == [b"hey-0", b"hey-1", b"hey-2", b"hey-3", b"hey-4", b"hey-5"])

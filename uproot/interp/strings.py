@@ -49,7 +49,7 @@ def _asstrings_fromroot(data, offsets, local_entrystart, local_entrystop, bytes_
     if local_entrystart < 0 or local_entrystop >= len(offsets) or local_entrystart > local_entrystop:
         raise ValueError("illegal local_entrystart or local_entrystop in asstrings.fromroot")
 
-    contents = numpy.empty(offsets[local_entrystop] - offsets[local_entrystart] - (local_entrystop - local_entrystart), dtype=CHARTYPE)
+    content = numpy.empty(offsets[local_entrystop] - offsets[local_entrystart] - (local_entrystop - local_entrystart), dtype=CHARTYPE)
     newoffsets  = numpy.empty(1 + local_entrystop - local_entrystart, dtype=offsets.dtype)
     newoffsets[0] = 0
 
@@ -62,12 +62,12 @@ def _asstrings_fromroot(data, offsets, local_entrystart, local_entrystop, bytes_
 
         stop = start + (datastop - datastart)
 
-        contents[start:stop] = data[datastart:datastop]
+        content[start:stop] = data[datastart:datastop]
         newoffsets[1 + entry - local_entrystart] = stop
 
         start = stop
 
-    return contents[:stop], newoffsets[:-1], newoffsets[1:]
+    return content[:stop], newoffsets[:-1], newoffsets[1:]
 
 if numba is not None:
     _asstrings_fromroot = numba.njit(_asstrings_fromroot)
@@ -97,31 +97,31 @@ class asstrings(Interpretation):
         return numbytes - self.bytes_to_skip*numentries  # an overestimate if skip4_if_255 and there are any individual strings with > 255 bytes
 
     def source_numitems(self, source):
-        return len(source.jaggedarray.contents)          # not an overestimate
+        return len(source.jaggedarray.content)          # not an overestimate
 
     def fromroot(self, data, offsets, local_entrystart, local_entrystop):
         return Strings(JaggedArray(*_asstrings_fromroot(data, offsets, local_entrystart, local_entrystop, self.bytes_to_skip, self.skip4_if_255)))
 
     def destination(self, numitems, numentries):
-        contents = numpy.empty(numitems, dtype=CHARTYPE)
+        content = numpy.empty(numitems, dtype=CHARTYPE)
         sizes = numpy.empty(numentries, dtype=numpy.int64)
-        return JaggedArray._Prep(contents, sizes)
+        return JaggedArray._Prep(content, sizes)
 
     def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
-        destination.contents[itemstart:itemstop] = source.jaggedarray.contents
+        destination.content[itemstart:itemstop] = source.jaggedarray.content
         destination.sizes[entrystart:entrystop] = source.jaggedarray.stops - source.jaggedarray.starts
         
     def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
-        destination.contents = destination.contents[itemstart:itemstop]
+        destination.content = destination.content[itemstart:itemstop]
         destination.sizes = destination.sizes[entrystart:entrystop]
         return destination
 
     def finalize(self, destination):
-        contents = destination.contents
+        content = destination.content
         offsets = sizes2offsets(destination.sizes)
         starts = offsets[:-1]
         stops  = offsets[1:]
-        return Strings(JaggedArray(contents, starts, stops))
+        return Strings(JaggedArray(content, starts, stops))
 
 class Strings(object):
     # makes __doc__ attribute mutable before Python 3.3
@@ -137,7 +137,7 @@ class Strings(object):
                 x = x.encode("utf-8", "replace")
             offsets[i + 1] = stop = stop + len(x)
 
-        contents = numpy.empty(offsets[-1], dtype=CHARTYPE)
+        content = numpy.empty(offsets[-1], dtype=CHARTYPE)
         starts = offsets[:-1]
         stops = offsets[1:]
 
@@ -145,18 +145,18 @@ class Strings(object):
             for i, x, in enumerate(strs):
                 if isinstance(x, unicode):
                     x = x.encode("utf-8", "replace")
-                contents[starts[i]:stops[i]] = map(ord, x)
+                content[starts[i]:stops[i]] = map(ord, x)
         else:
             for i, x, in enumerate(strs):
                 if isinstance(x, str):
                     x = x.encode("utf-8", "replace")
-                contents[starts[i]:stops[i]] = memoryview(x)
+                content[starts[i]:stops[i]] = memoryview(x)
             
-        return Strings(uproot.types.jagged.JaggedArray(contents, starts, stops))
+        return Strings(uproot.types.jagged.JaggedArray(content, starts, stops))
 
     def __init__(self, jaggedarray):
-        assert jaggedarray.contents.dtype == CHARTYPE
-        assert len(jaggedarray.contents.shape) == 1
+        assert jaggedarray.content.dtype == CHARTYPE
+        assert len(jaggedarray.content.shape) == 1
         self.jaggedarray = jaggedarray
 
     def __len__(self):
@@ -249,7 +249,7 @@ if numba is not None:
             if isinstance(objtyp, StringsType):
                 idxtyp = numba.typing.builtins.normalize_1d_index(idxtyp)
                 if isinstance(idxtyp, numba.types.Integer):
-                    return numba.typing.templates.signature(objtyp.jaggedarray.contents, objtyp, idxtyp)
+                    return numba.typing.templates.signature(objtyp.jaggedarray.content, objtyp, idxtyp)
 
     @numba.extending.lower_builtin("getitem", StringsType, numba.types.Integer)
     def strings_getitem(context, builder, sig, args):
