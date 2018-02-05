@@ -35,6 +35,7 @@ import os.path
 import struct
 import sys
 import threading
+import warnings
 from collections import namedtuple
 try:
     from urlparse import urlparse
@@ -93,15 +94,15 @@ def _delayedraise(excinfo):
 
 ################################################################ high-level interface
 
-def iterate(path, treepath, branches=None, entrysteps=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, recover=False, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, **options):
-    for tree, newbranches, globalentrystart in _iterate(path, treepath, branches, recover, localsource, xrootdsource, **options):
+def iterate(path, treepath, branches=None, entrysteps=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, **options):
+    for tree, newbranches, globalentrystart in _iterate(path, treepath, branches, localsource, xrootdsource, **options):
         for start, stop, arrays in tree.iterate(branches=newbranches, entrysteps=entrysteps, outputtype=outputtype, reportentries=True, entrystart=0, entrystop=tree.numentries, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking):
             if reportentries:
                 yield globalentrystart + start, globalentrystart + stop, arrays
             else:
                 yield arrays
         
-def _iterate(path, treepath, branches, recover, localsource, xrootdsource, **options):
+def _iterate(path, treepath, branches, localsource, xrootdsource, **options):
     def explode(x):
         parsed = urlparse(x)
         if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0:
@@ -122,9 +123,6 @@ def _iterate(path, treepath, branches, recover, localsource, xrootdsource, **opt
     globalentrystart = 0
     for path in paths:
         tree = uproot.rootio.open(path, localsource=localsource, xrootdsource=xrootdsource, **options)[treepath]
-        if recover:
-            tree.recover()
-
         listbranches = list(tree._normalize_branches(branches))
 
         newbranches = OrderedDict((branch.name, interpretation) for branch, interpretation in listbranches)
@@ -472,9 +470,9 @@ class TTreeMethods(object):
                 stream.write(line)
                 stream.write("\n")
 
-    def recover(self):
+    def _recover(self):
         for branch in self.allvalues():
-            branch.recover()
+            branch._recover()
 
     def _normalize_branches(self, arg):
         if arg is None:                                    # no specification; read all branches
@@ -563,6 +561,7 @@ class TBranchMethods(object):
         self._context = context
         self._streamer = None
         self._recoveredbasket = None
+        self._triedrecover = False
 
     @property
     def name(self):
@@ -616,6 +615,7 @@ class TBranchMethods(object):
 
     @property
     def numbaskets(self):
+        self._tryrecover()
         if self._recoveredbasket is None:
             return self.fWriteBasket
         else:
@@ -724,6 +724,7 @@ class TBranchMethods(object):
         return interpretation
 
     def numitems(self, interpretation=None, keycache=None):
+        self._tryrecover()
         interpretation = self._normalize_interpretation(interpretation)
         return sum(interpretation.numitems(key.border, self.basket_numentries(i)) for i, key in enumerate(_threadsafe_iterate_keys(keycache, True)))
 
@@ -732,6 +733,8 @@ class TBranchMethods(object):
         return uproot.source.compressed.Compression(self.fCompress)
 
     def basket_entrystart(self, i):
+        self._tryrecover()
+
         if 0 <= i < self.numbaskets:
             return self.fBasketEntry[i]
 
@@ -739,6 +742,8 @@ class TBranchMethods(object):
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
     def basket_entrystop(self, i):
+        self._tryrecover()
+
         if 0 <= i < self.fWriteBasket:
             return self.fBasketEntry[i + 1]
 
@@ -752,13 +757,16 @@ class TBranchMethods(object):
         return self.basket_entrystop(i) - self.basket_entrystart(i)
 
     def basket_uncompressedbytes(self, i, keycache=None):
+        self._tryrecover()
         return self._threadsafe_key(i, keycache, False).fObjlen
 
     def basket_compressedbytes(self, i):
+        self._tryrecover()
         key = self._threadsafe_key(i, keycache, False)
         return key.fNbytes - key.fKeylen
 
     def basket_numitems(self, i, interpretation=None, keycache=None):
+        self._tryrecover()
         interpretation = self._normalize_interpretation(interpretation)
         key = self._threadsafe_key(i, keycache, True)
         return interpretation.numitems(key.border, self.basket_numentries(i))
@@ -814,6 +822,8 @@ class TBranchMethods(object):
         return interpretation.fromroot(data, offsets, local_entrystart, local_entrystop)
 
     def basket(self, i, interpretation=None, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None):
+        self._tryrecover()
+
         if not 0 <= i < self.numbaskets:
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
@@ -858,6 +868,8 @@ class TBranchMethods(object):
         return basketstart, basketstop
 
     def baskets(self, interpretation=None, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, reportentries=False, executor=None, blocking=True):
+        self._tryrecover()
+
         interpretation = self._normalize_interpretation(interpretation)
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
         basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
@@ -905,6 +917,8 @@ class TBranchMethods(object):
             return wait
 
     def iterate_baskets(self, interpretation=None, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, reportentries=False):
+        self._tryrecover()
+
         interpretation = self._normalize_interpretation(interpretation)
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
 
@@ -935,6 +949,8 @@ class TBranchMethods(object):
         return basket_entryoffset
 
     def array(self, interpretation=None, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+        self._tryrecover()
+
         interpretation = self._normalize_interpretation(interpretation)
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
         basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
@@ -1026,6 +1042,8 @@ class TBranchMethods(object):
             return wait
 
     def _step_array(self, interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, cache, basketcache, keycache, executor, explicit_basketcache):
+        self._tryrecover()
+
         if cache is not None:
             out = cache.get(self._cachekey(interpretation, entrystart, entrystop), None)
             if out is not None:
@@ -1105,6 +1123,7 @@ class TBranchMethods(object):
         return wait
 
     def lazyarray(self, interpretation=None, cache=None, basketcache=None, keycache=None, executor=None):
+        self._tryrecover()
         interpretation = self._normalize_interpretation(interpretation)
         return self._LazyArray(self, interpretation, cache, basketcache, keycache, executor)
 
@@ -1277,13 +1296,21 @@ class TBranchMethods(object):
         def basketdata(self):
             return self.contents
 
-    def recover(self):
+    def _recover(self):
         if self._recoveredbasket is None:
             recovered = [x for x in uproot.rootio.TObjArray.read(self._source, self.fBaskets._cursor, self._context, asclass=TBranchMethods._RecoveredTBasket) if x is not None]
             if len(recovered) == 1:
                 self._recoveredbasket = recovered[0]
             else:
                 raise ValueError("recovered {0} baskets, expected 1".format(len(recovered)))
+
+    def _tryrecover(self):
+        if not self._triedrecover and self.numentries != self.fBasketEntry[self.fWriteBasket]:
+            try:
+                self._recover()
+            except Exception as err:
+                warnings.warn("attempted to read missing baskets from incompletely written file, but encountered {0}: {1}".format(err.__class__.__name__, str(err)))
+        self._triedrecover = True
 
     def _basketkey(self, source, i, complete):
         if 0 <= i < self.fWriteBasket:
