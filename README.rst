@@ -588,8 +588,7 @@ Only the first three baskets were touched by the above call (and hence, only tho
          memmap([ 0,  0,  0, 36,  0,  0,  0, 37,  0,  0,  0, 38,  0,  0,  0, 39, 0,  0,  0,
                  40,  0,  0,  0, 41], dtype=uint8),
      'foriter.root;foriter;data;7;raw':
-         memmap([ 0,  0,  0, 42,  0,  0,  0, 43,  0,  0,  0, 44,  0,  0,  0, 45],
-                dtype=uint8)}
+         memmap([ 0,  0,  0, 42,  0,  0,  0, 43,  0,  0,  0, 44,  0,  0,  0, 45], dtype=uint8)}
 
 All of the baskets were touched by the above call (and hence, they are all loaded into cache).
 
