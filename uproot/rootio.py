@@ -203,7 +203,7 @@ class ROOTDirectory(object):
         return len(self._keys)
 
     def __iter__(self):
-        return self.keys()
+        return self.iterkeys()
 
     @staticmethod
     def _withoutcycle(key):

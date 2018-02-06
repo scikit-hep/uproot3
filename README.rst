@@ -58,16 +58,17 @@ Download a Z → μμ `flat ntuple <http://scikit-hep.org/uproot/examples/Zmumu.
     wget http://scikit-hep.org/uproot/examples/Zmumu.root
     wget http://scikit-hep.org/uproot/examples/HZZ.root
 
-Open each of the files; uproot presents them as dict-like objects with ROOT names and objects as keys and values. (The "cycle number" after the semicolon can usually be ignored.)
+Open each of the files; uproot presents them as ``dict``-like objects with ROOT names and objects as keys and values. (The "cycle number" after the semicolon can usually be ignored.)
 
 .. code-block:: python
 
+    >>> import uproot
     >>> uproot.open("Zmumu.root").keys()
     ['events;1']
     >>> uproot.open("HZZ.root").keys()
     ['events;1']
 
-Since the file acts as a dict, access the TTrees with square brackets. TTrees are also dict-like objects, with branch names and branches as keys and values. (Hint: ``allkeys()`` lists branches recursively, if they're nested.)
+Since the file acts as a ``dict``, access the TTrees with square brackets. TTrees are also ``dict``-like objects, with branch names and branches as keys and values. (Hint: ``allkeys()`` lists branches recursively, if they're nested.)
 
 .. code-block:: python
 
@@ -167,6 +168,37 @@ Reference documentation is not the place to start learning about a topic. Introd
 Exploring a file
 """"""""""""""""
 
+Download the `nesteddirs.root <http://scikit-hep.org/uproot/examples/nesteddirs.root>`_ sample and open it with uproot.
+
+.. code-block:: bash
+
+    wget http://scikit-hep.org/uproot/examples/nesteddirs.root
+
+.. code-block:: python
+
+    >>> import uproot
+    >>> file = uproot.open("nesteddirs.root")
+
+This ``file`` is a `ROOTDirectory`_, a class that can represent either a whole ROOT file or a TDirectory within that file. It emulates a Python ``dict``, so if you're familiar with this interface, you don't have to remember many method names. The "keys" are the names ROOT uses to find objects in files and the "values" are the data themselves.
+
+.. code-block:: python
+
+    >>> file.keys()                                      # get keys as a list
+    ['one;1', 'three;1']
+    >>> file.iterkeys()                                  # iterate over keys
+    <generator object iterkeys at 0x77209e67c0a0>
+    >>> (x for x in file)                                # iterate over keys (just like a dict)
+    <generator object <genexpr> at 0x7de7eca80320>
+    >>> file.allkeys()                                   # get all keys recursively
+    ['one;1', 'one/two;1', 'one/two/tree;1', 'one/tree;1', 'three;1', 'three/tree;1']
+
+If you only ask for the keys, the data won't be loaded (which can be important for performance!). The ``values()`` and ``items()`` functions do the same thing they do for lists, and there's an "iter" and "all" form for each of them.
+
+
+
+
+
+
 Remote files through XRootD
 """""""""""""""""""""""""""
 
@@ -194,3 +226,6 @@ Lazy arrays
 Connectors to other packages
 """"""""""""""""""""""""""""
 
+
+
+.. _ROOTDirectory: http://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootdirectory
