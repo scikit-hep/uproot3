@@ -42,7 +42,6 @@ Optional dependencies:
 
 - `XRootD <https://anaconda.org/nlesc/xrootd>`_ to access remote files
 - `python-futures <https://pypi.python.org/pypi/futures>`_ for parallel processing; this is part of the Python 3 standard library, so only install for Python 2
-- `Numba and LLVM <http://numba.pydata.org/numba-doc/latest/user/installing.html>`_ to JIT-compile functions (requires a particular version of LLVM, follow instructions)
 
 *Reminder: you do not need C++ ROOT to run uproot.*
 
@@ -653,8 +652,84 @@ By default, the iteration step size is the minimum necessary to line up with bas
 Iterating over files (like TChain)
 """"""""""""""""""""""""""""""""""
 
+If one file doesn't fit in memory, a collection of them won't, so we need to iterate over a collection of files just as we iterate over one file. The interface for this is similar to the `TTree`_ ``iterate`` method:
+
+.. code-block:: python
+
+    ['Type', 'Run', 'Event', 'E1', 'px1', 'py1', 'pz1', 'pt1', 'eta1', 'phi1', 'Q1', 'E2',
+
+    >>> for arrays in uproot.iterate("/set/of/files*.root", "events",
+    ...         ["branch1",
+    ...          "branch2",
+    ...          "branch3"
+    ...         ],entrysteps=10000):
+    ...     do_something_with(arrays)
+
+The **branches** parameter is the same (usually, a list of `TBranch`_ names will do), as is **entrysteps**, **outputtype**, caching, and parallel processing parameters. Since this form must iterate over a collection of files, it also takes a **path** (string with wildcards or a list of strings) and a **treepath** (location of the `TTree`_ within each file; must be the same), as well as **xrootdsource** options, if relevant.
+
 Non-flat TTrees: jagged arrays and more
 """""""""""""""""""""""""""""""""""""""
+
+We have already seen non-scalar structure in the `H → ZZ → μμμμ sample <http://scikit-hep.org/uproot/examples/HZZ.root>`_.
+
+.. code-block:: bash
+
+    wget http://scikit-hep.org/uproot/examples/HZZ.root
+
+.. code-block:: python
+
+    >>> import uproot
+    >>> tree = uproot.open("HZZ.root")["events"]
+    >>> tree.arrays(["Muon_Px", "Muon_Py", "Muon_Pz"])
+    {'Muon_Pz':
+        jaggedarray([[ -8.160793 -11.307582],
+                     [20.199968],
+                     [11.168285 36.96519 ],
+                     ...,
+                     [-52.66375],
+                     [162.17632],
+                     [54.719437]]),
+     'Muon_Py':
+        jaggedarray([[-11.654672    0.6934736],
+                     [-24.404259],
+                     [-21.723139  29.800508],
+                     ...,
+                     [-15.303859],
+                     [63.60957],
+                     [-35.665077]]),
+     'Muon_Px':
+        jaggedarray([[-52.899456  37.73778 ],
+                     [-0.81645936],
+                     [48.98783    0.8275667],
+                     ...,
+                     [-29.756786],
+                     [1.1418698],
+                     [23.913206]])}
+
+Jagged arrays are presented as Python objects with an array-like syntax (square brackets), but the subarrays that you get from each entry can have a different length. You can use this in straightforward Python code.
+
+.. code-block:: python
+
+    >>> px, py, pz = tree.arrays(["Muon_Px", "Muon_Py", "Muon_Pz"], outputtype=tuple)
+    >>> import math
+    >>> p = []
+    >>> for pxi, pyi, pzi in zip(px, py, pz):
+    ...     p.append([])
+    ...     for pxj, pyj, pzj in zip(pxi, pyi, pzi):
+    ...         p[-1].append(math.sqrt(pxj**2 + pyj**2 + pzj**2))
+
+But you can also take advantage of the fact that `JaggedArray`_ is backed by Numpy arrays to perform structure-preserving operations much more quickly. The following does the same thing as the above, but using only Numpy calls.
+
+.. code-block:: python
+
+    >>> import numpy
+    >>> pcontent = numpy.sqrt(px.content**2 + py.content**2 + pz.content**2)
+    >>> p = uproot.interp.jagged.JaggedArray(pcontent, px.starts, px.stops)
+
+
+
+
+
 
 Non-TTrees: histograms and more
 """""""""""""""""""""""""""""""
@@ -684,3 +759,4 @@ Connectors to other packages
 .. _TTree: http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods
 .. _TBranch: http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods
 .. _Interpretation: http://uproot.readthedocs.io/en/latest/interpretation.html
+.. _JaggedArray: http://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-jagged-jaggedarray
