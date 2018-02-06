@@ -56,7 +56,11 @@ def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defa
     parsed = urlparse(path)
     if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0:
         path = parsed.netloc + parsed.path
-        return ROOTDirectory.read(localsource(path), **options)
+        if isinstance(localsource, dict):
+            openfcn = lambda path: MemmapSource(path, **localsource)
+        else:
+            openfcn = localsource
+        return ROOTDirectory.read(openfcn(path), **options)
 
     elif _bytesid(parsed.scheme) == b"root":
         return xrootd(path, xrootdsource)
@@ -65,7 +69,11 @@ def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defa
         raise ValueError("URI scheme not recognized: {0}".format(path))
 
 def xrootd(path, xrootdsource=XRootDSource.defaults, **options):
-    return ROOTDirectory.read(xrootdsource(path), **options)
+    if isinstance(xrootdsource, dict):
+        openfcn = lambda path: XRootDSource(path, **xrootdsource)
+    else:
+        openfcn = xrootdsource
+    return ROOTDirectory.read(openfcn(path), **options)
 
 def nofilter(x): return True
 

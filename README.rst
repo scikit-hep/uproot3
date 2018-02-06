@@ -433,11 +433,58 @@ The **cache**, **basketcache**, and **keycache** parameters allow you to avoid r
 
 The **executor** and **blocking** parameters allow you to read and possibly decompress the branches in parallel. See `Parallel processing`_ below.
 
+All of the `TTree`_ and `TBranch`_ methods that read data into arrays— ``array``, ``lazyarray``, ``arrays``,  ``lazyarrays``, ``iterate``, ``basket``, ``baskets``, and ``iterate_baskets``— all use these parameters consistently. If you understand what they do for one method, you understand them all.
+
 Remote files through XRootD
 """""""""""""""""""""""""""
 
+XRootD is a remote file protocol that allows selective reading: if you only want a few arrays from a file that has hundreds, it can be much faster to leave the file on the server and read it through XRootD.
+
+To use XRootD with uproot, you need to have an XRootD installation with its Python interface (ships with XRootD 4 and up). You may `install XRootD with conda <https://anaconda.org/nlesc/xrootd>`_ or `install XRootD from source <http://xrootd.org/dload.html>`_, but in the latter case, be sure to configure ``PYTHONPATH`` and ``LD_LIBRARY_PATH`` such that
+
+.. code-block:: python
+
+    >>> import pyxrootd
+
+does not raise an ``ImportError`` exception.
+
+Once XRootD is installed, you can open remote files in uproot by specifying the ``root://`` protocol:
+
+.. code-block:: python
+
+    >>> import uproot
+    >>> file = uproot.open("root://eospublic.cern.ch//eos/opendata/atlas/OutreachDatasets/"
+    ...                    "2016-07-29/MC/mc_117049.ttbar_had.root")
+    >>> file.keys()
+    ['mini;1']
+    >>> tree = file["mini"]
+    >>> tree.show()
+    runNumber                  (no streamer)              asdtype('>i4')
+    eventNumber                (no streamer)              asdtype('>i4')
+    channelNumber              (no streamer)              asdtype('>i4')
+    mcWeight                   (no streamer)              asdtype('>f4')
+    pvxp_n                     (no streamer)              asdtype('>i4')
+    vxp_z                      (no streamer)              asdtype('>f4')
+    ...
+
+Apart from possible network bandwidth issues, this `ROOTDirectory`_ and the objects it contains are indistinguishable from data from a local file.
+
+Unlike a local file, however, remote files are buffered and cached by uproot. (The operating system buffers and caches local files!) For performance reasons, you may need to tune this buffering and caching: you do it through an **xrootdsource** parameter.
+
+.. code-block:: python
+
+    >>> file = uproot.open(..., xrootdsource=dict(chunkbytes=8*1024, limitbytes=1024**2))
+
+- **chunkbytes** is the granularity (in bytes) of requests through XRootD (by default, it requests data in 8 kB chunks);
+- **limitbytes** is the number of bytes that are held in memory before evicting and reusing memory (by default, it stores 1 MB of recently read XRootD data).
+
+These defaults have not been tuned. You might find improvements in throughput by tweaking them.
+
 Reading only part of a TBranch
 """"""""""""""""""""""""""""""
+
+
+
 
 Iterating over files (like TChain)
 """"""""""""""""""""""""""""""""""
