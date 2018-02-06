@@ -208,14 +208,14 @@ In addition, `ROOTDirectory`_ has ``classes()``, ``iterclasses()`` and ``allclas
 .. code-block:: python
 
     >>> for n, x in file.allclasses():
-    ...     print(n, "\t", x)
+    ...     print(repr(n), "\t", x)
     ... 
-    one;1           <class 'uproot.rootio.ROOTDirectory'>
-    one/two;1       <class 'uproot.rootio.ROOTDirectory'>
-    one/two/tree;1  <class 'uproot.rootio.TTree'>
-    one/tree;1      <class 'uproot.rootio.TTree'>
-    three;1         <class 'uproot.rootio.ROOTDirectory'>
-    three/tree;1    <class 'uproot.rootio.TTree'>
+    'one;1'          <class 'uproot.rootio.ROOTDirectory'>
+    'one/two;1'      <class 'uproot.rootio.ROOTDirectory'>
+    'one/two/tree;1' <class 'uproot.rootio.TTree'>
+    'one/tree;1'     <class 'uproot.rootio.TTree'>
+    'three;1'        <class 'uproot.rootio.ROOTDirectory'>
+    'three/tree;1'   <class 'uproot.rootio.TTree'>
 
 As with a ``dict``, square brackets extract values by key. If you include ``"/"`` or ``";"`` in your request, you can specify subdirectories or cycle numbers (those ``;1`` at the end of key names, which you can usually ignore).
 
