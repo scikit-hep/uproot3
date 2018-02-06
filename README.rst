@@ -47,7 +47,7 @@ or similar (use ``sudo``, ``virtualenv``, or ``conda`` if you wish).
 Getting started
 ---------------
 
-Download a `Z → μμ flat ntuple <http://scikit-hep.org/uproot/examples/Zmumu.root>`_ and a `H → ZZ → μμμμ <http://scikit-hep.org/uproot/examples/HZZ.root>`_ structured TTree.
+Download a Z → μμ `flat ntuple <http://scikit-hep.org/uproot/examples/Zmumu.root>`_ and a H → ZZ → μμμμ `structured TTree <http://scikit-hep.org/uproot/examples/HZZ.root>`_.
 
 .. code-block:: bash
 
