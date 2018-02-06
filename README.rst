@@ -153,6 +153,7 @@ Introductory tutorials
 Reference documentation is not the place to start learning about a topic. Introductory tutorials are included on this page.
 
 - `Exploring a file <#exploring-a-file>`_
+- `Array-reading options <#array-reading-options>`_
 - `Remote files through XRootD <#remote-files-through-xrootd>`_
 - `Reading only part of a TBranch <#reading-only-part-of-a-tbranch>`_
 - `Iterating over files (like TChain) <#iterating-over-files-like-tchain>`_
@@ -194,10 +195,109 @@ This ``file`` is a `ROOTDirectory`_, a class that can represent either a whole R
 
 If you only ask for the keys, the data won't be loaded (which can be important for performance!). The ``values()`` and ``items()`` functions do the same thing they do for lists, and there's an "iter" and "all" form for each of them.
 
+.. code-block:: python
 
+    >>> file.values()
+    [<ROOTDirectory 'one' at 0x783af8f82d10>, <ROOTDirectory 'three' at 0x783af8cf6250>]
+    >>> file.items()
+    [('one;1', <ROOTDirectory 'one' at 0x783af8cf64d0>),
+     ('three;1', <ROOTDirectory 'three' at 0x783af8cf6810>)]
 
+In addition, `ROOTDirectory`_ has ``classes()``, ``iterclasses()`` and ``allclasses()`` to iterate over keys and class names of the contained objects. You can identify the class of an object before loading it.
 
+.. code-block:: python
 
+    >>> for n, x in file.allclasses():
+    ...     print(n, "\t", x)
+    ... 
+    one;1           <class 'uproot.rootio.ROOTDirectory'>
+    one/two;1       <class 'uproot.rootio.ROOTDirectory'>
+    one/two/tree;1  <class 'uproot.rootio.TTree'>
+    one/tree;1      <class 'uproot.rootio.TTree'>
+    three;1         <class 'uproot.rootio.ROOTDirectory'>
+    three/tree;1    <class 'uproot.rootio.TTree'>
+
+As with a ``dict``, square brackets extract values by key. If you include ``"/"`` or ``";"`` in your request, you can specify subdirectories or cycle numbers (those ``;1`` at the end of key names, which you can usually ignore).
+
+.. code-block:: python
+
+    >>> file["one"]["two"]["tree"]
+    <TTree 'tree' at 0x783af8f8aed0>
+
+is equivalent to
+
+.. code-block:: python
+
+    >>> file["one/two/tree"]
+    <TTree 'tree' at 0x783af8cf6490>
+
+The memory management is explicit: each time you request a value from a `ROOTDirectory`_, it is deserialized from the file. This usually doesn't matter on the command-line, but it could in a loop.
+
+`TTree`_ objects are also ``dict``-like objects, but this time the keys and values are the `TBranch`_ names and objects. If you're not familiar with ROOT terminology, "tree" means a dataset and "branch" means one column or attribute of that dataset. The `TTree`_ class also has ``keys()``, ``iterkeys()``, ``allkeys()``, ``values()``, ``items()``, etc., because `TBranch`_ instances may be nested.
+
+To get an overview of what's available in the `TTree`_ and whether uproot can read it, call ``show()``.
+
+.. code-block:: python
+
+    >>> tree.show()
+    Int32                      (no streamer)              asdtype('>i4')
+    Int64                      (no streamer)              asdtype('>i8')
+    UInt32                     (no streamer)              asdtype('>u4')
+    UInt64                     (no streamer)              asdtype('>u8')
+    Float32                    (no streamer)              asdtype('>f4')
+    Float64                    (no streamer)              asdtype('>f8')
+    Str                        (no streamer)              asstrings()
+    ArrayInt32                 (no streamer)              asdtype('>i4', (10,))
+    ArrayInt64                 (no streamer)              asdtype('>i8', (10,))
+    ArrayUInt32                (no streamer)              asdtype('>u4', (10,))
+    ArrayUInt64                (no streamer)              asdtype('>u8', (10,))
+    ArrayFloat32               (no streamer)              asdtype('>f4', (10,))
+    ArrayFloat64               (no streamer)              asdtype('>f8', (10,))
+    N                          (no streamer)              asdtype('>i4')
+    SliceInt32                 (no streamer)              asjagged(asdtype('>i4'))
+    SliceInt64                 (no streamer)              asjagged(asdtype('>i8'))
+    SliceUInt32                (no streamer)              asjagged(asdtype('>u4'))
+    SliceUInt64                (no streamer)              asjagged(asdtype('>u8'))
+    SliceFloat32               (no streamer)              asjagged(asdtype('>f4'))
+    SliceFloat64               (no streamer)              asjagged(asdtype('>f8'))
+
+The first column shows `TBranch`_ names, the "streamers" in the second column are ROOT schemas in the file used to reconstruct complex user classes. (This file doesn't have any.) The third column shows uproot's default interpretation of the data. If any `TBranch`_ objects have ``None`` as the default interpretation, it uproot cannot read it (but possibly will in the future, as more types are handled).
+
+You can read each `TBranch`_ into an array by calling ``array()`` on the `TBranch`_
+
+.. code-block:: python
+
+    >>> tree["Float64"].array()
+    array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11., 12.,
+           13., 14., 15., 16., 17., 18., 19., 20., 21., 22., 23., 24., 25.,
+           26., 27., 28., 29., 30., 31., 32., 33., 34., 35., 36., 37., 38.,
+           39., 40., 41., 42., 43., 44., 45., 46., 47., 48., 49., 50., 51.,
+           52., 53., 54., 55., 56., 57., 58., 59., 60., 61., 62., 63., 64.,
+           65., 66., 67., 68., 69., 70., 71., 72., 73., 74., 75., 76., 77.,
+           78., 79., 80., 81., 82., 83., 84., 85., 86., 87., 88., 89., 90.,
+           91., 92., 93., 94., 95., 96., 97., 98., 99.])
+    >>> tree["Str"].array()
+    strings(['evt-000' 'evt-001' 'evt-002' ... 'evt-097' 'evt-098' 'evt-099'])
+    >>> tree["SliceInt32"].array()
+    jaggedarray([[],
+                 [1],
+                 [2 2],
+                 ...,
+                 [97 97 97 ... 97 97 97],
+                 [98 98 98 ... 98 98 98],
+                 [99 99 99 ... 99 99 99]])
+
+or read many at once with a single ``arrays([...])`` call on the `TTree`_.
+
+.. code-block:: python
+
+    >>> tree.arrays(["Int32", "Int64", "UInt32", "UInt64", "Float32", "Float64"])
+    ...
+    >>> tree.arrays()
+    ...
+
+Array-reading options
+"""""""""""""""""""""
 
 Remote files through XRootD
 """""""""""""""""""""""""""
@@ -229,3 +329,5 @@ Connectors to other packages
 
 
 .. _ROOTDirectory: http://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootdirectory
+.. _TTree: http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods
+.. _TBranch: http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods
