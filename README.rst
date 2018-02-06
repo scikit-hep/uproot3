@@ -627,6 +627,35 @@ By default, the iteration step size is the minimum necessary to line up with bas
 Lazy arrays
 """""""""""
 
+Another reason for loading only part of an array is to get a sense of the data without reading all of it. This can be a particularly useful way to examine a remote file over XRootD with a slow network connection.
+
+.. code-block:: python
+
+    >>> basketcache = {}
+    >>> myarray = branch.lazyarray(basketcache=basketcache)
+    >>> myarray
+    <uproot.tree._LazyArray object at 0x71eb8661f9d0>
+    >>> len(basketcache)
+    0
+    >>> myarray[5]
+    5
+    >>> len(basketcache)
+    1
+    >>> myarray[5:15]
+    array([ 5,  6,  7,  8,  9, 10, 11, 12, 13, 14], dtype=int32)
+    >>> len(basketcache)
+    3
+    >>> import numpy
+    >>> myarray[:]
+    array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
+           17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33,
+           34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45], dtype=int32)
+    >>> len(basketcache)
+    8
+
+Whenever a lazy array is indexed or sliced, it loads as little as possible to yield the result. Slicing everything (``[:]``) gives you a normal array.
+
+Since caching in uproot is always explicit (for consistency: see `Caching data`_), repeatedly indexing the same value repeatedly reads from the file unless you specify a cache. You'd probably always want to provide lazy arrays with caches.
 
 Iterating over files (like TChain)
 """"""""""""""""""""""""""""""""""
