@@ -152,17 +152,17 @@ Introductory tutorials
 
 Reference documentation is not the place to start learning about a topic. Introductory tutorials are included on this page.
 
-- `Exploring a file <#exploring-a-file>`_
-- `Array-reading parameters <#array-reading-parameters>`_
-- `Remote files through XRootD <#remote-files-through-xrootd>`_
-- `Reading only part of a TBranch <#reading-only-part-of-a-tbranch>`_
-- `Iterating over files (like TChain) <#iterating-over-files-like-tchain>`_
-- `Non-flat TTrees: jagged arrays and more <#non-flat-ttrees-jagged-arrays-and-more>`_
-- `Non-TTrees: histograms and more <#non-ttrees-histograms-and-more>`_
-- `Caching data <#caching-data>`_
-- `Parallel processing <#parallel-processing>`_
-- `Lazy arrays <#lazy-arrays>`_
-- `Connectors to other packages <#connectors-to-other-packages>`_
+- `Exploring a file`_
+- `Array-reading parameters`_
+- `Remote files through XRootD`_
+- `Reading only part of a TBranch`_
+- `Iterating over files (like TChain)`_
+- `Non-flat TTrees: jagged arrays and more`_
+- `Non-TTrees: histograms and more`_
+- `Caching data`_
+- `Parallel processing`_
+- `Lazy arrays`_
+- `Connectors to other packages`_
 
 .. inclusion-marker-5-do-not-remove
 
@@ -307,14 +307,127 @@ The **branches** parameter lets you specify which `TBranch`_ data to load and op
 - If it's a single string, you'll get the only array you've named.
 - If it's a list of strings, you'll get all the arrays you've named.
 - If it's a ``dict`` from name to `Interpretation`_, you'll read the requested arrays in the specified ways.
-- If it's a function, that function will be called on each `TBranch`_ object. If it returns ``None``, that `TBranch`_ will not be read; otherwise, it uses the return value as an `Interpretation`_.
+- There's also a functional form that gives more control at the cost of more complexity.
 
-Why would you want to use a non-default interpretation? They allow you to 
+Interpretations let you interpret the bytes of the ROOT file in different ways. Naturally, most of these are non-sensical:
 
+.. code-block:: python
 
+    >>> tree.arrays("Float64")
+    {'Float64': array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11., 12.,
+                        13., 14., 15., 16., 17., 18., 19., 20., 21., 22., 23., 24., 25.,
+                        26., 27., 28., 29., 30., 31., 32., 33., 34., 35., 36., 37., 38.,
+                        39., 40., 41., 42., 43., 44., 45., 46., 47., 48., 49., 50., 51.,
+                        52., 53., 54., 55., 56., 57., 58., 59., 60., 61., 62., 63., 64.,
+                        65., 66., 67., 68., 69., 70., 71., 72., 73., 74., 75., 76., 77.,
+                        78., 79., 80., 81., 82., 83., 84., 85., 86., 87., 88., 89., 90.,
+                        91., 92., 93., 94., 95., 96., 97., 98., 99.])}
+    >>> tree.arrays({"Float32": uproot.interp.asdtype("<i4")})
+    {'Float32': array([    0, 32831,    64, 16448, 32832, 41024, 49216, 57408,    65,
+                        4161,  8257, 12353, 16449, 20545, 24641, 28737, 32833, 34881,
+                       36929, 38977, 41025, 43073, 45121, 47169, 49217, 51265, 53313,
+                       55361, 57409, 59457, 61505, 63553,    66,  1090,  2114,  3138,
+                        4162,  5186,  6210,  7234,  8258,  9282, 10306, 11330, 12354,
+                       13378, 14402, 15426, 16450, 17474, 18498, 19522, 20546, 21570,
+                       22594, 23618, 24642, 25666, 26690, 27714, 28738, 29762, 30786,
+                       31810, 32834, 33346, 33858, 34370, 34882, 35394, 35906, 36418,
+                       36930, 37442, 37954, 38466, 38978, 39490, 40002, 40514, 41026,
+                       41538, 42050, 42562, 43074, 43586, 44098, 44610, 45122, 45634,
+                       46146, 46658, 47170, 47682, 48194, 48706, 49218, 49730, 50242,
+                       50754], dtype=int32)}
 
+But some are useful:
 
+.. code-block:: python
 
+    >>> tree.arrays({"Float64": uproot.interp.asdtype(">f8", todims=(5, 5))})
+    {'Float64': array([[[ 0.,  1.,  2.,  3.,  4.],
+                        [ 5.,  6.,  7.,  8.,  9.],
+                        [10., 11., 12., 13., 14.],
+                        [15., 16., 17., 18., 19.],
+                        [20., 21., 22., 23., 24.]],
+
+                       [[25., 26., 27., 28., 29.],
+                        [30., 31., 32., 33., 34.],
+                        [35., 36., 37., 38., 39.],
+                        [40., 41., 42., 43., 44.],
+                        [45., 46., 47., 48., 49.]],
+
+                       [[50., 51., 52., 53., 54.],
+                        [55., 56., 57., 58., 59.],
+                        [60., 61., 62., 63., 64.],
+                        [65., 66., 67., 68., 69.],
+                        [70., 71., 72., 73., 74.]],
+
+                       [[75., 76., 77., 78., 79.],
+                        [80., 81., 82., 83., 84.],
+                        [85., 86., 87., 88., 89.],
+                        [90., 91., 92., 93., 94.],
+                        [95., 96., 97., 98., 99.]]])}
+
+In particular, replacing ``asdtype`` with ``asarray`` lets you instruct uproot to fill an existing array, so that you can manage your own memory:
+
+.. code-block:: python
+
+    >>> import numpy
+    >>> myarray = numpy.zeros(200)   # allocate 200 zeros
+
+    >>> tree.arrays({"Float64": uproot.interp.asarray(">f8", myarray)})
+    {'Float64': array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11., 12.,
+                       13., 14., 15., 16., 17., 18., 19., 20., 21., 22., 23., 24., 25.,
+                       26., 27., 28., 29., 30., 31., 32., 33., 34., 35., 36., 37., 38.,
+                       39., 40., 41., 42., 43., 44., 45., 46., 47., 48., 49., 50., 51.,
+                       52., 53., 54., 55., 56., 57., 58., 59., 60., 61., 62., 63., 64.,
+                       65., 66., 67., 68., 69., 70., 71., 72., 73., 74., 75., 76., 77.,
+                       78., 79., 80., 81., 82., 83., 84., 85., 86., 87., 88., 89., 90.,
+                       91., 92., 93., 94., 95., 96., 97., 98., 99.])}
+    >>> myarray
+    array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11., 12.,
+           13., 14., 15., 16., 17., 18., 19., 20., 21., 22., 23., 24., 25.,
+           26., 27., 28., 29., 30., 31., 32., 33., 34., 35., 36., 37., 38.,
+           39., 40., 41., 42., 43., 44., 45., 46., 47., 48., 49., 50., 51.,
+           52., 53., 54., 55., 56., 57., 58., 59., 60., 61., 62., 63., 64.,
+           65., 66., 67., 68., 69., 70., 71., 72., 73., 74., 75., 76., 77.,
+           78., 79., 80., 81., 82., 83., 84., 85., 86., 87., 88., 89., 90.,
+           91., 92., 93., 94., 95., 96., 97., 98., 99.,  0.,  0.,  0.,  0.,
+            0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,
+            0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,
+            0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,
+            0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,
+            0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,
+            0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,
+            0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,
+            0.,  0.,  0.,  0.,  0.])
+
+The **outputtype** parameter lets you specify the container for your arrays. By default, you get a ``dict``, but that wouldn't be very useful in a ``for`` loop:
+
+.. code-block:: python
+
+    >>> for x, y, z in tree.iterate(["Float64", "Str", "ArrayInt32"]):
+    ...     print(x, y, z)
+    ... 
+    ArrayInt32 Str Float64
+
+A ``for`` loop over a ``dict`` just iterates over the names. We've read in three arrays, thrown away the arrays, and returned the names. In this case, we really wanted a tuple, which drops the names (normally needed for context), but preserves the order and unpacks into a given set of variables:
+
+.. code-block:: python
+
+    >>> for x, y, z in tree.iterate(["Float64", "Str", "ArrayInt32"], outputtype=tuple):
+    ...     print(x, y, z)
+    ...
+    [ 0.  1.  2.  3.  4.  5.  6.  7.  8.  9. 10. 11. 12. 13. 14. 15. 16. 17.
+     18. 19. 20. 21. 22. 23. 24. 25. 26. 27. 28. 29. 30. 31. 32. 33. 34. 35.
+     36. 37. 38. 39. 40. 41. 42. 43. 44. 45. 46. 47. 48. 49. 50. 51. 52. 53.
+     54. 55. 56. 57. 58. 59. 60. 61. 62. 63. 64. 65. 66. 67. 68. 69. 70. 71.
+     72. 73. 74. 75. 76. 77. 78. 79. 80. 81. 82. 83. 84. 85. 86. 87. 88. 89.
+     90. 91. 92. 93. 94. 95. 96. 97. 98. 99.]
+    ['evt-000' 'evt-001' 'evt-002' ... 'evt-097' 'evt-098' 'evt-099']
+    [[ 0  0  0  0  0  0  0  0  0  0]
+     [ 1  1  1  1  1  1  1  1  1  1]
+     [ 2  2  2  2  2  2  2  2  2  2]
+     [ 3  3  3  3  3  3  3  3  3  3]
+
+The **entrystart** and **entrystop** parameters let you slice an array while reading it, to avoid reading more than you want. See 
 
 
 Remote files through XRootD
@@ -345,6 +458,17 @@ Connectors to other packages
 """"""""""""""""""""""""""""
 
 
+.. _Exploring a file: #exploring-a-file
+.. _Array-reading parameters: #array-reading-parameters
+.. _Remote files through XRootD: #remote-files-through-xrootd
+.. _Reading only part of a TBranch: #reading-only-part-of-a-tbranch
+.. _Iterating over files (like TChain): #iterating-over-files-like-tchain
+.. _Non-flat TTrees: jagged arrays and more: #non-flat-ttrees-jagged-arrays-and-more
+.. _Non-TTrees: histograms and more: #non-ttrees-histograms-and-more
+.. _Caching data: #caching-data
+.. _Parallel processing: #parallel-processing
+.. _Lazy arrays: #lazy-arrays
+.. _Connectors to other packages: #connectors-to-other-packages
 
 .. _ROOTDirectory: http://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootdirectory
 .. _TTree: http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods
