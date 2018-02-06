@@ -153,7 +153,7 @@ Introductory tutorials
 Reference documentation is not the place to start learning about a topic. Introductory tutorials are included on this page.
 
 - `Exploring a file <#exploring-a-file>`_
-- `Array-reading options <#array-reading-options>`_
+- `Array-reading parameters <#array-reading-parameters>`_
 - `Remote files through XRootD <#remote-files-through-xrootd>`_
 - `Reading only part of a TBranch <#reading-only-part-of-a-tbranch>`_
 - `Iterating over files (like TChain) <#iterating-over-files-like-tchain>`_
@@ -261,9 +261,9 @@ To get an overview of what's available in the `TTree`_ and whether uproot can re
     SliceFloat32               (no streamer)              asjagged(asdtype('>f4'))
     SliceFloat64               (no streamer)              asjagged(asdtype('>f8'))
 
-The first column shows `TBranch`_ names, the "streamers" in the second column are ROOT schemas in the file used to reconstruct complex user classes. (This file doesn't have any.) The third column shows uproot's default interpretation of the data. If any `TBranch`_ objects have ``None`` as the default interpretation, it uproot cannot read it (but possibly will in the future, as more types are handled).
+The first column shows `TBranch`_ names, the "streamers" in the second column are ROOT schemas in the file used to reconstruct complex user classes. (This file doesn't have any.) The third column shows uproot's default interpretation of the data. If any `TBranch`_ objects have ``None`` as the default interpretation, uproot cannot read it (but possibly will in the future, as more types are handled).
 
-You can read each `TBranch`_ into an array by calling ``array()`` on the `TBranch`_
+You can read each `TBranch`_ into an array by calling ``array()`` on the `TBranch`_.
 
 .. code-block:: python
 
@@ -296,8 +296,26 @@ or read many at once with a single ``arrays([...])`` call on the `TTree`_.
     >>> tree.arrays()
     ...
 
-Array-reading options
-"""""""""""""""""""""
+Array-reading parameters
+""""""""""""""""""""""""
+
+The complete list of array-reading parameters is given in the `TTree`_ reference (`e.g. this link <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot.tree.TTreeMethods.arrays>`_), but here's a guide to what you should know.
+
+The **branches** parameter lets you specify which `TBranch`_ data to load and optionally, an interpretation other than the default.
+
+- If it's ``None`` or unspecified, you'll get all arrays.
+- If it's a single string, you'll get the only array you've named.
+- If it's a list of strings, you'll get all the arrays you've named.
+- If it's a ``dict`` from name to `Interpretation`_, you'll read the requested arrays in the specified ways.
+- If it's a function, that function will be called on each `TBranch`_ object. If it returns ``None``, that `TBranch`_ will not be read; otherwise, it uses the return value as an `Interpretation`_.
+
+Why would you want to use a non-default interpretation? They allow you to 
+
+
+
+
+
+
 
 Remote files through XRootD
 """""""""""""""""""""""""""
@@ -331,3 +349,4 @@ Connectors to other packages
 .. _ROOTDirectory: http://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootdirectory
 .. _TTree: http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods
 .. _TBranch: http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods
+.. _Interpretation: http://uproot.readthedocs.io/en/latest/interpretation.html

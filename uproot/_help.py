@@ -91,13 +91,6 @@ u"""Opens a ROOT file (local or remote), specified by file path.
     Notes
     -----
     The ROOTDirectory returned by this function is not necessarily an open file. File handles are managed internally by :py:class:`Source <uproot.source.source.Source>` objects to permit parallel reading. Although this function can be used in a ``with`` construct (which protects against unclosed files), the ``with`` construct has no meaning when applied to this function. Files will be opened or closed as needed to read data on demand.
-
-    Examples
-    --------
-    ::
-
-        import uproot
-        tfile = uproot.open("/my/root/file.root")
     """.format(**open_fragments)
 
 ################################################################ uproot.rootio.xrootd
@@ -118,13 +111,6 @@ u"""Opens a remote ROOT file with XRootD (if installed).
     -------
     :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>`
         top-level directory of the ROOT file.
-    
-    Examples
-    --------
-    ::
-
-        import uproot
-        tfile = uproot.open("root://eos-server.cern/store/file.root")
     """.format(**open_fragments)
 
 ################################################################ uproot.rootio.ROOTDirectory
@@ -543,24 +529,6 @@ u"""Opens a series of ROOT files (local or remote), yielding the same number of 
     -------
     iterator over (int, int, outputtype) (if *reportentries*) or just outputtype (otherwise)
         aligned array segments from the files.
-
-    Examples
-    --------
-    ::
-
-        from math import *
-        import numpy
-        import uproot
-
-        iterator = uproot.iterate(
-            "/my/data*.root", "ParticleTree", 10000,
-            ["pt", "eta", "phi"], outputtype=tuple)
-
-        px = numpy.empty(10000)
-
-        for pt, eta, phi in iterator:
-            px[:len(pt)] = pt * sinh(eta) * cos(phi)
-            print(px[:len(pt)])
     """.format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
 
 ################################################################ uproot.tree.TTreeMethods
