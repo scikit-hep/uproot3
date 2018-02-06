@@ -43,7 +43,13 @@ def get_version():
 def get_description():
     description = open("README.rst").read()
     cutoff = description.index(".. inclusion-marker-5-do-not-remove")
-    return description[:cutoff].strip()
+    extra = """
+
+Introductory tutorials
+----------------------
+
+Introductory tutorials can be found on the `GitHub README <https://github.com/scikit-hep/uproot#introductory-tutorials>`_."""
+    return description[:cutoff].strip() + extra
 
 setup(name = "uproot",
       version = get_version(),

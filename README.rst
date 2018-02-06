@@ -8,7 +8,7 @@ uproot
 
 ROOT I/O in pure Python and Numpy.
 
-uproot (originally μproot, for "micro-Python ROOT") is a reader and (someday) a writer of the `ROOT file format <https://root.cern/>`_ using only Python and Numpy. Unlike the standard C++ ROOT implementation, uproot is only an I/O library, primarily intended to stream data into machine learning libraries in Python.
+uproot (originally μproot, for "micro-Python ROOT") is a reader and (someday) a writer of the `ROOT file format <https://root.cern/>`_ using only Python and Numpy. Unlike the standard C++ ROOT implementation, uproot is only an I/O library, primarily intended to stream data into machine learning libraries in Python. Unlike PyROOT and root_numpy, uproot does not depend on C++ ROOT. Instead, it uses Numpy calls to rapidly cast data blocks in the ROOT file as Numpy arrays.
 
 It is important to note that uproot is *not* maintained by the ROOT project team, so post bug reports as `uproot GitHub issues <https://github.com/scikit-hep/uproot/issues>`_, not on any ROOT forum.
 
@@ -70,22 +70,22 @@ Since the file acts as a dict, access the TTrees with square brackets. TTrees ar
     >>> zmumu = uproot.open("Zmumu.root")["events"]
     >>> hzz = uproot.open("HZZ.root")["events"]
     >>> zmumu.keys()
-    ['Type', 'Run', 'Event', 'E1', 'px1', 'py1', 'pz1', 'pt1', 'eta1', 'phi1', 'Q1', 'E2', 'px2', 'py2',
-     'pz2', 'pt2', 'eta2', 'phi2', 'Q2', 'M']
+    ['Type', 'Run', 'Event', 'E1', 'px1', 'py1', 'pz1', 'pt1', 'eta1', 'phi1', 'Q1', 'E2', 'px2',
+     'py2', 'pz2', 'pt2', 'eta2', 'phi2', 'Q2', 'M']
     >>> hzz.keys()
-    ['NJet', 'Jet_Px', 'Jet_Py', 'Jet_Pz', 'Jet_E', 'Jet_btag', 'Jet_ID', 'NMuon', 'Muon_Px', 'Muon_Py',
-     'Muon_Pz', 'Muon_E', 'Muon_Charge', 'Muon_Iso', 'NElectron', 'Electron_Px', 'Electron_Py',
-     'Electron_Pz', 'Electron_E', 'Electron_Charge', 'Electron_Iso', 'NPhoton', 'Photon_Px', 'Photon_Py',
-     ...]
+    ['NJet', 'Jet_Px', 'Jet_Py', 'Jet_Pz', 'Jet_E', 'Jet_btag', 'Jet_ID', 'NMuon', 'Muon_Px',
+     'Muon_Py', 'Muon_Pz', 'Muon_E', 'Muon_Charge', 'Muon_Iso', 'NElectron', 'Electron_Px',
+     'Electron_Py', 'Electron_Pz', 'Electron_E', 'Electron_Charge', 'Electron_Iso', 'NPhoton',
+    ...
 
 You can turn a chosen set of branches into Numpy arrays with the ``arrays`` method. Each array represents the values of a single attribute for all events, just as they're stored in a split ROOT file.
 
 .. code-block:: python
 
     >>> zmumu.arrays(["px1", "py1", "pz1"])
-    {'px1': array([-41.19528764,  35.11804977,  35.11804977, ...,  32.37749196, 32.37749196,  32.48539387]),
-     'py1': array([ 17.4332439 , -16.57036233, -16.57036233, ...,   1.19940578, 1.19940578,   1.2013503 ]),
-     'pz1': array([-68.96496181, -48.77524654, -48.77524654, ..., -74.53243061, -74.53243061, -74.80837247])}
+    {'px1': array([-41.19528764,  35.11804977, ..., 32.37749196,  32.48539387]),
+     'py1': array([ 17.4332439 , -16.57036233, ..., 1.19940578,   1.2013503 ]),
+     'pz1': array([-68.96496181, -48.77524654, ..., -74.53243061, -74.80837247])}
 
 If the number of items per entry is not constant, such as the number of jets in an event, they can't be expressed as flat Numpy arrays. Instead, uproot loads them into `jagged arrays <https://en.wikipedia.org/wiki/Jagged_array>`_.
 
@@ -132,7 +132,7 @@ But it's built out of regular Numpy arrays, for use in libraries that accept Num
 
 .. inclusion-marker-4-do-not-remove
 
-Reference Documentation
+Reference documentation
 -----------------------
 
 The complete reference documentation is available on `uproot.readthedocs.io <http://uproot.readthedocs.io/en/latest/>`_. These are exhaustive descriptions of each function and its parameters, also available as Python help strings.
@@ -144,7 +144,7 @@ The complete reference documentation is available on `uproot.readthedocs.io <htt
 
 .. inclusion-marker-5-do-not-remove
 
-Introductory Tutorials
+Introductory tutorials
 ----------------------
 
 Reference documentation is not the place to start learning about a topic. Introductory tutorials are included on this page.

@@ -2,7 +2,7 @@ uproot
 ======
 
 .. include:: ../../README.rst
-  :end-before: inclusion-marker-1-do-not-remove
+  :end-before: inclusion-marker-2-do-not-remove
 
 Reference documentation
 -----------------------
@@ -19,3 +19,7 @@ Reference documentation
 
 .. include:: ../../README.rst
   :start-after: inclusion-marker-2-do-not-remove
+  :end-before:  inclusion-marker-4-do-not-remove
+
+.. include:: ../../README.rst
+  :start-after: inclusion-marker-5-do-not-remove
