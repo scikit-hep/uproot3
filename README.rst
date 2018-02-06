@@ -156,12 +156,12 @@ Reference documentation is not the place to start learning about a topic. Introd
 - `Array-reading parameters`_
 - `Remote files through XRootD`_
 - `Reading only part of a TBranch`_
+- `Lazy arrays`_
 - `Iterating over files (like TChain)`_
 - `Non-flat TTrees: jagged arrays and more`_
 - `Non-TTrees: histograms and more`_
 - `Caching data`_
 - `Parallel processing`_
-- `Lazy arrays`_
 - `Connectors to other packages`_
 
 .. inclusion-marker-5-do-not-remove
@@ -235,7 +235,27 @@ The memory management is explicit: each time you request a value from a `ROOTDir
 
 `TTree`_ objects are also ``dict``-like objects, but this time the keys and values are the `TBranch`_ names and objects. If you're not familiar with ROOT terminology, "tree" means a dataset and "branch" means one column or attribute of that dataset. The `TTree`_ class also has ``keys()``, ``iterkeys()``, ``allkeys()``, ``values()``, ``items()``, etc., because `TBranch`_ instances may be nested.
 
-To get an overview of what's available in the `TTree`_ and whether uproot can read it, call ``show()``.
+The `TTree`_ also has the attributes you expect from ROOT, presented with Pythonic conventions (``numentries`` follows an uproot convention, in which all "number of" methods start with "num"),
+
+.. code-block:: python
+
+    >>> tree.name, tree.title, tree.numentries
+    ('tree', 'my tree title', 100)
+
+as well as the raw data that was read from the file (C++ private members that start with "f").
+
+.. code-block:: python
+
+    >>> [x for x in dir(tree) if x.startswith("f")]
+    ['fAliases', 'fAutoFlush', 'fAutoSave', 'fBranchRef', 'fBranches', 'fClusterRangeEnd',
+     'fClusterSize', 'fDefaultEntryOffsetLen', 'fEntries', 'fEstimate', 'fFillColor',
+     'fFillStyle', 'fFlushedBytes', 'fFriends', 'fIndex', 'fIndexValues', 'fLeaves',
+     'fLineColor', 'fLineStyle', 'fLineWidth', 'fMarkerColor', 'fMarkerSize',
+     'fMarkerStyle', 'fMaxEntries', 'fMaxEntryLoop', 'fMaxVirtualSize', 'fNClusterRange',
+     'fName', 'fSavedBytes', 'fScanField', 'fTimerInterval', 'fTitle', 'fTotBytes',
+     'fTreeIndex', 'fUpdate', 'fUserInfo', 'fWeight', 'fZipBytes', 'filter']
+
+To get an overview of what arrays are available in the `TTree`_ and whether uproot can read it, call ``show()``.
 
 .. code-block:: python
 
@@ -309,10 +329,11 @@ The **branches** parameter lets you specify which `TBranch`_ data to load and op
 - If it's a ``dict`` from name to `Interpretation`_, you'll read the requested arrays in the specified ways.
 - There's also a functional form that gives more control at the cost of more complexity.
 
-Interpretations let you interpret the bytes of the ROOT file in different ways. Naturally, most of these are non-sensical:
+An `Interpretation`_ lets you view the bytes of the ROOT file in different ways. Naturally, most of these are non-sensical:
 
 .. code-block:: python
 
+    # this array contains big-endian, 8-byte floating point numbers
     >>> tree.arrays("Float64")
     {'Float64': array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11., 12.,
                         13., 14., 15., 16., 17., 18., 19., 20., 21., 22., 23., 24., 25.,
@@ -322,6 +343,8 @@ Interpretations let you interpret the bytes of the ROOT file in different ways. 
                         65., 66., 67., 68., 69., 70., 71., 72., 73., 74., 75., 76., 77.,
                         78., 79., 80., 81., 82., 83., 84., 85., 86., 87., 88., 89., 90.,
                         91., 92., 93., 94., 95., 96., 97., 98., 99.])}
+
+    # but we could try reading them as little-endian, 4-byte integers (non-sensically)
     >>> tree.arrays({"Float32": uproot.interp.asdtype("<i4")})
     {'Float32': array([    0, 32831,    64, 16448, 32832, 41024, 49216, 57408,    65,
                         4161,  8257, 12353, 16449, 20545, 24641, 28737, 32833, 34881,
@@ -336,7 +359,7 @@ Interpretations let you interpret the bytes of the ROOT file in different ways. 
                        46146, 46658, 47170, 47682, 48194, 48706, 49218, 49730, 50242,
                        50754], dtype=int32)}
 
-But some are useful:
+Some reinterpretations are useful, though:
 
 .. code-block:: python
 
@@ -483,7 +506,127 @@ These defaults have not been tuned. You might find improvements in throughput by
 Reading only part of a TBranch
 """"""""""""""""""""""""""""""
 
+ROOT files can be very large— it wouldn't be unusual to encounter a file that is too big to load entirely into memory. Even in these cases, you may be able to load individual arrays into memory, but maybe you don't want to. uproot lets you slice an array before you load it from the file.
 
+Inside a ROOT file, `TBranch`_ data are split into chunks called baskets; each basket can be read and uncompressed independently of the others. Specifying a slice before reading, rather than loading a whole array and then slicing it, avoids reading baskets that aren't in the slice.
+
+The `foriter.root <http://scikit-hep.org/uproot/examples/foriter.root>`_ file has very small baskets to demonstrate.
+
+.. code-block:: bash
+
+    wget http://scikit-hep.org/uproot/examples/foriter.root
+
+.. code-block:: python
+
+    >>> import uproot
+    >>> branch = uproot.open("foriter.root")["foriter"]["data"]
+    >>> branch.numbaskets
+    8
+    >>> branch.baskets()
+    [array([ 0,  1,  2,  3,  4,  5], dtype=int32),
+     array([ 6,  7,  8,  9, 10, 11], dtype=int32),
+     array([12, 13, 14, 15, 16, 17], dtype=int32),
+     array([18, 19, 20, 21, 22, 23], dtype=int32),
+     array([24, 25, 26, 27, 28, 29], dtype=int32),
+     array([30, 31, 32, 33, 34, 35], dtype=int32),
+     array([36, 37, 38, 39, 40, 41], dtype=int32),
+     array([42, 43, 44, 45], dtype=int32)]
+
+When we ask for the whole array, all eight of the baskets would be read, decompressed, and concatenated. Specifying **entrystart** and/or **entrystop** avoids unnecessary reading and decompression.
+
+.. code-block:: python
+
+    >>> branch.array(entrystart=5, entrystop=15)
+    array([ 5,  6,  7,  8,  9, 10, 11, 12, 13, 14], dtype=int32)
+
+We can demonstrate that this is actually happening with a cache (see `Caching data`_ below).
+
+.. code-block:: python
+
+    >>> basketcache = {}
+    >>> branch.array(entrystart=5, entrystop=15, basketcache=basketcache)
+    array([ 5,  6,  7,  8,  9, 10, 11, 12, 13, 14], dtype=int32)
+    >>> basketcache
+    {'foriter.root;foriter;data;0;raw':
+         memmap([0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0, 5],
+                dtype=uint8),
+     'foriter.root;foriter;data;1;raw':
+         memmap([ 0,  0,  0,  6,  0,  0,  0,  7,  0,  0,  0,  8,  0,  0,  0,  9, 0,  0,  0,
+                 10,  0,  0,  0, 11], dtype=uint8),
+     'foriter.root;foriter;data;2;raw':
+         memmap([ 0,  0,  0, 12,  0,  0,  0, 13,  0,  0,  0, 14,  0,  0,  0, 15, 0,  0,  0,
+                 16,  0,  0,  0, 17], dtype=uint8)}
+
+Only the first three baskets were touched by the above call (and hence, only those three were loaded into cache).
+
+.. code-block:: python
+
+    >>> branch.array(basketcache=basketcache)
+    array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
+           17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33,
+           34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45], dtype=int32)
+    >>> basketcache
+    {'foriter.root;foriter;data;0;raw':
+         memmap([0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0, 5],
+                dtype=uint8),
+     'foriter.root;foriter;data;1;raw':
+         memmap([ 0,  0,  0,  6,  0,  0,  0,  7,  0,  0,  0,  8,  0,  0,  0,  9, 0,  0,  0,
+                 10,  0,  0,  0, 11], dtype=uint8),
+     'foriter.root;foriter;data;2;raw':
+         memmap([ 0,  0,  0, 12,  0,  0,  0, 13,  0,  0,  0, 14,  0,  0,  0, 15, 0,  0,  0,
+                 16,  0,  0,  0, 17], dtype=uint8),
+     'foriter.root;foriter;data;3;raw':
+         memmap([ 0,  0,  0, 18,  0,  0,  0, 19,  0,  0,  0, 20,  0,  0,  0, 21, 0,  0,  0,
+                 22,  0,  0,  0, 23], dtype=uint8),
+     'foriter.root;foriter;data;4;raw':
+         memmap([ 0,  0,  0, 24,  0,  0,  0, 25,  0,  0,  0, 26,  0,  0,  0, 27, 0,  0,  0,
+                 28,  0,  0,  0, 29], dtype=uint8),
+     'foriter.root;foriter;data;5;raw':
+         memmap([ 0,  0,  0, 30,  0,  0,  0, 31,  0,  0,  0, 32,  0,  0,  0, 33, 0,  0,  0,
+                 34,  0,  0,  0, 35], dtype=uint8),
+     'foriter.root;foriter;data;6;raw':
+         memmap([ 0,  0,  0, 36,  0,  0,  0, 37,  0,  0,  0, 38,  0,  0,  0, 39, 0,  0,  0,
+                 40,  0,  0,  0, 41], dtype=uint8),
+     'foriter.root;foriter;data;7;raw':
+         memmap([ 0,  0,  0, 42,  0,  0,  0, 43,  0,  0,  0, 44,  0,  0,  0, 45],
+                dtype=uint8)}
+
+All of the baskets were touched by the above call (and hence, they are all loaded into cache).
+
+Most often, the reason you'd want to slice an array before reading it is to efficiently iterate over data. `TTree`_ has an ``iterate`` method for that purpose (which, incidentally, also takes **entrystart** and **entrystop** parameters).
+
+.. code-block:: python
+
+    >>> tree = uproot.open("foriter.root")["foriter"]
+    >>> for chunk in tree.iterate("data"):
+    ...     print(chunk)
+    ... 
+    {'data': array([0, 1, 2, 3, 4, 5], dtype=int32)}
+    {'data': array([ 6,  7,  8,  9, 10, 11], dtype=int32)}
+    {'data': array([12, 13, 14, 15, 16, 17], dtype=int32)}
+    {'data': array([18, 19, 20, 21, 22, 23], dtype=int32)}
+    {'data': array([24, 25, 26, 27, 28, 29], dtype=int32)}
+    {'data': array([30, 31, 32, 33, 34, 35], dtype=int32)}
+    {'data': array([36, 37, 38, 39, 40, 41], dtype=int32)}
+    {'data': array([42, 43, 44, 45], dtype=int32)}
+    >>> for chunk in tree.iterate("data", entrysteps=5):
+    ...     print(chunk)
+    ... 
+    {'data': array([0, 1, 2, 3, 4], dtype=int32)}
+    {'data': array([5, 6, 7, 8, 9], dtype=int32)}
+    {'data': array([10, 11, 12, 13, 14], dtype=int32)}
+    {'data': array([15, 16, 17, 18, 19], dtype=int32)}
+    {'data': array([20, 21, 22, 23, 24], dtype=int32)}
+    {'data': array([25, 26, 27, 28, 29], dtype=int32)}
+    {'data': array([30, 31, 32, 33, 34], dtype=int32)}
+    {'data': array([35, 36, 37, 38, 39], dtype=int32)}
+    {'data': array([40, 41, 42, 43, 44], dtype=int32)}
+    {'data': array([45], dtype=int32)}
+
+By default, the iteration step size is the minimum necessary to line up with basket boundaries, but you can specify an explicit **entrysteps** (fixed integer or iterable over start, stop pairs).
+     
+Lazy arrays
+"""""""""""
 
 
 Iterating over files (like TChain)
@@ -501,9 +644,6 @@ Caching data
 Parallel processing
 """""""""""""""""""
 
-Lazy arrays
-"""""""""""
-
 Connectors to other packages
 """"""""""""""""""""""""""""
 
@@ -512,12 +652,12 @@ Connectors to other packages
 .. _Array-reading parameters: #array-reading-parameters
 .. _Remote files through XRootD: #remote-files-through-xrootd
 .. _Reading only part of a TBranch: #reading-only-part-of-a-tbranch
+.. _Lazy arrays: #lazy-arrays
 .. _Iterating over files (like TChain): #iterating-over-files-like-tchain
 .. _Non-flat TTrees: jagged arrays and more: #non-flat-ttrees-jagged-arrays-and-more
 .. _Non-TTrees: histograms and more: #non-ttrees-histograms-and-more
 .. _Caching data: #caching-data
 .. _Parallel processing: #parallel-processing
-.. _Lazy arrays: #lazy-arrays
 .. _Connectors to other packages: #connectors-to-other-packages
 
 .. _ROOTDirectory: http://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootdirectory
