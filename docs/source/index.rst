@@ -22,10 +22,5 @@ Reference documentation
   :start-after: inclusion-marker-3-do-not-remove
   :end-before:  inclusion-marker-4-do-not-remove
 
-Introductory tutorials
-----------------------
-
-Reference documentation is not the place to start learning about a topic. Introductory tutorials are included on this page.
-
 .. include:: ../../README.rst
   :start-after: inclusion-marker-5-do-not-remove

@@ -192,7 +192,10 @@ class TH1Methods(object):
 
     @property
     def xlabels(self):
-        return [str(x) for x in self.fXaxis.fLabels]
+        if self.fXaxis.fLabels is None:
+            return None
+        else:
+            return [str(x) for x in self.fXaxis.fLabels]
 
     def show(self, width=80, minimum=None, maximum=None, stream=sys.stdout):
         if minimum is None:

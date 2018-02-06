@@ -25,20 +25,24 @@ Install OAMap like any other Python package:
 
 or similar (use ``sudo``, ``virtualenv``, or ``conda`` if you wish).
 
-**Strict dependencies:**
+Strict dependencies:
+^^^^^^^^^^^^^^^^^^^^
 
 - `Python <http://docs.python-guide.org/en/latest/starting/installation/>`_ (2.6+, 3.4+)
 - `Numpy <https://scipy.org/install.html>`_
 
-**Recommended dependencies:**
+Recommended dependencies:
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - `lz4 <https://anaconda.org/anaconda/lz4>`_ compression used by some ROOT files
 - `lzma <https://anaconda.org/conda-forge/backports.lzma>`_ compression used by some ROOT files; this is part of the Python 3 standard library, so only install for Python 2
 
-**Optional dependencies:** (all are bindings to binaries that can be package-installed)
+Optional dependencies:
+^^^^^^^^^^^^^^^^^^^^^^
 
-- `Numba and LLVM <http://numba.pydata.org/numba-doc/latest/user/installing.html>`_ to JIT-compile functions (requires a particular version of LLVM, follow instructions)
+- `XRootD <https://anaconda.org/nlesc/xrootd>`_ to access remote files
 - `python-futures <https://pypi.python.org/pypi/futures>`_ for parallel processing; this is part of the Python 3 standard library, so only install for Python 2
+- `Numba and LLVM <http://numba.pydata.org/numba-doc/latest/user/installing.html>`_ to JIT-compile functions (requires a particular version of LLVM, follow instructions)
 
 *Reminder: you do not need C++ ROOT to run uproot.*
 
@@ -149,4 +153,33 @@ Reference documentation is not the place to start learning about a topic. Introd
 
 .. inclusion-marker-5-do-not-remove
 
-TODO!
+Exploring a file
+""""""""""""""""
+
+Remote files through XRootD
+"""""""""""""""""""""""""""
+
+Reading only part of a TBranch
+""""""""""""""""""""""""""""""
+
+Iterating over files (like TChain)
+""""""""""""""""""""""""""""""""""
+
+Non-flat TTrees: jagged arrays and more
+"""""""""""""""""""""""""""""""""""""""
+
+Non-TTrees: histograms and more
+"""""""""""""""""""""""""""""""
+
+Caching
+"""""""
+
+Parallel processing
+"""""""""""""""""""
+
+Lazy arrays
+"""""""""""
+
+Connectors to other packages
+""""""""""""""""""""""""""""
+
