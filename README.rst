@@ -151,6 +151,17 @@ Introductory tutorials
 
 Reference documentation is not the place to start learning about a topic. Introductory tutorials are included on this page.
 
+- `Exploring a file <#exploring-a-file>`_
+- `Remote files through XRootD <#remote-files-through-xrootd>`_
+- `Reading only part of a TBranch <#reading-only-part-of-a-tbranch>`_
+- `Iterating over files (like TChain) <#iterating-over-files-like-tchain>`_
+- `Non-flat TTrees: jagged arrays and more <#non-flat-ttrees-jagged-arrays-and-more>`_
+- `Non-TTrees: histograms and more <#non-ttrees-histograms-and-more>`_
+- `Caching <#caching>`_
+- `Parallel processing <#parallel-processing>`_
+- `Lazy arrays <#lazy-arrays>`_
+- `Connectors to other packages <#connectors-to-other-packages>`_
+
 .. inclusion-marker-5-do-not-remove
 
 Exploring a file
