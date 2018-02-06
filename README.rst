@@ -33,7 +33,7 @@ or similar (use ``sudo``, ``virtualenv``, or ``conda`` if you wish).
 **Recommended dependencies:**
 
 - `lz4 <https://anaconda.org/anaconda/lz4>`_ compression used by some ROOT files
-- `lzma <https://anaconda.org/anaconda/lzma>`_ compression used by some ROOT files; this is part of the Python 3 standard library, so only install for Python 2
+- `lzma <https://anaconda.org/conda-forge/backports.lzma>`_ compression used by some ROOT files; this is part of the Python 3 standard library, so only install for Python 2
 
 **Optional dependencies:** (all are bindings to binaries that can be package-installed)
 
