@@ -156,7 +156,6 @@ Reference documentation is not the place to start learning about a topic. Introd
 - `Array-reading parameters`_
 - `Remote files through XRootD`_
 - `Reading only part of a TBranch`_
-- `Lazy arrays`_
 - `Iterating over files (like TChain)`_
 - `Non-flat TTrees: jagged arrays and more`_
 - `Non-TTrees: histograms and more`_
@@ -592,7 +591,37 @@ Only the first three baskets were touched by the above call (and hence, only tho
 
 All of the baskets were touched by the above call (and hence, they are all loaded into cache).
 
-Most often, the reason you'd want to slice an array before reading it is to efficiently iterate over data. `TTree`_ has an ``iterate`` method for that purpose (which, incidentally, also takes **entrystart** and **entrystop** parameters).
+One reason you might want to only part of an array is to get a sense of the data without reading all of it. This can be a particularly useful way to examine a remote file over XRootD with a slow network connection. While you could do this by specifying a small **entrystop**, uproot has a lazy array interface to make this more convenient.
+
+.. code-block:: python
+
+    >>> basketcache = {}
+    >>> myarray = branch.lazyarray(basketcache=basketcache)
+    >>> myarray
+    <uproot.tree._LazyArray object at 0x71eb8661f9d0>
+    >>> len(basketcache)
+    0
+    >>> myarray[5]
+    5
+    >>> len(basketcache)
+    1
+    >>> myarray[5:15]
+    array([ 5,  6,  7,  8,  9, 10, 11, 12, 13, 14], dtype=int32)
+    >>> len(basketcache)
+    3
+    >>> import numpy
+    >>> myarray[:]
+    array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
+           17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33,
+           34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45], dtype=int32)
+    >>> len(basketcache)
+    8
+
+Whenever a lazy array is indexed or sliced, it loads as little as possible to yield the result. Slicing everything (``[:]``) gives you a normal array.
+
+Since caching in uproot is always explicit (for consistency: see `Caching data`_), repeatedly indexing the same value repeatedly reads from the file unless you specify a cache. You'd probably always want to provide lazy arrays with caches.
+
+Another reason to want to read part of an array is to efficiently iterate over data. `TTree`_ has an ``iterate`` method for that purpose (which, incidentally, also takes **entrystart** and **entrystop** parameters).
 
 .. code-block:: python
 
@@ -623,39 +652,6 @@ Most often, the reason you'd want to slice an array before reading it is to effi
     {'data': array([45], dtype=int32)}
 
 By default, the iteration step size is the minimum necessary to line up with basket boundaries, but you can specify an explicit **entrysteps** (fixed integer or iterable over start, stop pairs).
-     
-Lazy arrays
-"""""""""""
-
-Another reason for loading only part of an array is to get a sense of the data without reading all of it. This can be a particularly useful way to examine a remote file over XRootD with a slow network connection.
-
-.. code-block:: python
-
-    >>> basketcache = {}
-    >>> myarray = branch.lazyarray(basketcache=basketcache)
-    >>> myarray
-    <uproot.tree._LazyArray object at 0x71eb8661f9d0>
-    >>> len(basketcache)
-    0
-    >>> myarray[5]
-    5
-    >>> len(basketcache)
-    1
-    >>> myarray[5:15]
-    array([ 5,  6,  7,  8,  9, 10, 11, 12, 13, 14], dtype=int32)
-    >>> len(basketcache)
-    3
-    >>> import numpy
-    >>> myarray[:]
-    array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
-           17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33,
-           34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45], dtype=int32)
-    >>> len(basketcache)
-    8
-
-Whenever a lazy array is indexed or sliced, it loads as little as possible to yield the result. Slicing everything (``[:]``) gives you a normal array.
-
-Since caching in uproot is always explicit (for consistency: see `Caching data`_), repeatedly indexing the same value repeatedly reads from the file unless you specify a cache. You'd probably always want to provide lazy arrays with caches.
 
 Iterating over files (like TChain)
 """"""""""""""""""""""""""""""""""
@@ -680,7 +676,6 @@ Connectors to other packages
 .. _Array-reading parameters: #array-reading-parameters
 .. _Remote files through XRootD: #remote-files-through-xrootd
 .. _Reading only part of a TBranch: #reading-only-part-of-a-tbranch
-.. _Lazy arrays: #lazy-arrays
 .. _Iterating over files (like TChain): #iterating-over-files-like-tchain
 .. _Non-flat TTrees: jagged arrays and more: #non-flat-ttrees-jagged-arrays-and-more
 .. _Non-TTrees: histograms and more: #non-ttrees-histograms-and-more
