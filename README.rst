@@ -427,8 +427,11 @@ A ``for`` loop over a ``dict`` just iterates over the names. We've read in three
      [ 2  2  2  2  2  2  2  2  2  2]
      [ 3  3  3  3  3  3  3  3  3  3]
 
-The **entrystart** and **entrystop** parameters let you slice an array while reading it, to avoid reading more than you want. See 
+The **entrystart** and **entrystop** parameters let you slice an array while reading it, to avoid reading more than you want. See `Reading only part of a TBranch`_ below.
 
+The **cache**, **basketcache**, and **keycache** parameters allow you to avoid re-reading data without significantly altering your code. See `Caching data`_ below.
+
+The **executor** and **blocking** parameters allow you to read and possibly decompress the branches in parallel. See `Parallel processing`_ below.
 
 Remote files through XRootD
 """""""""""""""""""""""""""
