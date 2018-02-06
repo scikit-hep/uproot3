@@ -1,26 +1,8 @@
 uproot
 ======
 
-.. include:: ../../uproot/description.txt
-
-.. include:: ../../uproot/long_description.txt
-
-Tutorials and walk-throughs
----------------------------
-
-.. toctree::
-   :maxdepth: 1
-
-   introduction
-   installation
-   reading-flat-ntuples
-   reading-complex-objects
-   parallelization
-   caching
-   lazy-arrays
-   partitioning
-   numba-integration
-   pandas-integration
+.. include:: ../../README.rst
+  :end-before: inclusion-marker-1-do-not-remove
 
 Reference documentation
 -----------------------
@@ -35,11 +17,5 @@ Reference documentation
    caches
    parallel-io
 
-Other information
------------------
-
-.. toctree::
-   :maxdepth: 1
-
-   performance
-   status-and-roadmap
+.. include:: ../../README.rst
+  :start-after: inclusion-marker-2-do-not-remove

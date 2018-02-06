@@ -40,13 +40,18 @@ def get_version():
     exec(open(os.path.join("uproot", "version.py")).read(), g)
     return g["__version__"]
 
+def get_description():
+    description = open("README.rst").read()
+    cutoff = description.index(".. inclusion-marker-5-do-not-remove")
+    return description[:cutoff].strip()
+
 setup(name = "uproot",
       version = get_version(),
       packages = find_packages(exclude = ["tests"]),
       scripts = [],
-      data_files = [os.path.join("uproot", "description.txt"), os.path.join("uproot", "long_description.txt")],
-      description = open(os.path.join("uproot", "description.txt")).read().strip(),
-      long_description = open(os.path.join("uproot", "long_description.txt")).read().strip(),
+      data_files = ["README.rst"],
+      description = "ROOT I/O in pure Python and Numpy.",
+      long_description = get_description(),
       author = "Jim Pivarski (DIANA-HEP)",
       author_email = "pivarski@fnal.gov",
       maintainer = "Jim Pivarski (DIANA-HEP)",
