@@ -157,7 +157,7 @@ Reference documentation is not the place to start learning about a topic. Introd
 - `Iterating over files (like TChain) <#iterating-over-files-like-tchain>`_
 - `Non-flat TTrees: jagged arrays and more <#non-flat-ttrees-jagged-arrays-and-more>`_
 - `Non-TTrees: histograms and more <#non-ttrees-histograms-and-more>`_
-- `Caching <#caching>`_
+- `Caching data <#caching-data>`_
 - `Parallel processing <#parallel-processing>`_
 - `Lazy arrays <#lazy-arrays>`_
 - `Connectors to other packages <#connectors-to-other-packages>`_
@@ -182,8 +182,8 @@ Non-flat TTrees: jagged arrays and more
 Non-TTrees: histograms and more
 """""""""""""""""""""""""""""""
 
-Caching
-"""""""
+Caching data
+""""""""""""
 
 Parallel processing
 """""""""""""""""""
