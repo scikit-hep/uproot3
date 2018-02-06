@@ -2,7 +2,8 @@ uproot
 ======
 
 .. include:: ../../README.rst
-  :end-before: inclusion-marker-2-do-not-remove
+  :start-after: inclusion-marker-1-do-not-remove
+  :end-before:  inclusion-marker-3-do-not-remove
 
 Reference documentation
 -----------------------
@@ -18,8 +19,13 @@ Reference documentation
    parallel-io
 
 .. include:: ../../README.rst
-  :start-after: inclusion-marker-2-do-not-remove
+  :start-after: inclusion-marker-3-do-not-remove
   :end-before:  inclusion-marker-4-do-not-remove
+
+Introductory tutorials
+----------------------
+
+Reference documentation is not the place to start learning about a topic. Introductory tutorials are included on this page.
 
 .. include:: ../../README.rst
   :start-after: inclusion-marker-5-do-not-remove
