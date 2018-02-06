@@ -26,19 +26,19 @@ Install OAMap like any other Python package:
 or similar (use ``sudo``, ``virtualenv``, or ``conda`` if you wish).
 
 Strict dependencies:
-^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""""
 
 - `Python <http://docs.python-guide.org/en/latest/starting/installation/>`_ (2.6+, 3.4+)
 - `Numpy <https://scipy.org/install.html>`_
 
 Recommended dependencies:
-^^^^^^^^^^^^^^^^^^^^^^^^^
+"""""""""""""""""""""""""
 
 - `lz4 <https://anaconda.org/anaconda/lz4>`_ compression used by some ROOT files
 - `lzma <https://anaconda.org/conda-forge/backports.lzma>`_ compression used by some ROOT files; this is part of the Python 3 standard library, so only install for Python 2
 
 Optional dependencies:
-^^^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""""""
 
 - `XRootD <https://anaconda.org/nlesc/xrootd>`_ to access remote files
 - `python-futures <https://pypi.python.org/pypi/futures>`_ for parallel processing; this is part of the Python 3 standard library, so only install for Python 2
