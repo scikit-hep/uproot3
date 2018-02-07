@@ -750,7 +750,7 @@ But you can also take advantage of the fact that `JaggedArray`_ is backed by Num
 
 In the first code block, we used the Python interpreter and ``math`` library to compute momentum magnitudes, one for each muon, maintaining the event structure (one or two muons per event). In the second code block, we used Numpy to compute all the momentum magnitudes in one call (the loop is performed in compiled code) and packaged the result in a new `JaggedArray`_. Since we want the same structure as the original ``px``, we can reuse its ``starts`` and ``stops``.
 
-`JaggedArray`_ is a single Python type used to describe any list of lists of numbers from ROOT. In C++, it may be a branch with another branch as a counter (e.g. ``Muon_pt[nMuons]``), a ``std::vector<number>``, a numeric field from an exploded ``TClonesArray`` of class instances, etc. Jagged arrays are also the simplest kind of variable-sized object that can be found in a `TTree`_. More complex objects are deserialized into `JaggedArrays`_ wrapped in classes that present them differently, for instance
+`JaggedArray`_ is a single Python type used to describe any list of lists of numbers from ROOT. In C++, it may be a branch with another branch as a counter (e.g. ``Muon_pt[nMuons]``), a ``std::vector<number>``, a numeric field from an exploded ``TClonesArray`` of class instances, etc. Jagged arrays are also the simplest kind of variable-sized object that can be found in a `TTree`_. More complex objects are deserialized into `JaggedArray`_ wrapped in classes that present them differently, for instance
 
 .. code-block:: bash
 
