@@ -32,11 +32,52 @@ import sys
 import numbers
 import threading
 
+import numpy
+
 class MemoryCache(dict):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (type,), {})
 
     __slots__ = ("limitbytes", "numevicted", "spillover", "spill_immediately", "_order", "_lookup", "_numbytes")
+
+    if sys.version_info[0] < 3:
+        # Python 2
+        @staticmethod
+        def sizeof(obj):
+            if isinstance(obj, numpy.ndarray):
+                return sys.getsizeof(obj)
+            elif isinstance(obj, dict):
+                return sys.getsizeof(obj) + sum(MemoryCache.sizeof(k) + MemoryCache.sizeof(v) for k, v in obj)
+            elif isinstance(obj, (unicode, str)):
+                return sys.getsizeof(obj)
+            else:
+                out = sys.getsizeof(obj)
+                try:
+                    for x in obj:
+                        out += MemoryCache.sizeof(x)
+                except TypeError:
+                    pass
+                return out
+            return sys.getsizeof(obj)
+    else:
+        # Python 3
+        @staticmethod
+        def sizeof(obj):
+            if isinstance(obj, numpy.ndarray):
+                return sys.getsizeof(obj) + obj.nbytes
+            elif isinstance(obj, dict):
+                return sys.getsizeof(obj) + sum(MemoryCache.sizeof(k) + MemoryCache.sizeof(v) for k, v in obj)
+            elif isinstance(obj, (str, bytes)):
+                return sys.getsizeof(obj)
+            else:
+                out = sys.getsizeof(obj)
+                try:
+                    for x in obj:
+                        out += MemoryCache.sizeof(x)
+                except TypeError:
+                    pass
+                return out
+            return sys.getsizeof(obj)
 
     def __init__(self, limitbytes, spillover=None, spill_immediately=False, items=(), **kwds):
         assert isinstance(limitbytes, numbers.Integral) and limitbytes > 0
@@ -46,7 +87,7 @@ class MemoryCache(dict):
         self.numevicted = 0
         self._order = []
         self._lookup = {}
-        self._numbytes = sys.getsizeof(self.limitbytes) + sys.getsizeof(0) + sys.getsizeof(self.numevicted) + sys.getsizeof(self._order) + sys.getsizeof(self._lookup)
+        self._numbytes = self.sizeof(self.limitbytes) + self.sizeof(0) + self.sizeof(self.numevicted) + self.sizeof(self._order) + self.sizeof(self._lookup)
         self.update(items, **kwds)
 
     def _assertvalid(self):
@@ -55,7 +96,7 @@ class MemoryCache(dict):
         assert isinstance(self._order, list)
         assert isinstance(self._lookup, dict)
         assert set(self._lookup) == set(self._order)
-        assert self._numbytes == sys.getsizeof(self.limitbytes) + sys.getsizeof(0) + sys.getsizeof(self.numevicted) + sys.getsizeof(self._order) + sys.getsizeof(self._lookup) + sum(sys.getsizeof(k) for k in self._order) + sum(sys.getsizeof(v) for v in self._lookup.values())
+        assert self._numbytes == self.sizeof(self.limitbytes) + self.sizeof(0) + self.sizeof(self.numevicted) + sys.getsizeof(self._order) + sys.getsizeof(self._lookup) + sum(self.sizeof(k) for k in self._order) + sum(self.sizeof(v) for v in self._lookup.values())  # same keys in both _order and _lookup; don't double-count
 
     @property
     def numbytes(self):
@@ -102,10 +143,10 @@ class MemoryCache(dict):
 
     def __setitem__(self, key, value):
         container_before = sys.getsizeof(self._order) + sys.getsizeof(self._lookup)
-        delta_contents = sys.getsizeof(key) + sys.getsizeof(value)
+        delta_contents = self.sizeof(key) + self.sizeof(value)
 
         if key in self._lookup:
-            delta_contents -= sys.getsizeof(key) + sys.getsizeof(self._lookup[key])
+            delta_contents -= self.sizeof(key) + self.sizeof(self._lookup[key])
             self.promote(key)
         else:
             self._order.append(key)
@@ -119,7 +160,7 @@ class MemoryCache(dict):
 
         while len(self._order) > 0 and self._numbytes > self.limitbytes:
             container_before = sys.getsizeof(self._order) + sys.getsizeof(self._lookup)
-            delta_contents = -(sys.getsizeof(self._lookup[self._order[0]]) + sys.getsizeof(self._order[0]))
+            delta_contents = -(self.sizeof(self._lookup[self._order[0]]) + self.sizeof(self._order[0]))
 
             if not self.spill_immediately:
                 self.spill(self._order[0])
@@ -190,7 +231,7 @@ class MemoryCache(dict):
         self.numevicted = 0
         self._order = []
         self._lookup = {}
-        self._numbytes = sys.getsizeof(self.limitbytes) + sys.getsizeof(0) + sys.getsizeof(self.numevicted) + sys.getsizeof(self._order) + sys.getsizeof(self._lookup)
+        self._numbytes = self.sizeof(self.limitbytes) + self.sizeof(0) + self.sizeof(self.numevicted) + sys.getsizeof(self._order) + sys.getsizeof(self._lookup)
 
     def has_key(self, key):
         if key in self._lookup:
@@ -312,7 +353,7 @@ class MemoryCache(dict):
         self.limitbytes, self.numevicted, order, lookup = state
         self._order = []
         self._lookup = {}
-        self._numbytes = sys.getsizeof(self.limitbytes) + sys.getsizeof(0) + sys.getsizeof(self.numevicted) + sys.getsizeof(self._order) + sys.getsizeof(self._lookup)
+        self._numbytes = self.sizeof(self.limitbytes) + self.sizeof(0) + self.sizeof(self.numevicted) + sys.getsizeof(self._order) + sys.getsizeof(self._lookup)
         for key in order:
             self[key] = lookup[key]
 

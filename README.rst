@@ -886,9 +886,26 @@ The array functions will always check the cache first, and if it's empty, get th
      'AAGUS3fQmKsR56dpAQAAf77v;events;Q2;asdtype(Bi4,Li4,(),());0-2304':
          array([-1,  1,  1, ..., -1, -1, -1], dtype=int32)}
 
-Key names are long because they encode a unique identifier to the file, the path to the `TTree`_, to the `TBranch`_, the `Interpretation`_, and the entry range, so that we don't confuse one cached object for another.
+Key names are long because they encode a unique identifier to the file, the path to the `TTree`_, to the `TBranch`_, the `Interpretation`_, and the entry range, so that we don't confuse one cached array for another.
 
+Python ``dict`` objects will keep the arrays as long as the process lives (or they're manually deleted, or the ``dict`` goes out of scope). Sometimes this is too long. Usually, caches have a Least Recently Used (LRU) eviction policy: they're capped at a given size and when adding a new array would exceed that size, they delete the ones that were least recently accessed. `MemoryCache`_ implements such a policy.
 
+.. code-block:: python
+
+    >>> cache = uproot.cache.memorycache.MemoryCache(8*1024**3)    # 8 GB (typical)
+    >>> import numpy
+    >>> cache["one"] = numpy.zeros(3*1024**3, dtype=numpy.uint8)   # 3 GB
+    >>> list(cache)
+    ['one']
+    >>> cache["two"] = numpy.zeros(3*1024**3, dtype=numpy.uint8)   # 3 GB
+    >>> list(cache)
+    ['one', 'two']
+    >>> cache["three"] = numpy.zeros(3*1024**3, dtype=numpy.uint8) # 3 GB causes eviction
+    >>> list(cache)
+    ['two', 'three']
+    >>> cache["four"] = numpy.zeros(3*1024**3, dtype=numpy.uint8)  # 3 GB causes evication
+    >>> list(cache)
+    ['three', 'four']
 
 
 
@@ -918,3 +935,4 @@ Connectors to other packages
 .. _Interpretation: http://uproot.readthedocs.io/en/latest/interpretation.html
 .. _JaggedArray: http://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-jagged-jaggedarray
 .. _Strings: http://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-strings-strings
+.. _MemoryCache: http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-memorycache
