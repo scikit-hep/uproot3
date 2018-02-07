@@ -1151,13 +1151,24 @@ class TArrayF(TArray):
 class TArrayD(TArray):
     _dtype = numpy.dtype(">f8")
 
+# FIXME: I want to generalize this. It's the first example of a class that doesn't
+# follow the usual pattern. The full 11 bytes are
+# 
+#     "40 00 00 07 00 00 1a a1 2f 10 00"
+# 
+# I'm reasonably certain the first "40 00 00 07" is count with a kByteCountMask.
+# The next "00 00" probably isn't the version, since the streamer said it's version 1.
+# I'm also reasonably certain that the last byte is the fIOBits data.
+# That leaves 4 bytes unaccounted for.
 class ROOT_3a3a_TIOFeatures(ROOTStreamedObject):
     _fields = [u'fIOBits']
     classname = b'ROOT::TIOFeatures'
     @classmethod
     def _readinto(cls, self, source, cursor, context):
-        cursor.skip(10)
+        start, cnt, classversion = _startcheck(source, cursor)
+        cursor.skip(4)
         self.fIOBits = cursor.field(source, ROOT_3a3a_TIOFeatures._format1)
+        _endcheck(start, cursor, cnt)
         return self
     _format1 = struct.Struct('>B')
 
