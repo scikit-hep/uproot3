@@ -1151,6 +1151,16 @@ class TArrayF(TArray):
 class TArrayD(TArray):
     _dtype = numpy.dtype(">f8")
 
+class ROOT_3a3a_TIOFeatures(ROOTStreamedObject):
+    _fields = [u'fIOBits']
+    classname = b'ROOT::TIOFeatures'
+    @classmethod
+    def _readinto(cls, self, source, cursor, context):
+        cursor.skip(10)
+        self.fIOBits = cursor.field(source, ROOT_3a3a_TIOFeatures._format1)
+        return self
+    _format1 = struct.Struct('>B')
+
 class Undefined(ROOTStreamedObject):
     classname = None
 
@@ -1180,6 +1190,7 @@ builtin_classes = {"TObject":    TObject,
                    "TArrayL":    TArrayL,
                    "TArrayL64":  TArrayL64,
                    "TArrayF":    TArrayF,
-                   "TArrayD":    TArrayD}
+                   "TArrayD":    TArrayD,
+                   "ROOT_3a3a_TIOFeatures": ROOT_3a3a_TIOFeatures}
 
 builtin_skip =    {"TBranch":    ["fBaskets"]}
