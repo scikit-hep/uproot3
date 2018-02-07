@@ -107,7 +107,11 @@ def _iterate(path, treepath, branches, localsource, xrootdsource, **options):
     def explode(x):
         parsed = urlparse(x)
         if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0:
-            return sorted(glob.glob(os.path.expanduser(parsed.netloc + parsed.path)))
+            pattern = os.path.expanduser(parsed.netloc + parsed.path)
+            out = sorted(glob.glob(pattern))
+            if len(out) == 0:
+                raise TypeError("no matches for filename {0}".format(repr(pattern)))
+            return out
         else:
             return [x]
 
