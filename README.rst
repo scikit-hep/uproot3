@@ -45,7 +45,7 @@ Optional dependencies:
 - `XRootD <https://anaconda.org/nlesc/xrootd>`_ to access remote files
 - `futures <https://pypi.python.org/pypi/futures>`_ for parallel processing; this is part of the Python 3 standard library, so only install for Python 2
 
-*Reminder: you do not need C++ ROOT to run uproot.*
+**Reminder: you do not need C++ ROOT to run uproot.**
 
 .. inclusion-marker-3-do-not-remove
 
@@ -151,7 +151,7 @@ The complete reference documentation is available on `uproot.readthedocs.io <htt
 Introductory tutorials
 ----------------------
 
-Reference documentation is not the place to start learning about a topic. Introductory tutorials are included on this page.
+Reference documentation is not the place to start learning about a topic. Introductory tutorials are provided below.
 
 - `Exploring a file`_
 - `Array-reading parameters`_
@@ -658,13 +658,8 @@ If one file doesn't fit in memory, a collection of them won't, so we need to ite
 
 .. code-block:: python
 
-    ['Type', 'Run', 'Event', 'E1', 'px1', 'py1', 'pz1', 'pt1', 'eta1', 'phi1', 'Q1', 'E2',
-
     >>> for arrays in uproot.iterate("/set/of/files*.root", "events",
-    ...         ["branch1",
-    ...          "branch2",
-    ...          "branch3"
-    ...         ],entrysteps=10000):
+    ...         ["branch1", "branch2", "branch3"],entrysteps=10000):
     ...     do_something_with(arrays)
 
 The **branches** parameter is the same (usually, a list of `TBranch`_ names will do), as is **entrysteps**, **outputtype**, caching, and parallel processing parameters. Since this form must iterate over a collection of files, it also takes a **path** (string with wildcards or a list of strings) and a **treepath** (location of the `TTree`_ within each file; must be the same), as well as **xrootdsource** options, if relevant.

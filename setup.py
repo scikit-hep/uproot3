@@ -46,11 +46,6 @@ def get_description():
     stop = description.index(".. inclusion-marker-5-do-not-remove")
     extra = """
 
-Introductory tutorials
-----------------------
-
-Introductory tutorials can be found on the `GitHub README <https://github.com/scikit-hep/uproot#introductory-tutorials>`_.
-
 .. _Exploring a file: https://github.com/scikit-hep/uproot#exploring-a-file
 .. _Array-reading parameters: https://github.com/scikit-hep/uproot#array-reading-parameters
 .. _Remote files through XRootD: https://github.com/scikit-hep/uproot#remote-files-through-xrootd
