@@ -228,7 +228,7 @@ class JaggedArray(object):
 
         elif isinstance(index, slice):
             if index.step is not None and index.step != 1:
-                raise NotImplementedError("cannot slice a JaggedArray with step != 1")
+                raise NotImplementedError("cannot yet slice a JaggedArray with step != 1 (FIXME: this is possible, should be implemented)")
             else:
                 return JaggedArray(self.content, self.starts[index], self.stops[index])
 
@@ -318,10 +318,11 @@ class asvar(asjagged):
         return self.genclass(*((super(asvar, self).finalize(destination),) + self.args))
 
 class VariableLength(object):
-    def __init__(self, jaggedarray):
-        assert jaggedarray.content.dtype.itemsize == 1
-        assert len(jaggedarray.content.shape) == 1
-        self.jaggedarray = jaggedarray
+    def __init__(self, *args):
+        self.jaggedarray = args[0]
+        assert self.jaggedarray.content.dtype.itemsize == 1
+        assert len(self.jaggedarray.content.shape) == 1
+        self.args = args[1:]
 
     def __len__(self):
         return len(self.jaggedarray)
@@ -331,7 +332,7 @@ class VariableLength(object):
             return self.interpret(self.jaggedarray[index])
 
         elif isinstance(index, slice):
-            return self.__class__(self.jaggedarray[slice])
+            return self.__class__(*((self.jaggedarray[index],) + self.args))
 
         else:
             raise TypeError("{0} index must be an integer or a slice".format(self.__class__.__name__))
@@ -358,7 +359,7 @@ def asstlvectorvector(fromdtype):
 
 class JaggedJaggedArray(VariableLength):
     def __init__(self, jaggedarray, fromdtype):
-        super(JaggedJaggedArray, self).__init__(jaggedarray)
+        super(JaggedJaggedArray, self).__init__(jaggedarray, fromdtype)
         self.fromdtype = fromdtype
 
     indexdtype = numpy.dtype(">i4")

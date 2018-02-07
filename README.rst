@@ -50,7 +50,7 @@ Optional dependencies:
 Getting started
 ---------------
 
-Download a Z → μμ `flat ntuple <http://scikit-hep.org/uproot/examples/Zmumu.root>`_ and a H → ZZ → μμμμ `structured TTree <http://scikit-hep.org/uproot/examples/HZZ.root>`_.
+Download a Z → μμ `flat ntuple <http://scikit-hep.org/uproot/examples/Zmumu.root>`_ and a H → ZZ → eeμμ `structured TTree <http://scikit-hep.org/uproot/examples/HZZ.root>`_.
 
 .. code-block:: bash
 
@@ -670,7 +670,7 @@ The **branches** parameter is the same (usually, a list of `TBranch`_ names will
 Non-flat TTrees: jagged arrays and more
 """""""""""""""""""""""""""""""""""""""
 
-We have already seen non-scalar structure in the `H → ZZ → μμμμ sample <http://scikit-hep.org/uproot/examples/HZZ.root>`_.
+We have already seen non-scalar structure in the `H → ZZ → eeμμ sample <http://scikit-hep.org/uproot/examples/HZZ.root>`_.
 
 .. code-block:: bash
 
@@ -706,7 +706,7 @@ We have already seen non-scalar structure in the `H → ZZ → μμμμ sample <
                      [1.1418698],
                      [23.913206]])}
 
-Jagged arrays are presented as Python objects with an array-like syntax (square brackets), but the subarrays that you get from each entry can have a different length. You can use this in straightforward Python code.
+Jagged arrays are presented as Python objects with an array-like syntax (square brackets), but the subarrays that you get from each entry can have a different length. You can use this in straightforward Python code (double nested ``for`` loop).
 
 .. code-block:: python
 
@@ -717,6 +717,17 @@ Jagged arrays are presented as Python objects with an array-like syntax (square 
     ...     p.append([])
     ...     for pxj, pyj, pzj in zip(pxi, pyi, pzi):
     ...         p[-1].append(math.sqrt(pxj**2 + pyj**2 + pzj**2))
+    >>> p[:10]
+    [[54.77939728331514, 39.40155413769603],
+     [31.690269339405322],
+     [54.73968355087043, 47.48874088422057],
+     [413.46002426963094, 344.0415120421566],
+     [120.86427107457735, 51.28450356111275],
+     [44.093180987524, 52.881414889639125],
+     [132.11798977251323, 39.83906179940468],
+     [160.19447580091284],
+     [112.09960289042792, 21.37544434752662],
+     [101.37877704093872, 70.2069335164593]]
 
 But you can also take advantage of the fact that `JaggedArray`_ is backed by Numpy arrays to perform structure-preserving operations much more quickly. The following does the same thing as the above, but using only Numpy calls.
 
@@ -725,14 +736,76 @@ But you can also take advantage of the fact that `JaggedArray`_ is backed by Num
     >>> import numpy
     >>> pcontent = numpy.sqrt(px.content**2 + py.content**2 + pz.content**2)
     >>> p = uproot.interp.jagged.JaggedArray(pcontent, px.starts, px.stops)
+    >>> p[:10]
+    jaggedarray([[54.7794   39.401554],
+                 [31.69027],
+                 [54.739685 47.48874 ],
+                 [413.46005 344.0415 ],
+                 [120.86427  51.2845 ],
+                 [44.09318  52.881416],
+                 [132.11798  39.83906],
+                 [160.19447],
+                 [112.09961   21.375444],
+                 [101.37878  70.20693]])
 
+In the first code block, we used the Python interpreter and ``math`` library to compute momentum magnitudes, one for each muon, maintaining the event structure (one or two muons per event). In the second code block, we used Numpy to compute all the momentum magnitudes in one call (the loop is performed in compiled code) and packaged the result in a new `JaggedArray`_. Since we want the same structure as the original ``px``, we can reuse its ``starts`` and ``stops``.
 
+`JaggedArray`_ is a single Python type used to describe any list of lists of numbers from ROOT. In C++, it may be a branch with another branch as a counter (e.g. ``Muon_pt[nMuons]``), a ``std::vector<number>``, a numeric field from an exploded ``TClonesArray`` of class instances, etc. Jagged arrays are also the simplest kind of variable-sized object that can be found in a `TTree`_. More complex objects are deserialized into `JaggedArrays`_ wrapped in classes that present them differently, for instance
 
+.. code-block:: bash
 
+    wget http://scikit-hep.org/uproot/examples/Zmumu.root
 
+.. code-block:: python
+
+    >>> import uproot
+    >>> tree = uproot.open("Zmumu.root")["events"]
+    >>> tree.array("Type")
+    strings([b'GT' b'TT' b'GT' ... b'TT' b'GT' b'GG'])
+
+The `Strings`_ type represents a collection of strings, not as (memory-hogging) Python ``bytes``, but as a `JaggedArray`_ wrapper:
+
+.. code-block:: python
+
+    >>> strings = tree.array("Type")
+    >>> strings.jaggedarray.content
+    array([71, 84, 84, ..., 84, 71, 71], dtype=uint8)
+    >>> strings.jaggedarray.starts
+    array([   0,    2,    4, ..., 4602, 4604, 4606])
+    >>> strings.jaggedarray.stops
+    array([   2,    4,    6, ..., 4604, 4606, 4608])
+
+The "numeric" content is actually the ASCII representation of all the string data:
+
+    >>> strings.jaggedarray.content.tostring()
+    b'GTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTG
+      GGTTTGTTTTTGTGTGGGTTTGTGGGTTTGTTTTTGTGTTTTTTTGTGTTTTTTTTTGTGTTTTTTTTTTTGTGTGGGTTTGTGGGT
+      TTGTTTTTGTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGG
+      TTTGTTTTTGTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGG
+     ...
+
+The role of the `Strings`_ wrapper is to yield each item as a Python ``bytes`` on demand.
+
+.. code-block:: python
+
+    >>> strings[5]
+    b'TT'
+    >>> isinstance(strings[5], bytes)
+    True
+    >>> strings[5:10]
+    strings([b'TT' b'GT' b'GG' b'GT' b'TT'])
+    >>> strings[5:10].tolist()
+    [b'TT', b'GT', b'GG', b'GT', b'TT']
+
+Again, it doesn't matter whether the strings were ``char*``, ``std::string``, or ``TString``, etc. in C++. They all translate into `Strings`_.
+
+At the time of this writing, ``std::vector<std::string>`` and ``std::vector<std::vector<numbers>>`` are also implemented this way.
 
 Non-TTrees: histograms and more
 """""""""""""""""""""""""""""""
+
+
+
 
 Caching data
 """"""""""""
@@ -760,3 +833,4 @@ Connectors to other packages
 .. _TBranch: http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods
 .. _Interpretation: http://uproot.readthedocs.io/en/latest/interpretation.html
 .. _JaggedArray: http://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-jagged-jaggedarray
+.. _Strings: http://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-strings-strings
