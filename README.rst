@@ -156,8 +156,8 @@ Reference documentation is not the place to start learning about a topic. Introd
 - `Remote files through XRootD`_
 - `Reading only part of a TBranch`_
 - `Iterating over files (like TChain)`_
-- `Non-flat TTrees: jagged arrays and more`_
-- `Non-TTrees: histograms and more`_
+- `Non-flat TTrees\: jagged arrays and more`_
+- `Non-TTrees\: histograms and more`_
 - `Caching data`_
 - `Parallel processing`_
 - `Connectors to other packages`_
@@ -667,8 +667,8 @@ If one file doesn't fit in memory, a collection of them won't, so we need to ite
 
 The **branches** parameter is the same (usually, a list of `TBranch`_ names will do), as is **entrysteps**, **outputtype**, caching, and parallel processing parameters. Since this form must iterate over a collection of files, it also takes a **path** (string with wildcards or a list of strings) and a **treepath** (location of the `TTree`_ within each file; must be the same), as well as **xrootdsource** options, if relevant.
 
-Non-flat TTrees: jagged arrays and more
-"""""""""""""""""""""""""""""""""""""""
+Non-flat TTrees\: jagged arrays and more
+""""""""""""""""""""""""""""""""""""""""
 
 We have already seen non-scalar structure in the `H → ZZ → eeμμ sample <http://scikit-hep.org/uproot/examples/HZZ.root>`_.
 
@@ -801,8 +801,8 @@ Again, it doesn't matter whether the strings were ``char*``, ``std::string``, or
 
 At the time of this writing, ``std::vector<std::string>`` and ``std::vector<std::vector<numbers>>`` are also implemented this way. Eventually, uproot should be able to read any type, translating C++ classes into Python ``namedtuples``, filled on demand.
 
-Non-TTrees: histograms and more
-"""""""""""""""""""""""""""""""
+Non-TTrees\: histograms and more
+""""""""""""""""""""""""""""""""
 
 The uproot implementation is fairly general, to be robust against changes in the ROOT format. ROOT has a wonderful backward-compatibility mechanism called "streamers," which specify how bytes translate into data fields for every type of object contained in the file. Even such basic types as ``TObjArray`` and ``TNamed`` are defined by streamers.
 
@@ -1090,8 +1090,8 @@ Point your local web browser to the address returned by ``canvas.url`` and whene
 .. _Remote files through XRootD: #remote-files-through-xrootd
 .. _Reading only part of a TBranch: #reading-only-part-of-a-tbranch
 .. _Iterating over files (like TChain): #iterating-over-files-like-tchain
-.. _Non-flat TTrees: jagged arrays and more: #non-flat-ttrees-jagged-arrays-and-more
-.. _Non-TTrees: histograms and more: #non-ttrees-histograms-and-more
+.. _Non-flat TTrees\: jagged arrays and more: #non-flat-ttrees-jagged-arrays-and-more
+.. _Non-TTrees\: histograms and more: #non-ttrees-histograms-and-more
 .. _Caching data: #caching-data
 .. _Parallel processing: #parallel-processing
 .. _Connectors to other packages: #connectors-to-other-packages

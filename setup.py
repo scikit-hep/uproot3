@@ -55,8 +55,8 @@ Introductory tutorials can be found on the `GitHub README <https://github.com/sc
 .. _Remote files through XRootD: https://github.com/scikit-hep/uproot#remote-files-through-xrootd
 .. _Reading only part of a TBranch: https://github.com/scikit-hep/uproot#reading-only-part-of-a-tbranch
 .. _Iterating over files (like TChain): https://github.com/scikit-hep/uproot#iterating-over-files-like-tchain
-.. _Non-flat TTrees: jagged arrays and more: https://github.com/scikit-hep/uproot#non-flat-ttrees-jagged-arrays-and-more
-.. _Non-TTrees: histograms and more: https://github.com/scikit-hep/uproot#non-ttrees-histograms-and-more
+.. _Non-flat TTrees\: jagged arrays and more: https://github.com/scikit-hep/uproot#non-flat-ttrees-jagged-arrays-and-more
+.. _Non-TTrees\: histograms and more: https://github.com/scikit-hep/uproot#non-ttrees-histograms-and-more
 .. _Caching data: https://github.com/scikit-hep/uproot#caching-data
 .. _Parallel processing: https://github.com/scikit-hep/uproot#parallel-processing
 .. _Connectors to other packages: https://github.com/scikit-hep/uproot#connectors-to-other-packages
