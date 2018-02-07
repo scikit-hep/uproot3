@@ -41,7 +41,7 @@ Optional dependencies:
 """"""""""""""""""""""
 
 - `XRootD <https://anaconda.org/nlesc/xrootd>`_ to access remote files
-- `python-futures <https://pypi.python.org/pypi/futures>`_ for parallel processing; this is part of the Python 3 standard library, so only install for Python 2
+- `futures <https://pypi.python.org/pypi/futures>`_ for parallel processing; this is part of the Python 3 standard library, so only install for Python 2
 
 *Reminder: you do not need C++ ROOT to run uproot.*
 
@@ -878,7 +878,7 @@ and you don't want it to return to the file the second time you run it, you can 
     >>> for q1, q2 in tree.iterate(["Q1", "Q2"], outputtype=tuple, cache=cache):
     ...     do_something(q1, q2)
 
-The array functions will always check the cache first, and if it's empty, get the arrays the normal way and fill the cache. Since this cache was a simple ``dict``, we can see what's in it.
+The array methods will always check the cache first, and if it's empty, get the arrays the normal way and fill the cache. Since this cache was a simple ``dict``, we can see what's in it.
 
     >>> cache
     {'AAGUS3fQmKsR56dpAQAAf77v;events;Q1;asdtype(Bi4,Li4,(),());0-2304':
@@ -941,7 +941,7 @@ The cache is a directory on disk (hint: use your SSD disk!) that has enough infr
     │   └── 01-one
     └── state.json
 
-You can use the `MemoryCache`_ and `DiskCache`_ as **cache** arguments to the uproot array functions, and you can even use them in your analysis for other purposes. They are ``dict``-like objects to which you can assign items explicitly or replace
+You can use the `MemoryCache`_ and `DiskCache`_ as **cache** arguments to the uproot array methods, and you can even use them in your analysis for other purposes. They are ``dict``-like objects to which you can assign items explicitly or replace
 
 .. code-block:: python
 
@@ -955,19 +955,75 @@ with
 
 where ``long_running_process`` is any function taking zero arguments. If ``"my cache key"`` is found, you quickly get the result from the cache; if not, it computes ``long_running_process``, sets the cache, and returns the result. This can considerably speed up oft-repeated analysis scripts without obscuring clarity.
 
+You can even create a `MemoryCache`_ that spills over to `DiskCache`_ when full. Just chain them:
 
+.. code-block:: python
 
-.. cache, basketcache, and keycache
+    # an 8 GB memory cache backed up by a 500 GB disk cache
+    >>> cache = uproot.cache.MemoryCache(8*1024**3, uproot.cache.DiskCache(500*1024**3))
 
+The ``spill_immediately`` parameter (``False`` by default) determines whether the `DiskCache`_ is a superset of the `MemoryCache`_ (by immediately copying new data to disk) or only contains data that have been evicted from the `MemoryCache`_ (often faster, but you don't have a backup if the process fails).
 
+Finally, you may be wondering why the array methods have three cache parameters: **cache**, **basketcache**, and **keycache**. Here's what they mean.
 
+- **cache:** applies to fully constructed arrays. Thus, if you request the same branch with a different **entrystart**, **entrystop**, or `Interpretation`_ (e.g. ``dtype`` or ``dims``), it counts as a new array and *competes* with arrays already in the cache, rather than drawing on them. Pass a **cache** argument if you're extracting whole arrays or iterating with fixed **entrysteps**.
+- **basketcache:** applies to raw (but decompressed) basket data. This data can be re-sliced and re-interpreted many ways, and uproot finds what it needs in the cache. It's particularly useful for lazy arrays, which are frequently re-sliced.
+- **keycache:** applies to ROOT ``TKey`` objects, used to look up baskets. With a full **basketcache** and a **keycache**, uproot never needs to access the file. The reason **keycache** is separate from **basketcache** is because ``TKey`` objects are much smaller than most arrays and should have a different eviction priority than an array: use a cache with LRU for **basketcache** and a simple ``dict`` for **keycache**.
 
+Normally, you'd *either* set only **cache** *or* both **basketcache** and **keycache**. You can use the same ``dict``-like object for many applications (single pool) or different caches for different applications (to keep the priority queues distinct).
+
+As we have seen, uproot's XRootD handler has an even lower-level cache for bytes read over the network. This is implemented as a `MemoryCache`_. Local files are usually read as memory-mapped files, in which case the operating system does the low-level caching with the same mechanism as virtual memory. (For more control, you can `uproot.open`_ a file with ``localsource=dict(chunkbytes=8*1024, limitbytes=1024**2)`` to use a regular file handle and custom paging/cache size.)
 
 Parallel processing
 """""""""""""""""""
 
+Just as caching must be explicit in uproot, parallel processing must be explicit as well. By default, every read, decompression, and array construction is single-threaded. To enable parallel processing, pass a Python 3 executor.
+
+If you're using Python 2, install the backport.
+
+.. code-block:: bash
+
+    pip install futures --user
+
+An executor is a group of pre-allocated threads that are all waiting for work. Create them with
+
+.. code-block:: python
+
+    >>> import concurrent.futures
+    >>> executor = concurrent.futures.ThreadPoolExecutor(32)   # 32 threads
+
+where the number of threads can be several times the number of CPUs on your machine.
+
+.. code-block:: python
+
+    >>> import multiprocessing
+    >>> multiprocessing.cpu_count()
+    8
+
+These threads are being used for I/O, which is limited by hardware other than the CPU. (If you observe 100% CPU usage for a long time, you may be limited by time spent decompressing, so reduce the number of threads to the number of CPUs, but if you observe mostly idle CPUs, then you are limited by disk or network reading: increase the number of threads until the CPUs are busy.)
+
+Most array-reading methods have an **executor** parameter, into which you can pass this thread pool.
+
+.. code-block:: python
+
+    >>> import uproot
+    >>> branch = uproot.open("foriter.root")["foriter"]["data"]
+    >>> branch.array(executor=executor)
+    array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
+           17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33,
+           34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45], dtype=int32)
+
+The only difference that might be visible to the user is performance. With an executor, each basket is read, decompressed, and copied to the output array in a separate task, and these tasks are handed to the executor for scheduling. A ``ThreadPoolExecutor`` fills all of the available workers and pushes more work on whenever a task finishes. The tasks must share memory (cannot be a ``ProcessPoolExecutor``) because they all write to (different parts of) the same output array.
+
+If you're familiar with Python's Global Interpreter Lock (GIL), you might be wondering how parallel processing could help a single-process Python program. In uproot, at least, all of the operations that scale with the number of events— reading, decompressing, and the array copy— are performed in operating system calls (reading), compiled compression libraries that release the GIL, and Numpy, which also releases the GIL.
+
 Connectors to other packages
 """"""""""""""""""""""""""""
+
+
+
+
+
 
 
 .. _Exploring a file: #exploring-a-file
@@ -990,3 +1046,4 @@ Connectors to other packages
 .. _MemoryCache: http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-memorycache
 .. _ThreadSafeMemoryCache: http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-threadsafememorycache
 .. _DiskCache: http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-diskcache
+.. _uproot.open: http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-open

@@ -41,12 +41,12 @@ def _method(x):
 
 open_fragments = {
     # localsource
-    "localsource": u"""localsource : function: path \u21d2 :py:class:`Source <uproot.source.source.Source>`
-        function that will be applied to the path to produce an uproot :py:class:`Source <uproot.source.source.Source>` object if the path is a local file. Default is :py:meth:`MemmapSource.defaults <uproot.source.memmap.MemmapSource.defaults>` for memory-mapped files.""",
+    "localsource": u"""localsource : function: path \u21d2 :py:class:`Source <uproot.source.source.Source> or ``dict`` of keyword arguments`
+        function that will be applied to the path to produce an uproot :py:class:`Source <uproot.source.source.Source>` object if the path is a local file. Default is :py:meth:`MemmapSource.defaults <uproot.source.memmap.MemmapSource.defaults>` for memory-mapped files. If a ``dict``, the ``dict`` is passed as keyword arguments to :py:class:`MemmapSource <uproot.source.memmap.MemmapSource>` constructor.""",
 
     # xrootdsource
-    "xrootdsource": u"""xrootdsource : function: path \u21d2 :py:class:`Source <uproot.source.source.Source>`
-        function that will be applied to the path to produce an uproot :py:class:`Source <uproot.source.source.Source>` object if the path is an XRootD URL. Default is :py:meth:`XRootDSource.defaults <uproot.source.xrootd.XRootDSource.defaults>` for XRootD with default chunk size/caching. (See :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>` constructor for details.)""",
+    "xrootdsource": u"""xrootdsource : function: path \u21d2 :py:class:`Source <uproot.source.source.Source> or ``dict`` of keyword arguments`
+        function that will be applied to the path to produce an uproot :py:class:`Source <uproot.source.source.Source>` object if the path is an XRootD URL. Default is :py:meth:`XRootDSource.defaults <uproot.source.xrootd.XRootDSource.defaults>` for XRootD with default chunk size/caching. (See :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>` constructor for details.) If a ``dict``, the ``dict`` is passed as keyword arguments to :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>` constructor.""",
 
     # options
     "options": u"""**options
@@ -545,9 +545,7 @@ u"""Adds array reading methods to TTree objects that have been streamed from a R
     - **name** (*bytes*) name of the TTree.
     - **title** (*bytes*) title of the TTree.
     - **numentries** (*int*) number of entries in the TTree (same as ``len``).
-    - **pandas** connector to `Pandas <http://pandas.pydata.org/>`_ functions *(not implemented)*.
-    - **numba** connector to `Numba <http://numba.pydata.org/>`_ functions *(not implemented)*.
-    - **oamap** connector to `OAMap <https://github.com/diana-hep/oamap>`_ functions *(not implemented)*.
+    - **pandas** connector to `Pandas <http://pandas.pydata.org/>`_ functions
 
     - :py:meth:`get <uproot.tree.TTreeMethods.get>` return a branch by name (at any level of depth).
     - :py:meth:`iterkeys <uproot.tree.TTreeMethods.iterkeys>` iterate over branch names.
@@ -1604,7 +1602,7 @@ _method(uproot.interp.numerical.asarray.finalize).__doc__ = interp_fragments["se
 uproot.interp.jagged.asjagged.__doc__ = \
 u"""Interpret branch as a jagged array (array of non-uniformly sized arrays).
 
-    This interpretation directs branch-reading to fill contiguous arrays and present them to the user in a :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>` interface. Such an object behaves as though it were an array of non-uniformly sized arrays, but it is more memory and cache-line efficient because the underlying data are contiguous. Access to :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>` is optimized in functions compiled with `Numba <http://numba.pydata.org/>`_.
+    This interpretation directs branch-reading to fill contiguous arrays and present them to the user in a :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>` interface. Such an object behaves as though it were an array of non-uniformly sized arrays, but it is more memory and cache-line efficient because the underlying data are contiguous.
 
     In this interpretation, "items" (for ``numitems``, ``itemstart``, ``itemstop``, etc.) are the items of the inner array (however that is defined), and "entries" are elements of the outer array. The outer array is always one-dimensional.
 
@@ -1669,8 +1667,6 @@ u"""Array of non-uniformly sized arrays, implemented with contiguous *content* a
     - the ``len`` function (``__len__``) returns the number of inner arrays.
     - iteration (``__iter__``) iterates over inner arrays.
 
-    These methods are `Numba <http://numba.pydata.org/>`_-aware: if used in a Numba-compiled function, access will be accelerated. *(Except slicing: not implemented inside Numba functions.)*
-
     Parameters
     ----------
     content : ``numpy.ndarray``
@@ -1716,8 +1712,6 @@ u"""Array of non-uniformly sized strings, implemented with contiguous *content* 
 
     In Python 3, these "strings" are ``bytes`` objects.
 
-    These methods are `Numba <http://numba.pydata.org/>`_-aware: if used in a Numba-compiled function, access will be accelerated. However, in a Numba function, the contents are presented as a plain array of ``numpy.uint8``, not a string (as of this writing, Numba has no ``array.tostring`` support). *(Also excluding slicing: slicing is not implemented inside Numba functions.)*
-
     Parameters
     ----------
     jaggedarray : :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>`
@@ -1756,6 +1750,7 @@ u"""A ``dict`` with a least-recently-used (LRU) eviction policy.
     - **promote(key)** declare a key to be the most recently used; raises ``KeyError`` if *key* is not in this cache (does not check spillover).
     - **spill(key)** copies a key-value pair to the spillover, if any; raises ``KeyError`` if *key* is not in this cache (does not check spillover).
     - **spill()** copies all key-value pairs to the spillover, if any.
+    - **do(key, function)** returns the value associated with *key*, if it exists; calls the zero-argument *function*, sets it to *key* and returns that if the *key* is not yet in the cache.
     - all ``dict`` methods, following Python 3 conventions, in which **keys**, **values**, and **items** return iterators, rather than lists.
 
     Parameters
@@ -1846,6 +1841,7 @@ u"""A persistent, ``dict``-like object with a least-recently-used (LRU) eviction
     - **values()** locks the cache and returns an iterator over values; same locking warning.
     - **items()** locks the cache and returns an iterator over key-value pairs; same locking warning.
     - **destroy()** deletes the directory--- all subsequent actions are undefined.
+    - **do(key, function)** returns the value associated with *key*, if it exists; calls the zero-argument *function*, sets it to *key* and returns that if the *key* is not yet in the cache.
 """
 
 cache_diskcache_fragments = {
