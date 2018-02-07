@@ -42,7 +42,8 @@ def get_version():
 
 def get_description():
     description = open("README.rst").read()
-    cutoff = description.index(".. inclusion-marker-5-do-not-remove")
+    start = description.index(".. inclusion-marker-1-5-do-not-remove")
+    stop = description.index(".. inclusion-marker-5-do-not-remove")
     extra = """
 
 Introductory tutorials
@@ -61,7 +62,7 @@ Introductory tutorials can be found on the `GitHub README <https://github.com/sc
 .. _Parallel processing: https://github.com/scikit-hep/uproot#parallel-processing
 .. _Connectors to other packages: https://github.com/scikit-hep/uproot#connectors-to-other-packages
 """
-    return description[:cutoff].strip() + extra
+    return description[start:stop].strip() + extra
 
 setup(name = "uproot",
       version = get_version(),
