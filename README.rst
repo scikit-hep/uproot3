@@ -63,9 +63,9 @@ Open each of the files; uproot presents them as ``dict``-like objects with ROOT 
 
     >>> import uproot
     >>> uproot.open("Zmumu.root").keys()
-    ['events;1']
+    [b'events;1']
     >>> uproot.open("HZZ.root").keys()
-    ['events;1']
+    [b'events;1']
 
 Since the file acts as a ``dict``, access the TTrees with square brackets. TTrees are also ``dict``-like objects, with branch names and branches as keys and values. (Hint: ``allkeys()`` lists branches recursively, if they're nested.)
 
@@ -74,12 +74,12 @@ Since the file acts as a ``dict``, access the TTrees with square brackets. TTree
     >>> zmumu = uproot.open("Zmumu.root")["events"]
     >>> hzz = uproot.open("HZZ.root")["events"]
     >>> zmumu.keys()
-    ['Type', 'Run', 'Event', 'E1', 'px1', 'py1', 'pz1', 'pt1', 'eta1', 'phi1', 'Q1', 'E2',
-     'px2', 'py2', 'pz2', 'pt2', 'eta2', 'phi2', 'Q2', 'M']
+    [b'Type', b'Run', b'Event', b'E1', b'px1', b'py1', b'pz1', b'pt1', b'eta1', b'phi1',
+     b'Q1', b'E2', b'px2', b'py2', b'pz2', b'pt2', b'eta2', b'phi2', b'Q2', b'M']
     >>> hzz.keys()
-    ['NJet', 'Jet_Px', 'Jet_Py', 'Jet_Pz', 'Jet_E', 'Jet_btag', 'Jet_ID', 'NMuon', 'Muon_Px',
-     'Muon_Py', 'Muon_Pz', 'Muon_E', 'Muon_Charge', 'Muon_Iso', 'NElectron', 'Electron_Px',
-     'Electron_Py', 'Electron_Pz', 'Electron_E', 'Electron_Charge', 'Electron_Iso', 'NPhoton',
+    [b'NJet', b'Jet_Px', b'Jet_Py', b'Jet_Pz', b'Jet_E', b'Jet_btag', b'Jet_ID', b'NMuon',
+     b'Muon_Px', b'Muon_Py', b'Muon_Pz', b'Muon_E', b'Muon_Charge', b'Muon_Iso', b'NElectron',
+     b'Electron_Px', b'Electron_Py', b'Electron_Pz', b'Electron_E', b'Electron_Charge',
     ...
 
 You can turn a chosen set of branches into Numpy arrays with the ``arrays`` method. Each array represents the values of a single attribute for all events, just as they're stored in a split ROOT file.
@@ -87,9 +87,9 @@ You can turn a chosen set of branches into Numpy arrays with the ``arrays`` meth
 .. code-block:: python
 
     >>> zmumu.arrays(["px1", "py1", "pz1"])
-    {'px1': array([-41.19528764,  35.11804977, ..., 32.37749196,  32.48539387]),
-     'py1': array([ 17.4332439 , -16.57036233, ..., 1.19940578,   1.2013503 ]),
-     'pz1': array([-68.96496181, -48.77524654, ..., -74.53243061, -74.80837247])}
+    {b'px1': array([-41.19528764,  35.11804977, ..., 32.37749196,  32.48539387]),
+     b'py1': array([ 17.4332439 , -16.57036233, ..., 1.19940578,   1.2013503 ]),
+     b'pz1': array([-68.96496181, -48.77524654, ..., -74.53243061, -74.80837247])}
 
 If the number of items per entry is not constant, such as the number of jets in an event, they can't be expressed as flat Numpy arrays. Instead, uproot loads them into `jagged arrays <https://en.wikipedia.org/wiki/Jagged_array>`_.
 
@@ -183,23 +183,23 @@ This ``file`` is a `ROOTDirectory`_, a class that can represent either a whole R
 .. code-block:: python
 
     >>> file.keys()                                      # get keys as a list
-    ['one;1', 'three;1']
+    [b'one;1', b'three;1']
     >>> file.iterkeys()                                  # iterate over keys
     <generator object iterkeys at 0x77209e67c0a0>
     >>> (x for x in file)                                # iterate over keys (just like a dict)
     <generator object <genexpr> at 0x7de7eca80320>
     >>> file.allkeys()                                   # get all keys recursively
-    ['one;1', 'one/two;1', 'one/two/tree;1', 'one/tree;1', 'three;1', 'three/tree;1']
+    [b'one;1', b'one/two;1', b'one/two/tree;1', b'one/tree;1', b'three;1', b'three/tree;1']
 
 If you only ask for the keys, the data won't be loaded (which can be important for performance!). The ``values()`` and ``items()`` functions do the same thing they do for lists, and there's an "iter" and "all" form for each of them.
 
 .. code-block:: python
 
     >>> file.values()
-    [<ROOTDirectory 'one' at 0x783af8f82d10>, <ROOTDirectory 'three' at 0x783af8cf6250>]
+    [<ROOTDirectory b'one' at 0x783af8f82d10>, <ROOTDirectory b'three' at 0x783af8cf6250>]
     >>> file.items()
-    [('one;1', <ROOTDirectory 'one' at 0x783af8cf64d0>),
-     ('three;1', <ROOTDirectory 'three' at 0x783af8cf6810>)]
+    [(b'one;1', <ROOTDirectory b'one' at 0x783af8cf64d0>),
+     (b'three;1', <ROOTDirectory b'three' at 0x783af8cf6810>)]
 
 In addition, `ROOTDirectory`_ has ``classes()``, ``iterclasses()`` and ``allclasses()`` to iterate over keys and class names of the contained objects. You can identify the class of an object before loading it.
 
@@ -208,26 +208,26 @@ In addition, `ROOTDirectory`_ has ``classes()``, ``iterclasses()`` and ``allclas
     >>> for n, x in file.allclasses():
     ...     print(repr(n), "\t", x)
     ... 
-    'one;1'          <class 'uproot.rootio.ROOTDirectory'>
-    'one/two;1'      <class 'uproot.rootio.ROOTDirectory'>
-    'one/two/tree;1' <class 'uproot.rootio.TTree'>
-    'one/tree;1'     <class 'uproot.rootio.TTree'>
-    'three;1'        <class 'uproot.rootio.ROOTDirectory'>
-    'three/tree;1'   <class 'uproot.rootio.TTree'>
+    b'one;1'          <class 'uproot.rootio.ROOTDirectory'>
+    b'one/two;1'      <class 'uproot.rootio.ROOTDirectory'>
+    b'one/two/tree;1' <class 'uproot.rootio.TTree'>
+    b'one/tree;1'     <class 'uproot.rootio.TTree'>
+    b'three;1'        <class 'uproot.rootio.ROOTDirectory'>
+    b'three/tree;1'   <class 'uproot.rootio.TTree'>
 
 As with a ``dict``, square brackets extract values by key. If you include ``"/"`` or ``";"`` in your request, you can specify subdirectories or cycle numbers (those ``;1`` at the end of key names, which you can usually ignore).
 
 .. code-block:: python
 
     >>> file["one"]["two"]["tree"]
-    <TTree 'tree' at 0x783af8f8aed0>
+    <TTree b'tree' at 0x783af8f8aed0>
 
 is equivalent to
 
 .. code-block:: python
 
     >>> file["one/two/tree"]
-    <TTree 'tree' at 0x783af8cf6490>
+    <TTree b'tree' at 0x783af8cf6490>
 
 The memory management is explicit: each time you request a value from a `ROOTDirectory`_, it is deserialized from the file. This usually doesn't matter on the command-line, but it could in a loop.
 
@@ -238,7 +238,7 @@ The `TTree`_ also has the attributes you expect from ROOT, presented with Python
 .. code-block:: python
 
     >>> tree.name, tree.title, tree.numentries
-    ('tree', 'my tree title', 100)
+    (b'tree', b'my tree title', 100)
 
 as well as the raw data that was read from the file (C++ private members that start with "f").
 
@@ -333,55 +333,55 @@ An `Interpretation`_ lets you view the bytes of the ROOT file in different ways.
 
     # this array contains big-endian, 8-byte floating point numbers
     >>> tree.arrays("Float64")
-    {'Float64': array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11., 12.,
-                        13., 14., 15., 16., 17., 18., 19., 20., 21., 22., 23., 24., 25.,
-                        26., 27., 28., 29., 30., 31., 32., 33., 34., 35., 36., 37., 38.,
-                        39., 40., 41., 42., 43., 44., 45., 46., 47., 48., 49., 50., 51.,
-                        52., 53., 54., 55., 56., 57., 58., 59., 60., 61., 62., 63., 64.,
-                        65., 66., 67., 68., 69., 70., 71., 72., 73., 74., 75., 76., 77.,
-                        78., 79., 80., 81., 82., 83., 84., 85., 86., 87., 88., 89., 90.,
-                        91., 92., 93., 94., 95., 96., 97., 98., 99.])}
+    {b'Float64': array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11., 12.,
+                         13., 14., 15., 16., 17., 18., 19., 20., 21., 22., 23., 24., 25.,
+                         26., 27., 28., 29., 30., 31., 32., 33., 34., 35., 36., 37., 38.,
+                         39., 40., 41., 42., 43., 44., 45., 46., 47., 48., 49., 50., 51.,
+                         52., 53., 54., 55., 56., 57., 58., 59., 60., 61., 62., 63., 64.,
+                         65., 66., 67., 68., 69., 70., 71., 72., 73., 74., 75., 76., 77.,
+                         78., 79., 80., 81., 82., 83., 84., 85., 86., 87., 88., 89., 90.,
+                         91., 92., 93., 94., 95., 96., 97., 98., 99.])}
 
     # but we could try reading them as little-endian, 4-byte integers (non-sensically)
     >>> tree.arrays({"Float32": uproot.interp.asdtype("<i4")})
-    {'Float32': array([    0, 32831,    64, 16448, 32832, 41024, 49216, 57408,    65,
-                        4161,  8257, 12353, 16449, 20545, 24641, 28737, 32833, 34881,
-                       36929, 38977, 41025, 43073, 45121, 47169, 49217, 51265, 53313,
-                       55361, 57409, 59457, 61505, 63553,    66,  1090,  2114,  3138,
-                        4162,  5186,  6210,  7234,  8258,  9282, 10306, 11330, 12354,
-                       13378, 14402, 15426, 16450, 17474, 18498, 19522, 20546, 21570,
-                       22594, 23618, 24642, 25666, 26690, 27714, 28738, 29762, 30786,
-                       31810, 32834, 33346, 33858, 34370, 34882, 35394, 35906, 36418,
-                       36930, 37442, 37954, 38466, 38978, 39490, 40002, 40514, 41026,
-                       41538, 42050, 42562, 43074, 43586, 44098, 44610, 45122, 45634,
-                       46146, 46658, 47170, 47682, 48194, 48706, 49218, 49730, 50242,
-                       50754], dtype=int32)}
+    {b'Float32': array([    0, 32831,    64, 16448, 32832, 41024, 49216, 57408,    65,
+                         4161,  8257, 12353, 16449, 20545, 24641, 28737, 32833, 34881,
+                        36929, 38977, 41025, 43073, 45121, 47169, 49217, 51265, 53313,
+                        55361, 57409, 59457, 61505, 63553,    66,  1090,  2114,  3138,
+                         4162,  5186,  6210,  7234,  8258,  9282, 10306, 11330, 12354,
+                        13378, 14402, 15426, 16450, 17474, 18498, 19522, 20546, 21570,
+                        22594, 23618, 24642, 25666, 26690, 27714, 28738, 29762, 30786,
+                        31810, 32834, 33346, 33858, 34370, 34882, 35394, 35906, 36418,
+                        36930, 37442, 37954, 38466, 38978, 39490, 40002, 40514, 41026,
+                        41538, 42050, 42562, 43074, 43586, 44098, 44610, 45122, 45634,
+                        46146, 46658, 47170, 47682, 48194, 48706, 49218, 49730, 50242,
+                        50754], dtype=int32)}
 
 Some reinterpretations are useful, though:
 
 .. code-block:: python
 
     >>> tree.arrays({"Float64": uproot.interp.asdtype(">f8", todims=(5, 5))})
-    {'Float64': array([[[ 0.,  1.,  2.,  3.,  4.],
-                        [ 5.,  6.,  7.,  8.,  9.],
-                        [10., 11., 12., 13., 14.],
-                        [15., 16., 17., 18., 19.],
-                        [20., 21., 22., 23., 24.]],
-                       [[25., 26., 27., 28., 29.],
-                        [30., 31., 32., 33., 34.],
-                        [35., 36., 37., 38., 39.],
-                        [40., 41., 42., 43., 44.],
-                        [45., 46., 47., 48., 49.]],
-                       [[50., 51., 52., 53., 54.],
-                        [55., 56., 57., 58., 59.],
-                        [60., 61., 62., 63., 64.],
-                        [65., 66., 67., 68., 69.],
-                        [70., 71., 72., 73., 74.]],
-                       [[75., 76., 77., 78., 79.],
-                        [80., 81., 82., 83., 84.],
-                        [85., 86., 87., 88., 89.],
-                        [90., 91., 92., 93., 94.],
-                        [95., 96., 97., 98., 99.]]])}
+    {b'Float64': array([[[ 0.,  1.,  2.,  3.,  4.],
+                         [ 5.,  6.,  7.,  8.,  9.],
+                         [10., 11., 12., 13., 14.],
+                         [15., 16., 17., 18., 19.],
+                         [20., 21., 22., 23., 24.]],
+                        [[25., 26., 27., 28., 29.],
+                         [30., 31., 32., 33., 34.],
+                         [35., 36., 37., 38., 39.],
+                         [40., 41., 42., 43., 44.],
+                         [45., 46., 47., 48., 49.]],
+                        [[50., 51., 52., 53., 54.],
+                         [55., 56., 57., 58., 59.],
+                         [60., 61., 62., 63., 64.],
+                         [65., 66., 67., 68., 69.],
+                         [70., 71., 72., 73., 74.]],
+                        [[75., 76., 77., 78., 79.],
+                         [80., 81., 82., 83., 84.],
+                         [85., 86., 87., 88., 89.],
+                         [90., 91., 92., 93., 94.],
+                         [95., 96., 97., 98., 99.]]])}
 
 In particular, replacing ``asdtype`` with ``asarray`` lets you instruct uproot to fill an existing array, so that you can manage your own memory:
 
@@ -391,14 +391,14 @@ In particular, replacing ``asdtype`` with ``asarray`` lets you instruct uproot t
     >>> myarray = numpy.zeros(200)   # allocate 200 zeros
 
     >>> tree.arrays({"Float64": uproot.interp.asarray(">f8", myarray)})
-    {'Float64': array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11., 12.,
-                       13., 14., 15., 16., 17., 18., 19., 20., 21., 22., 23., 24., 25.,
-                       26., 27., 28., 29., 30., 31., 32., 33., 34., 35., 36., 37., 38.,
-                       39., 40., 41., 42., 43., 44., 45., 46., 47., 48., 49., 50., 51.,
-                       52., 53., 54., 55., 56., 57., 58., 59., 60., 61., 62., 63., 64.,
-                       65., 66., 67., 68., 69., 70., 71., 72., 73., 74., 75., 76., 77.,
-                       78., 79., 80., 81., 82., 83., 84., 85., 86., 87., 88., 89., 90.,
-                       91., 92., 93., 94., 95., 96., 97., 98., 99.])}
+    {b'Float64': array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11., 12.,
+                        13., 14., 15., 16., 17., 18., 19., 20., 21., 22., 23., 24., 25.,
+                        26., 27., 28., 29., 30., 31., 32., 33., 34., 35., 36., 37., 38.,
+                        39., 40., 41., 42., 43., 44., 45., 46., 47., 48., 49., 50., 51.,
+                        52., 53., 54., 55., 56., 57., 58., 59., 60., 61., 62., 63., 64.,
+                        65., 66., 67., 68., 69., 70., 71., 72., 73., 74., 75., 76., 77.,
+                        78., 79., 80., 81., 82., 83., 84., 85., 86., 87., 88., 89., 90.,
+                        91., 92., 93., 94., 95., 96., 97., 98., 99.])}
     >>> myarray
     array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11., 12.,
            13., 14., 15., 16., 17., 18., 19., 20., 21., 22., 23., 24., 25.,
@@ -474,7 +474,7 @@ Once XRootD is installed, you can open remote files in uproot by specifying the 
     >>> file = uproot.open("root://eospublic.cern.ch//eos/opendata/atlas/OutreachDatasets/"
     ...                    "2016-07-29/MC/mc_117049.ttbar_had.root")
     >>> file.keys()
-    ['mini;1']
+    [b'mini;1']
     >>> tree = file["mini"]
     >>> tree.show()
     runNumber                  (no streamer)              asdtype('>i4')
@@ -625,27 +625,27 @@ Another reason to want to read part of an array is to efficiently iterate over d
     >>> for chunk in tree.iterate("data"):
     ...     print(chunk)
     ... 
-    {'data': array([0, 1, 2, 3, 4, 5], dtype=int32)}
-    {'data': array([ 6,  7,  8,  9, 10, 11], dtype=int32)}
-    {'data': array([12, 13, 14, 15, 16, 17], dtype=int32)}
-    {'data': array([18, 19, 20, 21, 22, 23], dtype=int32)}
-    {'data': array([24, 25, 26, 27, 28, 29], dtype=int32)}
-    {'data': array([30, 31, 32, 33, 34, 35], dtype=int32)}
-    {'data': array([36, 37, 38, 39, 40, 41], dtype=int32)}
-    {'data': array([42, 43, 44, 45], dtype=int32)}
+    {b'data': array([0, 1, 2, 3, 4, 5], dtype=int32)}
+    {b'data': array([ 6,  7,  8,  9, 10, 11], dtype=int32)}
+    {b'data': array([12, 13, 14, 15, 16, 17], dtype=int32)}
+    {b'data': array([18, 19, 20, 21, 22, 23], dtype=int32)}
+    {b'data': array([24, 25, 26, 27, 28, 29], dtype=int32)}
+    {b'data': array([30, 31, 32, 33, 34, 35], dtype=int32)}
+    {b'data': array([36, 37, 38, 39, 40, 41], dtype=int32)}
+    {b'data': array([42, 43, 44, 45], dtype=int32)}
     >>> for chunk in tree.iterate("data", entrysteps=5):
     ...     print(chunk)
     ... 
-    {'data': array([0, 1, 2, 3, 4], dtype=int32)}
-    {'data': array([5, 6, 7, 8, 9], dtype=int32)}
-    {'data': array([10, 11, 12, 13, 14], dtype=int32)}
-    {'data': array([15, 16, 17, 18, 19], dtype=int32)}
-    {'data': array([20, 21, 22, 23, 24], dtype=int32)}
-    {'data': array([25, 26, 27, 28, 29], dtype=int32)}
-    {'data': array([30, 31, 32, 33, 34], dtype=int32)}
-    {'data': array([35, 36, 37, 38, 39], dtype=int32)}
-    {'data': array([40, 41, 42, 43, 44], dtype=int32)}
-    {'data': array([45], dtype=int32)}
+    {b'data': array([0, 1, 2, 3, 4], dtype=int32)}
+    {b'data': array([5, 6, 7, 8, 9], dtype=int32)}
+    {b'data': array([10, 11, 12, 13, 14], dtype=int32)}
+    {b'data': array([15, 16, 17, 18, 19], dtype=int32)}
+    {b'data': array([20, 21, 22, 23, 24], dtype=int32)}
+    {b'data': array([25, 26, 27, 28, 29], dtype=int32)}
+    {b'data': array([30, 31, 32, 33, 34], dtype=int32)}
+    {b'data': array([35, 36, 37, 38, 39], dtype=int32)}
+    {b'data': array([40, 41, 42, 43, 44], dtype=int32)}
+    {b'data': array([45], dtype=int32)}
 
 By default, the iteration step size is the minimum necessary to line up with basket boundaries, but you can specify an explicit **entrysteps** (fixed integer or iterable over start, stop pairs).
 
@@ -681,7 +681,7 @@ We have already seen non-scalar structure in the `H → ZZ → eeμμ sample <ht
     >>> import uproot
     >>> tree = uproot.open("HZZ.root")["events"]
     >>> tree.arrays(["Muon_Px", "Muon_Py", "Muon_Pz"])
-    {'Muon_Pz':
+    {b'Muon_Pz':
         jaggedarray([[ -8.160793 -11.307582],
                      [20.199968],
                      [11.168285 36.96519 ],
@@ -689,7 +689,7 @@ We have already seen non-scalar structure in the `H → ZZ → eeμμ sample <ht
                      [-52.66375],
                      [162.17632],
                      [54.719437]]),
-     'Muon_Py':
+     b'Muon_Py':
         jaggedarray([[-11.654672    0.6934736],
                      [-24.404259],
                      [-21.723139  29.800508],
@@ -697,7 +697,7 @@ We have already seen non-scalar structure in the `H → ZZ → eeμμ sample <ht
                      [-15.303859],
                      [63.60957],
                      [-35.665077]]),
-     'Muon_Px':
+     b'Muon_Px':
         jaggedarray([[-52.899456  37.73778 ],
                      [-0.81645936],
                      [48.98783    0.8275667],
@@ -799,16 +799,100 @@ The role of the `Strings`_ wrapper is to yield each item as a Python ``bytes`` o
 
 Again, it doesn't matter whether the strings were ``char*``, ``std::string``, or ``TString``, etc. in C++. They all translate into `Strings`_.
 
-At the time of this writing, ``std::vector<std::string>`` and ``std::vector<std::vector<numbers>>`` are also implemented this way.
+At the time of this writing, ``std::vector<std::string>`` and ``std::vector<std::vector<numbers>>`` are also implemented this way. Eventually, uproot should be able to read any type, translating C++ classes into Python ``namedtuples``, filled on demand.
 
 Non-TTrees: histograms and more
 """""""""""""""""""""""""""""""
 
+The uproot implementation is fairly general, to be robust against changes in the ROOT format. ROOT has a wonderful backward-compatibility mechanism called "streamers," which specify how bytes translate into data fields for every type of object contained in the file. Even such basic types as ``TObjArray`` and ``TNamed`` are defined by streamers.
 
+To read a `TTree`_, uproot first consults the streamers in your ROOT file to know how to deserialize your particular version of `TTree`_. This is why the `TTree`_ class contains so many members starting with "f"— they are the C++ class private members, and uproot is literally following the prescription to deserialize the C++ class. Pythonic attributes like ``tree.name`` and ``tree.numentries`` are aliases for ``tree.fName`` and ``tree.fEntries``, etc.
 
+.. code-block:: python
+
+    >>> [x for x in dir(tree) if x.startswith("f")]
+    ['fAliases', 'fAutoFlush', 'fAutoSave', 'fBranchRef', 'fBranches', 'fClusterRangeEnd',
+     'fClusterSize', 'fDefaultEntryOffsetLen', 'fEntries', 'fEstimate', 'fFillColor',
+     'fFillStyle', 'fFlushedBytes', 'fFriends', 'fIndex', 'fIndexValues', 'fLeaves',
+     'fLineColor', 'fLineStyle', 'fLineWidth', 'fMarkerColor', 'fMarkerSize',
+     'fMarkerStyle', 'fMaxEntries', 'fMaxEntryLoop', 'fMaxVirtualSize', 'fNClusterRange',
+     'fName', 'fSavedBytes', 'fScanField', 'fTimerInterval', 'fTitle', 'fTotBytes',
+     'fTreeIndex', 'fUpdate', 'fUserInfo', 'fWeight', 'fZipBytes', 'filter']
+
+This means that literally any kind of object may be read from a `ROOTDirectory`_. Even if the uproot authors have never heard of it, the new data type will have a streamer in the file, and uproot will follow that prescription to make an object with the appropriate private fields. What you do with that object is another story: the member functions, written in C++, are *not* serialized into the ROOT file, and thus the Python object will have data but no functionality.
+
+We have to add functionality by writing the equivalent Python. The uproot `TTree`_ implementation is a bundle of functions that expect private members like ``fName``, ``fEntries``, and ``fBranches``. Other ROOT types can be wrapped in similar ways. Histograms are useful, and therefore the ``TH1`` classes are similarly wrapped:
+
+.. code-block:: bash
+
+    wget http://scikit-hep.org/uproot/examples/histograms.root
+
+.. code-block:: python
+
+    >>> import uproot
+    >>> file = uproot.open("histograms.root")
+    >>> file.allkeys()
+    [b'one;1', b'two;1', b'three;1']
+    >>> file["one"].show()
+                      0                                                       2410.8
+                      +------------------------------------------------------------+
+    [-inf, -3)   0    |                                                            |
+    [-3, -2.4)   68   |**                                                          |
+    [-2.4, -1.8) 285  |*******                                                     |
+    [-1.8, -1.2) 755  |*******************                                         |
+    [-1.2, -0.6) 1580 |***************************************                     |
+    [-0.6, 0)    2296 |*********************************************************   |
+    [0, 0.6)     2286 |*********************************************************   |
+    [0.6, 1.2)   1570 |***************************************                     |
+    [1.2, 1.8)   795  |********************                                        |
+    [1.8, 2.4)   289  |*******                                                     |
+    [2.4, 3)     76   |**                                                          |
+    [3, inf]     0    |                                                            |
+                      +------------------------------------------------------------+
+
+    >>> [x for x in dir(file["one"]) if not x.startswith("_") and not x.startswith("f")]
+    ['allvalues', 'append', 'bokeh', 'classname', 'classversion', 'clear', 'copy', 'count',
+     'extend', 'high', 'holoviews', 'index', 'insert', 'interval', 'low', 'name', 'numbins',
+     'numpy', 'overflows', 'pop', 'read', 'remove', 'reverse', 'show', 'sort', 'title',
+     'underflows', 'values', 'xlabels']
+
+Some code exists to view histograms in Pythonic plotting packages like Bokeh and Holoviews, but this is a wide-open area for future development. For now, uproot's ability to read histograms is useful for querying bin values in scripts.
 
 Caching data
 """"""""""""
+
+Following Python's preference for explicit operations over implicit ones, uproot does not cache any data by default. If you say ``file["tree"]`` twice or ``tree["branch"].array()`` twice, uproot will go back to the file each time to extract the contents. It will not hold previously loaded objects or arrays in memory in case you want them again. You can keep them in memory yourself by assigning them to a variable; the price of having to be explicit is well worth not having to reverse engineer a memory-hogging cache.
+
+Sometimes, however, changing your code to assign new variable names (or ``dict`` entries) for every array you want to keep in memory can be time-consuming or obscure an otherwise simple analysis script. It would be nice to just turn on caching. For this purpose, all array-extracting methods have **cache**, **basketcache**, and **keycache** options that accpet any ``dict``-like object as a cache.
+
+If you have a loop like
+
+.. code-block:: python
+
+    >>> for q1, q2 in tree.iterate(["Q1", "Q2"], outputtype=tuple):
+    ...     do_something(q1, q2)
+
+and you don't want it to return to the file the second time you run it, you can change it to
+
+    >>> cache = {}
+    >>> for q1, q2 in tree.iterate(["Q1", "Q2"], outputtype=tuple, cache=cache):
+    ...     do_something(q1, q2)
+
+The array functions will always check the cache first, and if it's empty, get the arrays the normal way and fill the cache. Since this cache was a simple ``dict``, we can see what's in it.
+
+    >>> cache
+    {'AAGUS3fQmKsR56dpAQAAf77v;events;Q1;asdtype(Bi4,Li4,(),());0-2304':
+         array([ 1, -1, -1, ...,  1,  1,  1], dtype=int32),
+     'AAGUS3fQmKsR56dpAQAAf77v;events;Q2;asdtype(Bi4,Li4,(),());0-2304':
+         array([-1,  1,  1, ..., -1, -1, -1], dtype=int32)}
+
+Key names are long because they encode a unique identifier to the file, the path to the `TTree`_, to the `TBranch`_, the `Interpretation`_, and the entry range, so that we don't confuse one cached object for another.
+
+
+
+
+
+
 
 Parallel processing
 """""""""""""""""""

@@ -28,6 +28,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import base64
 import glob
 import inspect
 import numbers
@@ -429,15 +430,24 @@ class TTreeMethods(object):
         else:
             explicit_basketcache = True
                 
+        def evaluate(interpretation, future, past, cachekey):
+            if future is None:
+                return past
+            else:
+                out = interpretation.finalize(future())
+                if cache is not None:
+                    cache[cachekey] = out
+                return out
+
         if issubclass(outputtype, dict):
             def wrap_for_python_scope(futures):
-                return lambda: outputtype([(name, interpretation.finalize(future())) for name, interpretation, future in futures])
+                return lambda: outputtype([(name, evaluate(interpretation, future, past, cachekey)) for name, interpretation, future, past, cachekey in futures])
         elif outputtype == tuple or outputtype == list:
             def wrap_for_python_scope(futures):
-                return lambda: outputtype([interpretation.finalize(future()) for name, interpretation, future in futures])
+                return lambda: outputtype([evaluate(interpretation, future, past, cachekey) for name, interpretation, future, past, cachekey in futures])
         else:
             def wrap_for_python_scope(futures):
-                return lambda: outputtype(*[interpretation.finalize(future()) for name, interpretation, future in futures])
+                return lambda: outputtype(*[evaluate(interpretation, future, past, cachekey) for name, interpretation, future, past, cachekey in futures])
 
         for start, stop in entrysteps:
             start = max(start, entrystart)
@@ -445,7 +455,18 @@ class TTreeMethods(object):
             if start > stop:
                 continue
 
-            out = wrap_for_python_scope([(branch.name, interpretation, branch._step_array(interpretation, basket_itemoffset, basket_entryoffset, start, stop, cache, basketcache, keycache, executor, explicit_basketcache)) for branch, interpretation, basket_itemoffset, basket_entryoffset in branchinfo])
+            futures = []
+            for branch, interpretation, basket_itemoffset, basket_entryoffset in branchinfo:
+                cachekey = branch._cachekey(interpretation, start, stop)
+                if cache is not None:
+                    out = cache.get(cachekey, None)
+                    if out is not None:
+                        futures.append((branch.name, interpretation, None, out, cachekey))
+                        continue
+                future = branch._step_array(interpretation, basket_itemoffset, basket_entryoffset, start, stop, basketcache, keycache, executor, explicit_basketcache)
+                futures.append((branch.name, interpretation, future, None, cachekey))
+
+            out = wrap_for_python_scope(futures)
 
             if blocking:
                 out = out()
@@ -622,13 +643,13 @@ class TBranchMethods(object):
             return self.fWriteBasket + 1
 
     def _cachekey(self, interpretation, entrystart, entrystop):
-        return "{0};{1};{2};{3};{4}-{5}".format(self._context.sourcepath, self._context.treename, self.name, interpretation.identifier, entrystart, entrystop)
+        return "{0};{1};{2};{3};{4}-{5}".format(base64.b64encode(self._context.uuid).decode("ascii"), self._context.treename.decode("ascii"), self.name.decode("ascii"), interpretation.identifier, entrystart, entrystop)
 
     def _basketcachekey(self, i):
-        return "{0};{1};{2};{3};raw".format(self._context.sourcepath, self._context.treename, self.name, i)
+        return "{0};{1};{2};{3};raw".format(base64.b64encode(self._context.uuid).decode("ascii"), self._context.treename.decode("ascii"), self.name.decode("ascii"), i)
 
     def _keycachekey(self, i):
-        return "{0};{1};{2};{3};key".format(self._context.sourcepath, self._context.treename, self.name, i)
+        return "{0};{1};{2};{3};key".format(base64.b64encode(self._context.uuid).decode("ascii"), self._context.treename.decode("ascii"), self.name.decode("ascii"), i)
 
     def _threadsafe_key(self, i, keycache, complete):
         key = None
@@ -1041,13 +1062,8 @@ class TBranchMethods(object):
         else:
             return wait
 
-    def _step_array(self, interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, cache, basketcache, keycache, executor, explicit_basketcache):
+    def _step_array(self, interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, basketcache, keycache, executor, explicit_basketcache):
         self._tryrecover()
-
-        if cache is not None:
-            out = cache.get(self._cachekey(interpretation, entrystart, entrystop), None)
-            if out is not None:
-                return lambda: out
 
         basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
 

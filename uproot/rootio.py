@@ -88,6 +88,7 @@ class ROOTDirectory(object):
     class _FileContext(object):
         def __init__(self, sourcepath, streamerinfos, streamerinfosmap, classes, compression, tfile):
             self.sourcepath, self.streamerinfos, self.streamerinfosmap, self.classes, self.compression, self.tfile = sourcepath, streamerinfos, streamerinfosmap, classes, compression, tfile
+            self.uuid = tfile["fUUID"]
 
         def copy(self):
             out = ROOTDirectory._FileContext.__new__(ROOTDirectory._FileContext)
