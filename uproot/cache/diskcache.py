@@ -39,6 +39,10 @@ import re
 import shutil
 import struct
 try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+try:
     from urllib import quote as urlquote
     from urllib import unquote as urlunquote
 except ImportError:
@@ -85,8 +89,12 @@ memmapread.version1 = numpy.array([147, 78, 85, 77, 80, 89, 1, 0], dtype=numpy.u
 memmapread.version2 = numpy.array([147, 78, 85, 77, 80, 89, 2, 0], dtype=numpy.uint8)
 
 def arrayread(filename, cleanup):
-    try:
+    if hasattr(filename, "read") and hasattr(filename, "close"):
+        file = filename
+    else:
         file = open(filename, "rb")
+
+    try:
         magic_version = file.read(8)
         if magic_version == b"\x93NUMPY\x01\x00":
             # version 1.0
@@ -116,6 +124,26 @@ def arraywrite(filename, obj):
     with open(filename, "wb") as file:
         numpy.save(file, obj)
 
+def anyread(filename, cleanup):
+    file = open(filename, "rb")
+    if file.read(6) == b"\x93NUMPY":
+        file.seek(0)
+        return arrayread(file, cleanup)
+    else:
+        try:
+            file.seek(0)
+            return pickle.load(file)
+        finally:
+            file.close()
+            cleanup()
+
+def anywrite(filename, obj):
+    if isinstance(obj, numpy.ndarray):
+        return arraywrite(filename, obj)
+    else:
+        with open(filename, "wb") as file:
+            pickle.dump(obj, file)
+
 class DiskCache(object):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (type,), {})
@@ -135,7 +163,7 @@ class DiskCache(object):
     class State(object): pass
 
     @staticmethod
-    def create(limitbytes, directory, read=arrayread, write=arraywrite, lookupsize=10000, maxperdir=100, delimiter="-", numformat=numpy.uint64):
+    def create(limitbytes, directory, read=anyread, write=anywrite, lookupsize=10000, maxperdir=100, delimiter="-", numformat=numpy.uint64):
         if os.path.exists(directory):
             shutil.rmtree(directory)
 
@@ -207,7 +235,7 @@ class DiskCache(object):
         return out
 
     @staticmethod
-    def join(directory, read=arrayread, write=arraywrite, check=True):
+    def join(directory, read=anyread, write=anywrite, check=True):
         if not os.path.exists(directory):
             raise ValueError("cannot join {0} because it does not exist".format(repr(directory)))
 
@@ -304,13 +332,14 @@ class DiskCache(object):
     def refresh_config(self):
         self.config.__dict__.update(json.load(os.path.join(self.directory, self.CONFIG_FILE)))
 
-    def __contains__(self, name):
+    def __contains__(self, name, lock=True):
         if not isinstance(name, bytes) and hasattr(name, "encode"):
             name = name.encode("utf-8")
         if not isinstance(name, bytes):
             raise TypeError("keys must be strings, not {0}".format(type(name)))
 
-        self._lockstate()
+        if lock:
+            self._lockstate()
         try:
             for num, n in self._walkorder(os.path.join(self.directory, self.ORDER_DIR), reverse=True):
                 if name == n:
@@ -318,15 +347,17 @@ class DiskCache(object):
             return False
 
         finally:
-            self._unlockstate()
+            if lock:
+                self._unlockstate()
 
-    def promote(self, name):
+    def promote(self, name, lock=True):
         if not isinstance(name, bytes) and hasattr(name, "encode"):
             name = name.encode("utf-8")
         if not isinstance(name, bytes):
             raise TypeError("keys must be strings, not {0}".format(type(name)))
 
-        self._lockstate()
+        if lock:
+            self._lockstate()
         try:
             oldpath = self._get(name)  # might raise KeyError
 
@@ -346,15 +377,17 @@ class DiskCache(object):
             self._set(name, self._path2num(newpath))
 
         finally:
-            self._unlockstate()
+            if lock:
+                self._unlockstate()
 
-    def __getitem__(self, name):
+    def __getitem__(self, name, lock=True):
         if not isinstance(name, bytes) and hasattr(name, "encode"):
             name = name.encode("utf-8")
         if not isinstance(name, bytes):
             raise TypeError("keys must be strings, not {0}".format(type(name)))
 
-        self._lockstate()
+        if lock:
+            self._lockstate()
         try:
             oldpath = self._get(name)  # might raise KeyError
 
@@ -379,7 +412,8 @@ class DiskCache(object):
             os.link(newpath, linkpath)
 
         finally:
-            self._unlockstate()
+            if lock:
+                self._unlockstate()
 
         def cleanup():
             os.remove(linkpath)
@@ -390,7 +424,7 @@ class DiskCache(object):
 
         return self.read(linkpath, cleanup)
 
-    def __setitem__(self, name, value):
+    def __setitem__(self, name, value, lock=True):
         if not isinstance(name, bytes) and hasattr(name, "encode"):
             name = name.encode("utf-8")
         if not isinstance(name, bytes):
@@ -410,7 +444,8 @@ class DiskCache(object):
             else:                            # simply reinstate it
                 break   # success! get out of the while loop!
 
-        self._lockstate()
+        if lock:
+            self._lockstate()
         try:
             try:
                 oldpath = self._get(name)
@@ -434,20 +469,22 @@ class DiskCache(object):
             self._evict(os.path.join(self.directory, self.ORDER_DIR), True)
 
         finally:
-            self._unlockstate()
+            if lock:
+                self._unlockstate()
 
         try:
             os.rmdir(piddir)
         except:
             pass
 
-    def __delitem__(self, name):
+    def __delitem__(self, name, lock=True):
         if not isinstance(name, bytes) and hasattr(name, "encode"):
             name = name.encode("utf-8")
         if not isinstance(name, bytes):
             raise TypeError("keys must be strings, not {0}".format(type(name)))
 
-        self._lockstate()
+        if lock:
+            self._lockstate()
         try:
             oldpath = self._get(name)
             self.state.numbytes -= os.path.getsize(oldpath)
@@ -455,20 +492,59 @@ class DiskCache(object):
             self._cleandirs(os.path.split(oldpath)[0])
             self._del(name)
         finally:
-            self._unlockstate()
+            if lock:
+                self._unlockstate()
 
-    def keys(self):
-        self._lockstate()
+    def get(self, name, default=None, lock=True):
+        try:
+            return self.__getitem__(name, lock=lock)
+        except KeyError:
+            return default
+
+    def setdefault(self, key, default=None, lock=True):
+        if lock:
+            self._lockstate()
+        try:
+            if not self.__contains__(key, lock=False):
+                self.__setitem__(key, default, lock=False)
+                return default
+            else:
+                return self.__getitem__(key, lock=False)
+        finally:
+            if lock:
+                self._unlockstate()
+
+    def do(self, key, function, lock=True):
+        if not callable(function):
+            raise TypeError("'function' must be a zero-argument function")
+        if lock:
+            self._lockstate()
+        try:
+            if not self.__contains__(key, lock=False):
+                value = function()
+                self.__setitem__(key, value, lock=False)
+                return value
+            else:
+                return self.__getitem__(key, lock=False)
+        finally:
+            if lock:
+                self._unlockstate()
+
+    def keys(self, lock=True):
+        if lock:
+            self._lockstate()
         try:
             for num, name in self._walkorder(os.path.join(self.directory, self.ORDER_DIR)):
                 yield name.decode("utf-8")
         finally:
-            self._unlockstate()
+            if lock:
+                self._unlockstate()
 
-    def items(self):
+    def items(self, lock=True):
         linkpaths = []
 
-        self._lockstate()
+        if lock:
+            self._lockstate()
         try:
             piddir = self._piddir()
             for num, name in self._walkorder(os.path.join(self.directory, self.ORDER_DIR)):
@@ -478,7 +554,8 @@ class DiskCache(object):
                 linkpaths.append((name, linkpath))
 
         finally:
-            self._unlockstate()
+            if lock:
+                self._unlockstate()
 
         def make_cleanup(linkpath):   # Python's function-based variable scope
             def cleanup():

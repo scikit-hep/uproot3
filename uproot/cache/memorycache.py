@@ -289,7 +289,19 @@ class MemoryCache(dict):
     def setdefault(self, key, default=None):
         if key not in self._lookup:
             self[key] = default
-        return self[key]
+            return default
+        else:
+            return self[key]
+
+    def do(self, key, function):
+        if not callable(function):
+            raise TypeError("'function' must be a zero-argument function")
+        if key not in self._lookup:
+            value = function()
+            self[key] = value
+            return value
+        else:
+            return self[key]
 
     def __len__(self):
         return len(self._order)
@@ -432,6 +444,10 @@ class ThreadSafeMemoryCache(MemoryCache):
     def setdefault(self, key, default=None):
         with self._lock:
             return super(ThreadSafeMemoryCache, self).setdefault(key, default)
+
+    def do(self, key, function):
+        with self._lock:
+            return super(ThreadSafeMemoryCache, self).do(key, function)
 
     def __eq__(self, other):
         if not self.__class__ == other.__class__:

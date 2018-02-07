@@ -863,7 +863,7 @@ Caching data
 
 Following Python's preference for explicit operations over implicit ones, uproot does not cache any data by default. If you say ``file["tree"]`` twice or ``tree["branch"].array()`` twice, uproot will go back to the file each time to extract the contents. It will not hold previously loaded objects or arrays in memory in case you want them again. You can keep them in memory yourself by assigning them to a variable; the price of having to be explicit is well worth not having to reverse engineer a memory-hogging cache.
 
-Sometimes, however, changing your code to assign new variable names (or ``dict`` entries) for every array you want to keep in memory can be time-consuming or obscure an otherwise simple analysis script. It would be nice to just turn on caching. For this purpose, all array-extracting methods have **cache**, **basketcache**, and **keycache** options that accpet any ``dict``-like object as a cache.
+Sometimes, however, changing your code to assign new variable names (or ``dict`` entries) for every array you want to keep in memory can be time-consuming or obscure an otherwise simple analysis script. It would be nice to just turn on caching. For this purpose, all array-extracting methods have **cache**, **basketcache**, and **keycache** parameters that accpet any ``dict``-like object as a cache.
 
 If you have a loop like
 
@@ -888,11 +888,11 @@ The array functions will always check the cache first, and if it's empty, get th
 
 Key names are long because they encode a unique identifier to the file, the path to the `TTree`_, to the `TBranch`_, the `Interpretation`_, and the entry range, so that we don't confuse one cached array for another.
 
-Python ``dict`` objects will keep the arrays as long as the process lives (or they're manually deleted, or the ``dict`` goes out of scope). Sometimes this is too long. Usually, caches have a Least Recently Used (LRU) eviction policy: they're capped at a given size and when adding a new array would exceed that size, they delete the ones that were least recently accessed. `MemoryCache`_ implements such a policy.
+Python ``dict`` objects will keep the arrays as long as the process lives (or they're manually deleted, or the ``dict`` goes out of scope). Sometimes this is too long. Real caches typically have a Least Recently Used (LRU) eviction policy: they're capped at a given size and when adding a new array would exceed that size, they delete the ones that were least recently accessed. `MemoryCache`_ implements such a policy.
 
 .. code-block:: python
 
-    >>> cache = uproot.cache.memorycache.MemoryCache(8*1024**3)    # 8 GB (typical)
+    >>> cache = uproot.cache.MemoryCache(8*1024**3)    # 8 GB (typical)
     >>> import numpy
     >>> cache["one"] = numpy.zeros(3*1024**3, dtype=numpy.uint8)   # 3 GB
     >>> list(cache)
@@ -906,6 +906,58 @@ Python ``dict`` objects will keep the arrays as long as the process lives (or th
     >>> cache["four"] = numpy.zeros(3*1024**3, dtype=numpy.uint8)  # 3 GB causes evication
     >>> list(cache)
     ['three', 'four']
+
+Thus, you can pass a `MemoryCache`_ as the **cache** argument to get caching with an LRU policy. If you need it, there's also a `ThreadSafeMemoryCache`_ for parallel processing.
+
+Sometimes, you might need a cache that survives from one process to another. For instance, you have a long-running script that fails on the last step and you want to get to that last step more quickly by not re-reading/re-decompressing/re-formatting the ROOT data as arrays. Use a `DiskCache`_.
+
+.. code-block:: python
+
+    >>> import uproot
+    # the first process that uses the cache must create it
+    >>> cache = uproot.cache.DiskCache.create(8*1024**3, "/tmp/mycache")   # limit to 8 GB
+    >>> import numpy
+    >>> cache["my cache key"] = numpy.zeros(10000)
+    >>> exit()
+
+.. code-block:: python
+
+    >>> import uproot
+    # the second process that uses the cache must join it
+    >>> cache = uproot.cache.DiskCache.join("/tmp/mycache")                # already limited
+    >>> cache["my cache key"]
+    array([0., 0., 0., ..., 0., 0., 0.])
+
+The cache is a directory on disk (hint: use your SSD disk!) that has enough infrastructure to quickly lookup data (implements a hashmap), promote the most recently used object, keep track of the disk size, evict the least recently used, all while avoiding costly directory-listings and putting too many files in the same directory. Everything is contained in the directory— delete the directory when you no longer want it. Depending on your use, you may want to investigate its performance tuning settings (``lookupsize`` and ``maxperdir``).
+
+.. code-block:: bash
+
+    $ tree /tmp/mycache
+    /tmp/mycache
+    ├── collisions
+    ├── config.json
+    ├── lookup.npy
+    ├── order
+    │   └── 01-one
+    └── state.json
+
+You can use the `MemoryCache`_ and `DiskCache`_ as **cache** arguments to the uproot array functions, and you can even use them in your analysis for other purposes. They are ``dict``-like objects to which you can assign items explicitly or replace
+
+.. code-block:: python
+
+    >>> result = long_running_process()
+
+with
+
+.. code-block:: python
+
+    >>> result = cache.do("my cache key", long_running_process)
+
+where ``long_running_process`` is any function taking zero arguments. If ``"my cache key"`` is found, you quickly get the result from the cache; if not, it computes ``long_running_process``, sets the cache, and returns the result. This can considerably speed up oft-repeated analysis scripts without obscuring clarity.
+
+
+
+.. cache, basketcache, and keycache
 
 
 
@@ -936,3 +988,5 @@ Connectors to other packages
 .. _JaggedArray: http://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-jagged-jaggedarray
 .. _Strings: http://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-strings-strings
 .. _MemoryCache: http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-memorycache
+.. _ThreadSafeMemoryCache: http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-threadsafememorycache
+.. _DiskCache: http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-diskcache
