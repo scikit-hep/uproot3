@@ -977,9 +977,9 @@ As we have seen, uproot's XRootD handler has an even lower-level cache for bytes
 Parallel processing
 """""""""""""""""""
 
-Just as caching must be explicit in uproot, parallel processing must be explicit as well. By default, every read, decompression, and array construction is single-threaded. To enable parallel processing, pass a Python 3 executor.
+Just as caching must be explicit in uproot, parallel processing must be explicit as well. By default, every read, decompression, and array construction is single-threaded. To enable parallel processing, pass in a Python 3 executor.
 
-If you're using Python 2, install the backport.
+To use executors in Python 2, install the backport.
 
 .. code-block:: bash
 
@@ -1000,7 +1000,7 @@ where the number of threads can be several times the number of CPUs on your mach
     >>> multiprocessing.cpu_count()
     8
 
-These threads are being used for I/O, which is limited by hardware other than the CPU. (If you observe 100% CPU usage for a long time, you may be limited by time spent decompressing, so reduce the number of threads to the number of CPUs, but if you observe mostly idle CPUs, then you are limited by disk or network reading: increase the number of threads until the CPUs are busy.)
+These threads are being used for I/O, which is usually limited by hardware other than the CPU. (If you observe 100% CPU usage for a long time, you may be limited by CPU time spent decompressing, so reduce the number of threads. If you observe mostly idle CPUs, however, then you are limited by disk or network reading: increase the number of threads until the CPUs are busy.)
 
 Most array-reading methods have an **executor** parameter, into which you can pass this thread pool.
 
@@ -1017,11 +1017,70 @@ The only difference that might be visible to the user is performance. With an ex
 
 If you're familiar with Python's Global Interpreter Lock (GIL), you might be wondering how parallel processing could help a single-process Python program. In uproot, at least, all of the operations that scale with the number of events— reading, decompressing, and the array copy— are performed in operating system calls (reading), compiled compression libraries that release the GIL, and Numpy, which also releases the GIL.
 
+Since the baskets are being read in parallel, you may want to read them in the background, freeing up the main thread to do other things (such as submit even more work!). If you set ``blocking=False``, the array methods return a zero-argument function instead of an array, ``dict`` of arrays, or whatever. When you want to wait for the result, evaluate this function.
+
+.. code-block:: python
+
+    >>> arrays = branch.array(executor=executor, blocking=False)
+    >>> arrays
+    <function TBranchMethods.array.<locals>.wait at 0x783465575950>
+    >>> arrays()
+    array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
+           17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33,
+           34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45], dtype=int32)
+
+The ``blocking=False`` setting can be used without an executor (without parallel processing), but it doesn't make much sense to do that.
+
 Connectors to other packages
 """"""""""""""""""""""""""""
 
+As a connector between ROOT and the scientific Python world, uproot has a growing set of extensions to ease these transitions. For instance, to get a Pandas DataFrame, call `tree.pandas.df`_:
 
+.. code-block:: python
 
+    >>> import uproot
+    >>> tree = uproot.open("Zmumu.root")["events"]
+    >>> tree.pandas.df(["pt1", "eta1", "phi1", "pt2", "eta2", "phi2"])
+              eta1      eta2      phi1      phi2      pt1      pt2
+    0    -1.217690 -1.051390  2.741260 -0.440873  44.7322  38.8311
+    1    -1.051390 -1.217690 -0.440873  2.741260  38.8311  44.7322
+    2    -1.051390 -1.217690 -0.440873  2.741260  38.8311  44.7322
+    3    -1.051390 -1.217690 -0.440873  2.741260  38.8311  44.7322
+    ...        ...       ...       ...       ...      ...      ...
+    2300 -1.482700 -1.570440 -2.775240  0.037027  72.8781  32.3997
+    2301 -1.570440 -1.482700  0.037027 -2.775240  32.3997  72.8781
+    2302 -1.570440 -1.482700  0.037027 -2.775240  32.3997  72.8781
+    2303 -1.570440 -1.482700  0.037027 -2.775240  32.3997  72.8781
+
+    [2304 rows x 6 columns]
+
+This method takes the same **branches**, **entrystart**, **entrystop**, **cache**, **basketcache**, **keycache**, and **executor** methods as all the other array methods.
+
+Histograms have experimental connectors to Bokeh and Holoviews for plotting.
+
+.. code-block:: bash
+
+    pip install bokeh --user
+
+.. code-block:: python
+
+    >>> import uproot
+    >>> canvas = uproot.BokehCanvas()     # there's only one canvas; get it
+    >>> canvas.show()                     # opens a tab in your web browser
+
+    >>> file = uproot.open("histograms.root")
+    >>> file["one"].bokeh.plot()          # draws the histogram in the latest tab
+
+The interesting thing about Bokeh is that it can be running on a remote site (e.g. CERN or Fermilab), sending plots to your local web browser (though a WebSocket). For this configuration, show the canvas with a ``hosts`` argument— which IP addresses are allowed to view the plots (only ``"localhost"`` by default, but ``"*"`` for the world)— and an optional ``port`` (one will be assigned if not explicit).
+
+.. code-block:: python
+
+    # on the remote machine
+    >>> canvas.show(hosts="*", port=12345)
+    >>> canvas.url
+    'http://where.am.i:12345'
+
+Point your local web browser to the address returned by ``canvas.url`` and whenever you call ``hist.bokeh.plot()`` on the remote machine, you'll see plots in your web browser. (It sure beats forwarding X-Windows through ssh!)
 
 
 
@@ -1047,3 +1106,4 @@ Connectors to other packages
 .. _ThreadSafeMemoryCache: http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-threadsafememorycache
 .. _DiskCache: http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-diskcache
 .. _uproot.open: http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-open
+.. _tree.pandas.df: http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot._connect.to_pandas.TTreeMethods_pandas.df
