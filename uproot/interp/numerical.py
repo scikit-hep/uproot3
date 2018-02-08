@@ -39,6 +39,12 @@ if sys.version_info[0] <= 2:
 else:
     string_types = (str, bytes)
 
+def _dimsprod(dims):
+    out = 1
+    for x in dims:
+        out *= x
+    return out
+
 class asdtype(Interpretation):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (Interpretation.__metaclass__,), {})
@@ -100,7 +106,8 @@ class asdtype(Interpretation):
         return numpy.empty((0,) + self.todims, dtype=self.todtype)
 
     def compatible(self, other):
-        return isinstance(other, (asdtype, asarray)) and self.todtype == other.todtype and self.todims == other.todims
+        return (isinstance(other, (asdtype, asarray)) and self.todtype == other.todtype and self.todims == other.todims) or \
+               (isinstance(other, asstlbitset) and self.todtype == other.dtype and self.todims == (other.numbytes,))
 
     def numitems(self, numbytes, numentries):
         return numbytes // self.fromdtype.itemsize
@@ -140,6 +147,8 @@ class asdtype(Interpretation):
         assert itemstart % product == 0
         assert itemstop % product == 0
         return destination[itemstart // product : itemstop // product]
+        # FIXME: isn't the above equivalent to the following?
+        #     return destination[entrystart:entrystop]
 
     def finalize(self, destination):
         return destination
@@ -195,8 +204,46 @@ class asarray(asdtype):
         array, stop = destination
         return array[:stop]
 
-def _dimsprod(dims):
-    out = 1
-    for x in dims:
-        out *= x
-    return out
+class asstlbitset(Interpretation):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (Interpretation.__metaclass__,), {})
+
+    dtype = numpy.dtype(numpy.bool_)
+
+    def __init__(self, numbytes):
+        self.numbytes = numbytes
+
+    def __repr__(self):
+        return self.identifier
+
+    @property
+    def identifier(self):
+        return "asstlbitset({0})".format(self.numbytes)
+
+    def empty(self):
+        return numpy.empty((0,), dtype=self.dtype)
+
+    def compatible(self, other):
+        return (isinstance(other, asstlbitset) and self.numbytes == other.numbytes) or \
+               (isinstance(other, (asdtype, asarray)) and self.dtype == other.todtype and (self.numbytes,) == other.todims)
+
+    def numitems(self, numbytes, numentries):
+        return max(0, numbytes // self.dtype.itemsize - 10*numentries)
+
+    def source_numitems(self, source):
+        return _dimsprod(source.shape)
+
+    def fromroot(self, data, offsets, local_entrystart, local_entrystop):
+        return data.view(self.dtype).reshape((-1, self.numbytes + 10))[local_entrystart:local_entrystop,10:]
+
+    def destination(self, numitems, numentries):
+        return numpy.empty((numitems // self.numbytes, self.numbytes), dtype=self.dtype)
+
+    def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
+        destination[entrystart:entrystop] = source
+
+    def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
+        return destination[entrystart:entrystop]
+
+    def finalize(self, destination):
+        return destination

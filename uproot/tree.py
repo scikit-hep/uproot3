@@ -552,10 +552,19 @@ class TTreeMethods(object):
     def _normalize_entrystartstop(self, entrystart, entrystop):
         if entrystart is None:
             entrystart = 0
+        elif entrystart < 0:
+            entrystart += self.numentries
+        entrystart = min(self.numentries, max(0, entrystart))
+
         if entrystop is None:
             entrystop = self.numentries
+        elif entrystop < 0:
+            entrystop += self.numentries
+        entrystop = min(self.numentries, max(0, entrystop))
+
         if entrystop < entrystart:
             raise IndexError("entrystop must be greater than or equal to entrystart")
+
         return entrystart, entrystop
 
     def __len__(self):

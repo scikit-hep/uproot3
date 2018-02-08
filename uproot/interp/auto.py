@@ -36,6 +36,7 @@ import numpy
 import uproot.const
 from uproot.interp.numerical import asdtype
 from uproot.interp.numerical import asarray
+from uproot.interp.numerical import asstlbitset
 from uproot.interp.jagged import asjagged
 from uproot.interp.jagged import asstlvector
 from uproot.interp.jagged import asstlvectorvector
@@ -204,6 +205,11 @@ def interpret(branch, classes=None, swapbytes=True):
                     except _NotNumerical:
                         pass
 
+                if hasattr(branch._streamer, "fTypeName"):
+                    m = re.match(b"bitset<([1-9][0-9]*)>", branch._streamer.fTypeName)
+                    if m is not None:
+                        return asstlbitset(int(m.group(1)))
+
                 if getattr(branch._streamer, "fTypeName", None) == b"vector<bool>":
                     return asstlvector(asdtype("bool"))
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<char>":
@@ -251,6 +257,10 @@ def interpret(branch, classes=None, swapbytes=True):
                     return asstlvectorvector(">f4")
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<double> >":
                     return asstlvectorvector(">f8")
+
+                m = re.match(b"bitset<([1-9][0-9]*)>", branch.fClassName)
+                if m is not None:
+                    return asstlbitset(int(m.group(1)))
 
                 if branch.fClassName == b"vector<bool>":
                     return asstlvector(asdtype("bool"))
