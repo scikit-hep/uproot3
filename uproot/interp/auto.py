@@ -150,6 +150,9 @@ def interpret(branch, classes=None, swapbytes=True):
 
     except _NotNumerical:
         if len(branch.fLeaves) == 1:
+            if len(branch.fBranches) > 0 and all(len(x.fLeaves) == 1 and x.fLeaves[0].fLeafCount is branch.fLeaves[0] for x in branch.fBranches):
+                return asdtype(">i4")
+
             if branch.fLeaves[0].__class__.__name__ == "TLeafC":
                 return asstrings(skip_bytes=1, skip4_if_255=True)
 
