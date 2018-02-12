@@ -78,7 +78,7 @@ def _ftype2dtype(fType):
 def _leaf2dtype(leaf):
     classname = leaf.__class__.__name__
     if classname == "TLeafO":
-        return numpy.dtype(numpy.bool)
+        return numpy.dtype(numpy.bool_)
     elif classname == "TLeafB":
         if leaf.fIsUnsigned:
             return numpy.dtype(numpy.uint8)
@@ -214,7 +214,7 @@ def interpret(branch, classes=None, swapbytes=True):
                         return asstlbitset(int(m.group(1)))
 
                 if getattr(branch._streamer, "fTypeName", None) == b"vector<bool>":
-                    return asstlvector(asdtype("bool"))
+                    return asstlvector(asdtype(numpy.bool_))
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<char>":
                     return asstlvector(asdtype("i1"))
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<unsigned char>":
@@ -239,11 +239,11 @@ def interpret(branch, classes=None, swapbytes=True):
                     return asstlvecstrings()
 
                 if getattr(branch._streamer, "fTypeName", None) == b"vector<vector<bool> >":
-                    return asstlvectorvector(">bool")
+                    return asstlvectorvector(numpy.bool_)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<char> >":
-                    return asstlvectorvector(">i1")
+                    return asstlvectorvector("i1")
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<unsigned char> >":
-                    return asstlvectorvector(">u1")
+                    return asstlvectorvector("u1")
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<short> >":
                     return asstlvectorvector(">i2")
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<unsigned short> >":
@@ -266,7 +266,7 @@ def interpret(branch, classes=None, swapbytes=True):
                     return asstlbitset(int(m.group(1)))
 
                 if branch.fClassName == b"vector<bool>":
-                    return asstlvector(asdtype("bool"))
+                    return asstlvector(asdtype(numpy.bool_))
                 elif branch.fClassName == b"vector<char>":
                     return asstlvector(asdtype("i1"))
                 elif branch.fClassName == b"vector<unsigned char>":
@@ -291,11 +291,11 @@ def interpret(branch, classes=None, swapbytes=True):
                     return asstlvecstrings()
 
                 if branch.fClassName == b"vector<vector<bool> >":
-                    return asstlvectorvector(">bool")
+                    return asstlvectorvector(numpy.bool_)
                 elif branch.fClassName == b"vector<vector<char> >":
-                    return asstlvectorvector(">i1")
+                    return asstlvectorvector("i1")
                 elif branch.fClassName == b"vector<vector<unsigned char> >":
-                    return asstlvectorvector(">u1")
+                    return asstlvectorvector("u1")
                 elif branch.fClassName == b"vector<vector<short> >":
                     return asstlvectorvector(">i2")
                 elif branch.fClassName == b"vector<vector<unsigned short> >":
