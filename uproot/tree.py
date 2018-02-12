@@ -217,9 +217,15 @@ class TTreeMethods(object):
 
     def _postprocess(self, source, cursor, context):
         context.treename = self.name
+
         for branch in self.fBranches:
             self._attachstreamer(branch, context.streamerinfosmap.get(getattr(branch, "fClassName", None), None), context.streamerinfosmap)
-        
+
+        if self.fAliases is None:
+            self.aliases = {}
+        else:
+            self.aliases = dict((alias.fName, alias.fTitle) for alias in self.fAliases)
+
     @property
     def name(self):
         return self.fName
@@ -232,8 +238,19 @@ class TTreeMethods(object):
     def numentries(self):
         return self.fEntries
 
-    def iterkeys(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
+    @property
+    def numbranches(self):
+        count = 0
+        for x in self.itervalues(recursive=True):
+            count += 1
+        return count
+
+    def iterkeys(self, recursive=False, filtername=nofilter, filtertitle=nofilter, aliases=True):
         for branch in self.itervalues(recursive, filtername, filtertitle):
+            if aliases:
+                for aliasname, branchname in self.aliases.items():
+                    if branch.name == branchname:
+                        yield aliasname
             yield branch.name
 
     def itervalues(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
@@ -244,41 +261,37 @@ class TTreeMethods(object):
                 for x in branch.itervalues(recursive, filtername, filtertitle):
                     yield x
 
-    def iteritems(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
-        for branch in self.fBranches:
-            if filtername(branch.name) and filtertitle(branch.title):
-                yield branch.name, branch
-            if recursive:
-                for x in branch.iteritems(recursive, filtername, filtertitle):
-                    yield x
+    def iteritems(self, recursive=False, filtername=nofilter, filtertitle=nofilter, aliases=True):
+        for branch in self.itervalues(recursive, filtername, filtertitle):
+            if aliases:
+                for aliasname, branchname in self.aliases.items():
+                    if branch.name == branchname:
+                        yield aliasname, branch
+            yield branch.name, branch
 
-    def keys(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
-        return list(self.iterkeys(recursive=recursive, filtername=filtername, filtertitle=filtertitle))
+    def keys(self, recursive=False, filtername=nofilter, filtertitle=nofilter, aliases=True):
+        return list(self.iterkeys(recursive=recursive, filtername=filtername, filtertitle=filtertitle, aliases=aliases))
 
     def values(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
         return list(self.itervalues(recursive=recursive, filtername=filtername, filtertitle=filtertitle))
 
-    def items(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
-        return list(self.iteritems(recursive=recursive, filtername=filtername, filtertitle=filtertitle))
+    def items(self, recursive=False, filtername=nofilter, filtertitle=nofilter, aliases=True):
+        return list(self.iteritems(recursive=recursive, filtername=filtername, filtertitle=filtertitle, aliases=aliases))
 
-    def allkeys(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
-        return self.keys(recursive=True, filtername=filtername, filtertitle=filtertitle)
+    def allkeys(self, recursive=False, filtername=nofilter, filtertitle=nofilter, aliases=True):
+        return self.keys(recursive=True, filtername=filtername, filtertitle=filtertitle, aliases=aliases)
 
     def allvalues(self, filtername=nofilter, filtertitle=nofilter):
         return self.values(recursive=True, filtername=filtername, filtertitle=filtertitle)
 
-    def allitems(self, filtername=nofilter, filtertitle=nofilter):
-        return self.items(recursive=True, filtername=filtername, filtertitle=filtertitle)
+    def allitems(self, filtername=nofilter, filtertitle=nofilter, aliases=True):
+        return self.items(recursive=True, filtername=filtername, filtertitle=filtertitle, aliases=aliases)
 
-    def get(self, name):
+    def get(self, name, recursive=True, filtername=nofilter, filtertitle=nofilter, aliases=True):
         name = _bytesid(name)
-        for branch in self.values():
-            if branch.name == name:
-                return branch
-            try:
-                return branch.get(name)
-            except KeyError:
-                pass
+        for n, b in self.iteritems(recursive=recursive, filtername=filtername, filtertitle=filtertitle, aliases=aliases):
+            if n == name:
+                return b
         raise KeyError("not found: {0}".format(repr(name)))
 
     def __contains__(self, name):
@@ -525,7 +538,7 @@ class TTreeMethods(object):
                 flagsbyte += re.X
         return flagsbyte
 
-    def _normalize_branches(self, arg, allownone=True, allowcallable=True, allowdict=True, allowstring=True):
+    def _normalize_branches(self, arg, allownone=True, allowcallable=True, allowdict=True, allowstring=True, aliases=True):
         if allownone and arg is None:                      # no specification; read all branches
             for branch in self.allvalues():                # that have interpretations
                 interpretation = interpret(branch)
@@ -551,17 +564,17 @@ class TTreeMethods(object):
                 isregex = re.match(self._branch_regex, word)
                 if isregex is not None:
                     regex, flags = isregex.groups()
-                    for branch in self.allvalues():
-                        if re.match(regex, branch.name, self._branch_flags(flags)):
+                    for name, branch in self.iteritems(recursive=True, aliases=aliases):
+                        if re.match(regex, name, self._branch_flags(flags)):
                             yield branch, branch._normalize_dtype(interpretation)
 
                 elif b"*" in word or b"?" in word or b"[" in word:
-                    for branch in self.allvalues():
-                        if branch.name == word or glob.fnmatch.fnmatchcase(branch.name, word):
+                    for name, branch in self.iteritems(recursive=True, aliases=aliases):
+                        if name == word or glob.fnmatch.fnmatchcase(name, word):
                             yield branch, branch._normalize_dtype(interpretation)
 
                 else:
-                    branch = self.get(word)
+                    branch = self.get(word, aliases=aliases)
                     yield branch, branch._normalize_dtype(interpretation)
 
         elif allowstring and isinstance(arg, string_types):
@@ -580,27 +593,27 @@ class TTreeMethods(object):
                     isregex = re.match(self._branch_regex, word)
                     if isregex is not None:
                         regex, flags = isregex.groups()
-                        for branch in self.allvalues():
-                            if re.match(regex, branch.name, self._branch_flags(flags)):
+                        for name, branch in self.iteritems(recursive=True, aliases=aliases):
+                            if re.match(regex, name, self._branch_flags(flags)):
                                 interpretation = interpret(branch)
                                 if interpretation is None:
-                                    if branch.name == word:
+                                    if name == word:
                                         raise ValueError("cannot interpret branch {0} as a Python type".format(repr(branch.name)))
                                 else:
                                     yield branch, interpretation
 
                     elif b"*" in word or b"?" in word or b"[" in word:
-                        for branch in self.allvalues():
-                            if branch.name == word or glob.fnmatch.fnmatchcase(branch.name, word):
+                        for name, branch in self.iteritems(recursive=True, aliases=aliases):
+                            if name == word or glob.fnmatch.fnmatchcase(name, word):
                                 interpretation = interpret(branch)
                                 if interpretation is None:
-                                    if branch.name == word:
+                                    if name == word:
                                         raise ValueError("cannot interpret branch {0} as a Python type".format(repr(branch.name)))
                                 else:
                                     yield branch, interpretation
 
                     else:
-                        branch = self.get(word)
+                        branch = self.get(word, aliases=aliases)
                         interpretation = interpret(branch)
                         if interpretation is None:
                             raise ValueError("cannot interpret branch {0} as a Python type".format(repr(branch.name)))
@@ -667,6 +680,13 @@ class TBranchMethods(object):
     def numentries(self):
         return self.fEntries   # or self.fEntryNumber?
 
+    @property
+    def numbranches(self):
+        count = 0
+        for x in self.itervalues(recursive=True):
+            count += 1
+        return count
+
     def iterkeys(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
         for branch in self.itervalues(recursive, filtername, filtertitle):
             yield branch.name
@@ -704,6 +724,13 @@ class TBranchMethods(object):
 
     def allitems(self, filtername=nofilter, filtertitle=nofilter):
         return self.items(recursive=True, filtername=filtername, filtertitle=filtertitle)
+            
+    def get(self, name, recursive=True, filtername=nofilter, filtertitle=nofilter, aliases=True):
+        name = _bytesid(name)
+        for n, b in self.iteritems(recursive=recursive, filtername=filtername, filtertitle=filtertitle):
+            if n == name:
+                return b
+        raise KeyError("not found: {0}".format(repr(name)))
 
     @property
     def numbaskets(self):
@@ -862,17 +889,6 @@ class TBranchMethods(object):
         interpretation = self._normalize_interpretation(interpretation)
         key = self._threadsafe_key(i, keycache, True)
         return interpretation.numitems(key.border, self.basket_numentries(i))
-            
-    def get(self, name):
-        name = _bytesid(name)
-        for branch in self.values():
-            if branch.name == name:
-                return branch
-            try:
-                return branch.get(name)
-            except KeyError:
-                pass
-        raise KeyError("not found: {0}".format(repr(name)))
 
     def _normalize_entrystartstop(self, entrystart, entrystop):
         if entrystart is None:
