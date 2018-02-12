@@ -324,8 +324,8 @@ The complete list of array-reading parameters is given in the `TTree`_ reference
 The **branches** parameter lets you specify which `TBranch`_ data to load and optionally, an interpretation other than the default.
 
 - If it's ``None`` or unspecified, you'll get all arrays.
-- If it's a single string, you'll get the only array you've named.
-- If it's a list of strings, you'll get all the arrays you've named.
+- If it's a single string, you'll either get the array you've named or all the arrays that match a glob pattern (if it includes ``*``, ``?``, or ``[...]``) or full regular expression (if it starts and ends with slashes with flags ``/pattern/i``).
+- If it's a list of strings, you'll get all the arrays you've named or specified by pattern-matching.
 - If it's a ``dict`` from name to `Interpretation`_, you'll read the requested arrays in the specified ways.
 - There's also a functional form that gives more control at the cost of more complexity.
 

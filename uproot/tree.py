@@ -33,6 +33,7 @@ import glob
 import inspect
 import numbers
 import os.path
+import re
 import struct
 import sys
 import threading
@@ -501,14 +502,37 @@ class TTreeMethods(object):
         for branch in self.allvalues():
             branch._recover()
 
-    def _normalize_branches(self, arg):
-        if arg is None:                                    # no specification; read all branches
+    def matches(self, branches):
+        return [b.name for b, i in self._normalize_branches(branches, allownone=False, allowcallable=False, allowdict=False, allowstring=True)]
+
+    _branch_regex = re.compile(b"^/(.*)/([iLmsux]*)$")
+
+    @staticmethod
+    def _branch_flags(flags):
+        flagsbyte = 0
+        for flag in flags:
+            if flag == "i":
+                flagsbyte += re.I
+            elif flag == "L":
+                flagsbyte += re.L
+            elif flag == "m":
+                flagsbyte += re.M
+            elif flag == "s":
+                flagsbyte += re.S
+            elif flag == "u":
+                flagsbyte += re.U
+            elif flag == "x":
+                flagsbyte += re.X
+        return flagsbyte
+
+    def _normalize_branches(self, arg, allownone=True, allowcallable=True, allowdict=True, allowstring=True):
+        if allownone and arg is None:                      # no specification; read all branches
             for branch in self.allvalues():                # that have interpretations
                 interpretation = interpret(branch)
                 if interpretation is not None:
                     yield branch, interpretation
 
-        elif callable(arg):
+        elif allowcallable and callable(arg):
             for branch in self.allvalues():
                 result = arg(branch)
                 if result is None:
@@ -520,36 +544,68 @@ class TTreeMethods(object):
                 else:                                      # function is giving interpretations
                     yield branch, branch._normalize_dtype(result)
 
-        elif isinstance(arg, dict):
-            for name, interpretation in arg.items():       # dict of branch-interpretation pairs
-                name = _bytesid(name)
-                branch = self.get(name)
-                interpretation = branch._normalize_dtype(interpretation)
-                yield branch, interpretation
+        elif allowdict and isinstance(arg, dict):
+            for word, interpretation in arg.items():
+                word = _bytesid(word)
 
-        elif isinstance(arg, string_types):
-            name = _bytesid(arg)                           # one explicitly given branch name
-            branch = self.get(name)
-            interpretation = interpret(branch)             # but no interpretation given
-            if interpretation is None:
-                raise ValueError("cannot interpret branch {0} as a Python type".format(repr(name)))
-            else:
-                yield branch, interpretation
+                isregex = re.match(self._branch_regex, word)
+                if isregex is not None:
+                    regex, flags = isregex.groups()
+                    for branch in self.allvalues():
+                        if re.match(regex, branch.name, self._branch_flags(flags)):
+                            yield branch, branch._normalize_dtype(interpretation)
+
+                elif b"*" in word or b"?" in word or b"[" in word:
+                    for branch in self.allvalues():
+                        if branch.name == word or glob.fnmatch.fnmatchcase(branch.name, word):
+                            yield branch, branch._normalize_dtype(interpretation)
+
+                else:
+                    branch = self.get(word)
+                    yield branch, branch._normalize_dtype(interpretation)
+
+        elif allowstring and isinstance(arg, string_types):
+            for x in self._normalize_branches([arg]):
+                yield x
 
         else:
             try:
-                names = iter(arg)                          # only way to check for iterable (in general)
+                words = iter(arg)                          # only way to check for iterable (in general)
             except:
                 raise TypeError("'branches' argument not understood")
             else:
-                for name in names:
-                    name = _bytesid(name)
-                    branch = self.get(name)
-                    interpretation = interpret(branch)     # but no interpretation given
-                    if interpretation is None:
-                        raise ValueError("cannot interpret branch {0} as a Python type".format(repr(name)))
+                for word in words:
+                    word = _bytesid(word)
+
+                    isregex = re.match(self._branch_regex, word)
+                    if isregex is not None:
+                        regex, flags = isregex.groups()
+                        for branch in self.allvalues():
+                            if re.match(regex, branch.name, self._branch_flags(flags)):
+                                interpretation = interpret(branch)
+                                if interpretation is None:
+                                    if branch.name == word:
+                                        raise ValueError("cannot interpret branch {0} as a Python type".format(repr(branch.name)))
+                                else:
+                                    yield branch, interpretation
+
+                    elif b"*" in word or b"?" in word or b"[" in word:
+                        for branch in self.allvalues():
+                            if branch.name == word or glob.fnmatch.fnmatchcase(branch.name, word):
+                                interpretation = interpret(branch)
+                                if interpretation is None:
+                                    if branch.name == word:
+                                        raise ValueError("cannot interpret branch {0} as a Python type".format(repr(branch.name)))
+                                else:
+                                    yield branch, interpretation
+
                     else:
-                        yield branch, interpretation
+                        branch = self.get(word)
+                        interpretation = interpret(branch)
+                        if interpretation is None:
+                            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(branch.name)))
+                        else:
+                            yield branch, interpretation
 
     def _normalize_entrystartstop(self, entrystart, entrystop):
         if entrystart is None:

@@ -436,8 +436,8 @@ tree_fragments = {
         - if ``None`` *(default)*, select all *interpretable* branches;
         - if a function :py:class:`TBranchMethods <uproot.tree.TBranchMethods>` \u21d2 ``None`` or :py:class:`Interpretation <uproot.interp.interp.Interpretation>`, select branches for which the function does not return ``None`` and use the interpretation it returns otherwise;
         - if a ``dict`` of str \u2192 :py:class:`Interpretation <uproot.interp.interp.Interpretation>`, select branches named by keys and use interpretations from the associated values;
-        - if a list of str, select branches by name
-        - if a single str, select a single branch""",
+        - if a list of str, select branches by name;
+        - if a single str, select a single branch. The selection by string can include filename-like glob characters (``*``, ``?``, ``[...]``) or it can be a full regular expression (Python flavored) if surrounded by slashes, like ``/pattern/i`` (where ``i`` is an optional `Python re flag <https://docs.python.org/2/library/re.html>`_).""",
 
     # outputtype
     "outputtype": u"""outputtype : type
