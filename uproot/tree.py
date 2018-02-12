@@ -423,8 +423,6 @@ class TTreeMethods(object):
         if outputtype == namedtuple:
             outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
 
-        branchinfo = [(branch, interpretation, branch._basket_itemoffset(interpretation, 0, branch.numbaskets, keycache), branch._basket_entryoffset(0, branch.numbaskets)) for branch, interpretation in branches]
-
         if keycache is None:
             keycache = uproot.cache.memorycache.ThreadSafeDict()
 
@@ -433,7 +431,7 @@ class TTreeMethods(object):
             explicit_basketcache = False
         else:
             explicit_basketcache = True
-                
+
         def evaluate(interpretation, future, past, cachekey):
             if future is None:
                 return past
@@ -460,7 +458,11 @@ class TTreeMethods(object):
                 continue
 
             futures = []
-            for branch, interpretation, basket_itemoffset, basket_entryoffset in branchinfo:
+            for branch, interpretation in branches:
+                basketstart, basketstop = branch._basketstartstop(start, stop)
+                basket_itemoffset = branch._basket_itemoffset(interpretation, basketstart, basketstop, keycache)
+                basket_entryoffset = branch._basket_entryoffset(basketstart, basketstop)
+
                 cachekey = branch._cachekey(interpretation, start, stop)
                 if cache is not None:
                     out = cache.get(cachekey, None)
@@ -1082,12 +1084,6 @@ class TBranchMethods(object):
 
         if basketstart is None:
             return lambda: interpretation.empty()
-
-        basket_itemoffset = basket_itemoffset[basketstart : basketstop + 1]
-        basket_itemoffset = [x - basket_itemoffset[0] for x in basket_itemoffset]
-
-        basket_entryoffset = basket_entryoffset[basketstart : basketstop + 1]
-        basket_entryoffset = [x - basket_entryoffset[0] for x in basket_entryoffset]
 
         destination = interpretation.destination(basket_itemoffset[-1], basket_entryoffset[-1])
 
