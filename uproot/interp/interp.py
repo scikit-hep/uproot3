@@ -60,5 +60,5 @@ class Interpretation(object):
     def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
         raise NotImplementedError
 
-    def finalize(self, destination):
+    def finalize(self, destination, branch):
         raise NotImplementedError

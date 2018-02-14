@@ -446,24 +446,24 @@ class TTreeMethods(object):
         else:
             explicit_basketcache = True
 
-        def evaluate(interpretation, future, past, cachekey):
+        def evaluate(branch, interpretation, future, past, cachekey):
             if future is None:
                 return past
             else:
-                out = interpretation.finalize(future())
+                out = interpretation.finalize(future(), branch)
                 if cache is not None:
                     cache[cachekey] = out
                 return out
 
         if issubclass(outputtype, dict):
             def wrap_for_python_scope(futures):
-                return lambda: outputtype([(name, evaluate(interpretation, future, past, cachekey)) for name, interpretation, future, past, cachekey in futures])
+                return lambda: outputtype([(branch.name, evaluate(branch, interpretation, future, past, cachekey)) for branch, interpretation, future, past, cachekey in futures])
         elif outputtype == tuple or outputtype == list:
             def wrap_for_python_scope(futures):
-                return lambda: outputtype([evaluate(interpretation, future, past, cachekey) for name, interpretation, future, past, cachekey in futures])
+                return lambda: outputtype([evaluate(branch, interpretation, future, past, cachekey) for branch, interpretation, future, past, cachekey in futures])
         else:
             def wrap_for_python_scope(futures):
-                return lambda: outputtype(*[evaluate(interpretation, future, past, cachekey) for name, interpretation, future, past, cachekey in futures])
+                return lambda: outputtype(*[evaluate(branch, interpretation, future, past, cachekey) for branch, interpretation, future, past, cachekey in futures])
 
         for start, stop in entrysteps:
             start = max(start, entrystart)
@@ -481,10 +481,10 @@ class TTreeMethods(object):
                 if cache is not None:
                     out = cache.get(cachekey, None)
                     if out is not None:
-                        futures.append((branch.name, interpretation, None, out, cachekey))
+                        futures.append((branch, interpretation, None, out, cachekey))
                         continue
                 future = branch._step_array(interpretation, basket_itemoffset, basket_entryoffset, start, stop, basketcache, keycache, executor, explicit_basketcache)
-                futures.append((branch.name, interpretation, future, None, cachekey))
+                futures.append((branch, interpretation, future, None, cachekey))
 
             out = wrap_for_python_scope(futures)
 
@@ -953,7 +953,7 @@ class TBranchMethods(object):
 
         destination = interpretation.destination(numitems, numentries)
         interpretation.fill(source, destination, 0, numitems, 0, numentries)
-        out = interpretation.finalize(destination)
+        out = interpretation.finalize(destination, self)
 
         if cache is not None:
             cache[cachekey] = out
@@ -1139,7 +1139,7 @@ class TBranchMethods(object):
                                           basket_entryoffset[0],
                                           basket_entryoffset[-1])
 
-            out = interpretation.finalize(clipped)
+            out = interpretation.finalize(clipped, self)
             if cache is not None:
                 cache[cachekey] = out
             return out

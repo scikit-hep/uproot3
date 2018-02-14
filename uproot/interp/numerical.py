@@ -150,7 +150,7 @@ class asdtype(Interpretation):
         # FIXME: isn't the above equivalent to the following?
         #     return destination[entrystart:entrystop]
 
-    def finalize(self, destination):
+    def finalize(self, destination, branch):
         return destination
 
 class asarray(asdtype):
@@ -200,7 +200,7 @@ class asarray(asdtype):
         array, stop = destination
         return super(asarray, self).clip(array, itemstart, itemstop, entrystart, entrystop), stop
 
-    def finalize(self, destination):
+    def finalize(self, destination, branch):
         array, stop = destination
         return array[:stop]
 
@@ -245,5 +245,5 @@ class asstlbitset(Interpretation):
     def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
         return destination[entrystart:entrystop]
 
-    def finalize(self, destination):
+    def finalize(self, destination, branch):
         return destination
