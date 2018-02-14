@@ -4,11 +4,11 @@ uproot
 .. image:: https://travis-ci.org/scikit-hep/uproot.svg?branch=master
    :target: https://travis-ci.org/scikit-hep/uproot
 
-.. image:: https://zenodo.org/badge/102874853.svg
-   :target: https://zenodo.org/badge/latestdoi/102874853
-
 .. image:: https://readthedocs.org/projects/uproot/badge/
    :target: http://uproot.readthedocs.io/
+
+.. image:: https://zenodo.org/badge/102874853.svg
+   :target: https://zenodo.org/badge/latestdoi/102874853
 
 .. inclusion-marker-1-do-not-remove
 
