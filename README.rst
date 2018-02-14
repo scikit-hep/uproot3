@@ -8,7 +8,7 @@ uproot
    :target: http://uproot.readthedocs.io/
 
 .. image:: https://zenodo.org/badge/102874853.svg
-   :target: https://zenodo.org/badge/latestdoi/102874853
+   :target: https://doi.org/10.5281/zenodo.1173083
 
 .. inclusion-marker-1-do-not-remove
 
