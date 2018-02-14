@@ -25,7 +25,7 @@ It is important to note that uproot is *not* maintained by the ROOT project team
 Installation
 ------------
 
-Install OAMap like any other Python package:
+Install uproot like any other Python package:
 
 .. code-block:: bash
 
