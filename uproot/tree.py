@@ -677,6 +677,10 @@ class TBranchMethods(object):
         return self.fTitle
 
     @property
+    def interpretation(self):
+        return interpret(self)
+
+    @property
     def numentries(self):
         return self.fEntries   # or self.fEntryNumber?
 
