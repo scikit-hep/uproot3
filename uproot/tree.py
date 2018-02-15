@@ -372,17 +372,18 @@ class TTreeMethods(object):
     def arrays(self, branches=None, outputtype=dict, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         branches = list(self._normalize_branches(branches))
 
-        if outputtype == namedtuple:
-            outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
-
         futures = [(branch.name, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=False)) for branch, interpretation in branches]
 
-        if issubclass(outputtype, dict):
+        if outputtype == namedtuple:
+            outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
             def wait():
-                return outputtype([(name, future()) for name, future in futures])
-        elif outputtype == tuple or outputtype == list:
+                return outputtype(*[future() for name, future in futures])
+        elif issubclass(outputtype, dict):
             def wait():
-                return outputtype([future() for name, future in futures])
+                return outputtype((name, future()) for name, future in futures)
+        elif issubclass(outputtype, (list, tuple)):
+            def wait():
+                return outputtype(future() for name, future in futures)
         else:
             def wait():
                 return outputtype(*[future() for name, future in futures])
@@ -391,19 +392,19 @@ class TTreeMethods(object):
             return wait()
         else:
             return wait
-        
+
     def lazyarrays(self, branches=None, outputtype=dict, cache=None, basketcache=None, keycache=None, executor=None):
         branches = list(self._normalize_branches(branches))
 
-        if outputtype == namedtuple:
-            outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
-
         lazyarrays = [(branch.name, branch.lazyarray(interpretation=interpretation, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor)) for branch, interpretation in branches]
 
-        if issubclass(outputtype, dict):
+        if outputtype == namedtuple:
+            outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
+            return outputtype(*[lazyarray for name, lazyarray in lazyarrays])
+        elif issubclass(outputtype, dict):
             return outputtype(lazyarrays)
-        elif outputtype == tuple or outputtype == list:
-            return outputtype([lazyarray for name, lazyarray in lazyarrays])
+        elif issubclass(outputtype, (list, tuple)):
+            return outputtype(lazyarray for name, lazyarray in lazyarrays)
         else:
             return outputtype(*[lazyarray for name, lazyarray in lazyarrays])
 
@@ -417,7 +418,7 @@ class TTreeMethods(object):
             entrystepsize = entrysteps
             if entrystepsize <= 0:
                 raise ValueError("if an integer, entrysteps must be positive")
-            
+
             def startstop():
                 start = entrystart
                 while start < entrystop and start < self.numentries:
@@ -433,9 +434,6 @@ class TTreeMethods(object):
                 raise TypeError("entrysteps must be None for cluster iteration, a positive integer for equal steps in number of entries, or an iterable of 2-tuples for explicit entry starts (inclusive) and stops (exclusive)")
 
         branches = list(self._normalize_branches(branches))
-
-        if outputtype == namedtuple:
-            outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
 
         if keycache is None:
             keycache = uproot.cache.memorycache.ThreadSafeDict()
@@ -455,12 +453,16 @@ class TTreeMethods(object):
                     cache[cachekey] = out
                 return out
 
-        if issubclass(outputtype, dict):
+        if outputtype == namedtuple:
+            outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
             def wrap_for_python_scope(futures):
-                return lambda: outputtype([(branch.name, evaluate(branch, interpretation, future, past, cachekey)) for branch, interpretation, future, past, cachekey in futures])
-        elif outputtype == tuple or outputtype == list:
+                return lambda: outputtype(*[evaluate(branch, interpretation, future, past, cachekey) for branch, interpretation, future, past, cachekey in futures])
+        elif issubclass(outputtype, dict):
             def wrap_for_python_scope(futures):
-                return lambda: outputtype([evaluate(branch, interpretation, future, past, cachekey) for branch, interpretation, future, past, cachekey in futures])
+                return lambda: outputtype((branch.name, evaluate(branch, interpretation, future, past, cachekey)) for branch, interpretation, future, past, cachekey in futures)
+        elif issubclass(outputtype, (list, tuple)):
+            def wrap_for_python_scope(futures):
+                return lambda: outputtype(evaluate(branch, interpretation, future, past, cachekey) for branch, interpretation, future, past, cachekey in futures)
         else:
             def wrap_for_python_scope(futures):
                 return lambda: outputtype(*[evaluate(branch, interpretation, future, past, cachekey) for branch, interpretation, future, past, cachekey in futures])
