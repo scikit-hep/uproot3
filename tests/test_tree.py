@@ -501,6 +501,26 @@ class TestTree(unittest.TestCase):
         self.assertEqual(arrays.one.tolist(), [1, 2, 3, 4])
         self.assertEqual(arrays.three.tolist(), [b"uno", b"dos", b"tres", b"quatro"])
 
+        class MyList(list):
+            pass
+
+        class MyTuple(tuple):
+            pass
+
+        arrays = tree.arrays(["three", "two", "one"], outputtype=MyList)
+        self.assertTrue(isinstance(arrays, MyList))
+        self.assertEqual(arrays[2].tolist(), [1, 2, 3, 4])
+        self.assertEqual(arrays[0].tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+
+        arrays = tree.arrays(["three", "two", "one"], outputtype=MyTuple)
+        self.assertTrue(isinstance(arrays, MyTuple))
+
+        arrays = tree.lazyarrays(["three", "two", "one"], outputtype=MyList)
+        self.assertTrue(isinstance(arrays, MyList))
+
+        arrays = tree.lazyarrays(["three", "two", "one"], outputtype=MyTuple)
+        self.assertTrue(isinstance(arrays, MyTuple))
+
     def test_tree_lazy(self):
         tree = uproot.open("tests/samples/sample-5.30.00-uncompressed.root")["sample"]
 
