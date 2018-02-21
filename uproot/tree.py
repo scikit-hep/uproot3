@@ -1359,7 +1359,7 @@ class TBranchMethods(object):
             
     class _RecoveredTBasket(uproot.rootio.ROOTObject):
         @classmethod
-        def _readinto(cls, self, source, cursor, context):
+        def _readinto(cls, self, source, cursor, context, parent):
             start = cursor.index
             self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle = cursor.fields(source, cls._format1)
 
@@ -1401,7 +1401,7 @@ class TBranchMethods(object):
 
     def _recover(self):
         if self._recoveredbasket is None:
-            recovered = [x for x in uproot.rootio.TObjArray.read(self._source, self.fBaskets._cursor, self._context, asclass=TBranchMethods._RecoveredTBasket) if x is not None]
+            recovered = [x for x in uproot.rootio.TObjArray.read(self._source, self.fBaskets._cursor, self._context, self, asclass=TBranchMethods._RecoveredTBasket) if x is not None]
             if len(recovered) == 1:
                 self._recoveredbasket = recovered[0]
             else:

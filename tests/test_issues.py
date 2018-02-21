@@ -79,3 +79,7 @@ class TestIssues(unittest.TestCase):
     def test_issue49(self):
         t = uproot.open("tests/samples/issue49.root")["nllscan"]
         t.arrays()
+
+    def test_issue54(self):
+        h = uproot.open("tests/samples/hepdata-example.root")["hpx"]
+        self.assertTrue(h.fFunctions[0].fParent is h)

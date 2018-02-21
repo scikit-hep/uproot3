@@ -140,8 +140,8 @@ class ROOTDirectory(object):
 
                 if read_streamers:
                     streamercontext = ROOTDirectory._FileContext(source.path, None, None, streamerclasses, uproot.source.compressed.Compression(fCompress), tfile)
-                    streamerkey = TKey.read(source, Cursor(fSeekInfo), streamercontext)
-                    streamerinfos, streamerinfosmap, streamerrules = _readstreamers(streamerkey._source, streamerkey._cursor, streamercontext)
+                    streamerkey = TKey.read(source, Cursor(fSeekInfo), streamercontext, None)
+                    streamerinfos, streamerinfosmap, streamerrules = _readstreamers(streamerkey._source, streamerkey._cursor, streamercontext, None)
                 else:
                     streamerinfos, streamerinfosmap, streamerrules = [], {}, []
 
@@ -149,7 +149,7 @@ class ROOTDirectory(object):
                 context = ROOTDirectory._FileContext(source.path, streamerinfos, streamerinfosmap, classes, uproot.source.compressed.Compression(fCompress), tfile)
 
                 keycursor = Cursor(fBEGIN)
-                mykey = TKey.read(source, keycursor, context)
+                mykey = TKey.read(source, keycursor, context, None)
 
                 return ROOTDirectory.read(source, Cursor(fBEGIN + fNbytesName), context, mykey)
 
@@ -172,10 +172,10 @@ class ROOTDirectory(object):
                     fSeekDir, fSeekParent, fSeekKeys = cursor.fields(source, ROOTDirectory._format4_big)
 
                 subcursor = Cursor(fSeekKeys)
-                headerkey = TKey.read(source, subcursor, context)
+                headerkey = TKey.read(source, subcursor, context, None)
 
                 nkeys = subcursor.field(source, ROOTDirectory._format5)
-                keys = [TKey.read(source, subcursor, context) for i in range(nkeys)]
+                keys = [TKey.read(source, subcursor, context, None) for i in range(nkeys)]
 
                 out = ROOTDirectory(mykey.fName, context, keys)
                 out.fVersion, out.fDatimeC, out.fDatimeM, out.fNbytesKeys, out.fNbytesName, out.fSeekDir, out.fSeekParent, out.fSeekKeys = fVersion, fDatimeC, fDatimeM, fNbytesKeys, fNbytesName, fSeekDir, fSeekParent, fSeekKeys
@@ -382,8 +382,9 @@ def _nametitle(source, cursor):
     _endcheck(start, cursor, cnt)
     return name, title
 
-def _readobjany(source, cursor, context, asclass=None):
+def _readobjany(source, cursor, context, parent, asclass=None):
     # TBufferFile::ReadObjectAny()
+    # https://github.com/root-project/root/blob/c4aa801d24d0b1eeb6c1623fd18160ef2397ee54/io/io/src/TBufferFile.cxx#L2684
     # https://github.com/root-project/root/blob/c4aa801d24d0b1eeb6c1623fd18160ef2397ee54/io/io/src/TBufferFile.cxx#L2404
 
     beg = cursor.index - cursor.origin
@@ -402,18 +403,18 @@ def _readobjany(source, cursor, context, asclass=None):
     if numpy.int64(tag) & uproot.const.kClassMask == 0:
         # reference object
         if tag == 0:
-            return None                                    # return null
+            return None                                         # return null
 
         elif tag == 1:
-            raise NotImplementedError("tag == 1 means self; not implemented yet")
+            return parent
 
         elif tag not in cursor.refs:
             # jump past this object
             cursor.index = cursor.origin + beg + bcnt + 4
-            return None                                    # return null
+            return None                                         # return null
 
         else:
-            return cursor.refs[tag]                        # return object
+            return cursor.refs[tag]                             # return object
 
     elif tag == uproot.const.kNewClassTag:
         # new class and object
@@ -427,18 +428,18 @@ def _readobjany(source, cursor, context, asclass=None):
             cursor.refs[len(cursor.refs) + 1] = fct
         
         if asclass is None:
-            obj = fct.read(source, cursor, context)        # new object
+            obj = fct.read(source, cursor, context, parent)     # new object
             if isinstance(obj, Undefined):
                 obj.classname = cname
         else:
-            obj = asclass.read(source, cursor, context)    # placeholder new object
+            obj = asclass.read(source, cursor, context, parent) # placeholder new object
 
         if vers > 0:
             cursor.refs[beg + uproot.const.kMapOffset] = obj
         else:
             cursor.refs[len(cursor.refs) + 1] = obj
 
-        return obj                                         # return object
+        return obj                                              # return object
 
     else:
         # reference class, new object
@@ -448,25 +449,25 @@ def _readobjany(source, cursor, context, asclass=None):
             if ref not in cursor.refs:
                 raise IOError("invalid class-tag reference")
 
-            fct = cursor.refs[ref]                         # reference class
+            fct = cursor.refs[ref]                              # reference class
 
             if fct not in context.classes.values():
                 raise IOError("invalid class-tag reference (not a recognized class: {0})".format(fct))
 
-            obj = fct.read(source, cursor, context)        # new object
+            obj = fct.read(source, cursor, context, parent)     # new object
 
         else:
-            obj = asclass.read(source, cursor, context)    # placeholder new object
+            obj = asclass.read(source, cursor, context, parent) # placeholder new object
 
         if vers > 0:
             cursor.refs[beg + uproot.const.kMapOffset] = obj
         else:
             cursor.refs[len(cursor.refs) + 1] = obj
 
-        return obj                                         # return object
+        return obj                                              # return object
 
-def _readstreamers(source, cursor, context):
-    tlist = TList.read(source, cursor, context)
+def _readstreamers(source, cursor, context, parent):
+    tlist = TList.read(source, cursor, context, parent)
 
     streamerinfos = []
     streamerrules = []
@@ -602,7 +603,7 @@ def _defineclasses(streamerinfos):
     for streamerinfo in streamerinfos:
         if isinstance(streamerinfo, TStreamerInfo) and _safename(streamerinfo.fName) not in classes:
             code = ["    @classmethod",
-                    "    def _readinto(cls, self, source, cursor, context):",
+                    "    def _readinto(cls, self, source, cursor, context, parent):",
                     "        start, cnt, classversion = _startcheck(source, cursor)",
                     "        if classversion != cls.classversion:",
                     "            raise ValueError(\"attempting to read {0} object version {1} with a class generated by streamer version {2}\".format(cls.__name__, classversion, cls.classversion))"]
@@ -618,7 +619,7 @@ def _defineclasses(streamerinfos):
                     code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
 
                 elif isinstance(element, TStreamerBase):
-                    code.append("        {0}._readinto(self, source, cursor, context)".format(_safename(element.fName)))   # rename.get(element.fName, element.fName)))
+                    code.append("        {0}._readinto(self, source, cursor, context, parent)".format(_safename(element.fName)))   # rename.get(element.fName, element.fName)))
                     bases.append(_safename(element.fName))   # rename.get(element.fName, element.fName))
 
                 elif isinstance(element, TStreamerBasicPointer):
@@ -670,15 +671,15 @@ def _defineclasses(streamerinfos):
                 elif isinstance(element, TStreamerObjectPointer):
                     if element.fType == uproot.const.kObjectp:
                         if _safename(streamerinfo.fName) in skip and _safename(element.fName) in skip[_safename(streamerinfo.fName)]:
-                            code.append("        Undefined.read(source, cursor, context)")
+                            code.append("        Undefined.read(source, cursor, context, self)")
                         else:
-                            code.append("        self.{0} = {1}.read(source, cursor, context)".format(_safename(element.fName), _safename(element.fTypeName.rstrip(b"*"))))   # rename.get(element.fTypeName, element.fTypeName.decode("ascii")).rstrip("*")))
+                            code.append("        self.{0} = {1}.read(source, cursor, context, self)".format(_safename(element.fName), _safename(element.fTypeName.rstrip(b"*"))))   # rename.get(element.fTypeName, element.fTypeName.decode("ascii")).rstrip("*")))
                             fields.append(_safename(element.fName))
                     elif element.fType == uproot.const.kObjectP:
                         if _safename(streamerinfo.fName) in skip and _safename(element.fName) in skip[_safename(streamerinfo.fName)]:
-                            code.append("        _readobjany(source, cursor, context, asclass=Undefined)")
+                            code.append("        _readobjany(source, cursor, context, parent, asclass=Undefined)")
                         else:
-                            code.append("        self.{0} = _readobjany(source, cursor, context)".format(_safename(element.fName)))
+                            code.append("        self.{0} = _readobjany(source, cursor, context, parent)".format(_safename(element.fName)))
                             fields.append(_safename(element.fName))
                     else:
                         code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
@@ -691,9 +692,9 @@ def _defineclasses(streamerinfos):
 
                 elif isinstance(element, (TStreamerObject, TStreamerObjectAny, TStreamerString)):
                     if _safename(streamerinfo.fName) in skip and _safename(element.fName) in skip[_safename(streamerinfo.fName)]:
-                        code.append("        self.{0} = Undefined.read(source, cursor, context)".format(_safename(element.fName)))
+                        code.append("        self.{0} = Undefined.read(source, cursor, context, self)".format(_safename(element.fName)))
                     else:
-                        code.append("        self.{0} = {1}.read(source, cursor, context)".format(_safename(element.fName), _safename(element.fTypeName)))   # rename.get(element.fTypeName, element.fTypeName.decode("ascii"))))
+                        code.append("        self.{0} = {1}.read(source, cursor, context, self)".format(_safename(element.fName), _safename(element.fTypeName)))   # rename.get(element.fTypeName, element.fTypeName.decode("ascii"))))
                         fields.append(_safename(element.fName))
 
                 else:
@@ -745,16 +746,16 @@ class ROOTObject(object):
         return self.__class__.__name__
 
     @classmethod
-    def read(cls, source, cursor, context):
+    def read(cls, source, cursor, context, parent):
         if cls._copycontext:
             context = context.copy()
         out = cls.__new__(cls)
-        out = cls._readinto(out, source, cursor, context)
+        out = cls._readinto(out, source, cursor, context, parent)
         out._postprocess(source, cursor, context)
         return out
 
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
+    def _readinto(cls, self, source, cursor, context, parent):
         raise NotImplementedError
 
     def _postprocess(self, source, cursor, context):
@@ -768,7 +769,7 @@ class ROOTObject(object):
 
 class TKey(ROOTObject):
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
+    def _readinto(cls, self, source, cursor, context, parent):
         start = cursor.index
 
         self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir = cursor.fields(source, self._format_small)
@@ -811,10 +812,10 @@ class TKey(ROOTObject):
                 return ROOTDirectory.read(self._source, self._cursor.copied(), self._context, self)
 
             elif classname in self._context.classes:
-                return self._context.classes[classname].read(self._source, self._cursor.copied(), self._context)
+                return self._context.classes[classname].read(self._source, self._cursor.copied(), self._context, self)
 
             else:
-                out = Undefined.read(self._source, self._cursor.copied(), self._context)
+                out = Undefined.read(self._source, self._cursor.copied(), self._context, self)
                 out.classname = classname
                 return out
 
@@ -824,11 +825,11 @@ class TKey(ROOTObject):
 
 class TStreamerInfo(ROOTObject):
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
+    def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self.classversion = _startcheck(source, cursor)
         self.fName, _ = _nametitle(source, cursor)
         self.fCheckSum, self.fClassVersion = cursor.fields(source, TStreamerInfo._format)
-        self.fElements = _readobjany(source, cursor, context)
+        self.fElements = _readobjany(source, cursor, context, parent)
         assert isinstance(self.fElements, list)
         _endcheck(start, cursor, cnt)
         return self
@@ -845,7 +846,7 @@ class TStreamerInfo(ROOTObject):
 
 class TStreamerElement(ROOTObject):
     @classmethod
-    def _readinto(cls, self, source, cursor, context):    
+    def _readinto(cls, self, source, cursor, context, parent):    
         start, cnt, self.classversion = _startcheck(source, cursor)
 
         self.fOffset = 0
@@ -894,17 +895,17 @@ class TStreamerElement(ROOTObject):
 
 class TStreamerArtificial(TStreamerElement):
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
+    def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self.classversion = _startcheck(source, cursor)
-        super(TStreamerArtificial, self)._readinto(self, source, cursor, context)
+        super(TStreamerArtificial, self)._readinto(self, source, cursor, context, parent)
         _endcheck(start, cursor, cnt)
         return self
 
 class TStreamerBase(TStreamerElement):
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
+    def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self.classversion = _startcheck(source, cursor)
-        super(TStreamerBase, self)._readinto(self, source, cursor, context)
+        super(TStreamerBase, self)._readinto(self, source, cursor, context, parent)
         if self.classversion > 2:
             self.fBaseVersion = cursor.field(source, TStreamerBase._format)
         _endcheck(start, cursor, cnt)
@@ -914,9 +915,9 @@ class TStreamerBase(TStreamerElement):
 
 class TStreamerBasicPointer(TStreamerElement):
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
+    def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self.classversion = _startcheck(source, cursor)
-        super(TStreamerBasicPointer, self)._readinto(self, source, cursor, context)
+        super(TStreamerBasicPointer, self)._readinto(self, source, cursor, context, parent)
         self.fCountVersion = cursor.field(source, TStreamerBasicPointer._format)
         self.fCountName = cursor.string(source)
         self.fCountClass = cursor.string(source)
@@ -927,9 +928,9 @@ class TStreamerBasicPointer(TStreamerElement):
 
 class TStreamerBasicType(TStreamerElement):
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
+    def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self.classversion = _startcheck(source, cursor)
-        super(TStreamerBasicType, self)._readinto(self, source, cursor, context)
+        super(TStreamerBasicType, self)._readinto(self, source, cursor, context, parent)
 
         if uproot.const.kOffsetL < self.fType < uproot.const.kOffsetP:
             self.fType -= uproot.const.kOffsetL
@@ -960,9 +961,9 @@ class TStreamerBasicType(TStreamerElement):
 
 class TStreamerLoop(TStreamerElement):
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
+    def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self.classversion = _startcheck(source, cursor)
-        super(TStreamerLoop, self)._readinto(self, source, cursor, context)
+        super(TStreamerLoop, self)._readinto(self, source, cursor, context, parent)
         self.fCountVersion = cursor.field(source, TStreamerLoop._format)
         self.fCountName = cursor.string(source)
         self.fCountClass = cursor.string(source)
@@ -973,41 +974,41 @@ class TStreamerLoop(TStreamerElement):
 
 class TStreamerObject(TStreamerElement):
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
+    def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self.classversion = _startcheck(source, cursor)
-        super(TStreamerObject, self)._readinto(self, source, cursor, context)
+        super(TStreamerObject, self)._readinto(self, source, cursor, context, parent)
         _endcheck(start, cursor, cnt)
         return self
 
 class TStreamerObjectAny(TStreamerElement):
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
+    def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self.classversion = _startcheck(source, cursor)
-        super(TStreamerObjectAny, self)._readinto(self, source, cursor, context)
+        super(TStreamerObjectAny, self)._readinto(self, source, cursor, context, parent)
         _endcheck(start, cursor, cnt)
         return self
 
 class TStreamerObjectAnyPointer(TStreamerElement):
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
+    def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self.classversion = _startcheck(source, cursor)
-        super(TStreamerObjectAnyPointer, self)._readinto(self, source, cursor, context)
+        super(TStreamerObjectAnyPointer, self)._readinto(self, source, cursor, context, parent)
         _endcheck(start, cursor, cnt)
         return self
 
 class TStreamerObjectPointer(TStreamerElement):
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
+    def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self.classversion = _startcheck(source, cursor)
-        super(TStreamerObjectPointer, self)._readinto(self, source, cursor, context)
+        super(TStreamerObjectPointer, self)._readinto(self, source, cursor, context, parent)
         _endcheck(start, cursor, cnt)
         return self
 
 class TStreamerSTL(TStreamerElement):
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
+    def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self.classversion = _startcheck(source, cursor)
-        super(TStreamerSTL, self)._readinto(self, source, cursor, context)
+        super(TStreamerSTL, self)._readinto(self, source, cursor, context, parent)
 
         self.fSTLtype, self.fCtype = cursor.fields(source, TStreamerSTL._format)
 
@@ -1024,17 +1025,17 @@ class TStreamerSTL(TStreamerElement):
 
 class TStreamerSTLstring(TStreamerSTL):
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
+    def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self.classversion = _startcheck(source, cursor)
-        super(TStreamerSTLstring, self)._readinto(self, source, cursor, context)
+        super(TStreamerSTLstring, self)._readinto(self, source, cursor, context, parent)
         _endcheck(start, cursor, cnt)
         return self
 
 class TStreamerString(TStreamerElement):
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
+    def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self.classversion = _startcheck(source, cursor)
-        super(TStreamerString, self)._readinto(self, source, cursor, context)
+        super(TStreamerString, self)._readinto(self, source, cursor, context, parent)
         _endcheck(start, cursor, cnt)
         return self
 
@@ -1047,13 +1048,13 @@ class TObject(ROOTStreamedObject):
     _fields = []
 
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
+    def _readinto(cls, self, source, cursor, context, parent):
         _skiptobj(source, cursor)
         return self
 
 class TString(bytes, ROOTStreamedObject):
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
+    def _readinto(cls, self, source, cursor, context, parent):
         return TString(cursor.string(source))
 
     def __str__(self):
@@ -1061,9 +1062,9 @@ class TString(bytes, ROOTStreamedObject):
 
 class TNamed(TObject):
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
+    def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self.classversion = _startcheck(source, cursor)
-        TObject._readinto(self, source, cursor, context)
+        TObject._readinto(self, source, cursor, context, parent)
         self.fName = cursor.string(source)
         self.fTitle = cursor.string(source)
         _endcheck(start, cursor, cnt)
@@ -1071,27 +1072,27 @@ class TNamed(TObject):
 
 class TObjArray(list, ROOTStreamedObject):
     @classmethod
-    def read(cls, source, cursor, context, asclass=None):
+    def read(cls, source, cursor, context, parent, asclass=None):
         if cls._copycontext:
             context = context.copy()
         out = cls.__new__(cls)
-        out = cls._readinto(out, source, cursor, context, asclass=asclass)
+        out = cls._readinto(out, source, cursor, context, parent, asclass=asclass)
         out._postprocess(source, cursor, context)
         return out
 
     @classmethod
-    def _readinto(cls, self, source, cursor, context, asclass=None):
+    def _readinto(cls, self, source, cursor, context, parent, asclass=None):
         start, cnt, self.classversion = _startcheck(source, cursor)
         _skiptobj(source, cursor)
         name = cursor.string(source)
         size, low = cursor.fields(source, struct.Struct(">ii"))
-        self.extend([_readobjany(source, cursor, context, asclass=asclass) for i in range(size)])
+        self.extend([_readobjany(source, cursor, context, parent, asclass=asclass) for i in range(size)])
         _endcheck(start, cursor, cnt)
         return self
 
 class TObjString(bytes, ROOTStreamedObject):
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
+    def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self.classversion = _startcheck(source, cursor)
         _skiptobj(source, cursor)
         string = cursor.string(source)
@@ -1103,13 +1104,13 @@ class TObjString(bytes, ROOTStreamedObject):
 
 class TList(list, ROOTStreamedObject):
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
+    def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self.classversion = _startcheck(source, cursor)
         _skiptobj(source, cursor)
         name = cursor.string(source)
         size = cursor.field(source, struct.Struct(">i"))
         for i in range(size):
-            self.append(_readobjany(source, cursor, context))
+            self.append(_readobjany(source, cursor, context, parent))
             n = cursor.field(source, TList._format_n)  # ignore option
             cursor.bytes(source, n)                    # 
         _endcheck(start, cursor, cnt)
@@ -1118,13 +1119,13 @@ class TList(list, ROOTStreamedObject):
 
 class THashList(TList):
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
-        TList._readinto(self, source, cursor, context)
+    def _readinto(cls, self, source, cursor, context, parent):
+        TList._readinto(self, source, cursor, context, parent)
         return self
 
 class TArray(list, ROOTStreamedObject):
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
+    def _readinto(cls, self, source, cursor, context, parent):
         length = cursor.field(source, TArray._format)
         self.extend(cursor.array(source, length, self._dtype))
         return self
@@ -1164,7 +1165,7 @@ class ROOT_3a3a_TIOFeatures(ROOTStreamedObject):
     _fields = [u'fIOBits']
     classname = b'ROOT::TIOFeatures'
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
+    def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, classversion = _startcheck(source, cursor)
         cursor.skip(4)
         self.fIOBits = cursor.field(source, ROOT_3a3a_TIOFeatures._format1)
@@ -1176,7 +1177,7 @@ class Undefined(ROOTStreamedObject):
     classname = None
 
     @classmethod
-    def _readinto(cls, self, source, cursor, context):
+    def _readinto(cls, self, source, cursor, context, parent):
         self._cursor = cursor.copied()
         start, cnt, self.classversion = _startcheck(source, cursor)
         cursor.skip(cnt - 6)
