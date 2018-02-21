@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os.path
+import re
 try:
     from urllib.request import urlopen, Request
 except ImportError:
@@ -44,6 +45,7 @@ class HTTPSource(uproot.source.chunked.ChunkedSource):
 
     def __init__(self, path, *args, **kwds):
         super(HTTPSource, self).__init__(path, *args, **kwds)
+        self._size = None
     
     @staticmethod
     def defaults(path):
@@ -53,9 +55,16 @@ class HTTPSource(uproot.source.chunked.ChunkedSource):
         pass
 
     def size(self):
-        return None
+        return self._size
+
+    _contentrange = re.compile("^bytes [0-9]+-[0-9]+/([0-9]+)$")
 
     def _read(self, chunkindex):
         request = Request(self.path, headers={"Range": "bytes={0}-{1}".format(chunkindex * self._chunkbytes, (chunkindex + 1) * self._chunkbytes)})
-        data = urlopen(request).read()
+        handle = urlopen(request)
+        data = handle.read()
+        if self._size is None:
+            m = self._contentrange.match(handle.headers.get("content-range", ""))
+            if m is not None:
+                self._size = int(m.group(1))
         return numpy.frombuffer(data, dtype=numpy.uint8)
