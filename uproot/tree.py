@@ -1336,8 +1336,9 @@ class TBranchMethods(object):
 
                 self.border = self.fLast - self.fKeylen
 
-                if source.size() - self.fSeekKey < self.fNbytes:
-                    raise ValueError("TKey declares that object {0} has {1} bytes but only {2} remain in the file".format(repr(self.fName), self.fNbytes, source.size() - self.fSeekKey))
+                if source.size() is not None:
+                    if source.size() - self.fSeekKey < self.fNbytes:
+                        raise ValueError("TKey declares that object {0} has {1} bytes but only {2} remain in the file".format(repr(self.fName), self.fNbytes, source.size() - self.fSeekKey))
 
                 if self.fObjlen != self.fNbytes - self.fKeylen:
                     self.source = uproot.source.compressed.CompressedSource(compression, source, Cursor(self.fSeekKey + self.fKeylen), self.fNbytes - self.fKeylen, self.fObjlen)

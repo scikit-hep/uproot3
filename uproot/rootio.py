@@ -44,6 +44,7 @@ import uproot.const
 import uproot.source.compressed
 from uproot.source.memmap import MemmapSource
 from uproot.source.xrootd import XRootDSource
+from uproot.source.http import HTTPSource
 from uproot.source.cursor import Cursor
 
 ################################################################ register mixins for user-facing ROOT classes
@@ -52,7 +53,7 @@ methods = {}
 
 ################################################################ high-level interface
 
-def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, **options):
+def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
     parsed = urlparse(path)
     if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0:
         path = parsed.netloc + parsed.path
@@ -65,6 +66,9 @@ def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defa
     elif _bytesid(parsed.scheme) == b"root":
         return xrootd(path, xrootdsource)
 
+    elif _bytesid(parsed.scheme) == b"http":
+        return http(path, httpsource)
+
     else:
         raise ValueError("URI scheme not recognized: {0}".format(path))
 
@@ -73,6 +77,13 @@ def xrootd(path, xrootdsource=XRootDSource.defaults, **options):
         openfcn = lambda path: XRootDSource(path, **xrootdsource)
     else:
         openfcn = xrootdsource
+    return ROOTDirectory.read(openfcn(path), **options)
+
+def http(path, httpsource=HTTPSource.defaults, **options):
+    if isinstance(httpsource, dict):
+        openfcn = lambda path: HTTPSource(path, **httpsource)
+    else:
+        openfcn = httpsource
     return ROOTDirectory.read(openfcn(path), **options)
 
 def nofilter(x): return True
@@ -781,8 +792,9 @@ class TKey(ROOTObject):
         self.fName = cursor.string(source)
         self.fTitle = cursor.string(source)
 
-        if source.size() - self.fSeekKey < self.fNbytes:
-            raise ValueError("TKey declares that object {0} has {1} bytes but only {2} remain in the file".format(repr(self.fName), self.fNbytes, source.size() - self.fSeekKey))
+        if source.size() is not None:
+            if source.size() - self.fSeekKey < self.fNbytes:
+                raise ValueError("TKey declares that object {0} has {1} bytes but only {2} remain in the file".format(repr(self.fName), self.fNbytes, source.size() - self.fSeekKey))
 
         # object size != compressed size means it's compressed
         if self.fObjlen != self.fNbytes - self.fKeylen:
