@@ -83,3 +83,15 @@ class TestIssues(unittest.TestCase):
     def test_issue54(self):
         h = uproot.open("tests/samples/hepdata-example.root")["hpx"]
         self.assertTrue(h.fFunctions[0].fParent is h)
+
+    def test_issue55(self):
+        withoffsets = uproot.open("tests/samples/small-dy-withoffsets.root")["tree"]
+        nooffsets = uproot.open("tests/samples/small-dy-nooffsets.root")["tree"]
+        self.assertTrue(numpy.array_equal(withoffsets.array("nJet"), nooffsets.array("nJet")))
+        self.assertTrue(numpy.array_equal(withoffsets.array("nMuon"), nooffsets.array("nMuon")))
+        self.assertTrue(numpy.array_equal(withoffsets.array("Jet_jetId"), nooffsets.array("Jet_jetId")))
+        self.assertTrue(numpy.array_equal(withoffsets.array("Jet_pt"), nooffsets.array("Jet_pt")))
+        self.assertTrue(numpy.array_equal(withoffsets.array("MET_pt"), nooffsets.array("MET_pt")))
+        self.assertTrue(numpy.array_equal(withoffsets.array("Muon_charge"), nooffsets.array("Muon_charge")))
+        self.assertTrue(numpy.array_equal(withoffsets.array("Muon_pt"), nooffsets.array("Muon_pt")))
+        self.assertTrue(numpy.array_equal(withoffsets.array("event"), nooffsets.array("event")))

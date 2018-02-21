@@ -126,3 +126,7 @@ kSTLunorderedmap      = 12
 kSTLunorderedmultimap = 13
 kSTLend               = 14
 kSTLany               = 300
+
+################################################################ IOFeatures
+
+kGenerateOffsetMap    = 1

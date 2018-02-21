@@ -762,14 +762,14 @@ class ROOTObject(object):
             context = context.copy()
         out = cls.__new__(cls)
         out = cls._readinto(out, source, cursor, context, parent)
-        out._postprocess(source, cursor, context)
+        out._postprocess(source, cursor, context, parent)
         return out
 
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         raise NotImplementedError
 
-    def _postprocess(self, source, cursor, context):
+    def _postprocess(self, source, cursor, context, parent):
         pass
 
     def __repr__(self):
@@ -1089,7 +1089,7 @@ class TObjArray(list, ROOTStreamedObject):
             context = context.copy()
         out = cls.__new__(cls)
         out = cls._readinto(out, source, cursor, context, parent, asclass=asclass)
-        out._postprocess(source, cursor, context)
+        out._postprocess(source, cursor, context, parent)
         return out
 
     @classmethod

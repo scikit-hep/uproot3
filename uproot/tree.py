@@ -215,11 +215,21 @@ class TTreeMethods(object):
 
                 self._attachstreamer(subbranch, submembers.get(name, None), streamerinfosmap)
 
-    def _postprocess(self, source, cursor, context):
+    def _postprocess(self, source, cursor, context, parent):
         context.treename = self.name
 
         for branch in self.fBranches:
             self._attachstreamer(branch, context.streamerinfosmap.get(getattr(branch, "fClassName", None), None), context.streamerinfosmap)
+
+        leaf2branch = {}
+        for branch in self.itervalues(recursive=True):
+            if len(branch.fLeaves) == 1:
+                leaf2branch[id(branch.fLeaves[0])] = branch
+
+        for branch in self.itervalues(recursive=True):
+            if len(branch.fLeaves) > 0:
+                if branch.fLeaves[0].fLeafCount is not None:
+                    branch._countbranch = leaf2branch.get(id(branch.fLeaves[0].fLeafCount), None)
 
         if self.fAliases is None:
             self.aliases = {}
@@ -663,12 +673,16 @@ class TBranchMethods(object):
     # # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (uproot.rootio.ROOTObject.__metaclass__,), {})
 
-    def _postprocess(self, source, cursor, context):
+    def _postprocess(self, source, cursor, context, parent):
         self._source = source
         self._context = context
         self._streamer = None
         self._recoveredbasket = None
         self._triedrecover = False
+        self._countbranch = None
+        self._tree_iofeatures = 0
+        if hasattr(parent, "fIOFeatures"):
+            self._tree_iofeatures = parent.fIOFeatures.fIOBits
 
     @property
     def name(self):
@@ -926,6 +940,18 @@ class TBranchMethods(object):
 
         if key.fObjlen == key.border:
             data, offsets = basketdata, None
+
+            if self._countbranch is not None and numpy.uint8(self._tree_iofeatures) & numpy.uint8(uproot.const.kGenerateOffsetMap) != 0:
+                counts = self._countbranch.array(entrystart=(local_entrystart + self.basket_entrystart(i)),
+                                                 entrystop=(local_entrystop + self.basket_entrystart(i)))
+                itemsize = 1
+                if isinstance(interpretation, asjagged):
+                    itemsize = interpretation.asdtype.fromdtype.itemsize
+                numpy.multiply(counts, itemsize, counts)
+                offsets = numpy.empty(len(counts) + 1, dtype=numpy.int32)
+                offsets[0] = 0
+                numpy.cumsum(counts, out=offsets[1:])
+
         else:
             data = basketdata[:key.border]
             offsets = numpy.empty((key.fObjlen - key.border - 4) // 4, dtype=numpy.int32)  # native endian
