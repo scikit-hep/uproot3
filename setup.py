@@ -44,7 +44,7 @@ def get_description():
     description = open("README.rst").read()
     start = description.index(".. inclusion-marker-1-5-do-not-remove")
     stop = description.index(".. inclusion-marker-5-do-not-remove")
-    before = """.. image:: https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/logo-300px.png
+    before = """.. image:: https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/source/logo-300px.png
    :alt: uproot
    :target: https://github.com/scikit-hep/uproot
 

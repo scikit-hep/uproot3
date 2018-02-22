@@ -1,4 +1,4 @@
-.. image:: logo-600px.png
+.. image:: logo-300px.png
    :alt: uproot
    :target: https://github.com/scikit-hep/uproot
 
