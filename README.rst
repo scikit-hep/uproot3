@@ -1,5 +1,6 @@
-uproot
-======
+.. image:: https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/logo-300px.png
+   :alt: uproot
+   :target: https://github.com/scikit-hep/uproot
 
 .. image:: https://travis-ci.org/scikit-hep/uproot.svg?branch=master
    :target: https://travis-ci.org/scikit-hep/uproot
