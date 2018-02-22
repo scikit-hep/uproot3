@@ -1,7 +1,6 @@
-.. image:: https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/logo-300px.png
+.. image:: docs/source/logo-300px.png
    :alt: uproot
-   :target: https://github.com/scikit-hep/uproot
-   :align: center
+   :target: http://uproot.readthedocs.io/en/latest/
 
 uproot
 ======

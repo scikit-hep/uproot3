@@ -44,7 +44,13 @@ def get_description():
     description = open("README.rst").read()
     start = description.index(".. inclusion-marker-1-5-do-not-remove")
     stop = description.index(".. inclusion-marker-5-do-not-remove")
-    extra = """
+    before = """.. image:: https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/logo-300px.png
+   :alt: uproot
+   :target: https://github.com/scikit-hep/uproot
+
+"""
+
+    after = """
 
 .. _Exploring a file: https://github.com/scikit-hep/uproot#exploring-a-file
 .. _Array-reading parameters: https://github.com/scikit-hep/uproot#array-reading-parameters
@@ -57,7 +63,7 @@ def get_description():
 .. _Parallel processing: https://github.com/scikit-hep/uproot#parallel-processing
 .. _Connectors to other packages: https://github.com/scikit-hep/uproot#connectors-to-other-packages
 """
-    return description[start:stop].strip() + extra
+    return before + description[start:stop].strip() + after
 
 setup(name = "uproot",
       version = get_version(),
