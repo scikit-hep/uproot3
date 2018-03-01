@@ -107,7 +107,7 @@ class TVector3Methods(object):
         return math.sqrt(self.fX**2 + self.fY**2 + self.fZ**2)
 
     def costheta(self):
-        if self.fX == 0.0 and self.fY == 0.0 and self.fZ == 0.0:
+        if self.fX == 0 and self.fY == 0 and self.fZ == 0:
             return 1.0
         else:
             return self.fZ / math.sqrt(self.fX**2 + self.fY**2 + self.fZ**2)
@@ -171,7 +171,7 @@ class TVector3Methods(object):
 
     def unit(self):
         mag = self.mag
-        if mag != 0.0 and mag != 1.0:
+        if mag != 0 and mag != 1:
             return TVector3(self.fX / mag, self.fY / mag, self.fZ / mag)
         else:
             return self
@@ -194,28 +194,37 @@ class TVector3Methods(object):
     def __sub__(self, other):
         return TVector3(self.fX - other.fX, self.fY - other.fY, self.fZ - other.fZ)
 
-    def __imul__(self, scalar):
+    def __imul__(self, other):
         self.fX *= scalar
         self.fY *= scalar
         self.fZ *= scalar
         return self
 
-    def __mul__(self, scalar):
-        return TVector3(self.fX * scalar, self.fY * scalar, self.fZ * scalar)
+    def __mul__(self, other):
+        if isinstance(other, TVector3):
+            return self.dot(other)
+        else:
+            return TVector3(self.fX * other, self.fY * other, self.fZ * other)
 
-    def __rmul__(self, scalar):
-        return TVector3(self.fX * scalar, self.fY * scalar, self.fZ * scalar)
+    def __rmul__(self, other):
+        return self.__mul__(other)
 
     def __itruediv__(self, scalar):
         self.fX /= float(scalar)
         self.fY /= float(scalar)
         self.fZ /= float(scalar)
+        return self
 
     __idiv__ = __itruediv__
 
+    def __truediv__(self, scalar):
+        return TVector3(self.fX / scalar, self.fY / scalar, self.fZ / scalar)
+
+    __div__ = __truediv__
+
     def __eq__(self, other):
-        if other == 0.0:
-            return self.fX == 0.0 and self.fY == 0.0 and self.fZ == 0.0
+        if other == 0:
+            return self.fX == 0 and self.fY == 0 and self.fZ == 0
         else:
             return self.fX == other.fX and self.fY == other.fY and self.fZ == other.fZ
 
@@ -223,7 +232,7 @@ class TVector3Methods(object):
         return not self.__eq__(other)
 
     def __nonzero__(self):
-        return self.fX == 0.0 and self.fY == 0.0 and self.fZ == 0.0
+        return self.fX == 0 and self.fY == 0 and self.fZ == 0
 
     def __iter__(self):
         return (self.fX, self.fY, self.fZ).__iter__()
@@ -237,17 +246,17 @@ class TVector3Methods(object):
                         self.fX * other.fY - self.fY * other.fX)
 
     def rotate(self, angle, *args):
-        if len(args) == 1 and isinstance(args[0], Vector3D):
+        if len(args) == 1 and isinstance(args[0], TVector3):
             ux, uy, uz = args[0].fX, args[0].fY, args[0].fZ
         elif len(args) == 1 and len(args[0]) == 3:
             ux, uy, uz = args[0]
         elif len(args) == 3:
             ux, uy, uz = args
         else:
-            raise TypeError("Input object not a Vector3D nor an iterable with 3 elements.")
+            raise TypeError("Input object not a TVector3 nor an iterable with 3 elements.")
 
         norm = math.sqrt(ux**2 + uy**2 + uz**2)
-        if norm != 1.0:
+        if norm != 1:
             ux = ux / norm
             uy = uy / norm
             uz = uz / norm
@@ -273,7 +282,7 @@ class TVector3Methods(object):
     def cosdelta(self, other):
         m1 = self.mag2
         m2 = other.mag2
-        if m1 == 0.0 or m2 == 0.0:
+        if m1 == 0 or m2 == 0:
             return 1.0
         r = self.dot(other) / math.sqrt(m1 * m2)
         return max(-1.0, min(1.0, r))
@@ -283,13 +292,13 @@ class TVector3Methods(object):
         return math.acos(cd) if not deg else math.degrees(math.acos(cd))
 
     def isparallel(self, other):
-        return self.cosdelta(other) == 1.0
+        return self.cosdelta(other) == 1
 
     def isantiparallel(self, other):
-        return self.cosdelta(other) == -1.0
+        return self.cosdelta(other) == -1
 
     def iscollinear(self, other):
-        return abs(self.cosdelta(other)) == 1.0
+        return abs(self.cosdelta(other)) == 1
 
     def isopposite(self, other):
         return (self + other) == 0
@@ -326,6 +335,364 @@ class TLorentzVectorMethods(object):
         x, y, z, t = values
         return cls(x, y, z, t)
 
+    @property
+    def x(self):
+        return self.fP.fX
 
-        
+    @x.setter
+    def x(self, value):
+        self.fP.fX = value
+
+    @property
+    def y(self):
+        return self.fP.fY
+
+    @y.setter
+    def y(self, value):
+        self.fP.fY = value
+
+    @property
+    def z(self):
+        return self.fP.fZ
+
+    @z.setter
+    def z(self, value):
+        self.fP.fZ = value
+
+    @property
+    def vector(self):
+        return self.fP.copy()
+
+    @property
+    def t(self):
+        return self.fE
+
+    @t.setter
+    def t(self, value):
+        self.fE = value
+
+    def costheta(self):
+        return self.fP.costheta()
+
+    def theta(self, deg=False):
+        return self.fP.theta(deg)
+
+    def phi(self, deg=False):
+        return self.fP.phi(deg)
+
+    @property
+    def px(self):
+        return self.fP.fX
+
+    @px.setter
+    def px(self, value):
+        self.fP.fX = value
+
+    @property
+    def py(self):
+        return self.fP.fY
+
+    @py.setter
+    def py(self, value):
+        self.fP.fY = value
+
+    @property
+    def pz(self):
+        return self.fP.fZ
+
+    @pz.setter
+    def pz(self, value):
+        self.fP.fZ = value
+
+    @property
+    def e(self):
+        return self.fE
+
+    @e.setter
+    def e(self, value):
+        self.fE = value
+
+    def set(self, x, y, z, t):
+        self.fP = TVector3(x, y, z)
+        self.fE = t
+
+    def setpxpypzm(self, px, py, pz, m):
+        self.fP.set(px, py, pz)
+        if m > 0:
+            self.fE = math.sqrt(px**2 + py**2 + pz**2 + m**2)
+        else:
+            self.fE = math.sqrt(px**2 + py**2 + pz**2 - m**2)
+
+    def setpxpypze(self, px, py, pz, e):
+        self.set(px, py, pz, e)
+
+    def setptetaphim(self, pt, eta, phi, m):
+        px = pt*math.cos(phi)
+        py = pt*math.sin(phi)
+        pz = pt*math.sinh(eta)
+        self.setpxpypzm(px, py, pz, m)
+
+    def setptetaphie(self, pt, eta, phi, e):
+        px = pt*math.cos(phi)
+        py = pt*math.sin(phi)
+        pz = pt*math.sinh(eta)
+        self.setpxpypze(px, py, pz, e)
+
+    def tolist(self):
+        return [self.fP.fX, self.fP.fY, self.fP.fZ, self.fE]
+
+    def __setitem__(self, i, value):
+        if i < 0:
+            i += 4
+        if i == 0:
+            self.fP.fX = value
+        elif i == 1:
+            self.fP.fY = value
+        elif i == 2:
+            self.fP.fZ = value
+        elif i == 3:
+            self.fE = value
+        else:
+            raise IndexError("TLorentzVector is of length 4 only!")
+
+    def __getitem__(self, i):
+        if i < 0:
+            i += 4
+        if i == 0:
+            return self.fP.fX
+        elif i == 1:
+            return self.fP.fY
+        elif i == 2:
+            return self.fP.fZ
+        elif i == 3:
+            return self.fE
+        else:
+            raise IndexError("TLorentzVector is of length 3 only!")
+
+    def __len__(self):
+        return 4
+
+    @property
+    def p(self):
+        return self.fP.mag
+
+    @property
+    def pt(self):
+        return self.fP.rho
+
+    @property
+    def et(self):
+        return float(self.fE) * self.pt / self.p
+
+    @property
+    def m(self):
+        return self.mag
+
+    @property
+    def m2(self):
+        return self.mag2
+
+    @property
+    def mass(self):
+        return self.mag
+
+    @property
+    def mass2(self):
+        return self.mag2
+
+    @property
+    def mt(self):
+        return self.transversemass
+
+    @property
+    def mt2(self):
+        return self.transversemass2
+
+    @property
+    def transversemass(self):
+        mt2 = self.transversemass2
+        return math.sqrt(mt2) if mt2 >= 0 else -math.sqrt(-mt2)
+
+    @property
+    def transversemass2(self):
+        return self.fE**2 - self.fP.fZ**2
+
+    @property
+    def beta(self):
+        return self.fP.mag / self.fE
+
+    @property
+    def gamma(self):
+        beta = self.beta
+        if beta < 1:
+            return 1.0 / math.sqrt(1.0 - beta**2)
+        else:
+            return float("inf")
+
+    @property
+    def eta(self):
+        return self.pseudorapidity
+
+    @property
+    def boostvector(self):
+        return TVector3(self.fP.fX / self.fE, self.fP.fY / self.fE, self.fP.fZ / self.fE)
+
+    @property
+    def pseudorapidity(self):
+        costheta = self.costheta()
+        if abs(costheta) < 1:
+            return -0.5 * math.log((1.0 - costheta) / (1.0 + costheta))
+        else:
+            return float("inf") if self.z > 0 else float("-inf")
+
+    @property
+    def rapidity(self):
+        return 0.5 * math.log((self.fE + self.fP.fZ) / (self.fE - self.fP.fZ))
+
+    @property
+    def mag(self):
+        mag2 = self.mag2
+        return math.sqrt(mag2) if mag2 >= 0 else -math.sqrt(-mag2)
+
+    @property
+    def mag2(self):
+        return self.fE*2 - self.fP.mag2
+
+    @property
+    def perp2(self):
+        return self.fP.fX**2 + self.fP.fY**2
+
+    @property
+    def perp(self):
+        return math.sqrt(self.perp2)
+
+    def copy(self):
+        return TLorentzVector(self.fP.fX, self.fP.fY, self.fP.fZ, self.fE)
+
+    def __iadd__(self, other):
+        self.fP += other.fP
+        self.fE += other.fE
+        return self
+
+    def __isub__(self, other):
+        self.fP -= other.fP
+        self.fE -= other.fE
+        return self
+
+    def __add__(self, other):
+        return TLorentzVector(self.fP.fX + other.fP.fX, self.fP.fY + other.fP.fY, self.fP.fZ + other.fP.fZ, self.fE + other.fE)
+
+    def __sub__(self, other):
+        return TLorentzVector(self.fP.fX - other.fP.fX, self.fP.fY - other.fP.fY, self.fP.fZ - other.fP.fZ, self.fE - other.fE)
+
+    def __imul__(self, scalar):
+        self.fP *= scalar
+        self.fE *= scalar
+        return self
+
+    def __mul__(self, other):
+        if isinstance(other, TLorentzVector):
+            return self.dot(other)
+        else:
+            return TLorentzVector(self.fP.fX * other, self.fP.fY * other, self.fP.fZ * other, self.fE * other)
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __itruediv__(self, scalar):
+        self.fP.fX /= float(scalar)
+        self.fP.fY /= float(scalar)
+        self.fP.fZ /= float(scalar)
+        self.fE /= float(scalar)
+        return self
+
+    __idiv__ = __itruediv__
+
+    def __truediv__(self, scalar):
+        return TLorentzVector(self.fP.fX / scalar, self.fP.fY / scalar, self.fP.fZ / scalar, self.fE / scalar)
+
+    __div__ = __truediv__
+
+    def __eq__(self, other):
+        if other == 0:
+            return self.fP.fX == 0 and self.fP.fY == 0 and self.fP.fZ == 0 and self.fE == 0
+        else:
+            return self.fP.fX == other.fP.fX and self.fP.fY == other.fP.fY and self.fP.fZ == other.fP.fZ and self.fE == other.fE
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __iter__(self):
+        return (self.fP.fX, self.fP.fY, self.fP.fZ, self.fE).__iter__()
+
+    def boost(self, *args):
+        if len(args) == 1 and isinstance(args[0], TVector3):
+            bx, by, bz = args[0].fX, args[0].fY, args[0].fZ
+        elif len(args) == 1 and len(args[0]) == 3:
+            bx, by, bz = args[0]
+        elif len(args) == 3:
+            bx, by, bz = args
+        else:
+            raise TypeError("Input object not a TVector3 nor an iterable with 3 elements.")
+
+        b2 = bx**2 + by**2 + bz**2
+        gamma = 1.0 / math.sqrt(1.0 - b2)
+        bp = bx * self.fP.fX + by * self.fP.fY + bz * self.fP.fZ
+        if b2 > 0:
+            gamma2 = (gamma - 1.0) / b2
+        else:
+            gamma2 = 0.0
+
+        xp = self.fP.fX + gamma2 * bp * bx - gamma * bx * self.fE
+        yp = self.fP.fY + gamma2 * bp * by - gamma * by * self.fE
+        zp = self.fP.fZ + gamma2 * bp * bz - gamma * bz * self.fE
+        tp = gamma * (self.fE - bp)
+
+        return TLorentzVector(xp, yp, zp, tp)
+
+    def rotate(self, angle, *args):
+        v3p = self.fP.rotate(angle, *args)
+        return TLorentzVector(v3p.fX, v3p.fY, v3p.fZ, self.fE)
+
+    def rotatex(self, angle):
+        return self.rotate(angle, 1, 0, 0)
+
+    def rotatey(self, angle):
+        return self.rotate(angle, 0, 1, 0)
+
+    def rotatez(self, angle):
+        return self.rotate(angle, 0, 0, 1)
+
+    def dot(self, other):
+        return self.fE*other.fE - self.fP.dot(other.fP)
+
+    def deltaeta(self, other):
+        return self.eta - other.eta
+
+    def deltaphi(self, other):
+        dphi = self.phi() - other.phi()
+        while dphi > math.pi:
+            dphi -= 2.0*math.pi
+        while dphi < -math.pi:
+            dphi += 2.0*math.pi
+        return dphi
+
+    def deltar(self, other):
+        return math.sqrt(self.deltaeta(other)**2 + self.deltaphi(other)**2)
+
+    def isspacelike(self):
+        return self.mag2 < 0
+
+    def istimelike(self):
+        return self.mag2 > 0
+
+    def islightlike(self):
+        return self.mag2 == 0
+
+    def __repr__(self):
+        return "TLorentzVector({0}, {1}, {2})".format(self.fP.fX, self.fP.fY, self.fP.fZ, self.fE)
+
+    def __str__(self):
+        return str((self.fP.fX, self.fP.fY, self.fP.fZ, self.fE))
+
 # uproot.rootio.methods["TLorentzVector"] = TLorentzVectorMethods
