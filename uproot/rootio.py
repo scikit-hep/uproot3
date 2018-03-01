@@ -111,6 +111,7 @@ class ROOTDirectory(object):
         # make sure that all methods classes have been loaded
         import uproot.tree
         import uproot.hist
+        import uproot.physics
 
         if len(args) == 0:
             try:

@@ -167,12 +167,12 @@ class TVector3Methods(object):
         return math.sqrt(self.fX**2 + self.fY**2 + self.fZ**2)
 
     def copy(self):
-        return TVector3(self.fX, self.fY, self.fZ)
+        return self.__class__(self.fX, self.fY, self.fZ)
 
     def unit(self):
         mag = self.mag
         if mag != 0 and mag != 1:
-            return TVector3(self.fX / mag, self.fY / mag, self.fZ / mag)
+            return self.__class__(self.fX / mag, self.fY / mag, self.fZ / mag)
         else:
             return self
 
@@ -189,10 +189,10 @@ class TVector3Methods(object):
         return self
 
     def __add__(self, other):
-        return TVector3(self.fX + other.fX, self.fY + other.fY, self.fZ + other.fZ)
+        return self.__class__(self.fX + other.fX, self.fY + other.fY, self.fZ + other.fZ)
 
     def __sub__(self, other):
-        return TVector3(self.fX - other.fX, self.fY - other.fY, self.fZ - other.fZ)
+        return self.__class__(self.fX - other.fX, self.fY - other.fY, self.fZ - other.fZ)
 
     def __imul__(self, other):
         self.fX *= scalar
@@ -201,10 +201,10 @@ class TVector3Methods(object):
         return self
 
     def __mul__(self, other):
-        if isinstance(other, TVector3):
+        if isinstance(other, TVector3Methods):
             return self.dot(other)
         else:
-            return TVector3(self.fX * other, self.fY * other, self.fZ * other)
+            return self.__class__(self.fX * other, self.fY * other, self.fZ * other)
 
     def __rmul__(self, other):
         return self.__mul__(other)
@@ -218,7 +218,7 @@ class TVector3Methods(object):
     __idiv__ = __itruediv__
 
     def __truediv__(self, scalar):
-        return TVector3(self.fX / scalar, self.fY / scalar, self.fZ / scalar)
+        return self.__class__(self.fX / scalar, self.fY / scalar, self.fZ / scalar)
 
     __div__ = __truediv__
 
@@ -241,12 +241,12 @@ class TVector3Methods(object):
         return self.fX*other.fX + self.fY*other.fY + self.fZ*other.fZ
 
     def cross(self, other):
-        return TVector3(self.fY * other.fZ - self.fZ * other.fY,
-                        self.fZ * other.fX - self.fX * other.fZ,
-                        self.fX * other.fY - self.fY * other.fX)
+        return self.__class__(self.fY * other.fZ - self.fZ * other.fY,
+                              self.fZ * other.fX - self.fX * other.fZ,
+                              self.fX * other.fY - self.fY * other.fX)
 
     def rotate(self, angle, *args):
-        if len(args) == 1 and isinstance(args[0], TVector3):
+        if len(args) == 1 and isinstance(args[0], TVector3Methods):
             ux, uy, uz = args[0].fX, args[0].fY, args[0].fZ
         elif len(args) == 1 and len(args[0]) == 3:
             ux, uy, uz = args[0]
@@ -268,7 +268,7 @@ class TVector3Methods(object):
         yp = (ux * uy * c1 + uz * s) * self.fX + (c + uy**2 * c1) * self.fY + (uy * uz * c1 - ux * s) * self.fZ
         zp = (ux * uz * c1 - uy * s) * self.fX + (uy * uz * c1 + ux * s) * self.fY + (c + uz**2 * c1) * self.fZ
 
-        return TVector3(xp, yp, zp)
+        return self.__class__(xp, yp, zp)
 
     def rotatex(self, angle):
         return self.rotate(angle, 1, 0, 0)
@@ -307,19 +307,19 @@ class TVector3Methods(object):
         return self.dot(other) == 0
 
     def __repr__(self):
-        return "TVector3({0}, {1}, {2})".format(self.fX, self.fY, self.fZ)
+        return "{0}({1:.4g}, {2:.4g}, {3:.4g})".format(self.__class__.__name__, self.fX, self.fY, self.fZ)
 
     def __str__(self):
         return str((self.fX, self.fY, self.fZ))
         
-# uproot.rootio.methods["TVector3"] = TVector3Methods
+uproot.rootio.methods["TVector3"] = TVector3Methods
 
 class TLorentzVectorMethods(object):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (uproot.rootio.ROOTObject.__metaclass__,), {})
 
     def __init__(self, x=0.0, y=0.0, z=0.0, t=0.0):
-        self.fP = TVector3(x, y, z)
+        self.fP = TVector3Methods(x, y, z)
         self.fE = t
 
     @classmethod
@@ -413,7 +413,9 @@ class TLorentzVectorMethods(object):
         self.fE = value
 
     def set(self, x, y, z, t):
-        self.fP = TVector3(x, y, z)
+        self.fP.fX = x
+        self.fP.fY = y
+        self.fP.fZ = z
         self.fE = t
 
     def setpxpypzm(self, px, py, pz, m):
@@ -535,7 +537,7 @@ class TLorentzVectorMethods(object):
 
     @property
     def boostvector(self):
-        return TVector3(self.fP.fX / self.fE, self.fP.fY / self.fE, self.fP.fZ / self.fE)
+        return self.fP.__class__(self.fP.fX / self.fE, self.fP.fY / self.fE, self.fP.fZ / self.fE)
 
     @property
     def pseudorapidity(self):
@@ -567,7 +569,7 @@ class TLorentzVectorMethods(object):
         return math.sqrt(self.perp2)
 
     def copy(self):
-        return TLorentzVector(self.fP.fX, self.fP.fY, self.fP.fZ, self.fE)
+        return self.__class__(self.fP.fX, self.fP.fY, self.fP.fZ, self.fE)
 
     def __iadd__(self, other):
         self.fP += other.fP
@@ -580,10 +582,10 @@ class TLorentzVectorMethods(object):
         return self
 
     def __add__(self, other):
-        return TLorentzVector(self.fP.fX + other.fP.fX, self.fP.fY + other.fP.fY, self.fP.fZ + other.fP.fZ, self.fE + other.fE)
+        return self.__class__(self.fP.fX + other.fP.fX, self.fP.fY + other.fP.fY, self.fP.fZ + other.fP.fZ, self.fE + other.fE)
 
     def __sub__(self, other):
-        return TLorentzVector(self.fP.fX - other.fP.fX, self.fP.fY - other.fP.fY, self.fP.fZ - other.fP.fZ, self.fE - other.fE)
+        return self.__class__(self.fP.fX - other.fP.fX, self.fP.fY - other.fP.fY, self.fP.fZ - other.fP.fZ, self.fE - other.fE)
 
     def __imul__(self, scalar):
         self.fP *= scalar
@@ -591,10 +593,10 @@ class TLorentzVectorMethods(object):
         return self
 
     def __mul__(self, other):
-        if isinstance(other, TLorentzVector):
+        if isinstance(other, TLorentzVectorMethods):
             return self.dot(other)
         else:
-            return TLorentzVector(self.fP.fX * other, self.fP.fY * other, self.fP.fZ * other, self.fE * other)
+            return self.__class__(self.fP.fX * other, self.fP.fY * other, self.fP.fZ * other, self.fE * other)
 
     def __rmul__(self, other):
         return self.__mul__(other)
@@ -609,7 +611,7 @@ class TLorentzVectorMethods(object):
     __idiv__ = __itruediv__
 
     def __truediv__(self, scalar):
-        return TLorentzVector(self.fP.fX / scalar, self.fP.fY / scalar, self.fP.fZ / scalar, self.fE / scalar)
+        return self.__class__(self.fP.fX / scalar, self.fP.fY / scalar, self.fP.fZ / scalar, self.fE / scalar)
 
     __div__ = __truediv__
 
@@ -626,7 +628,7 @@ class TLorentzVectorMethods(object):
         return (self.fP.fX, self.fP.fY, self.fP.fZ, self.fE).__iter__()
 
     def boost(self, *args):
-        if len(args) == 1 and isinstance(args[0], TVector3):
+        if len(args) == 1 and isinstance(args[0], TVector3Methods):
             bx, by, bz = args[0].fX, args[0].fY, args[0].fZ
         elif len(args) == 1 and len(args[0]) == 3:
             bx, by, bz = args[0]
@@ -648,11 +650,11 @@ class TLorentzVectorMethods(object):
         zp = self.fP.fZ + gamma2 * bp * bz - gamma * bz * self.fE
         tp = gamma * (self.fE - bp)
 
-        return TLorentzVector(xp, yp, zp, tp)
+        return self.__class__(xp, yp, zp, tp)
 
     def rotate(self, angle, *args):
         v3p = self.fP.rotate(angle, *args)
-        return TLorentzVector(v3p.fX, v3p.fY, v3p.fZ, self.fE)
+        return self.__class__(v3p.fX, v3p.fY, v3p.fZ, self.fE)
 
     def rotatex(self, angle):
         return self.rotate(angle, 1, 0, 0)
@@ -690,9 +692,9 @@ class TLorentzVectorMethods(object):
         return self.mag2 == 0
 
     def __repr__(self):
-        return "TLorentzVector({0}, {1}, {2})".format(self.fP.fX, self.fP.fY, self.fP.fZ, self.fE)
+        return "{0}({1:.4g}, {2:.4g}, {3:.4g}, {4:.4g})".format(self.__class__.__name__, self.fP.fX, self.fP.fY, self.fP.fZ, self.fE)
 
     def __str__(self):
         return str((self.fP.fX, self.fP.fY, self.fP.fZ, self.fE))
 
-# uproot.rootio.methods["TLorentzVector"] = TLorentzVectorMethods
+uproot.rootio.methods["TLorentzVector"] = TLorentzVectorMethods
