@@ -415,7 +415,7 @@ class JaggedObjects(VariableLength):
             return "[{0}]".format(", ".join(repr(x) for x in self))
 
     def __repr__(self):
-        return "JaggedObjects({0})".format(self._class.__name__)
+        return "<JaggedObjects of {0} at {1:012x}>".format(self._class.__name__, id(self))
 
     def __getitem__(self, index):
         if isinstance(index, numbers.Integral):
