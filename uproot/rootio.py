@@ -1033,6 +1033,14 @@ class TStreamerSTL(TStreamerElement):
         _endcheck(start, cursor, cnt)
         return self
 
+    @classmethod
+    def vector(cls, fType, fTypeName):
+        self = cls.__new__(cls)
+        self.fSTLtype = uproot.const.kSTLvector
+        self.fCtype = fType
+        self.fTypeName = b"vector<" + fTypeName + b">"
+        return self
+
     _format = struct.Struct(">ii")
 
 class TStreamerSTLstring(TStreamerSTL):

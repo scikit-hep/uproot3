@@ -155,11 +155,21 @@ class TTreeMethods(object):
 
     _copycontext = True
 
+    _vector_regex = re.compile(b"^vector<(.+)>$")
+
     def _attachstreamer(self, branch, streamer, streamerinfosmap):
         if streamer is None:
-            return
+            m = re.match(self._vector_regex, getattr(branch, "fClassName", b""))
+            if m is None or m.group(1) not in streamerinfosmap:
+                return
+            else:
+                substreamer = streamerinfosmap[m.group(1)]
+                if isinstance(substreamer, uproot.rootio.TStreamerInfo):
+                    streamer = uproot.rootio.TStreamerSTL.vector(None, substreamer.fName)
+                else:
+                    streamer = uproot.rootio.TStreamerSTL.vector(substreamer.fType, substreamer.fTypeName)
 
-        elif isinstance(streamer, uproot.rootio.TStreamerInfo):
+        if isinstance(streamer, uproot.rootio.TStreamerInfo):
             if len(streamer.fElements) == 1 and isinstance(streamer.fElements[0], uproot.rootio.TStreamerBase) and streamer.fElements[0].fName == b"TObjArray":
                 if streamer.fName == b"TClonesArray":
                     return self._attachstreamer(branch, streamerinfosmap.get(branch.fClonesName, None), streamerinfosmap)
