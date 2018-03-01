@@ -34,6 +34,15 @@ import uproot.rootio
 
 # adheres to interface of https://github.com/scikit-hep/scikit-hep/blob/master/skhep/math/vectors.py
 
+def vector3(x, y, z):
+    return TVector3Methods(x, y, z)
+
+def spherical3(r, theta, phi):
+    return TVector3Methods.fromsphericalcoords(r, theta, phi)
+
+def cylindrical3(rho, phi, z):
+    return TVector3Methods.fromcylindricalcoords(rho, phi, z)
+
 class TVector3Methods(object):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (uproot.rootio.ROOTObject.__metaclass__,), {})
@@ -313,6 +322,37 @@ class TVector3Methods(object):
         return str((self.fX, self.fY, self.fZ))
         
 uproot.rootio.methods["TVector3"] = TVector3Methods
+
+def vector4(x, y, z, t):
+    return TLorentzVectorMethods(x, y, z, t)
+
+def spherical4(r, theta, phi, t):
+    return TLorentzVectorMethods.from3vector(TVector3Methods.fromsphericalcoords(r, theta, phi), t)
+
+def cylindrical4(rho, phi, z, t):
+    return TLorentzVectorMethods.from3vector(TVector3Methods.fromcylindricalcoords(rho, phi, z), t)
+
+def pxpypze(px, py, pz, e):
+    return vector4(px, py, pz, e)
+
+def pxpypzm(px, py, pz, m):
+    if m > 0:
+        e = math.sqrt(px**2 + py**2 + pz**2 + m**2)
+    else:
+        e = math.sqrt(px**2 + py**2 + pz**2 - m**2)
+    return pxpypze(px, py, pz, e)
+
+def ptetaphie(pt, eta, phi, e):
+    px = pt*math.cos(phi)
+    py = pt*math.sin(phi)
+    pz = pt*math.sinh(eta)
+    return pxpypze(px, py, pz, e)
+
+def ptetaphim(pt, eta, phi, m):
+    px = pt*math.cos(phi)
+    py = pt*math.sin(phi)
+    pz = pt*math.sinh(eta)
+    return pxpypzm(px, py, pz, m)
 
 class TLorentzVectorMethods(object):
     # makes __doc__ attribute mutable before Python 3.3
