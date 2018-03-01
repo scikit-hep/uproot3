@@ -416,8 +416,8 @@ class TestTree(unittest.TestCase):
     def test_directories(self):
         file = uproot.open("tests/samples/nesteddirs.root")
 
-        self.assertEqual([(n, cls.classname) for n, cls in file.classes()], [(b"one;1", b"TDirectory"), (b"three;1", b"TDirectory")])
-        self.assertEqual([(n, cls.classname) for n, cls in file.allclasses()], [(b"one;1", b"TDirectory"), (b"one/two;1", b"TDirectory"), (b"one/two/tree;1", b"TTree"), (b"one/tree;1", b"TTree"), (b"three;1", b"TDirectory"), (b"three/tree;1", b"TTree")])
+        self.assertEqual([(n, cls._classname) for n, cls in file.classes()], [(b"one;1", b"TDirectory"), (b"three;1", b"TDirectory")])
+        self.assertEqual([(n, cls._classname) for n, cls in file.allclasses()], [(b"one;1", b"TDirectory"), (b"one/two;1", b"TDirectory"), (b"one/two/tree;1", b"TTree"), (b"one/tree;1", b"TTree"), (b"three;1", b"TDirectory"), (b"three/tree;1", b"TTree")])
 
         self.assertEqual(list(file["one"]["tree"].keys()), [b"one", b"two", b"three"])
         self.assertEqual(list(file["one"].get("tree", 1).keys()), [b"one", b"two", b"three"])
