@@ -754,7 +754,8 @@ class TBranchMethods(object):
 
     @property
     def numbaskets(self):
-        self._tryrecover()
+        if not self._triedrecover:
+            self._tryrecover()
         if self._recoveredbasket is None:
             return self.fWriteBasket
         else:
@@ -863,7 +864,8 @@ class TBranchMethods(object):
         return interpretation
 
     def numitems(self, interpretation=None, keycache=None):
-        self._tryrecover()
+        if not self._triedrecover:
+            self._tryrecover()
         interpretation = self._normalize_interpretation(interpretation)
         return sum(interpretation.numitems(key.border, self.basket_numentries(i)) for i, key in enumerate(_threadsafe_iterate_keys(keycache, True)))
 
@@ -872,7 +874,8 @@ class TBranchMethods(object):
         return uproot.source.compressed.Compression(self.fCompress)
 
     def basket_entrystart(self, i):
-        self._tryrecover()
+        if not self._triedrecover:
+            self._tryrecover()
 
         if 0 <= i < self.numbaskets:
             return self.fBasketEntry[i]
@@ -881,7 +884,8 @@ class TBranchMethods(object):
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
     def basket_entrystop(self, i):
-        self._tryrecover()
+        if not self._triedrecover:
+            self._tryrecover()
 
         if 0 <= i < self.fWriteBasket:
             return self.fBasketEntry[i + 1]
@@ -896,16 +900,19 @@ class TBranchMethods(object):
         return self.basket_entrystop(i) - self.basket_entrystart(i)
 
     def basket_uncompressedbytes(self, i, keycache=None):
-        self._tryrecover()
+        if not self._triedrecover:
+            self._tryrecover()
         return self._threadsafe_key(i, keycache, False).fObjlen
 
     def basket_compressedbytes(self, i):
-        self._tryrecover()
+        if not self._triedrecover:
+            self._tryrecover()
         key = self._threadsafe_key(i, keycache, False)
         return key.fNbytes - key.fKeylen
 
     def basket_numitems(self, i, interpretation=None, keycache=None):
-        self._tryrecover()
+        if not self._triedrecover:
+            self._tryrecover()
         interpretation = self._normalize_interpretation(interpretation)
         key = self._threadsafe_key(i, keycache, True)
         return interpretation.numitems(key.border, self.basket_numentries(i))
@@ -962,7 +969,8 @@ class TBranchMethods(object):
         return interpretation.fromroot(data, offsets, local_entrystart, local_entrystop)
 
     def basket(self, i, interpretation=None, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None):
-        self._tryrecover()
+        if not self._triedrecover:
+            self._tryrecover()
 
         if not 0 <= i < self.numbaskets:
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
@@ -1008,7 +1016,8 @@ class TBranchMethods(object):
         return basketstart, basketstop
 
     def baskets(self, interpretation=None, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, reportentries=False, executor=None, blocking=True):
-        self._tryrecover()
+        if not self._triedrecover:
+            self._tryrecover()
 
         interpretation = self._normalize_interpretation(interpretation)
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
@@ -1057,7 +1066,8 @@ class TBranchMethods(object):
             return wait
 
     def iterate_baskets(self, interpretation=None, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, reportentries=False):
-        self._tryrecover()
+        if not self._triedrecover:
+            self._tryrecover()
 
         interpretation = self._normalize_interpretation(interpretation)
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
@@ -1089,7 +1099,8 @@ class TBranchMethods(object):
         return basket_entryoffset
 
     def array(self, interpretation=None, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
-        self._tryrecover()
+        if not self._triedrecover:
+            self._tryrecover()
 
         interpretation = self._normalize_interpretation(interpretation)
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
@@ -1182,7 +1193,8 @@ class TBranchMethods(object):
             return wait
 
     def _step_array(self, interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, basketcache, keycache, executor, explicit_basketcache):
-        self._tryrecover()
+        if not self._triedrecover:
+            self._tryrecover()
 
         basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
 
@@ -1252,7 +1264,8 @@ class TBranchMethods(object):
         return wait
 
     def lazyarray(self, interpretation=None, cache=None, basketcache=None, keycache=None, executor=None):
-        self._tryrecover()
+        if not self._triedrecover:
+            self._tryrecover()
         interpretation = self._normalize_interpretation(interpretation)
         return self._LazyArray(self, interpretation, cache, basketcache, keycache, executor)
 
