@@ -181,6 +181,10 @@ class TTreeMethods(object):
                 return self._attachstreamer(branch, streamer.fElements[0], streamerinfosmap)
 
         branch._streamer = streamer
+        if isinstance(streamer, uproot.rootio.TStreamerSTL) and streamer.fSTLtype == uproot.const.kSTLvector:
+            branch._vecstreamer = streamerinfosmap.get(re.match(self._vector_regex, streamer.fTypeName).group(1), None)
+        else:
+            branch._vecstreamer = None
 
         digDeeperTypes = (uproot.rootio.TStreamerObject, uproot.rootio.TStreamerObjectAny, uproot.rootio.TStreamerObjectPointer, uproot.rootio.TStreamerObjectAnyPointer)
 

@@ -32,6 +32,8 @@ import numbers
 
 import numpy
 
+import uproot.source.source
+import uproot.source.cursor
 from uproot.interp.interp import Interpretation
 from uproot.interp.numerical import asdtype
 
@@ -375,6 +377,45 @@ class VariableLength(object):
     @staticmethod
     def interpret(item):
         raise NotImplementedError
+
+class asobjs(asvar):
+    def __init__(self, cls, context=None):
+        super(asobjs, self).__init__(JaggedObjects, skip_bytes=0, args=(cls, context))
+        self.cls = cls
+        self.context = context
+
+    @property
+    def identifier(self):
+        return "asobjs({0})".format(self.cls.__name__)
+
+def asjaggedobjects(cls, context=None):
+    return asobjs(cls, context=context)
+
+class JaggedObjects(VariableLength):
+    indexdtype = numpy.dtype(">i4")
+
+    def __init__(self, jaggedarray, cls, context):
+        super(JaggedObjects, self).__init__(jaggedarray, cls)
+        self._class = cls
+        self._context = context
+
+    def interpret(self, item):
+        size, = item[6:10].view(JaggedObjects.indexdtype)
+        source = uproot.source.source.Source(item)
+        cursor = uproot.source.cursor.Cursor(10)
+        out = [None] * size
+        for i in range(size):
+            out[i] = self._class.read(source, cursor, self._context, None)
+        return out
+
+    def __str__(self):
+        if len(self) > 6:
+            return "[{0}\n ...\n{1}]".format(",\n".join(("" if i == 0 else " ") + repr(self[i]) for i in range(3)), ",\n".join(" " + repr(self[i]) for i in range(-3, 0)))
+        else:
+            return "[{0}]".format(", ".join(repr(x) for x in self))
+
+    def __repr__(self):
+        return "JaggedObjects({0})".format(self._class.__name__)
 
 def asstlvectorvector(fromdtype):
     return asvar(JaggedJaggedArray, skip_bytes=6, args=(numpy.dtype(fromdtype),))

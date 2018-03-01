@@ -34,17 +34,31 @@ class Source(object):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (type,), {})
 
+    def __init__(self, data):
+        assert len(data.shape) == 1 and data.dtype == numpy.uint8
+        self._source = data
+
     def parent(self):
-        raise NotImplementedError
+        return self
 
     def size(self):
-        raise NotImplementedError
+        return len(self._source)
 
     def threadlocal(self):
-        raise NotImplementedError
+        return self
 
     def dismiss(self):
-        raise NotImplementedError
+        pass
 
     def data(self, start, stop, dtype=None):
-        raise NotImplementedError
+        # assert start >= 0
+        # assert stop >= 0
+        # assert stop >= start
+
+        if stop > len(self._source):
+            raise IndexError("indexes {0}:{1} are beyond the end of data source {2}".format(len(self._source), stop, repr(self.path)))
+
+        if dtype is None:
+            return self._source[start:stop]
+        else:
+            return self._source[start:stop].view(dtype)
