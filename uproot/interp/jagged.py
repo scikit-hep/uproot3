@@ -417,6 +417,16 @@ class JaggedObjects(VariableLength):
     def __repr__(self):
         return "JaggedObjects({0})".format(self._class.__name__)
 
+    def __getitem__(self, index):
+        if isinstance(index, numbers.Integral):
+            return self.interpret(self.jaggedarray[index])
+
+        elif isinstance(index, slice):
+            return JaggedObjects(self.jaggedarray[index], self._class, self._context)
+
+        else:
+            raise TypeError("{0} index must be an integer or a slice".format(self.__class__.__name__))
+
 def asstlvectorvector(fromdtype):
     return asvar(JaggedJaggedArray, skip_bytes=6, args=(numpy.dtype(fromdtype),))
 

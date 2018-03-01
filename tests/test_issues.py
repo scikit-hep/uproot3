@@ -95,3 +95,8 @@ class TestIssues(unittest.TestCase):
         self.assertTrue(numpy.array_equal(withoffsets.array("Muon_charge"), nooffsets.array("Muon_charge")))
         self.assertTrue(numpy.array_equal(withoffsets.array("Muon_pt"), nooffsets.array("Muon_pt")))
         self.assertTrue(numpy.array_equal(withoffsets.array("event"), nooffsets.array("event")))
+
+    def test_issue57(self):
+        tree = uproot.open("tests/samples/issue57.root")["outtree"]
+        self.assertTrue(all(isinstance(y, uproot.physics.TLorentzVectorMethods) and isinstance(y.fP, uproot.physics.TVector3Methods) for x in tree["sel_lep"].array() for y in x))
+        self.assertTrue(all(isinstance(y, uproot.physics.TLorentzVectorMethods) and isinstance(y.fP, uproot.physics.TVector3Methods) for x in tree["selJet"].array() for y in x))
