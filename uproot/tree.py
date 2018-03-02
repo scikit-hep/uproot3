@@ -1522,7 +1522,7 @@ uproot.rootio.methods["TBranch"] = TBranchMethods
 
 ################################################################ for quickly getting numentries
 
-def numentries(path, treepath, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None, blocking=True):
+def numentries(path, treepath, total=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None, blocking=True):
     if isinstance(path, string_types):
         paths = _filename_explode(path)
     else:
@@ -1569,10 +1569,64 @@ def numentries(path, treepath, localsource=MemmapSource.defaults, xrootdsource=X
     if blocking:
         for excinfo in excinfos:
             _delayedraise(excinfo)
-        return sum(out)
+        if total:
+            return sum(out)
+        else:
+            return dict(zip(paths, out))
     else:
         def wait():
             for excinfo in excinfos:
                 _delayedraise(excinfo)
-            return sum(out)
+            if total:
+                return sum(out)
+            else:
+                return dict(zip(paths, out))
         return wait
+
+def lazyarrays(path, treepath, branches, outputtype=dict, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
+    if isinstance(path, string_types):
+        paths = _filename_explode(path)
+    else:
+        paths = [y for x in path for y in _filename_explode(x)]
+
+    path2numentries = numentries(paths, treepath, total=False, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor, blocking=True)
+    globalentryoffset = numpy.empty(len(path2numentries) + 1, dtype=numpy.uint64)
+    globalentryoffset[0] = 0
+    for i, x in enumerate(self._paths):
+        globalentryoffset[i + 1] = globalentryoffset[i] + path2numentries[x]
+
+    tree = uproot.rootio.open(paths[0], localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource)[treepath]
+    branches = list(tree._normalize_branches(branches))
+
+    if cache is None:
+        cache = uproot.cache.memorycache.MemoryCache(limitbytes)
+    if basketcache is None:
+        basketcache = cache
+    if keycache is None:
+        keycache = cache
+    cache[0] = tree
+
+    if outputtype == namedtuple:
+        outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
+        return outputtype(*[LazyArray(paths, treepath, branch, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
+    elif issubclass(outputtype, dict):
+        return outputtype((name, LazyArray(paths, treepath, branch, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor)) for branch, interpretation in branches)
+    elif issubclass(outputtype, (list, tuple)):
+        return outputtype(LazyArray(paths, treepath, branch, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches)
+    else:
+        return outputtype(*[LazyArray(paths, treepath, branch, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
+
+class LazyArray(object):
+    def __init__(self, paths, treepath, branch, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor):
+        self._paths = paths
+        self._treepath = treepath
+        self._branch = branch
+        self._interpretation = interpretation
+        self._globalentryoffset = globalentryoffset
+        self._cache = cache
+        self._basketcache = basketcache
+        self._keycache = keycache
+        self._localsource = localsource
+        self._xrootdsource = xrootdsource
+        self._httpsource = httpsource
+        self._executor = executor
