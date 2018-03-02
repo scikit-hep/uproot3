@@ -36,6 +36,7 @@ import uproot.source.source
 import uproot.source.cursor
 from uproot.interp.interp import Interpretation
 from uproot.interp.numerical import asdtype
+from uproot.interp.numerical import _dimsprod
 
 def sizes2offsets(sizes):
     out = numpy.empty(len(sizes) + 1, dtype=sizes.dtype)
@@ -96,8 +97,9 @@ class asjagged(Interpretation):
         if local_entrystart == local_entrystop:
             content = self.asdtype.fromroot(data, None, 0, 0)
         else:
+            itemsize = self.asdtype.fromdtype.itemsize * _dimsprod(self.asdtype.fromdims)
             if self.skip_bytes == 0:
-                numpy.floor_divide(offsets, self.asdtype.fromdtype.itemsize, offsets)
+                numpy.floor_divide(offsets, itemsize, offsets)
                 starts = offsets[local_entrystart     : local_entrystop    ]
                 stops  = offsets[local_entrystart + 1 : local_entrystop + 1]
                 content = self.asdtype.fromroot(data, None, starts[0], stops[-1])
@@ -109,7 +111,7 @@ class asjagged(Interpretation):
                 numpy.cumsum(fromstops - fromstarts, out=newoffsets[1:])
                 newdata = numpy.empty(newoffsets[-1], dtype=data.dtype)
                 _compactify(data, fromstarts, fromstops, newdata, newoffsets[:-1], newoffsets[1:])
-                numpy.floor_divide(newoffsets, self.asdtype.fromdtype.itemsize, newoffsets)
+                numpy.floor_divide(newoffsets, itemsize, newoffsets)
                 starts = newoffsets[:-1]
                 stops = newoffsets[1:]
                 content = self.asdtype.fromroot(newdata, None, 0, stops[-1])
@@ -445,7 +447,7 @@ class JaggedJaggedArray(VariableLength):
         while i < len(item):
             size, = item[i : i + 4].view(JaggedJaggedArray.indexdtype)
             i += 4
-            numbytes = size*self.fromdtype.itemsize
+            numbytes = size * self.fromdtype.itemsize
             out.append(item[i : i + numbytes].view(self.fromdtype))
             i += numbytes
         return out
