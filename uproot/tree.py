@@ -1557,7 +1557,7 @@ def numentries(path, treepath, localsource=MemmapSource.defaults, xrootdsource=X
             else:
                 return None
             finally:
-                source.dismiss()
+                source._source._mmap.close()
 
     if executor is None:
         for i in range(len(paths)):
