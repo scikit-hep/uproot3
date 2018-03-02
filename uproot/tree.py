@@ -80,6 +80,7 @@ from uproot.interp.numerical import asdtype
 from uproot.source.cursor import Cursor
 from uproot.source.memmap import MemmapSource
 from uproot.source.xrootd import XRootDSource
+from uproot.source.http import HTTPSource
 
 if sys.version_info[0] <= 2:
     string_types = (unicode, str)
@@ -94,32 +95,35 @@ def _delayedraise(excinfo):
         else:
             raise err.with_traceback(trc)
 
+def _filename_explode(x):
+    parsed = urlparse(x)
+    if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0:
+        pattern = os.path.expanduser(parsed.netloc + parsed.path)
+        if "*" in pattern or "?" in pattern or "[" in pattern:
+            out = sorted(glob.glob(pattern))
+            if len(out) == 0:
+                raise TypeError("no matches for filename {0}".format(repr(pattern)))
+        else:
+            out = [pattern]
+        return out
+    else:
+        return [x]
+
 ################################################################ high-level interface
 
-def iterate(path, treepath, branches=None, entrysteps=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, **options):
-    for tree, newbranches, globalentrystart in _iterate(path, treepath, branches, localsource, xrootdsource, **options):
+def iterate(path, treepath, branches=None, entrysteps=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
+    for tree, newbranches, globalentrystart in _iterate(path, treepath, branches, localsource, xrootdsource, httpsource, **options):
         for start, stop, arrays in tree.iterate(branches=newbranches, entrysteps=entrysteps, outputtype=outputtype, reportentries=True, entrystart=0, entrystop=tree.numentries, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking):
             if reportentries:
                 yield globalentrystart + start, globalentrystart + stop, arrays
             else:
                 yield arrays
-        
-def _iterate(path, treepath, branches, localsource, xrootdsource, **options):
-    def explode(x):
-        parsed = urlparse(x)
-        if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0:
-            pattern = os.path.expanduser(parsed.netloc + parsed.path)
-            out = sorted(glob.glob(pattern))
-            if len(out) == 0:
-                raise TypeError("no matches for filename {0}".format(repr(pattern)))
-            return out
-        else:
-            return [x]
 
+def _iterate(path, treepath, branches, localsource, xrootdsource, httpsource, **options):
     if isinstance(path, string_types):
-        paths = explode(path)
+        paths = _filename_explode(path)
     else:
-        paths = [y for x in path for y in explode(x)]
+        paths = [y for x in path for y in _filename_explode(x)]
 
     oldpath = None
     oldbranches = None
@@ -128,7 +132,7 @@ def _iterate(path, treepath, branches, localsource, xrootdsource, **options):
     outerstart = 0
     globalentrystart = 0
     for path in paths:
-        tree = uproot.rootio.open(path, localsource=localsource, xrootdsource=xrootdsource, **options)[treepath]
+        tree = uproot.rootio.open(path, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)[treepath]
         listbranches = list(tree._normalize_branches(branches))
 
         newbranches = OrderedDict((branch.name, interpretation) for branch, interpretation in listbranches)
@@ -1515,3 +1519,60 @@ class TBranchMethods(object):
         raise TypeError("'TBranch' object is not iterable")
 
 uproot.rootio.methods["TBranch"] = TBranchMethods
+
+################################################################ for quickly getting numentries
+
+def numentries(path, treepath, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None, blocking=True):
+    if isinstance(path, string_types):
+        paths = _filename_explode(path)
+    else:
+        paths = [y for x in path for y in _filename_explode(x)]
+
+    class _TTreeForNumEntries(uproot.rootio.ROOTStreamedObject):
+        @classmethod
+        def _readinto(cls, self, source, cursor, context, parent):
+            start, cnt, classversion = uproot.rootio._startcheck(source, cursor)
+            tnamed = uproot.rootio.Undefined.read(source, cursor, context, parent)
+            tattline = uproot.rootio.Undefined.read(source, cursor, context, parent)
+            tattfill = uproot.rootio.Undefined.read(source, cursor, context, parent)
+            tattmarker = uproot.rootio.Undefined.read(source, cursor, context, parent)
+            self.fEntries, = cursor.fields(source, _TTreeForNumEntries._format1)
+            return self
+        _format1 = struct.Struct('>q')
+    
+    out = [None] * len(paths)
+
+    def fill(i):
+        try:
+            file = uproot.rootio.open(paths[i], localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, read_streamers=False, keep_source=True)
+        except:
+            return sys.exc_info()
+        else:
+            try:
+                source = file._context.source
+                file._context.classes["TTree"] = _TTreeForNumEntries
+                out[i] = file[treepath].fEntries
+            except:
+                return sys.exc_info()
+            else:
+                return None
+            finally:
+                source.dismiss()
+
+    if executor is None:
+        for i in range(len(paths)):
+            _delayedraise(fill(i))
+        excinfos = ()
+    else:
+        excinfos = executor.map(fill, range(len(paths)))
+
+    if blocking:
+        for excinfo in excinfos:
+            _delayedraise(excinfo)
+        return sum(out)
+    else:
+        def wait():
+            for excinfo in excinfos:
+                _delayedraise(excinfo)
+            return sum(out)
+        return wait
