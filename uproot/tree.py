@@ -395,9 +395,6 @@ class TTreeMethods(object):
     def array(self, branch, interpretation=None, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         return self.get(branch).array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
 
-    def lazyarray(self, branch, interpretation=None, cache=None, basketcache=None, keycache=None, executor=None):
-        return self.get(branch).lazyarray(interpretation=interpretation, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor)
-
     def arrays(self, branches=None, outputtype=dict, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         branches = list(self._normalize_branches(branches))
 
@@ -422,10 +419,18 @@ class TTreeMethods(object):
         else:
             return wait
 
-    def lazyarrays(self, branches=None, outputtype=dict, cache=None, basketcache=None, keycache=None, executor=None):
+    def lazyarray(self, branch, interpretation=None, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, executor=None):
+        return self.get(branch).lazyarray(interpretation=interpretation, limitbytes=limitbytes, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor)
+
+    def lazyarrays(self, branches=None, outputtype=dict, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, executor=None):
         branches = list(self._normalize_branches(branches))
 
-        lazyarrays = [(branch.name, branch.lazyarray(interpretation=interpretation, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor)) for branch, interpretation in branches]
+        if basketcache is None:
+            basketcache = uproot.cache.memorycache.ThreadSafeMemoryCache(limitbytes)
+        if keycache is None:
+            keycache = uproot.cache.memorycache.ThreadSafeDict()
+
+        lazyarrays = [(branch.name, branch.lazyarray(interpretation=interpretation, limitbytes=limitbytes, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor)) for branch, interpretation in branches]
 
         if outputtype == namedtuple:
             outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
@@ -1282,102 +1287,17 @@ class TBranchMethods(object):
 
         return wait
 
-    def lazyarray(self, interpretation=None, cache=None, basketcache=None, keycache=None, executor=None):
+    def lazyarray(self, interpretation=None, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, executor=None):
         if not self._triedrecover:
             self._tryrecover()
+
+        if basketcache is None:
+            basketcache = uproot.cache.memorycache.ThreadSafeMemoryCache(limitbytes)
+        if keycache is None:
+            keycache = uproot.cache.memorycache.ThreadSafeDict()
+
         interpretation = self._normalize_interpretation(interpretation)
-        return self._LazyArray(self, interpretation, cache, basketcache, keycache, executor)
-
-    class _LazyArray(object):
-        def __init__(self, branch, interpretation, cache, basketcache, keycache, executor):
-            if keycache is None:
-                keycache = uproot.cache.memorycache.ThreadSafeDict()
-
-            self._branch = branch
-            self._interpretation = interpretation
-            self._cache = cache
-            self._basketcache = basketcache
-            self._keycache = keycache
-            self._executor = executor
-
-            self._len = self._branch.numentries
-
-            if hasattr(self._interpretation, "todtype"):
-                self.dtype = self._interpretation.todtype
-
-            if hasattr(self._interpretation, "todims"):
-                self.shape = (len(self),) + self._interpretation.todims
-
-        def __len__(self):
-            return self._len
-
-        def __getitem__(self, index):
-            if isinstance(index, slice):
-                start, stop, step = self._normalize_slice(index)
-                if (start >= stop and step > 0) or (stop >= start and step < 0):
-                    return self._interpretation.empty()
-                else:
-                    array = self._array(min(start, stop), max(start, stop))
-                    if step == 1:
-                        return array
-                    else:
-                        return array[::step]
-            else:
-                index = self._normalize_index(index, False, 1)
-                array = self._array(index, index + 1)
-                return array[0]
-
-        def __getslice__(self, start, end):
-            return self.__getitem__(slice(start, end))
-
-        def cumsum(self, axis=None, dtype=None, out=None):
-            return self._array(self._basket_entryoffset[0], self._basket_entryoffset[-1]).cumsum(axis=axis, dtype=dtype, out=out)
-
-        def _array(self, entrystart, entrystop):
-            return self._branch.array(interpretation=self._interpretation, entrystart=entrystart, entrystop=entrystop, cache=self._cache, basketcache=self._basketcache, keycache=self._keycache, executor=self._executor, blocking=True)
-
-        def _normalize_index(self, i, clip, step):
-            lenself = len(self)
-            if i < 0:
-                j = lenself + i
-                if j < 0:
-                    if clip:
-                        return 0 if step > 0 else lenself
-                    else:
-                        raise IndexError("index out of range: {0} for length {1}".format(i, lenself))
-                else:
-                    return j
-            elif i < lenself:
-                return i
-            elif clip:
-                return lenself if step > 0 else 0
-            else:
-                raise IndexError("index out of range: {0} for length {1}".format(i, lenself))
-
-        def _normalize_slice(self, s):
-            lenself = len(self)
-            if s.step is None:
-                step = 1
-            else:
-                step = s.step
-            if step == 0:
-                raise ValueError("slice step cannot be zero")
-            if s.start is None:
-                if step > 0:
-                    start = 0
-                else:
-                    start = lenself - 1
-            else:
-                start = self._normalize_index(s.start, True, step)
-            if s.stop is None:
-                if step > 0:
-                    stop = lenself
-                else:
-                    stop = -1
-            else:
-                stop = self._normalize_index(s.stop, True, step)
-
-            return start, stop, step
+        return LazyArray._frombranch(self, interpretation, cache, basketcache, keycache, executor)
 
     class _BasketKey(object):
         def __init__(self, source, cursor, compression, complete):
@@ -1600,22 +1520,25 @@ def lazyarrays(path, treepath, branches=None, outputtype=dict, limitbytes=1024**
     branches = list(tree._normalize_branches(branches))
 
     if cache is None:
-        cache = uproot.cache.memorycache.MemoryCache(limitbytes)
+        cache = uproot.cache.memorycache.ThreadSafeMemoryCache(limitbytes)
     if basketcache is None:
         basketcache = cache
     if keycache is None:
         keycache = cache
     cache[0] = tree
 
+    def chunksize(branch):
+        return (branch.fBasketEntry[1:] - branch.fBasketEntry[:-1]).max()
+
     if outputtype == namedtuple:
         outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
-        return outputtype(*[LazyArray(paths, treepath, branch.name, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
+        return outputtype(*[LazyArray._frompaths(paths, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
     elif issubclass(outputtype, dict):
-        return outputtype((branch.name, LazyArray(paths, treepath, branch.name, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor)) for branch, interpretation in branches)
+        return outputtype((branch.name, LazyArray._frompaths(paths, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor)) for branch, interpretation in branches)
     elif issubclass(outputtype, (list, tuple)):
-        return outputtype(LazyArray(paths, treepath, branch.name, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches)
+        return outputtype(LazyArray._frompaths(paths, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches)
     else:
-        return outputtype(*[LazyArray(paths, treepath, branch.name, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
+        return outputtype(*[LazyArray._frompaths(paths, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
 
 def lazyarray(path, treepath, branchname, interpretation=None, outputtype=dict, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
     if interpretation is None:
@@ -1625,10 +1548,36 @@ def lazyarray(path, treepath, branchname, interpretation=None, outputtype=dict, 
     return lazyarrays(path, treepath, branches=branches, outputtype=tuple, limitbytes=limitbytes, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor)[0]
 
 class LazyArray(object):
-    def __init__(self, paths, treepath, branchname, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor):
+    def __init__(self):
+        raise TypeError("LazyArrays should be created with uproot.lazyarrays or TTreeMethods.lazyarrays")
+
+    @classmethod
+    def _frombranch(cls, onlybranch, interpretation, cache, basketcache, keycache, executor):
+        self = cls.__new__(cls)
+        self._onlybranch = onlybranch
+        self._paths = (None,)
+        self._treepath = None
+        self._branchname = onlybranch.name
+        self._chunksize = (onlybranch.fBasketEntry[1:] - onlybranch.fBasketEntry[:-1]).max()
+        self._interpretation = interpretation
+        self._globalentryoffset = numpy.array([0, onlybranch.numentries], dtype=numpy.int64)
+        self._cache = cache
+        self._basketcache = basketcache
+        self._keycache = keycache
+        self._localsource = None
+        self._xrootdsource = None
+        self._httpsource = None
+        self._executor = executor
+        return self
+
+    @classmethod
+    def _frompaths(cls, paths, treepath, branchname, chunksize, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor):
+        self = cls.__new__(cls)
+        self._onlybranch = None
         self._paths = paths
         self._treepath = treepath
         self._branchname = branchname
+        self._chunksize = chunksize
         self._interpretation = interpretation
         self._globalentryoffset = globalentryoffset
         self._cache = cache
@@ -1638,6 +1587,7 @@ class LazyArray(object):
         self._xrootdsource = xrootdsource
         self._httpsource = httpsource
         self._executor = executor
+        return self
 
     def __repr__(self):
         if isinstance(self._branchname, str):
@@ -1670,15 +1620,13 @@ class LazyArray(object):
             return numpy.dtype(numpy.object_)
 
     def _tree(self, filenum):
-        tree = self._cache.get(filenum)
+        tree = self._cache.get(filenum, None)
         if tree is None:
             tree = uproot.rootio.open(self._paths[filenum], localsource=self._localsource, xrootdsource=self._xrootdsource, httpsource=self._httpsource)[self._treepath]
             self._cache[filenum] = tree
         return tree
 
     def _piece(self, filenum, start, stop, step):
-        tree = self._tree(filenum)
-
         if step > 0:
             entrystart = start
             entrystop = stop
@@ -1689,10 +1637,18 @@ class LazyArray(object):
             entrystart = stop + 1
             entrystop = start + 1
 
-        array = tree[self._branchname].array(interpretation=self._interpretation, entrystart=entrystart, entrystop=entrystop, cache=self._cache, basketcache=self._basketcache, keycache=self._keycache, executor=self._executor, blocking=True)
+        if self._onlybranch is None:
+            tree = self._tree(filenum)
+            array = tree[self._branchname].array(interpretation=self._interpretation, entrystart=entrystart, entrystop=entrystop, cache=self._cache, basketcache=self._basketcache, keycache=self._keycache, executor=self._executor, blocking=True)
+        else:
+            array = self._onlybranch.array(interpretation=self._interpretation, entrystart=entrystart, entrystop=entrystop, cache=self._cache, basketcache=self._basketcache, keycache=self._keycache, executor=self._executor, blocking=True)
+
         if step < 0:
             array = array[::step]
         return array
+
+    def __getslice__(self, start, end):
+        return self.__getitem__(slice(start, end))
 
     def __getitem__(self, index):
         if isinstance(index, slice):
@@ -1749,9 +1705,14 @@ class LazyArray(object):
                     piece = self._piece(filenum, local_start, local_stop, step)
                     skip = int(math.ceil(size / float(abs(step)))) * abs(step) - size
 
-                    out[pointer : pointer + len(piece)] = piece
-                    pointer += len(piece)
-
+                    if isinstance(piece, numpy.ndarray):
+                        out[pointer : pointer + len(piece)] = piece
+                        pointer += len(piece)
+                    else:
+                        for x in piece:
+                            out[pointer] = x
+                            pointer += 1
+                    
             assert pointer == len(out)
             return out
 
@@ -1767,7 +1728,7 @@ class LazyArray(object):
             filenum = self._globalentryoffset.searchsorted(normindex, side="right") - 1
             localindex = normindex - self._globalentryoffset[filenum]
 
-            return self._piece(filenum, localindex, localindex, 1)[0]
+            return self._piece(filenum, localindex, localindex + 1, 1)[0]
 
         else:
             out = self.__getitem__(index[0])

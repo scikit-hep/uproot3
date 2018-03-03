@@ -38,9 +38,7 @@ class LazyArray_dask(object):
         except ImportError:
             raise
 
-        # if chunks isn't given, take the limiting cluster size of the first tree
         if chunks is None:
-            for start, stop in self._lazyarray._tree(0).clusters():
-                chunks = stop - start
+            chunks = self._lazyarray._chunksize
 
         return dask.array.from_array(self._lazyarray, chunks)
