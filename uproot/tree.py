@@ -667,7 +667,7 @@ class TTreeMethods(object):
         if entrystop < entrystart:
             raise IndexError("entrystop must be greater than or equal to entrystart")
 
-        return entrystart, entrystop
+        return int(entrystart), int(entrystop)
 
     def __len__(self):
         return self.numentries
@@ -1584,16 +1584,16 @@ def numentries(path, treepath, total=True, localsource=MemmapSource.defaults, xr
                 return dict(zip(paths, out))
         return wait
 
-def lazyarrays(path, treepath, branches, outputtype=dict, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
+def lazyarrays(path, treepath, branches=None, outputtype=dict, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
     if isinstance(path, string_types):
         paths = _filename_explode(path)
     else:
         paths = [y for x in path for y in _filename_explode(x)]
 
     path2numentries = numentries(paths, treepath, total=False, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor, blocking=True)
-    globalentryoffset = numpy.empty(len(path2numentries) + 1, dtype=numpy.uint64)
+    globalentryoffset = numpy.empty(len(path2numentries) + 1, dtype=numpy.int64)
     globalentryoffset[0] = 0
-    for i, x in enumerate(self._paths):
+    for i, x in enumerate(paths):
         globalentryoffset[i + 1] = globalentryoffset[i] + path2numentries[x]
 
     tree = uproot.rootio.open(paths[0], localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource)[treepath]
@@ -1609,35 +1609,49 @@ def lazyarrays(path, treepath, branches, outputtype=dict, limitbytes=1024**2, ca
 
     if outputtype == namedtuple:
         outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
-        return outputtype(*[LazyArray(paths, treepath, branch, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
+        return outputtype(*[LazyArray(paths, treepath, branch.name, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
     elif issubclass(outputtype, dict):
-        return outputtype((name, LazyArray(paths, treepath, branch, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor)) for branch, interpretation in branches)
+        return outputtype((branch.name, LazyArray(paths, treepath, branch.name, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor)) for branch, interpretation in branches)
     elif issubclass(outputtype, (list, tuple)):
-        return outputtype(LazyArray(paths, treepath, branch, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches)
+        return outputtype(LazyArray(paths, treepath, branch.name, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches)
     else:
-        return outputtype(*[LazyArray(paths, treepath, branch, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
+        return outputtype(*[LazyArray(paths, treepath, branch.name, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
+
+def lazyarray(path, treepath, branchname, interpretation=None, outputtype=dict, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
+    if interpretation is None:
+        branches = branchname
+    else:
+        branches = {branchname: interpretation}
+    return lazyarrays(path, treepath, branches=branches, outputtype=tuple, limitbytes=limitbytes, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor)[0]
 
 class LazyArray(object):
-    # def __init__(self, paths, treepath, branch, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor):
-    #     self._paths = paths
-    #     self._treepath = treepath
-    #     self._branch = branch
-    #     self._interpretation = interpretation
-    #     self._globalentryoffset = globalentryoffset
-    #     self._cache = cache
-    #     self._basketcache = basketcache
-    #     self._keycache = keycache
-    #     self._localsource = localsource
-    #     self._xrootdsource = xrootdsource
-    #     self._httpsource = httpsource
-    #     self._executor = executor
+    def __init__(self, paths, treepath, branchname, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor):
+        self._paths = paths
+        self._treepath = treepath
+        self._branchname = branchname
+        self._interpretation = interpretation
+        self._globalentryoffset = globalentryoffset
+        self._cache = cache
+        self._basketcache = basketcache
+        self._keycache = keycache
+        self._localsource = localsource
+        self._xrootdsource = xrootdsource
+        self._httpsource = httpsource
+        self._executor = executor
 
-    def __init__(self):
-        self._pieces = [numpy.arange(0, 10), numpy.arange(10, 15), numpy.arange(15, 30)]
-        self._globalentryoffset = numpy.array([0, 10, 15, 30])
-        self._interpretation = asdtype(int, todims=())
+    def __repr__(self):
+        if isinstance(self._branchname, str):
+            branchname = self._branchname
+        else:
+            branchname = self._branchname.decode("ascii")
+        return "<LazyArray {0} at {1:012x}>".format(repr(branchname), id(self))
 
-    @property
+    def __str__(self):
+        if len(self) > 6:
+            return numpy.array_str(self[:3], max_line_width=numpy.inf).rstrip("]") + " ... " + numpy.array_str(self[-3:], max_line_width=numpy.inf).lstrip("[")
+        else:
+            return numpy.array_str(str, max_line_width=numpy.inf)
+
     def __len__(self):
         return int(self._globalentryoffset[-1])
 
@@ -1654,6 +1668,31 @@ class LazyArray(object):
             return self._interpretation.todtype
         else:
             return numpy.dtype(numpy.object_)
+
+    def _tree(self, filenum):
+        tree = self._cache.get(filenum)
+        if tree is None:
+            tree = uproot.rootio.open(self._paths[filenum], localsource=self._localsource, xrootdsource=self._xrootdsource, httpsource=self._httpsource)[self._treepath]
+            self._cache[filenum] = tree
+        return tree
+
+    def _piece(self, filenum, start, stop, step):
+        tree = self._tree(filenum)
+
+        if step > 0:
+            entrystart = start
+            entrystop = stop
+        elif stop is None:
+            entrystart = 0
+            entrystop = start + 1
+        else:
+            entrystart = stop + 1
+            entrystop = start + 1
+
+        array = tree[self._branchname].array(interpretation=self._interpretation, entrystart=entrystart, entrystop=entrystop, cache=self._cache, basketcache=self._basketcache, keycache=self._keycache, executor=self._executor, blocking=True)
+        if step < 0:
+            array = array[::step]
+        return array
 
     def __getitem__(self, index):
         if isinstance(index, slice):
@@ -1677,7 +1716,7 @@ class LazyArray(object):
 
             skip = 0
             if start_filenum >= 0:
-                for filenum in range(*slice(start_filenum, stop_filenum, step_filenum).indices(len(self._pieces))):
+                for filenum in range(*slice(start_filenum, stop_filenum, step_filenum).indices(len(self._paths))):
                     filestart = self._globalentryoffset[filenum]
                     filestop = self._globalentryoffset[filenum + 1]
 
@@ -1707,8 +1746,10 @@ class LazyArray(object):
                             local_stop = None
                             size = local_start + 1
                     
-                    piece = self._pieces[filenum][local_start:local_stop:step]
+                    piece = self._piece(filenum, local_start, local_stop, step)
                     skip = int(math.ceil(size / float(abs(step)))) * abs(step) - size
+
+                    print "piece", type(piece), piece
 
                     out[pointer : pointer + len(piece)] = piece
                     pointer += len(piece)
@@ -1726,7 +1767,9 @@ class LazyArray(object):
                 raise IndexError("index {0} out of range for LazyArray of length {1}".format(index, lenself))
 
             filenum = self._globalentryoffset.searchsorted(normindex, side="right") - 1
-            return self._pieces[filenum][normindex - self._globalentryoffset[filenum]]
+            localindex = normindex - self._globalentryoffset[filenum]
+
+            return self._piece(filenum, localindex, localindex, 1)[0]
 
         else:
             out = self.__getitem__(index[0])
@@ -1734,31 +1777,7 @@ class LazyArray(object):
                 out[i] = out[i][index[1:]]
             return out
 
-# a = LazyArray()
-# for start in list(range(-35, 35)) + [None]:
-#     for stop in list(range(-35, 35)) + [None]:
-#         for step in (-3, -2, -1, 1, 2, 3, None):
-#             print start, stop, step
-#             assert a[start:stop:step].tolist() == list(range(30))[start:stop:step]
-
-
-            
-# import dask.array
-# import numpy
-
-# class Something(object):
-#     def __init__(self):
-#         self.a = numpy.arange(100)
-#     @property
-#     def shape(self):
-#         return self.a.shape
-#     @property
-#     def dtype(self):
-#         return self.a.dtype
-#     def __getitem__(self, index):
-#         print index
-#         return self.a[index]
-
-# a = dask.array.from_array(Something(), 10)
-
-
+    @property
+    def dask(self):
+        import uproot._connect.to_dask
+        return uproot._connect.to_dask.LazyArray_dask(self)
