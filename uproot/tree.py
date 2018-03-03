@@ -1749,8 +1749,6 @@ class LazyArray(object):
                     piece = self._piece(filenum, local_start, local_stop, step)
                     skip = int(math.ceil(size / float(abs(step)))) * abs(step) - size
 
-                    print "piece", type(piece), piece
-
                     out[pointer : pointer + len(piece)] = piece
                     pointer += len(piece)
 
@@ -1773,8 +1771,9 @@ class LazyArray(object):
 
         else:
             out = self.__getitem__(index[0])
-            for i in range(len(out)):
-                out[i] = out[i][index[1:]]
+            if len(index) > 1:
+                for i in range(len(out)):
+                    out[i] = out[i][index[1:]]
             return out
 
     @property
