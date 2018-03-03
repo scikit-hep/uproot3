@@ -34,6 +34,7 @@ import inspect
 import numbers
 import os.path
 import re
+import math
 import struct
 import sys
 import threading
@@ -1617,16 +1618,140 @@ def lazyarrays(path, treepath, branches, outputtype=dict, limitbytes=1024**2, ca
         return outputtype(*[LazyArray(paths, treepath, branch, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
 
 class LazyArray(object):
-    def __init__(self, paths, treepath, branch, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor):
-        self._paths = paths
-        self._treepath = treepath
-        self._branch = branch
-        self._interpretation = interpretation
-        self._globalentryoffset = globalentryoffset
-        self._cache = cache
-        self._basketcache = basketcache
-        self._keycache = keycache
-        self._localsource = localsource
-        self._xrootdsource = xrootdsource
-        self._httpsource = httpsource
-        self._executor = executor
+    # def __init__(self, paths, treepath, branch, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor):
+    #     self._paths = paths
+    #     self._treepath = treepath
+    #     self._branch = branch
+    #     self._interpretation = interpretation
+    #     self._globalentryoffset = globalentryoffset
+    #     self._cache = cache
+    #     self._basketcache = basketcache
+    #     self._keycache = keycache
+    #     self._localsource = localsource
+    #     self._xrootdsource = xrootdsource
+    #     self._httpsource = httpsource
+    #     self._executor = executor
+
+    def __init__(self):
+        self._pieces = [numpy.arange(0, 10), numpy.arange(10, 15), numpy.arange(15, 30)]
+        self._globalentryoffset = numpy.array([0, 10, 15, 30])
+
+    @property
+    def __len__(self):
+        return int(self._globalentryoffset[-1])
+
+    @property
+    def shape(self):
+        if isinstance(self._interpretation, asdtype):
+            return (len(self),) + self._interpretation.todims
+        else:
+            return (len(self),)
+
+    @property
+    def dtype(self):
+        if isinstance(self._interpretation, asdtype):
+            return self._interpretation.todtype
+        else:
+            return numpy.dtype(numpy.object_)
+
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            start, stop, step = index.indices(self._globalentryoffset[-1])
+            if step > 0:
+                step_filenum = 1
+                start_filenum = self._globalentryoffset.searchsorted(start, side="right") - 1
+                stop_filenum = self._globalentryoffset.searchsorted(stop, side="right")
+            else:
+                step_filenum = -1
+                start_filenum = self._globalentryoffset.searchsorted(start, side="right") - 1
+                stop_filenum = self._globalentryoffset.searchsorted(stop, side="right") - 2
+                if stop_filenum < 0:
+                    stop_filenum = None
+
+            out = []
+
+            skip = 0
+            for filenum in range(*slice(start_filenum, stop_filenum, step_filenum).indices(len(self._pieces))):
+                filestart = self._globalentryoffset[filenum]
+                filestop = self._globalentryoffset[filenum + 1]
+
+                if step_filenum == 1:
+                    if start > filestart:
+                        local_start = start - filestart
+                    else:
+                        local_start = skip
+
+                    if stop < filestop:
+                        local_stop = stop - filestart
+                    else:
+                        local_stop = filestop - filestart
+
+                    size = local_stop - local_start
+
+                else:
+                    if start < filestop:
+                        local_start = start - filestart
+                    else:
+                        local_start = filestop - filestart - 1 - skip
+
+                    if stop >= filestart:
+                        local_stop = stop - filestart
+                        size = local_start + 1 - local_stop
+                    else:
+                        local_stop = None
+                        size = local_start + 1
+
+                piece = self._pieces[filenum][local_start:local_stop:step]
+                skip = int(math.ceil(size / float(abs(step)))) * abs(step) - size
+
+                out.extend(piece)
+
+            return out
+
+        elif isinstance(index, numbers.Integral):
+            lenself = self._globalentryoffset[-1]
+            if index < 0:
+                normindex = index + lenself
+            else:
+                normindex = index
+            if normindex >= lenself:
+                raise IndexError("index {0} out of range for LazyArray of length {1}".format(index, lenself))
+
+            filenum = self._globalentryoffset.searchsorted(normindex, side="right") - 1
+            return self._pieces[filenum][normindex - self._globalentryoffset[filenum]]
+
+        else:
+            out = self.__getitem__(index[0])
+            for i in range(len(out)):
+                out[i] = out[i][index[1:]]
+            return out
+
+# a = LazyArray()
+
+# for start in list(range(-35, 35)) + [None]:
+#     for stop in list(range(-35, 35)) + [None]:
+#         for step in (-3, -2, -1, 1, 2, 3, None):
+#             print start, stop, step
+#             assert a[start:stop:step] == list(range(30))[start:stop:step]
+
+
+            
+# import dask.array
+# import numpy
+
+# class Something(object):
+#     def __init__(self):
+#         self.a = numpy.arange(100)
+#     @property
+#     def shape(self):
+#         return self.a.shape
+#     @property
+#     def dtype(self):
+#         return self.a.dtype
+#     def __getitem__(self, index):
+#         print index
+#         return self.a[index]
+
+# a = dask.array.from_array(Something(), 10)
+
+
