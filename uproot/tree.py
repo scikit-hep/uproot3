@@ -1635,6 +1635,7 @@ class LazyArray(object):
     def __init__(self):
         self._pieces = [numpy.arange(0, 10), numpy.arange(10, 15), numpy.arange(15, 30)]
         self._globalentryoffset = numpy.array([0, 10, 15, 30])
+        self._interpretation = asdtype(int, todims=())
 
     @property
     def __len__(self):
@@ -1668,44 +1669,51 @@ class LazyArray(object):
                 if stop_filenum < 0:
                     stop_filenum = None
 
-            out = []
+            shape = (max(0, (stop - start + (step - (1 if step > 0 else -1))) // step),)
+            if isinstance(self._interpretation, asdtype):
+                shape = shape + self._interpretation.todims
+            out = numpy.empty(shape, dtype=self.dtype)
+            pointer = 0
 
             skip = 0
-            for filenum in range(*slice(start_filenum, stop_filenum, step_filenum).indices(len(self._pieces))):
-                filestart = self._globalentryoffset[filenum]
-                filestop = self._globalentryoffset[filenum + 1]
+            if start_filenum >= 0:
+                for filenum in range(*slice(start_filenum, stop_filenum, step_filenum).indices(len(self._pieces))):
+                    filestart = self._globalentryoffset[filenum]
+                    filestop = self._globalentryoffset[filenum + 1]
 
-                if step_filenum == 1:
-                    if start > filestart:
-                        local_start = start - filestart
+                    if step_filenum == 1:
+                        if start > filestart:
+                            local_start = start - filestart
+                        else:
+                            local_start = skip
+
+                        if stop < filestop:
+                            local_stop = stop - filestart
+                        else:
+                            local_stop = filestop - filestart
+
+                        size = local_stop - local_start
+
                     else:
-                        local_start = skip
+                        if start < filestop:
+                            local_start = start - filestart
+                        else:
+                            local_start = filestop - filestart - 1 - skip
 
-                    if stop < filestop:
-                        local_stop = stop - filestart
-                    else:
-                        local_stop = filestop - filestart
+                        if stop >= filestart:
+                            local_stop = stop - filestart
+                            size = local_start + 1 - local_stop
+                        else:
+                            local_stop = None
+                            size = local_start + 1
+                    
+                    piece = self._pieces[filenum][local_start:local_stop:step]
+                    skip = int(math.ceil(size / float(abs(step)))) * abs(step) - size
 
-                    size = local_stop - local_start
+                    out[pointer : pointer + len(piece)] = piece
+                    pointer += len(piece)
 
-                else:
-                    if start < filestop:
-                        local_start = start - filestart
-                    else:
-                        local_start = filestop - filestart - 1 - skip
-
-                    if stop >= filestart:
-                        local_stop = stop - filestart
-                        size = local_start + 1 - local_stop
-                    else:
-                        local_stop = None
-                        size = local_start + 1
-
-                piece = self._pieces[filenum][local_start:local_stop:step]
-                skip = int(math.ceil(size / float(abs(step)))) * abs(step) - size
-
-                out.extend(piece)
-
+            assert pointer == len(out)
             return out
 
         elif isinstance(index, numbers.Integral):
@@ -1727,12 +1735,11 @@ class LazyArray(object):
             return out
 
 # a = LazyArray()
-
 # for start in list(range(-35, 35)) + [None]:
 #     for stop in list(range(-35, 35)) + [None]:
 #         for step in (-3, -2, -1, 1, 2, 3, None):
 #             print start, stop, step
-#             assert a[start:stop:step] == list(range(30))[start:stop:step]
+#             assert a[start:stop:step].tolist() == list(range(30))[start:stop:step]
 
 
             
