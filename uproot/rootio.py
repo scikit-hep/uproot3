@@ -722,7 +722,9 @@ def _defineclasses(streamerinfos, classes):
                 else:
                     raise AssertionError
 
-            code.extend(["        _endcheck(start, cursor, cnt)",
+            code.extend(["        if self.__class__.__name__ == cls.__name__:",
+                         "            self.__class__ = cls._variants[classversion]",
+                         "        _endcheck(start, cursor, cnt)",
                          "        return self"])
 
             if len(bases) == 0:
