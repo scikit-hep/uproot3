@@ -33,12 +33,10 @@ class LazyArray_dask(object):
         self._lazyarray = lazyarray
 
     def array(self, chunks=None, name=None):
-        try:
-            import dask.array
-        except ImportError:
-            raise
+        import dask.array
 
         if chunks is None:
             chunks = self._lazyarray._chunksize
 
-        return dask.array.from_array(self._lazyarray, chunks)
+        # TODO: what would it take to support fancy indexing?
+        return dask.array.from_array(self._lazyarray, chunks, fancy=False)

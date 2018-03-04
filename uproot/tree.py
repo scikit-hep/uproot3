@@ -31,10 +31,10 @@
 import base64
 import glob
 import inspect
+import math
 import numbers
 import os.path
 import re
-import math
 import struct
 import sys
 import threading
@@ -235,7 +235,8 @@ class TTreeMethods(object):
                 self._attachstreamer(subbranch, submembers.get(name, None), streamerinfosmap)
 
     def _postprocess(self, source, cursor, context, parent):
-        context.treename = self.name
+        self._context = context
+        self._context.treename = self.name
 
         for branch in self.fBranches:
             self._attachstreamer(branch, context.streamerinfosmap.get(getattr(branch, "fClassName", None), None), context.streamerinfosmap)
@@ -1448,7 +1449,9 @@ def numentries(path, treepath, total=True, localsource=MemmapSource.defaults, xr
         paths = _filename_explode(path)
     else:
         paths = [y for x in path for y in _filename_explode(x)]
+    return _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, executor, blocking, [])
 
+def _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, executor, blocking, uuids):
     class _TTreeForNumEntries(uproot.rootio.ROOTStreamedObject):
         @classmethod
         def _readinto(cls, self, source, cursor, context, parent):
@@ -1473,6 +1476,7 @@ def numentries(path, treepath, total=True, localsource=MemmapSource.defaults, xr
                 source = file._context.source
                 file._context.classes["TTree"] = _TTreeForNumEntries
                 out[i] = file[treepath].fEntries
+                uuids[i] = file._context.uuid
             except:
                 return sys.exc_info()
             else:
@@ -1487,21 +1491,17 @@ def numentries(path, treepath, total=True, localsource=MemmapSource.defaults, xr
     else:
         excinfos = executor.map(fill, range(len(paths)))
 
-    if blocking:
+    def wait():
         for excinfo in excinfos:
             _delayedraise(excinfo)
         if total:
             return sum(out)
         else:
             return dict(zip(paths, out))
+        
+    if blocking:
+        return wait()
     else:
-        def wait():
-            for excinfo in excinfos:
-                _delayedraise(excinfo)
-            if total:
-                return sum(out)
-            else:
-                return dict(zip(paths, out))
         return wait
 
 def lazyarrays(path, treepath, branches=None, outputtype=dict, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
@@ -1510,11 +1510,12 @@ def lazyarrays(path, treepath, branches=None, outputtype=dict, limitbytes=1024**
     else:
         paths = [y for x in path for y in _filename_explode(x)]
 
-    path2numentries = numentries(paths, treepath, total=False, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor, blocking=True)
-    globalentryoffset = numpy.empty(len(path2numentries) + 1, dtype=numpy.int64)
+    uuids = [None] * len(paths)
+    path2numentries = _numentries(paths, treepath, False, localsource, xrootdsource, httpsource, executor, True, uuids)
+    globalentryoffset = numpy.empty(len(paths) + 1, dtype=numpy.int64)
     globalentryoffset[0] = 0
-    for i, x in enumerate(paths):
-        globalentryoffset[i + 1] = globalentryoffset[i] + path2numentries[x]
+    for i in range(len(paths)):
+        globalentryoffset[i + 1] = globalentryoffset[i] + path2numentries[paths[i]]
 
     tree = uproot.rootio.open(paths[0], localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource)[treepath]
     branches = list(tree._normalize_branches(branches))
@@ -1525,20 +1526,20 @@ def lazyarrays(path, treepath, branches=None, outputtype=dict, limitbytes=1024**
         basketcache = cache
     if keycache is None:
         keycache = cache
-    cache[0] = tree
+    cache[LazyArray._cachekey(uuids[0], treepath)] = tree
 
     def chunksize(branch):
         return (branch.fBasketEntry[1:] - branch.fBasketEntry[:-1]).max()
 
     if outputtype == namedtuple:
         outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
-        return outputtype(*[LazyArray._frompaths(paths, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
+        return outputtype(*[LazyArray._frompaths(paths, uuids, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
     elif issubclass(outputtype, dict):
-        return outputtype((branch.name, LazyArray._frompaths(paths, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor)) for branch, interpretation in branches)
+        return outputtype((branch.name, LazyArray._frompaths(paths, uuids, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor)) for branch, interpretation in branches)
     elif issubclass(outputtype, (list, tuple)):
-        return outputtype(LazyArray._frompaths(paths, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches)
+        return outputtype(LazyArray._frompaths(paths, uuids, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches)
     else:
-        return outputtype(*[LazyArray._frompaths(paths, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
+        return outputtype(*[LazyArray._frompaths(paths, uuids, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
 
 def lazyarray(path, treepath, branchname, interpretation=None, outputtype=dict, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
     if interpretation is None:
@@ -1556,6 +1557,7 @@ class LazyArray(object):
         self = cls.__new__(cls)
         self._onlybranch = onlybranch
         self._paths = (None,)
+        self._uuids = (None,)
         self._treepath = None
         self._branchname = onlybranch.name
         self._chunksize = (onlybranch.fBasketEntry[1:] - onlybranch.fBasketEntry[:-1]).max()
@@ -1571,10 +1573,11 @@ class LazyArray(object):
         return self
 
     @classmethod
-    def _frompaths(cls, paths, treepath, branchname, chunksize, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor):
+    def _frompaths(cls, paths, uuids, treepath, branchname, chunksize, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor):
         self = cls.__new__(cls)
         self._onlybranch = None
         self._paths = paths
+        self._uuids = uuids
         self._treepath = treepath
         self._branchname = branchname
         self._chunksize = chunksize
@@ -1619,11 +1622,16 @@ class LazyArray(object):
         else:
             return numpy.dtype(numpy.object_)
 
+    @staticmethod
+    def _cachekey(uuid, treepath):
+        return "{0};{1}".format(base64.b64encode(uuid).decode("ascii"), _bytesid(treepath).decode("ascii"))
+
     def _tree(self, filenum):
-        tree = self._cache.get(filenum, None)
+        cachekey = LazyArray._cachekey(self._uuids[filenum], self._treepath)
+        tree = self._cache.get(cachekey, None)
         if tree is None:
             tree = uproot.rootio.open(self._paths[filenum], localsource=self._localsource, xrootdsource=self._xrootdsource, httpsource=self._httpsource)[self._treepath]
-            self._cache[filenum] = tree
+            self._cache[cachekey] = tree
         return tree
 
     def _piece(self, filenum, start, stop, step):
@@ -1639,9 +1647,9 @@ class LazyArray(object):
 
         if self._onlybranch is None:
             tree = self._tree(filenum)
-            array = tree[self._branchname].array(interpretation=self._interpretation, entrystart=entrystart, entrystop=entrystop, cache=self._cache, basketcache=self._basketcache, keycache=self._keycache, executor=self._executor, blocking=True)
+            array = tree[self._branchname].array(interpretation=self._interpretation, entrystart=entrystart, entrystop=entrystop, cache=None, basketcache=self._basketcache, keycache=self._keycache, executor=self._executor, blocking=True)
         else:
-            array = self._onlybranch.array(interpretation=self._interpretation, entrystart=entrystart, entrystop=entrystop, cache=self._cache, basketcache=self._basketcache, keycache=self._keycache, executor=self._executor, blocking=True)
+            array = self._onlybranch.array(interpretation=self._interpretation, entrystart=entrystart, entrystop=entrystop, cache=None, basketcache=self._basketcache, keycache=self._keycache, executor=self._executor, blocking=True)
 
         if step < 0:
             array = array[::step]
@@ -1667,6 +1675,7 @@ class LazyArray(object):
             shape = (max(0, (stop - start + (step - (1 if step > 0 else -1))) // step),)
             if isinstance(self._interpretation, asdtype):
                 shape = shape + self._interpretation.todims
+
             out = numpy.empty(shape, dtype=self.dtype)
             pointer = 0
 
@@ -1705,6 +1714,8 @@ class LazyArray(object):
                     piece = self._piece(filenum, local_start, local_stop, step)
                     skip = int(math.ceil(size / float(abs(step)))) * abs(step) - size
 
+                    tmp = pointer
+
                     if isinstance(piece, numpy.ndarray):
                         out[pointer : pointer + len(piece)] = piece
                         pointer += len(piece)
@@ -1712,7 +1723,7 @@ class LazyArray(object):
                         for x in piece:
                             out[pointer] = x
                             pointer += 1
-                    
+
             assert pointer == len(out)
             return out
 
