@@ -614,9 +614,9 @@ def _raise_notimplemented(streamertype, streamerdict, source, cursor):
     raise NotImplementedError("\n\nUnimplemented streamer type: {0}\n\nmembers: {1}\n\nfile contents:\n\n{2}".format(streamertype, streamerdict, cursor.hexdump(source)))
 
 def _resolveversion(cls, self, classversion):
-    if classversion not in cls._variants:
-        raise ValueError("attempting to read {0} object with version {1}, but there is no streamer in this ROOT file with that class name and version (versions available: {2})".format(cls.__name__, classversion, list(cls._variants.keys())))
-    self.__class__ = cls._variants[classversion]
+    if classversion not in cls._versions:
+        raise ValueError("attempting to read {0} object with version {1}, but there is no streamer in this ROOT file with that class name and version (versions available: {2})".format(cls.__name__, classversion, list(cls._versions.keys())))
+    self.__class__ = cls._versions[classversion]
 
 def _defineclasses(streamerinfos, classes):
     skip = dict(builtin_skip)
@@ -628,7 +628,7 @@ def _defineclasses(streamerinfos, classes):
                     "        start, cnt, classversion = _startcheck(source, cursor)",
                     "        if cls._classversion != classversion:",
                     "            cursor.index = start",
-                    "            return cls._variants[classversion]._readinto(self, source, cursor, context, parent)"]
+                    "            return cls._versions[classversion]._readinto(self, source, cursor, context, parent)"]
 
             fields = []
             bases = []
@@ -723,7 +723,7 @@ def _defineclasses(streamerinfos, classes):
                     raise AssertionError
 
             code.extend(["        if self.__class__.__name__ == cls.__name__:",
-                         "            self.__class__ = cls._variants[classversion]",
+                         "            self.__class__ = cls._versions[classversion]",
                          "        _endcheck(start, cursor, cnt)",
                          "        return self"])
 
@@ -738,7 +738,7 @@ def _defineclasses(streamerinfos, classes):
                 code.append("    {0} = {1}".format(n, v))
 
             code.insert(0, "    _classversion = {0}".format(streamerinfo.fClassVersion))
-            code.insert(0, "    _variants = variants")
+            code.insert(0, "    _versions = versions")
             if sys.version_info[0] > 2:
                 code.insert(0, "    _classname = {0}".format(repr(streamerinfo.fName)))
             else:
@@ -747,14 +747,14 @@ def _defineclasses(streamerinfos, classes):
             code.insert(0, "class {0}({1}):".format(_safename(streamerinfo.fName), ", ".join(bases)))
 
             if _safename(streamerinfo.fName) in classes:
-                variants = classes[_safename(streamerinfo.fName)]._variants
+                versions = classes[_safename(streamerinfo.fName)]._versions
             else:
-                variants = {}
+                versions = {}
 
-            classes["variants"] = variants
+            classes["versions"] = versions
             pyclass = _makeclass(streamerinfo.fName, id(streamerinfo), "\n".join(code), classes)
             streamerinfo.pyclass = pyclass
-            variants[pyclass._classversion] = pyclass
+            versions[pyclass._classversion] = pyclass
 
     return classes
 
