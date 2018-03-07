@@ -31,6 +31,7 @@
 import ast
 import fcntl
 import glob
+import hashlib
 import json
 import math
 import os
@@ -635,7 +636,11 @@ class DiskCache(object):
         return os.path.join(piddir, "{0}-{1}".format(len(os.listdir(piddir)), "".join(random.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789") for x in range(30))))
 
     def _index(self, name):
-        return abs(hash(name)) % self.config.lookupsize
+        if not isinstance(name, bytes) and hasattr(name, "encode"):
+            name = name.encode("utf-8")
+        if not isinstance(name, bytes):
+            raise TypeError("keys must be strings, not {0}".format(type(name)))
+        return abs(int(hashlib.md5(name).hexdigest(), 16)) % self.config.lookupsize
 
     def _get(self, name):
         assert self._lock is not None
