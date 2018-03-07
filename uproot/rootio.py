@@ -624,7 +624,7 @@ def _defineclasses(streamerinfos, classes):
     for streamerinfo in streamerinfos:
         pyclassname = _safename(streamerinfo.fName)
 
-        if isinstance(streamerinfo, TStreamerInfo) and pyclassname not in builtin_classes:
+        if isinstance(streamerinfo, TStreamerInfo) and pyclassname not in builtin_classes and (pyclassname not in classes or hasattr(classes[pyclassname], "_versions")):
             code = ["    @classmethod",
                     "    def _readinto(cls, self, source, cursor, context, parent):",
                     "        start, cnt, classversion = _startcheck(source, cursor)",
