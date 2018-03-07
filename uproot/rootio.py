@@ -622,7 +622,9 @@ def _defineclasses(streamerinfos, classes):
     skip = dict(builtin_skip)
 
     for streamerinfo in streamerinfos:
-        if isinstance(streamerinfo, TStreamerInfo) and _safename(streamerinfo.fName) not in builtin_classes:
+        pyclassname = _safename(streamerinfo.fName)
+
+        if isinstance(streamerinfo, TStreamerInfo) and pyclassname not in builtin_classes:
             code = ["    @classmethod",
                     "    def _readinto(cls, self, source, cursor, context, parent):",
                     "        start, cnt, classversion = _startcheck(source, cursor)",
@@ -692,13 +694,13 @@ def _defineclasses(streamerinfos, classes):
 
                 elif isinstance(element, TStreamerObjectPointer):
                     if element.fType == uproot.const.kObjectp:
-                        if _safename(streamerinfo.fName) in skip and _safename(element.fName) in skip[_safename(streamerinfo.fName)]:
+                        if pyclassname in skip and _safename(element.fName) in skip[pyclassname]:
                             code.append("        Undefined.read(source, cursor, context, self)")
                         else:
                             code.append("        self.{0} = {1}.read(source, cursor, context, self)".format(_safename(element.fName), _safename(element.fTypeName.rstrip(b"*"))))
                             fields.append(_safename(element.fName))
                     elif element.fType == uproot.const.kObjectP:
-                        if _safename(streamerinfo.fName) in skip and _safename(element.fName) in skip[_safename(streamerinfo.fName)]:
+                        if pyclassname in skip and _safename(element.fName) in skip[pyclassname]:
                             code.append("        _readobjany(source, cursor, context, parent, asclass=Undefined)")
                         else:
                             code.append("        self.{0} = _readobjany(source, cursor, context, parent)".format(_safename(element.fName)))
@@ -713,7 +715,7 @@ def _defineclasses(streamerinfos, classes):
                     code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
 
                 elif isinstance(element, (TStreamerObject, TStreamerObjectAny, TStreamerString)):
-                    if _safename(streamerinfo.fName) in skip and _safename(element.fName) in skip[_safename(streamerinfo.fName)]:
+                    if pyclassname in skip and _safename(element.fName) in skip[pyclassname]:
                         code.append("        self.{0} = Undefined.read(source, cursor, context, self)".format(_safename(element.fName)))
                     else:
                         code.append("        self.{0} = {1}.read(source, cursor, context, self)".format(_safename(element.fName), _safename(element.fTypeName)))
@@ -729,8 +731,8 @@ def _defineclasses(streamerinfos, classes):
 
             if len(bases) == 0:
                 bases.append("ROOTStreamedObject")
-            if _safename(streamerinfo.fName) in methods:
-                bases.insert(0, methods[_safename(streamerinfo.fName)].__name__)
+            if pyclassname in methods:
+                bases.insert(0, methods[pyclassname].__name__)
 
             for n, v in sorted(formats.items()):
                 code.append("    {0} = {1}".format(n, v))
@@ -744,10 +746,10 @@ def _defineclasses(streamerinfos, classes):
             else:
                 code.insert(0, "    _classname = b{0}".format(repr(streamerinfo.fName)))
             code.insert(0, "    _fields = [{0}]".format(", ".join(repr(x) for x in fields)))
-            code.insert(0, "class {0}({1}):".format(_safename(streamerinfo.fName), ", ".join(bases)))
+            code.insert(0, "class {0}({1}):".format(pyclassname, ", ".join(bases)))
 
-            if _safename(streamerinfo.fName) in classes:
-                versions = classes[_safename(streamerinfo.fName)]._versions
+            if pyclassname in classes:
+                versions = classes[pyclassname]._versions
             else:
                 versions = {}
 
