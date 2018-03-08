@@ -46,6 +46,10 @@ class TestIssues(unittest.TestCase):
         # self.assertEqual(t.array("mH").tolist(), [])
         # t.recover()
 
+        self.assertEqual(t["mH"].numbaskets, 1)
+        self.assertEqual(t["mH"].basket_entrystart(0), 0)
+        self.assertEqual(t["mH"].basket_entrystop(0), 61)
+        self.assertEqual(t["mH"].basket_numentries(0), 61)
         self.assertEqual(t.array("mH").tolist(), [124.0, 124.09089660644531, 124.18180084228516, 124.27269744873047, 124.36360168457031, 124.45449829101562, 124.54550170898438, 124.63639831542969, 124.72730255126953, 124.81819915771484, 124.87000274658203, 124.87550354003906, 124.88089752197266, 124.88639831542969, 124.89179992675781, 124.89730072021484, 124.90270233154297, 124.908203125, 124.90910339355469, 124.9135971069336, 124.91909790039062, 124.92449951171875, 124.93000030517578, 124.98739624023438, 124.9906997680664, 124.99349975585938, 124.99590301513672, 124.9977035522461, 124.9990005493164, 124.99970245361328, 125.0, 125.00029754638672, 125.0009994506836, 125.0022964477539, 125.00409698486328, 125.00650024414062, 125.0093002319336, 125.01260375976562, 125.06999969482422, 125.07550048828125, 125.08090209960938, 125.0864028930664, 125.09089660644531, 125.091796875, 125.09729766845703, 125.10269927978516, 125.10820007324219, 125.11360168457031, 125.11910247802734, 125.12449645996094, 125.12999725341797, 125.18180084228516, 125.27269744873047, 125.36360168457031, 125.45449829101562, 125.54550170898438, 125.63639831542969, 125.72730255126953, 125.81819915771484, 125.90910339355469, 126.0])
 
     def test_issue30(self):
@@ -100,3 +104,14 @@ class TestIssues(unittest.TestCase):
         tree = uproot.open("tests/samples/issue57.root")["outtree"]
         self.assertTrue(all(isinstance(y, uproot.physics.TLorentzVectorMethods) and isinstance(y.fP, uproot.physics.TVector3Methods) for x in tree["sel_lep"].array() for y in x))
         self.assertTrue(all(isinstance(y, uproot.physics.TLorentzVectorMethods) and isinstance(y.fP, uproot.physics.TVector3Methods) for x in tree["selJet"].array() for y in x))
+
+    def test_issue60(self):
+        t = uproot.open("tests/samples/issue60.root")["nllscan"]
+
+        self.assertEqual(t["status"].numbaskets, 2)
+        self.assertEqual(t["mH"].numbaskets, 3)
+        self.assertEqual((t["mH"].basket_entrystart(0), t["mH"].basket_entrystart(1), t["mH"].basket_entrystart(2)), (0, 3990, 7980))
+        self.assertEqual((t["mH"].basket_entrystop(0), t["mH"].basket_entrystop(1), t["mH"].basket_entrystop(2)), (3990, 7980, 11535))
+        self.assertEqual((t["mH"].basket_numentries(0), t["mH"].basket_numentries(1), t["mH"].basket_numentries(2)), (3990, 3990, 3555))
+        self.assertEqual(t.array("mH")[:10].tolist(), [125.3575896071691, 124.75819175713684, 124.79865223661515, 125.13239376420276, 125.19612659731995, 125.33001837818416, 124.93261741760551, 125.02903289132837, 124.65206649938854, 125.50663519903532])
+        self.assertEqual(t.array("mH")[-10:].tolist(), [125.5150930345707, 125.00248572708085, 124.55838505657864, 125.03766816520313, 125.27765299737514, 124.9976442776121, 124.8339210081154, 124.62415638855144, 125.33988981473144, 124.93384515492096])
