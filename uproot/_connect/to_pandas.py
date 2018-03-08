@@ -38,47 +38,6 @@ class TTreeMethods_pandas(object):
     def __init__(self, tree):
         self._tree = tree
 
-    def df(self, branches=None, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None):
+    def df(self, branches=None, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         import pandas
-
-        branches = list(self._tree._normalize_branches(branches))
-        entrystart, entrystop = self._tree._normalize_entrystartstop(entrystart, entrystop)
-
-        # verify that the types are allowed and create stubs for the numerical types
-        initialcolumns = {}
-        for branch, interpretation in branches:
-            if isinstance(interpretation, asdtype):
-                initialcolumns[branch.name] = interpretation.todtype.type(0)
-            elif isinstance(interpretation, asjagged):
-                initialcolumns[branch.name] = None
-            else:
-                raise TypeError("cannot convert interpretation {0} to DataFrame".format(interpretation))
-
-        # when Pandas creates a DataFrame with numerical stubs, it allocates memory the way it wants to
-        out = pandas.DataFrame(initialcolumns, index=numpy.arange(entrystart, entrystop))
-
-        # in the common case of converting the whole tree, you can safely fill Pandas's internal arrays in-place
-        if entrystart == 0 and entrystop == self._tree.numentries:
-            newbranches = {}
-            for branch, interpretation in branches:
-                if isinstance(interpretation, asdtype):
-                    newbranches[branch.name] = interpretation.toarray(out[branch.name].values)
-                else:
-                    newbranches[branch.name] = interpretation
-        else:
-            newbranches = dict((branch.name, interpretation) for branch, interpretation in branches)
-
-        # actually read all the data, possibly in parallel
-        arrays = self._tree.arrays(newbranches, entrystart=entrystart, entrystop=entrystop, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor)
-
-        # numerical data are already in the DataFrame, but the others have to be merged in
-        for branchname, interpretation in newbranches.items():
-            if isinstance(interpretation, asdtype):
-                if not isinstance(interpretation, asarray):
-                    out[branchname] = arrays[branchname]
-            elif isinstance(interpretation, asjagged):
-                out[branchname] = list(arrays[branchname])
-            else:
-                raise AssertionError((branchname, interpretation))
-
-        return out
+        return self._tree.arrays(branches=branches, outputtype=pandas.DataFrame, entrystart=entrystart, entrystop=entrystop, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
