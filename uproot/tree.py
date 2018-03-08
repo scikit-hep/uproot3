@@ -38,7 +38,6 @@ import re
 import struct
 import sys
 import threading
-import warnings
 from collections import namedtuple
 try:
     from urlparse import urlparse

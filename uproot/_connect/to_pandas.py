@@ -31,8 +31,8 @@
 import numpy
 
 from uproot.interp import asdtype
+from uproot.interp import asarray
 from uproot.interp import asjagged
-from uproot.interp import asstrings
 
 class TTreeMethods_pandas(object):
     def __init__(self, tree):
@@ -50,9 +50,7 @@ class TTreeMethods_pandas(object):
             if isinstance(interpretation, asdtype):
                 initialcolumns[branch.name] = interpretation.todtype.type(0)
             elif isinstance(interpretation, asjagged):
-                pass
-            elif isinstance(interpretation, asstrings):
-                pass
+                initialcolumns[branch.name] = None
             else:
                 raise TypeError("cannot convert interpretation {0} to DataFrame".format(interpretation))
 
@@ -72,14 +70,13 @@ class TTreeMethods_pandas(object):
         arrays = self._tree.arrays(newbranches, entrystart=entrystart, entrystop=entrystop, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor)
 
         # numerical data are already in the DataFrame, but the others have to be merged in
-        for branch, interpretation in branches:
+        for branchname, interpretation in newbranches.items():
             if isinstance(interpretation, asdtype):
-                out[branch.name] = arrays[branch.name]
+                if not isinstance(interpretation, asarray):
+                    out[branchname] = arrays[branchname]
             elif isinstance(interpretation, asjagged):
-                out[branch.name] = list(arrays[branch.name])
-            elif isinstance(interpretation, asstrings):
-                out[branch.name] = list(arrays[branch.name])
+                out[branchname] = list(arrays[branchname])
             else:
-                raise AssertionError
+                raise AssertionError((branchname, interpretation))
 
         return out
