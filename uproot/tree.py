@@ -70,6 +70,10 @@ except ImportError:
             return "OrderedDict([{0}])".format(", ".join("({0}, {1})".format(repr(k), repr(v)) for k, v in self.items()))
 
 import numpy
+try:
+    import pandas
+except ImportError:
+    pandas = None
 
 import uproot.rootio
 from uproot.rootio import _bytesid
@@ -114,6 +118,9 @@ def _filename_explode(x):
 def iterate(path, treepath, branches=None, entrysteps=None, outputtype=dict, reportentries=False, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
     for tree, newbranches, globalentrystart in _iterate(path, treepath, branches, localsource, xrootdsource, httpsource, **options):
         for start, stop, arrays in tree.iterate(branches=newbranches, entrysteps=entrysteps, outputtype=outputtype, reportentries=True, entrystart=0, entrystop=tree.numentries, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking):
+            if pandas is not None and issubclass(outputtype, pandas.DataFrame):
+                index = numpy.frombuffer(arrays.index.data, dtype=arrays.index.dtype)
+                numpy.add(index, globalentrystart, index)
             if reportentries:
                 yield globalentrystart + start, globalentrystart + stop, arrays
             else:
@@ -404,6 +411,10 @@ class TTreeMethods(object):
             outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
             def wait():
                 return outputtype(*[future() for name, future in futures])
+        elif pandas is not None and issubclass(outputtype, pandas.DataFrame):
+            entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+            def wait():
+                return outputtype(data=OrderedDict((name, future()) for name, future in futures), index=numpy.arange(entrystart, entrystop))
         elif issubclass(outputtype, dict):
             def wait():
                 return outputtype((name, future()) for name, future in futures)
@@ -435,6 +446,8 @@ class TTreeMethods(object):
         if outputtype == namedtuple:
             outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
             return outputtype(*[lazyarray for name, lazyarray in lazyarrays])
+        elif pandas is not None and issubclass(outputtype, pandas.DataFrame):
+            raise TypeError("pandas.DataFrame cannot store lazyarrays")
         elif issubclass(outputtype, dict):
             return outputtype(lazyarrays)
         elif issubclass(outputtype, (list, tuple)):
@@ -489,16 +502,19 @@ class TTreeMethods(object):
 
         if outputtype == namedtuple:
             outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
-            def wrap_for_python_scope(futures):
+            def wrap_for_python_scope(futures, start, stop):
                 return lambda: outputtype(*[evaluate(branch, interpretation, future, past, cachekey) for branch, interpretation, future, past, cachekey in futures])
+        elif pandas is not None and issubclass(outputtype, pandas.DataFrame):
+            def wrap_for_python_scope(futures, start, stop):
+                return lambda: outputtype(data=OrderedDict((branch.name, evaluate(branch, interpretation, future, past, cachekey)) for branch, interpretation, future, past, cachekey in futures), index=numpy.arange(start, stop))
         elif issubclass(outputtype, dict):
-            def wrap_for_python_scope(futures):
+            def wrap_for_python_scope(futures, start, stop):
                 return lambda: outputtype((branch.name, evaluate(branch, interpretation, future, past, cachekey)) for branch, interpretation, future, past, cachekey in futures)
         elif issubclass(outputtype, (list, tuple)):
-            def wrap_for_python_scope(futures):
+            def wrap_for_python_scope(futures, start, stop):
                 return lambda: outputtype(evaluate(branch, interpretation, future, past, cachekey) for branch, interpretation, future, past, cachekey in futures)
         else:
-            def wrap_for_python_scope(futures):
+            def wrap_for_python_scope(futures, start, stop):
                 return lambda: outputtype(*[evaluate(branch, interpretation, future, past, cachekey) for branch, interpretation, future, past, cachekey in futures])
 
         for start, stop in entrysteps:
@@ -522,7 +538,7 @@ class TTreeMethods(object):
                 future = branch._step_array(interpretation, basket_itemoffset, basket_entryoffset, start, stop, basketcache, keycache, executor, explicit_basketcache)
                 futures.append((branch, interpretation, future, None, cachekey))
 
-            out = wrap_for_python_scope(futures)
+            out = wrap_for_python_scope(futures, start, stop)
 
             if blocking:
                 out = out()
@@ -1562,6 +1578,8 @@ def lazyarrays(path, treepath, branches=None, outputtype=dict, limitbytes=1024**
     if outputtype == namedtuple:
         outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
         return outputtype(*[LazyArray._frompaths(paths, uuids, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
+    elif pandas is not None and issubclass(outputtype, pandas.DataFrame):
+        raise TypeError("pandas.DataFrame cannot store lazyarrays")
     elif issubclass(outputtype, dict):
         return outputtype((branch.name, LazyArray._frompaths(paths, uuids, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor)) for branch, interpretation in branches)
     elif issubclass(outputtype, (list, tuple)):
@@ -1569,7 +1587,7 @@ def lazyarrays(path, treepath, branches=None, outputtype=dict, limitbytes=1024**
     else:
         return outputtype(*[LazyArray._frompaths(paths, uuids, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
 
-def lazyarray(path, treepath, branchname, interpretation=None, outputtype=dict, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
+def lazyarray(path, treepath, branchname, interpretation=None, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
     if interpretation is None:
         branches = branchname
     else:

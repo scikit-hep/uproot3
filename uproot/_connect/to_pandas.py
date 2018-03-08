@@ -65,6 +65,8 @@ class TTreeMethods_pandas(object):
                     newbranches[branch.name] = interpretation.toarray(out[branch.name].values)
                 else:
                     newbranches[branch.name] = interpretation
+        else:
+            newbranches = dict((branch.name, interpretation) for branch, interpretation in branches)
 
         # actually read all the data, possibly in parallel
         arrays = self._tree.arrays(newbranches, entrystart=entrystart, entrystop=entrystop, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor)
