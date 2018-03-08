@@ -405,25 +405,25 @@ class TTreeMethods(object):
     def arrays(self, branches=None, outputtype=dict, entrystart=None, entrystop=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         branches = list(self._normalize_branches(branches))
 
-        futures = [(branch.name, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=False)) for branch, interpretation in branches]
+        futures = [(branch.name, interpretation, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=False)) for branch, interpretation in branches]
 
         if outputtype == namedtuple:
             outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
             def wait():
-                return outputtype(*[future() for name, future in futures])
+                return outputtype(*[future() for name, interpretation, future in futures])
         elif pandas is not None and issubclass(outputtype, pandas.DataFrame):
             entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
             def wait():
-                return outputtype(data=OrderedDict((name, future()) for name, future in futures), index=numpy.arange(entrystart, entrystop))
+                return outputtype(data=OrderedDict((name, list(future()) if isinstance(interpretation, asjagged) else future()) for name, interpretation, future in futures), index=numpy.arange(entrystart, entrystop))
         elif issubclass(outputtype, dict):
             def wait():
-                return outputtype((name, future()) for name, future in futures)
+                return outputtype((name, future()) for name, interpretation, future in futures)
         elif issubclass(outputtype, (list, tuple)):
             def wait():
-                return outputtype(future() for name, future in futures)
+                return outputtype(future() for name, interpretation, future in futures)
         else:
             def wait():
-                return outputtype(*[future() for name, future in futures])
+                return outputtype(*[future() for name, interpretation, future in futures])
 
         if blocking:
             return wait()
@@ -491,31 +491,34 @@ class TTreeMethods(object):
         else:
             explicit_basketcache = True
 
-        def evaluate(branch, interpretation, future, past, cachekey):
+        def evaluate(branch, interpretation, future, past, cachekey, pythonize):
             if future is None:
                 return past
             else:
                 out = interpretation.finalize(future(), branch)
                 if cache is not None:
                     cache[cachekey] = out
-                return out
+                if pythonize:
+                    return list(out)
+                else:
+                    return out
 
         if outputtype == namedtuple:
             outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
             def wrap_for_python_scope(futures, start, stop):
-                return lambda: outputtype(*[evaluate(branch, interpretation, future, past, cachekey) for branch, interpretation, future, past, cachekey in futures])
+                return lambda: outputtype(*[evaluate(branch, interpretation, future, past, cachekey, False) for branch, interpretation, future, past, cachekey in futures])
         elif pandas is not None and issubclass(outputtype, pandas.DataFrame):
             def wrap_for_python_scope(futures, start, stop):
-                return lambda: outputtype(data=OrderedDict((branch.name, evaluate(branch, interpretation, future, past, cachekey)) for branch, interpretation, future, past, cachekey in futures), index=numpy.arange(start, stop))
+                return lambda: outputtype(data=OrderedDict((branch.name, evaluate(branch, interpretation, future, past, cachekey, isinstance(interpretation, asjagged))) for branch, interpretation, future, past, cachekey in futures), index=numpy.arange(start, stop))
         elif issubclass(outputtype, dict):
             def wrap_for_python_scope(futures, start, stop):
-                return lambda: outputtype((branch.name, evaluate(branch, interpretation, future, past, cachekey)) for branch, interpretation, future, past, cachekey in futures)
+                return lambda: outputtype((branch.name, evaluate(branch, interpretation, future, past, cachekey, False)) for branch, interpretation, future, past, cachekey in futures)
         elif issubclass(outputtype, (list, tuple)):
             def wrap_for_python_scope(futures, start, stop):
-                return lambda: outputtype(evaluate(branch, interpretation, future, past, cachekey) for branch, interpretation, future, past, cachekey in futures)
+                return lambda: outputtype(evaluate(branch, interpretation, future, past, cachekey, False) for branch, interpretation, future, past, cachekey in futures)
         else:
             def wrap_for_python_scope(futures, start, stop):
-                return lambda: outputtype(*[evaluate(branch, interpretation, future, past, cachekey) for branch, interpretation, future, past, cachekey in futures])
+                return lambda: outputtype(*[evaluate(branch, interpretation, future, past, cachekey, False) for branch, interpretation, future, past, cachekey in futures])
 
         for start, stop in entrysteps:
             start = max(start, entrystart)
