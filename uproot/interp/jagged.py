@@ -136,10 +136,7 @@ class asjagged(Interpretation):
         starts = offsets[:-1]
         stops  = offsets[1:]
         content = self.asdtype.finalize(destination.content, branch)
-        leafcount = None
-        if len(branch.fLeaves) == 1:
-            leafcount = branch.fLeaves[0].fLeafCount
-        return JaggedArray(content, starts, stops, leafcount=leafcount)
+        return JaggedArray(content, starts, stops)
 
 def asstlvector(asdtype):
     return asjagged(asdtype, skip_bytes=10)
@@ -215,7 +212,7 @@ class JaggedArray(object):
 
         return JaggedArray(content, starts, stops)
 
-    def __init__(self, content, starts, stops, leafcount=None):
+    def __init__(self, content, starts, stops):
         assert isinstance(content, numpy.ndarray)
         assert isinstance(starts, numpy.ndarray) and issubclass(starts.dtype.type, numpy.integer)
         assert isinstance(stops, numpy.ndarray) and issubclass(stops.dtype.type, numpy.integer)
@@ -224,7 +221,6 @@ class JaggedArray(object):
         self.content = content
         self.starts = starts
         self.stops = stops
-        self.leafcount = leafcount
 
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -254,10 +250,7 @@ class JaggedArray(object):
             raise ValueError("starts and stops are not compatible; cannot express as offsets")
 
     def aligned(self, other):
-        if self.leafcount is not None and other.leafcount is not None and self.leafcount is other.leafcount:
-            return True
-        else:
-            return numpy.array_equal(self.starts, other.starts) and numpy.array_equal(self.stops, other.stops)
+        return numpy.array_equal(self.starts, other.starts) and numpy.array_equal(self.stops, other.stops)
 
     def __len__(self):
         return len(self.stops)
