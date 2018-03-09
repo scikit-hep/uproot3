@@ -226,6 +226,20 @@ class JaggedArray(object):
         self.stops = stops
         self.leafcount = leafcount
 
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state["leafcount"] = None
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+
+    def __eq__(self, other):
+        return isinstance(other, JaggedArray) and numpy.array_equal(self.content, other.content) and self.aligned(other)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     @property
     def offsets(self):
         if self.starts.base is not None and self.stops.base is not None and self.starts.base is self.stops.base and \
