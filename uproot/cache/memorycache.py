@@ -31,6 +31,8 @@
 import sys
 import numbers
 import threading
+import platform
+import math
 
 import numpy
 
@@ -40,44 +42,85 @@ class MemoryCache(dict):
 
     __slots__ = ("limitbytes", "numevicted", "spillover", "spill_immediately", "_order", "_lookup", "_numbytes")
 
-    if sys.version_info[0] < 3:
+    if platform.python_implementation() == "PyPy":
+        # PyPy doesn't have a sys.getsizeof, so make stuff up based on CPython (approximate is fine)
+        @staticmethod
+        def sizeof(obj, recurse=True):
+            if sys.version_info[0] < 3 and isinstance(obj, numpy.ndarray):
+                return 96 + obj.nbytes                 # most important case: arrays are big
+            elif isinstance(obj, numpy.ndarray):
+                return 80 + obj.nbytes
+            elif isinstance(obj, dict):
+                out = 280 + int(math.ceil(145 * 4.18**int(math.floor(math.log(len(obj) + 1, 4.18)))))
+                if recurse:
+                    return out + sum(MemoryCache.sizeof(k) + MemoryCache.sizeof(v) for k, v in obj.items())
+                else:
+                    return out
+            elif sys.version_info[0] < 3 and isinstance(obj, str):
+                return 37 + len(obj)
+            elif sys.version_info[0] < 3 and isinstance(obj, unicode):
+                return 52 + 4*len(obj)
+            elif isinstance(obj, str):
+                return 49 + len(obj.encode("utf-8"))
+            elif isinstance(obj, bytes):
+                return 33 + len(obj)
+            else:
+                try:
+                    out = 8*len(obj)                   # assuming it's a list
+                except TypeError:
+                    out = 24                           # default case (int? float?)
+                if recurse:
+                    try:
+                        for x in obj:
+                            out += MemoryCache.sizeof(x)
+                    except TypeError:
+                        pass
+                return out
+
+    elif sys.version_info[0] < 3:
         # Python 2
         @staticmethod
-        def sizeof(obj):
+        def sizeof(obj, recurse=True):
             if isinstance(obj, numpy.ndarray):
                 return sys.getsizeof(obj)
             elif isinstance(obj, dict):
-                return sys.getsizeof(obj) + sum(MemoryCache.sizeof(k) + MemoryCache.sizeof(v) for k, v in obj)
+                if recurse:
+                    return sys.getsizeof(obj) + sum(MemoryCache.sizeof(k) + MemoryCache.sizeof(v) for k, v in obj.items())
+                else:
+                    return sys.getsizeof(obj)
             elif isinstance(obj, (unicode, str)):
                 return sys.getsizeof(obj)
             else:
                 out = sys.getsizeof(obj)
-                try:
-                    for x in obj:
-                        out += MemoryCache.sizeof(x)
-                except TypeError:
-                    pass
+                if recurse:
+                    try:
+                        for x in obj:
+                            out += MemoryCache.sizeof(x)
+                    except TypeError:
+                        pass
                 return out
-            return sys.getsizeof(obj)
     else:
         # Python 3
         @staticmethod
-        def sizeof(obj):
+        def sizeof(obj, recurse=True):
             if isinstance(obj, numpy.ndarray):
                 return sys.getsizeof(obj) + obj.nbytes
             elif isinstance(obj, dict):
-                return sys.getsizeof(obj) + sum(MemoryCache.sizeof(k) + MemoryCache.sizeof(v) for k, v in obj)
+                if recurse:
+                    return sys.getsizeof(obj) + sum(MemoryCache.sizeof(k) + MemoryCache.sizeof(v) for k, v in obj.items())
+                else:
+                    return sys.getsizeof(obj)
             elif isinstance(obj, (str, bytes)):
                 return sys.getsizeof(obj)
             else:
                 out = sys.getsizeof(obj)
-                try:
-                    for x in obj:
-                        out += MemoryCache.sizeof(x)
-                except TypeError:
-                    pass
+                if recurse:
+                    try:
+                        for x in obj:
+                            out += MemoryCache.sizeof(x)
+                    except TypeError:
+                        pass
                 return out
-            return sys.getsizeof(obj)
 
     def __init__(self, limitbytes, spillover=None, spill_immediately=False, items=(), **kwds):
         assert isinstance(limitbytes, numbers.Integral) and limitbytes > 0
@@ -96,7 +139,7 @@ class MemoryCache(dict):
         assert isinstance(self._order, list)
         assert isinstance(self._lookup, dict)
         assert set(self._lookup) == set(self._order)
-        assert self._numbytes == self.sizeof(self.limitbytes) + self.sizeof(0) + self.sizeof(self.numevicted) + sys.getsizeof(self._order) + sys.getsizeof(self._lookup) + sum(self.sizeof(k) for k in self._order) + sum(self.sizeof(v) for v in self._lookup.values())  # same keys in both _order and _lookup; don't double-count
+        assert self._numbytes == self.sizeof(self.limitbytes) + self.sizeof(0) + self.sizeof(self.numevicted) + self.sizeof(self._order, False) + self.sizeof(self._lookup, False) + sum(self.sizeof(k) for k in self._order) + sum(self.sizeof(v) for v in self._lookup.values())  # same keys in both _order and _lookup; don't double-count
 
     @property
     def numbytes(self):
@@ -142,7 +185,7 @@ class MemoryCache(dict):
             self.spillover[key] = self._lookup[key]
 
     def __setitem__(self, key, value):
-        container_before = sys.getsizeof(self._order) + sys.getsizeof(self._lookup)
+        container_before = self.sizeof(self._order, False) + self.sizeof(self._lookup, False)
         delta_contents = self.sizeof(key) + self.sizeof(value)
 
         if key in self._lookup:
@@ -155,11 +198,11 @@ class MemoryCache(dict):
         if self.spill_immediately:
             self.spill(key)
 
-        container_after = sys.getsizeof(self._order) + sys.getsizeof(self._lookup)
+        container_after = self.sizeof(self._order, False) + self.sizeof(self._lookup, False)
         self._numbytes += container_after - container_before + delta_contents
 
         while len(self._order) > 0 and self._numbytes > self.limitbytes:
-            container_before = sys.getsizeof(self._order) + sys.getsizeof(self._lookup)
+            container_before = self.sizeof(self._order, False) + self.sizeof(self._lookup, False)
             delta_contents = -(self.sizeof(self._lookup[self._order[0]]) + self.sizeof(self._order[0]))
 
             if not self.spill_immediately:
@@ -168,7 +211,7 @@ class MemoryCache(dict):
             del self._lookup[self._order[0]]
             del self._order[0]
 
-            container_after = sys.getsizeof(self._order) + sys.getsizeof(self._lookup)
+            container_after = self.sizeof(self._order, False) + self.sizeof(self._lookup, False)
             self._numbytes += container_after - container_before + delta_contents
             self.numevicted += 1
 
@@ -182,13 +225,13 @@ class MemoryCache(dict):
         if key not in self._lookup:
             raise KeyError(repr(key))
 
-        container_before = sys.getsizeof(self._order) + sys.getsizeof(self._lookup)
-        delta_contents = -(sys.getsizeof(self._lookup[key]) + sys.getsizeof(key))
+        container_before = self.sizeof(self._order, False) + self.sizeof(self._lookup, False)
+        delta_contents = -(self.sizeof(self._lookup[key], False) + self.sizeof(key, False))
 
         del self._order[index(key)]
         del self._lookup[key]
 
-        container_after = sys.getsizeof(self._order) + sys.getsizeof(self._lookup)
+        container_after = self.sizeof(self._order, False) + self.sizeof(self._lookup, False)
         self._numbytes += container_after - container_before + delta_contents
 
     def keys(self):
@@ -231,7 +274,7 @@ class MemoryCache(dict):
         self.numevicted = 0
         self._order = []
         self._lookup = {}
-        self._numbytes = self.sizeof(self.limitbytes) + self.sizeof(0) + self.sizeof(self.numevicted) + sys.getsizeof(self._order) + sys.getsizeof(self._lookup)
+        self._numbytes = self.sizeof(self.limitbytes) + self.sizeof(0) + self.sizeof(self.numevicted) + self.sizeof(self._order, False) + self.sizeof(self._lookup, False)
 
     def has_key(self, key):
         if key in self._lookup:
@@ -365,7 +408,7 @@ class MemoryCache(dict):
         self.limitbytes, self.numevicted, order, lookup = state
         self._order = []
         self._lookup = {}
-        self._numbytes = self.sizeof(self.limitbytes) + self.sizeof(0) + self.sizeof(self.numevicted) + sys.getsizeof(self._order) + sys.getsizeof(self._lookup)
+        self._numbytes = self.sizeof(self.limitbytes) + self.sizeof(0) + self.sizeof(self.numevicted) + self.sizeof(self._order, False) + self.sizeof(self._lookup, False)
         for key in order:
             self[key] = lookup[key]
 
