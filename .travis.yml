@@ -9,8 +9,8 @@ python:
   - 3.4
   - 3.5
   - 3.6
-  - "pypy2.7"
-  - "pypy3.5"
+  - pypy2.7-5.10.0
+  - pypy3.5
 
 addons:
   apt:
@@ -36,4 +36,3 @@ deploy:
     tags: true
     branch: master
     condition: "$TRAVIS_PYTHON_VERSION = 2.7"
-
