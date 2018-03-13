@@ -9,6 +9,8 @@ python:
   - 3.4
   - 3.5
   - 3.6
+  - "pypy2.7"
+  - "pypy3.5"
 
 addons:
   apt:
