@@ -115,3 +115,11 @@ class TestIssues(unittest.TestCase):
         self.assertEqual((t["mH"].basket_numentries(0), t["mH"].basket_numentries(1), t["mH"].basket_numentries(2)), (3990, 3990, 3555))
         self.assertEqual(t.array("mH")[:10].tolist(), [125.3575896071691, 124.75819175713684, 124.79865223661515, 125.13239376420276, 125.19612659731995, 125.33001837818416, 124.93261741760551, 125.02903289132837, 124.65206649938854, 125.50663519903532])
         self.assertEqual(t.array("mH")[-10:].tolist(), [125.5150930345707, 125.00248572708085, 124.55838505657864, 125.03766816520313, 125.27765299737514, 124.9976442776121, 124.8339210081154, 124.62415638855144, 125.33988981473144, 124.93384515492096])
+
+    def test_issue63(self):
+        t = uproot.open("tests/samples/issue63.root")["WtLoop_meta"]
+
+        self.assertEqual(t["initialState"].array().tolist(), [b"Wt"])
+        self.assertEqual(t["generator"].array().tolist(), [b"PowhegPythia6"])
+        self.assertEqual(t["sampleType"].array().tolist(), [b"Nominal"])
+        self.assertEqual(t["campaign"].array().tolist(), [b"MC16a"])

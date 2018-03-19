@@ -268,6 +268,9 @@ def interpret(branch, classes=None, swapbytes=True):
                 if m is not None:
                     return asstlbitset(int(m.group(1)))
 
+                if branch.fClassName == b"string":
+                    return asstrings()
+
                 if branch.fClassName == b"vector<bool>":
                     return asstlvector(asdtype(numpy.bool_))
                 elif branch.fClassName == b"vector<char>":
