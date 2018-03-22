@@ -598,7 +598,7 @@ class TLorentzVectorMethods(object):
 
     @property
     def mag2(self):
-        return self.fE*2 - self.fP.mag2
+        return self.fE**2 - self.fP.mag2
 
     @property
     def perp2(self):
