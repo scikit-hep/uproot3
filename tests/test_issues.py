@@ -123,3 +123,7 @@ class TestIssues(unittest.TestCase):
         self.assertEqual(t["generator"].array().tolist(), [b"PowhegPythia6"])
         self.assertEqual(t["sampleType"].array().tolist(), [b"Nominal"])
         self.assertEqual(t["campaign"].array().tolist(), [b"MC16a"])
+
+    def test_issue64(self):
+        t = uproot.open("tests/samples/issue64.root")["events/events"]
+        self.assertEqual(t["e_pri"].array().tolist(), [0.00698000006377697] * 500)

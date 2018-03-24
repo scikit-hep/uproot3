@@ -249,7 +249,7 @@ class ROOTDirectory(object):
                     x.show(stream=stream)
 
     def _classof(self, classname):
-        if classname == b"TDirectory":
+        if classname == b"TDirectory" or classname == b"TDirectoryFile":
             cls = ROOTDirectory
         else:
             cls = self._context.classes.get(classname, None)
@@ -263,7 +263,7 @@ class ROOTDirectory(object):
             if filtername(key.fName) and filterclass(cls):
                 yield self._withcycle(key)
 
-            if recursive and key.fClassName == b"TDirectory":
+            if recursive and (key.fClassName == b"TDirectory" or key.fClassName == b"TDirectoryFile"):
                 for name in key.get().iterkeys(recursive, filtername, filterclass):
                     yield "{0}/{1}".format(self._withoutcycle(key).decode("ascii"), name.decode("ascii")).encode("ascii")
 
@@ -273,7 +273,7 @@ class ROOTDirectory(object):
             if filtername(key.fName) and filterclass(cls):
                 yield key.get()
 
-            if recursive and key.fClassName == b"TDirectory":
+            if recursive and (key.fClassName == b"TDirectory" or key.fClassName == b"TDirectoryFile"):
                 for value in key.get().itervalues(recursive, filtername, filterclass):
                     yield value
 
@@ -283,7 +283,7 @@ class ROOTDirectory(object):
             if filtername(key.fName) and filterclass(cls):
                 yield self._withcycle(key), key.get()
 
-            if recursive and key.fClassName == b"TDirectory":
+            if recursive and (key.fClassName == b"TDirectory" or key.fClassName == b"TDirectoryFile"):
                 for name, value in key.get().iteritems(recursive, filtername, filterclass):
                     yield "{0}/{1}".format(self._withoutcycle(key).decode("ascii"), name.decode("ascii")).encode("ascii"), value
 
@@ -293,7 +293,7 @@ class ROOTDirectory(object):
             if filtername(key.fName) and filterclass(cls):
                 yield self._withcycle(key), cls
 
-            if recursive and key.fClassName == b"TDirectory":
+            if recursive and (key.fClassName == b"TDirectory" or key.fClassName == b"TDirectoryFile"):
                 for name, classname in key.get().iterclasses(recursive, filtername, filterclass):
                     yield "{0}/{1}".format(self._withoutcycle(key).decode("ascii"), name.decode("ascii")).encode("ascii"), classname
 
@@ -842,7 +842,7 @@ class TKey(ROOTObject):
 
         classname = self.fClassName.decode("ascii")
         try:
-            if classname == "TDirectory":
+            if classname == "TDirectory" or classname == "TDirectoryFile":
                 return ROOTDirectory.read(self._source, self._cursor.copied(), self._context, self)
 
             elif classname in self._context.classes:
