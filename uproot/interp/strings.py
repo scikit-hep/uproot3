@@ -87,6 +87,10 @@ class asstrings(asvar):
             args.append("skip4_if_255={0}".format(self.skip4_if_255))
         return "asstrings({0})".format(", ".join(args))
 
+    @property
+    def dtype(self):
+        return numpy.dtype(str)
+
     def compatible(self, other):
         return isinstance(other, asstrings) and self.skip4_if_255 == other.skip4_if_255 and super(asstrings, self).compatible(other)
 
@@ -158,3 +162,7 @@ class ListStrings(VariableLength):
 
     def __repr__(self):
         return "liststrings({0})".format(str(self))
+
+    @classmethod
+    def _dtype(cls, args):
+        return numpy.dtype((str, (0,)))

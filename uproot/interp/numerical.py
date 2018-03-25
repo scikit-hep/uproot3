@@ -102,6 +102,10 @@ class asdtype(Interpretation):
         todims = "(" + ",".join(repr(x) for x in self.todims) + ")"
         return "asdtype({0},{1},{2},{3})".format(fromdtype, todtype, fromdims, todims)
 
+    @property
+    def dtype(self):
+        return numpy.dtype((self.todtype, self.todims))
+
     def empty(self):
         return numpy.empty((0,) + self.todims, dtype=self.todtype)
 

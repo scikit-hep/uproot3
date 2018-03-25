@@ -36,6 +36,10 @@ class Interpretation(object):
     def identifier(self):
         raise NotImplementedError
 
+    @property
+    def dtype(self):
+        raise NotImplementedError
+    
     def empty(self):
         raise NotImplementedError
 

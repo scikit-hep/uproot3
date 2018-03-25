@@ -255,8 +255,9 @@ class TTreeMethods(object):
 
         for branch in self.itervalues(recursive=True):
             if len(branch.fLeaves) > 0:
-                if branch.fLeaves[0].fLeafCount is not None:
-                    branch._countbranch = leaf2branch.get(id(branch.fLeaves[0].fLeafCount), None)
+                branch._countleaf = branch.fLeaves[0].fLeafCount
+                if branch._countleaf is not None:
+                    branch._countbranch = leaf2branch.get(id(branch._countleaf), None)
 
         if self.fAliases is None:
             self.aliases = {}
@@ -785,6 +786,14 @@ class TBranchMethods(object):
     @property
     def interpretation(self):
         return interpret(self)
+
+    @property
+    def countbranch(self):
+        return self._countbranch
+
+    @property
+    def countleaf(self):
+        return self._countleaf
 
     @property
     def numentries(self):

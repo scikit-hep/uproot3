@@ -81,6 +81,16 @@ class asjagged(Interpretation):
         else:
             return "asjagged({0}, {1})".format(self.asdtype.identifier, self.skip_bytes)
 
+    @property
+    def dtype(self):
+        subshape = self.asdtype.dtype.shape
+        sub = self.asdtype.dtype.subdtype
+        if sub is None:
+            tpe = self.asdtype.dtype
+        else:
+            tpe = sub[0]
+        return numpy.dtype((tpe, (0,) + subshape))
+
     def empty(self):
         return JaggedArray(self.asdtype.empty(), numpy.empty(0, dtype=numpy.int64), numpy.empty(0, dtype=numpy.int64))
 
@@ -339,6 +349,10 @@ class asvar(asjagged):
             args.append(", skip_bytes={0}".format(self.skip_bytes))
         return "asvar({0}{1})".format(self.genclass.__name__, "".join(args))
 
+    @property
+    def dtype(self):
+        return self.genclass._dtype(self.args)
+
     def empty(self):
         return self.genclass(*((super(asvar, self).empty(),) + self.args))
 
@@ -404,6 +418,10 @@ class asobjs(asvar):
     def identifier(self):
         return "asobjs({0})".format(self.cls.__name__)
 
+    @property
+    def dtype(self):
+        return numpy.dtype((object, (0,)))
+
 def asjaggedobjects(cls, context=None):
     return asobjs(cls, context=context)
 
@@ -450,6 +468,11 @@ class JaggedJaggedArray(VariableLength):
     def __init__(self, jaggedarray, fromdtype):
         super(JaggedJaggedArray, self).__init__(jaggedarray, fromdtype)
         self.fromdtype = fromdtype
+
+    @classmethod
+    def _dtype(cls, args):
+        shape = self.jaggedarray.content.shape[1:]
+        return numpy.dtype((self.jaggedarray.content.dtype, (0, 0) + shape))
 
     indexdtype = numpy.dtype(">i4")
 
