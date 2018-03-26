@@ -165,4 +165,4 @@ class ListStrings(VariableLength):
 
     @classmethod
     def _dtype(cls, args):
-        return numpy.dtype((str, (0,)))
+        return numpy.dtype((object, (0,)))

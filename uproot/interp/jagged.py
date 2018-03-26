@@ -471,8 +471,8 @@ class JaggedJaggedArray(VariableLength):
 
     @classmethod
     def _dtype(cls, args):
-        shape = self.jaggedarray.content.shape[1:]
-        return numpy.dtype((self.jaggedarray.content.dtype, (0, 0) + shape))
+        dtype, = args
+        return numpy.dtype((dtype, (0, 0)))
 
     indexdtype = numpy.dtype(">i4")
 
