@@ -138,15 +138,19 @@ class TestVersions(unittest.TestCase):
 
     def test_5_30_00(self):
         # 2011-06-28, TTree version 19
-        for compression in "uncompressed", "zlib", "lzma":
-            if compression is not "lzma" or lzma is not None:
-                self.compare(uproot.open("tests/samples/sample-5.30.00-{0}.root".format(compression))["sample"].arrays())
+        tests = ["uncompressed", "zlib"]
+        if lzma is not None:
+            tests.append("lzma")
+        for compression in tests:
+            self.compare(uproot.open("tests/samples/sample-5.30.00-{0}.root".format(compression))["sample"].arrays())
 
     def test_6_08_04(self):
         # 2017-01-13, TTree version 19
-        for compression in "uncompressed", "zlib", "lzma":
-            if compression is not "lzma" or lzma is not None:
-                self.compare(uproot.open("tests/samples/sample-6.08.04-{0}.root".format(compression))["sample"].arrays())
+        tests = ["uncompressed", "zlib"]
+        if lzma is not None:
+            tests.append("lzma")
+        for compression in tests:
+            self.compare(uproot.open("tests/samples/sample-6.08.04-{0}.root".format(compression))["sample"].arrays())
 
     def test_6_10_05(self):
         # 2017-07-28, TTree version 19

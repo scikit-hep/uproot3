@@ -43,6 +43,6 @@ environment:
 install:
   - "python --version"
 
-_script:
+build_script:
   - "pip install numpy --user"
   - "python setup.py test"
