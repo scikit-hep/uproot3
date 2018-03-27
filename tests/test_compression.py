@@ -31,6 +31,14 @@
 import unittest
 
 import numpy
+try:
+    import lzma
+except ImportError:
+    lzma = None
+try:
+    import lz4
+except ImportError:
+    lz4 = None
 
 import uproot
 
@@ -42,55 +50,71 @@ class TestCompression(unittest.TestCase):
         self.assertEqual(uproot.open("tests/samples/Zmumu-zlib.root").compression.algoname, "zlib")
         self.assertEqual(uproot.open("tests/samples/Zmumu-zlib.root").compression.level, 4)
 
-        self.assertEqual(uproot.open("tests/samples/Zmumu-lzma.root").compression.algoname, "lzma")
-        self.assertEqual(uproot.open("tests/samples/Zmumu-lzma.root").compression.level, 4)
+        if lzma is not None:
+            self.assertEqual(uproot.open("tests/samples/Zmumu-lzma.root").compression.algoname, "lzma")
+            self.assertEqual(uproot.open("tests/samples/Zmumu-lzma.root").compression.level, 4)
 
-        self.assertEqual(uproot.open("tests/samples/Zmumu-lz4.root").compression.algoname, "lz4")
-        self.assertEqual(uproot.open("tests/samples/Zmumu-lz4.root").compression.level, 4)
+        if lz4 is not None:
+            self.assertEqual(uproot.open("tests/samples/Zmumu-lz4.root").compression.algoname, "lz4")
+            self.assertEqual(uproot.open("tests/samples/Zmumu-lz4.root").compression.level, 4)
 
         self.assertEqual(uproot.open("tests/samples/Zmumu-uncompressed.root").compression.level, 0)
 
         self.assertEqual(uproot.open("tests/samples/HZZ-zlib.root").compression.algoname, "zlib")
         self.assertEqual(uproot.open("tests/samples/HZZ-zlib.root").compression.level, 4)
 
-        self.assertEqual(uproot.open("tests/samples/HZZ-lzma.root").compression.algoname, "lzma")
-        self.assertEqual(uproot.open("tests/samples/HZZ-lzma.root").compression.level, 4)
+        if lzma is not None:
+            self.assertEqual(uproot.open("tests/samples/HZZ-lzma.root").compression.algoname, "lzma")
+            self.assertEqual(uproot.open("tests/samples/HZZ-lzma.root").compression.level, 4)
 
-        self.assertEqual(uproot.open("tests/samples/HZZ-lz4.root").compression.algoname, "lz4")
-        self.assertEqual(uproot.open("tests/samples/HZZ-lz4.root").compression.level, 4)
+        if lz4 is not None:
+            self.assertEqual(uproot.open("tests/samples/HZZ-lz4.root").compression.algoname, "lz4")
+            self.assertEqual(uproot.open("tests/samples/HZZ-lz4.root").compression.level, 4)
 
         self.assertEqual(uproot.open("tests/samples/HZZ-uncompressed.root").compression.level, 0)
 
     def test_compression_keys(self):
         keys = [(n, cls._classname) for n, cls in uproot.open("tests/samples/Zmumu-uncompressed.root").allclasses()]
         self.assertEqual([(n, cls._classname) for n, cls in uproot.open("tests/samples/Zmumu-zlib.root").allclasses()], keys)
-        self.assertEqual([(n, cls._classname) for n, cls in uproot.open("tests/samples/Zmumu-lzma.root").allclasses()], keys)
-        self.assertEqual([(n, cls._classname) for n, cls in uproot.open("tests/samples/Zmumu-lz4.root").allclasses()], keys)
+        if lzma is not None:
+            self.assertEqual([(n, cls._classname) for n, cls in uproot.open("tests/samples/Zmumu-lzma.root").allclasses()], keys)
+        if lz4 is not None:
+            self.assertEqual([(n, cls._classname) for n, cls in uproot.open("tests/samples/Zmumu-lz4.root").allclasses()], keys)
 
         keys = [(n, cls._classname) for n, cls in uproot.open("tests/samples/HZZ-uncompressed.root").allclasses()]
         self.assertEqual([(n, cls._classname) for n, cls in uproot.open("tests/samples/HZZ-zlib.root").allclasses()], keys)
-        self.assertEqual([(n, cls._classname) for n, cls in uproot.open("tests/samples/HZZ-lzma.root").allclasses()], keys)
-        self.assertEqual([(n, cls._classname) for n, cls in uproot.open("tests/samples/HZZ-lz4.root").allclasses()], keys)
+        if lzma is not None:
+            self.assertEqual([(n, cls._classname) for n, cls in uproot.open("tests/samples/HZZ-lzma.root").allclasses()], keys)
+        if lz4 is not None:
+            self.assertEqual([(n, cls._classname) for n, cls in uproot.open("tests/samples/HZZ-lz4.root").allclasses()], keys)
 
     def test_compression_branches(self):
         branches = list(uproot.open("tests/samples/Zmumu-uncompressed.root")["events"].keys())
         self.assertEqual(list(uproot.open("tests/samples/Zmumu-zlib.root")["events"].keys()), branches)
-        self.assertEqual(list(uproot.open("tests/samples/Zmumu-lzma.root")["events"].keys()), branches)
-        self.assertEqual(list(uproot.open("tests/samples/Zmumu-lz4.root")["events"].keys()), branches)
+        if lzma is not None:
+            self.assertEqual(list(uproot.open("tests/samples/Zmumu-lzma.root")["events"].keys()), branches)
+        if lz4 is not None:
+            self.assertEqual(list(uproot.open("tests/samples/Zmumu-lz4.root")["events"].keys()), branches)
 
         branches = list(uproot.open("tests/samples/HZZ-uncompressed.root")["events"].keys())
         self.assertEqual(list(uproot.open("tests/samples/HZZ-zlib.root")["events"].keys()), branches)
-        self.assertEqual(list(uproot.open("tests/samples/HZZ-lzma.root")["events"].keys()), branches)
-        self.assertEqual(list(uproot.open("tests/samples/HZZ-lz4.root")["events"].keys()), branches)
+        if lzma is not None:
+            self.assertEqual(list(uproot.open("tests/samples/HZZ-lzma.root")["events"].keys()), branches)
+        if lz4 is not None:
+            self.assertEqual(list(uproot.open("tests/samples/HZZ-lz4.root")["events"].keys()), branches)
 
     def test_compression_content1(self):
         for name, array in uproot.open("tests/samples/Zmumu-uncompressed.root")["events"].arrays(["Type", "Event", "E1", "px1", "Q1", "M"]).items():
             self.assertTrue(numpy.array_equal(uproot.open("tests/samples/Zmumu-zlib.root")["events"].array(name), array))
-            self.assertTrue(numpy.array_equal(uproot.open("tests/samples/Zmumu-lzma.root")["events"].array(name), array))
-            self.assertTrue(numpy.array_equal(uproot.open("tests/samples/Zmumu-lz4.root")["events"].array(name), array))
+            if lzma is not None:
+                self.assertTrue(numpy.array_equal(uproot.open("tests/samples/Zmumu-lzma.root")["events"].array(name), array))
+            if lz4 is not None:
+                self.assertTrue(numpy.array_equal(uproot.open("tests/samples/Zmumu-lz4.root")["events"].array(name), array))
 
     def test_compression_content2(self):
         array = uproot.open("tests/samples/HZZ-uncompressed.root")["events"].array("Electron_Px").tolist()
         self.assertEqual(uproot.open("tests/samples/HZZ-zlib.root")["events"].array("Electron_Px").tolist(), array)
-        self.assertEqual(uproot.open("tests/samples/HZZ-lzma.root")["events"].array("Electron_Px").tolist(), array)
-        self.assertEqual(uproot.open("tests/samples/HZZ-lz4.root")["events"].array("Electron_Px").tolist(), array)
+        if lzma is not None:
+            self.assertEqual(uproot.open("tests/samples/HZZ-lzma.root")["events"].array("Electron_Px").tolist(), array)
+        if lz4 is not None:
+            self.assertEqual(uproot.open("tests/samples/HZZ-lz4.root")["events"].array("Electron_Px").tolist(), array)
