@@ -29,7 +29,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import ast
-import fcntl
 import glob
 import hashlib
 import json
@@ -49,6 +48,10 @@ try:
 except ImportError:
     from urllib.parse import quote as urlquote
     from urllib.parse import unquote as urlunquote
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
 
 import numpy
 
@@ -165,6 +168,9 @@ class DiskCache(object):
 
     @staticmethod
     def create(limitbytes, directory, read=anyread, write=anywrite, lookupsize=10000, maxperdir=100, delimiter="-", numformat=numpy.uint64):
+        if fcntl is None:
+            raise NotImplementedError("DiskCache is currently supported only on systems with fcntl (such as Mac and Linux, not Windows)")
+
         if os.path.exists(directory):
             shutil.rmtree(directory)
 
@@ -237,6 +243,9 @@ class DiskCache(object):
 
     @staticmethod
     def join(directory, read=anyread, write=anywrite, check=True):
+        if fcntl is None:
+            raise NotImplementedError("DiskCache is currently supported only on systems with fcntl (such as Mac and Linux, not Windows)")
+
         if not os.path.exists(directory):
             raise ValueError("cannot join {0} because it does not exist".format(repr(directory)))
 
