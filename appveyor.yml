@@ -1,7 +1,4 @@
 environment:
-  global:
-    CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\appveyor\\run_with_env.cmd"
-
   matrix:
     # - PYTHON: "C:\\Python27.10"
     #   PYTHON_VERSION: "2.7.10"
