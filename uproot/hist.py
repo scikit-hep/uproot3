@@ -42,9 +42,9 @@ class TH1Methods(object):
 
     def __repr__(self):
         if self.fName is None:
-            return "<{0} at 0x{1:012x}>".format(self.classname, id(self))
+            return "<{0} at 0x{1:012x}>".format(self._classname, id(self))
         else:
-            return "<{0} {1} 0x{2:012x}>".format(self.classname, repr(self.fName), id(self))
+            return "<{0} {1} 0x{2:012x}>".format(self._classname, repr(self.fName), id(self))
 
     @property
     def name(self):
@@ -281,7 +281,7 @@ class TH1(TH1Methods, list):
             raise TypeError("histogram bin values must be integers or floats")
 
     @property
-    def classname(self):
+    def _classname(self):
         if self._type() is int:
             return "TH1I"
         else:
@@ -295,7 +295,7 @@ class TH1(TH1Methods, list):
             return numpy.dtype(">f8")
 
 class TAxis(object):
-    classname = "TAxis"
+    _classname = "TAxis"
 
 def hist(numbins, low, high, name=None, title=None, values=None, allvalues=None, filldata=None):
     out = TH1()
