@@ -41,7 +41,7 @@ def get_version():
     return g["__version__"]
 
 def get_description():
-    description = open("README.rst").read()
+    description = open("README.rst",'rb').read().decode('utf8', 'ignore')    
     start = description.index(".. inclusion-marker-1-5-do-not-remove")
     stop = description.index(".. inclusion-marker-5-do-not-remove")
     before = """.. image:: https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/source/logo-300px.png
