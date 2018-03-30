@@ -151,7 +151,7 @@ class ROOTDirectory(object):
                                    "TObjArray":                 TObjArray,
                                    "TObjString":                TObjString}
 
-                if read_streamers:
+                if read_streamers and fSeekInfo != 0:
                     streamercontext = ROOTDirectory._FileContext(source.path, None, None, streamerclasses, uproot.source.compressed.Compression(fCompress), tfile)
                     streamerkey = TKey.read(source, Cursor(fSeekInfo), streamercontext, None)
                     streamerinfos, streamerinfosmap, streamerrules = _readstreamers(streamerkey._source, streamerkey._cursor, streamercontext, None)
