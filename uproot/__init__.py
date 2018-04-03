@@ -39,8 +39,6 @@ from uproot.source.xrootd import XRootDSource
 
 from uproot.interp.auto import interpret
 
-from uproot._connect.to_bokeh import BokehCanvas
-
 # put help strings on everything (they're long, too disruptive to intersperse
 # in the code, and are built programmatically to avoid duplication; Python's
 # inline docstring method doesn't accept non-literals)
