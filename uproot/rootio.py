@@ -630,7 +630,10 @@ def _defineclasses(streamerinfos, classes):
                     "        start, cnt, classversion = _startcheck(source, cursor)",
                     "        if cls._classversion != classversion:",
                     "            cursor.index = start",
-                    "            return cls._versions[classversion]._readinto(self, source, cursor, context, parent)"]
+                    "            if classversion in cls._versions:",
+                    "                return cls._versions[classversion]._readinto(self, source, cursor, context, parent)",
+                    "            else:",
+                    "                return Undefined.read(source, cursor, context, parent, cls.__name__)"]
 
             fields = []
             bases = []
@@ -649,17 +652,20 @@ def _defineclasses(streamerinfos, classes):
                 elif isinstance(element, TStreamerBasicPointer):
                     code.append("        cursor.skip(1)")
 
-                    m = re.search(b"\[([^\]]*)\]", element.fTitle)
-                    if m is None:
-                        raise ValueError("TStreamerBasicPointer fTitle should have a counter name between brackets: {0}".format(repr(element.fTitle)))
-                    counter = m.group(1)
+                    ### Provisional: counter -> element.fCountName
+                    ###
+                    # m = re.search(b"\[([^\]]*)\]", element.fTitle)
+                    # if m is None:
+                    #     raise ValueError("TStreamerBasicPointer fTitle should have a counter name between brackets: {0}".format(repr(element.fTitle)))
+                    # counter = m.group(1)
+                    ###
 
                     assert uproot.const.kOffsetP < element.fType < uproot.const.kOffsetP + 20
                     fType = element.fType - uproot.const.kOffsetP
 
                     dtypename = "_dtype{0}".format(len(dtypes) + 1)
                     dtypes[dtypename] = _ftype2dtype(fType)
-                    code.append("        self.{0} = cursor.array(source, self.{1}, cls.{2})".format(_safename(element.fName), _safename(counter), dtypename))
+                    code.append("        self.{0} = cursor.array(source, self.{1}, cls.{2})".format(_safename(element.fName), _safename(element.fCountName), dtypename))
                     fields.append(_safename(element.fName))
 
                 elif isinstance(element, TStreamerBasicType):
@@ -687,7 +693,9 @@ def _defineclasses(streamerinfos, classes):
                         fields.append(_safename(element.fName))
 
                 elif isinstance(element, TStreamerLoop):
-                    code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
+                    code.extend(["        cursor.skip(6)",
+                                 "        for index in range(self.{0}):".format(element.fCountName),
+                                 "            self.{0} = {1}.read(source, cursor, context, self)".format(_safename(element.fName), _safename(element.fTypeName.rstrip(b"*")))])
 
                 elif isinstance(element, TStreamerObjectAnyPointer):
                     code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
@@ -726,7 +734,11 @@ def _defineclasses(streamerinfos, classes):
 
             code.extend(["        if self.__class__.__name__ == cls.__name__:",
                          "            self.__class__ = cls._versions[classversion]",
-                         "        _endcheck(start, cursor, cnt)",
+                         "        try:",
+                         "            _endcheck(start, cursor, cnt)",
+                         "        except ValueError:",
+                         "            cursor.index = start",
+                         "            return Undefined.read(source, cursor, context, parent, cls.__name__)",
                          "        return self"])
 
             if len(bases) == 0:
@@ -1219,6 +1231,16 @@ class Undefined(ROOTStreamedObject):
     _classname = None
 
     @classmethod
+    def read(cls, source, cursor, context, parent, classname=None):
+        if cls._copycontext:
+            context = context.copy()
+        out = cls.__new__(cls)
+        out = cls._readinto(out, source, cursor, context, parent)
+        out._postprocess(source, cursor, context, parent)
+        out._classname = classname
+        return out
+
+    @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         self._cursor = cursor.copied()
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1228,7 +1250,7 @@ class Undefined(ROOTStreamedObject):
 
     def __repr__(self):
         if self._classname is not None:
-            return "<{0} (no class named {1}) at 0x{2:012x}>".format(self.__class__.__name__, repr(self._classname), id(self))
+            return "<{0} (no class named {1}, version {2}) at 0x{3:012x}>".format(self.__class__.__name__, repr(self._classname), self._classversion, id(self))
         else:
             return "<{0} at 0x{1:012x}>".format(self.__class__.__name__, id(self))
 
@@ -1249,4 +1271,5 @@ builtin_classes = {"TObject":    TObject,
                    "TArrayD":    TArrayD,
                    "ROOT_3a3a_TIOFeatures": ROOT_3a3a_TIOFeatures}
 
-builtin_skip =    {"TBranch":    ["fBaskets"]}
+builtin_skip =    {"TBranch":    ["fBaskets"],
+                   "TTree":      ["fUserInfo", "fBranchRef"]}
