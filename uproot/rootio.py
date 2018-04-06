@@ -652,14 +652,6 @@ def _defineclasses(streamerinfos, classes):
                 elif isinstance(element, TStreamerBasicPointer):
                     code.append("        cursor.skip(1)")
 
-                    ### Provisional: counter -> element.fCountName
-                    ###
-                    # m = re.search(b"\[([^\]]*)\]", element.fTitle)
-                    # if m is None:
-                    #     raise ValueError("TStreamerBasicPointer fTitle should have a counter name between brackets: {0}".format(repr(element.fTitle)))
-                    # counter = m.group(1)
-                    ###
-
                     assert uproot.const.kOffsetP < element.fType < uproot.const.kOffsetP + 20
                     fType = element.fType - uproot.const.kOffsetP
 
@@ -694,7 +686,7 @@ def _defineclasses(streamerinfos, classes):
 
                 elif isinstance(element, TStreamerLoop):
                     code.extend(["        cursor.skip(6)",
-                                 "        for index in range(self.{0}):".format(element.fCountName),
+                                 "        for index in range(self.{0}):".format(_safename(element.fCountName)),
                                  "            self.{0} = {1}.read(source, cursor, context, self)".format(_safename(element.fName), _safename(element.fTypeName.rstrip(b"*")))])
 
                 elif isinstance(element, TStreamerObjectAnyPointer):
