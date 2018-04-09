@@ -185,7 +185,13 @@ class CompressedSource(uproot.source.source.Source):
         if dtype is None:
             return self._uncompressed[start:stop]
         else:
-            return self._uncompressed[start:stop].view(dtype)
+            try:
+                return self._uncompressed[start:stop].view(dtype)
+            except ValueError:
+                #ValueError: When changing to a larger dtype, its size must be a divisor of the total size in bytes of the last axis of the array.
+                print('Skipped as unable to read yet')
+                return self._uncompressed[start:stop]
+                #return numpy.empty(self._uncompressed[start:stop].shape,dtype = dtype)
 
     def dismiss(self):
         self._uncompressed = None
