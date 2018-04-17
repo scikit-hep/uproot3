@@ -841,6 +841,9 @@ We have to add functionality by writing the equivalent Python. The uproot `TTree
     >>> file.allkeys()
     [b'one;1', b'two;1', b'three;1']
     >>> file["one"].show()
+
+.. code-block:: none
+
                       0                                                       2410.8
                       +------------------------------------------------------------+
     [-inf, -3)   0    |                                                            |
@@ -856,6 +859,8 @@ We have to add functionality by writing the equivalent Python. The uproot `TTree
     [2.4, 3)     76   |**                                                          |
     [3, inf]     0    |                                                            |
                       +------------------------------------------------------------+
+
+.. code-block:: python
 
     >>> [x for x in dir(file["one"]) if not x.startswith("_") and not x.startswith("f")]
     ['allvalues', 'append', 'bokeh', 'classname', 'classversion', 'clear', 'copy', 'count',
