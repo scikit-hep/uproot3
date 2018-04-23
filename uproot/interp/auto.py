@@ -41,6 +41,7 @@ from uproot.interp.jagged import asjagged
 from uproot.interp.jagged import asstlvector
 from uproot.interp.jagged import asstlvectorvector
 from uproot.interp.jagged import asjaggedobjects
+from uproot.interp.jagged import asjaggedobject
 from uproot.interp.strings import asstrings
 from uproot.interp.strings import asstlvecstrings
 

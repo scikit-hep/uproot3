@@ -422,8 +422,29 @@ class asobjs(asvar):
     def dtype(self):
         return numpy.dtype((object, (0,)))
 
+class asobj(asvar):
+    def __init__(self, cls, context=None):
+        for i in range(0, 300):
+            try:
+                super(asobj, self).__init__(JaggedObjects, skip_bytes=i, args=(cls, context))
+            except:
+                continue
+        self.cls = cls
+        self.context = context
+
+    @property
+    def identifier(self):
+        return "asobj({0})".format(self.cls.__name__)
+
+    @property
+    def dtype(self):
+        return numpy.dtype((object, (0,)))
+
 def asjaggedobjects(cls, context=None):
     return asobjs(cls, context=context)
+
+def asjaggedobject(cls, context=None):
+    return asobj(cls, context=context)
 
 class JaggedObjects(VariableLength):
     indexdtype = numpy.dtype(">i4")
