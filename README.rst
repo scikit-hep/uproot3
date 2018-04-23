@@ -841,6 +841,9 @@ We have to add functionality by writing the equivalent Python. The uproot `TTree
     >>> file.allkeys()
     [b'one;1', b'two;1', b'three;1']
     >>> file["one"].show()
+
+.. code-block:: none
+
                       0                                                       2410.8
                       +------------------------------------------------------------+
     [-inf, -3)   0    |                                                            |
@@ -857,13 +860,15 @@ We have to add functionality by writing the equivalent Python. The uproot `TTree
     [3, inf]     0    |                                                            |
                       +------------------------------------------------------------+
 
+.. code-block:: python
+
     >>> [x for x in dir(file["one"]) if not x.startswith("_") and not x.startswith("f")]
     ['allvalues', 'append', 'bokeh', 'classname', 'classversion', 'clear', 'copy', 'count',
      'extend', 'high', 'holoviews', 'index', 'insert', 'interval', 'low', 'name', 'numbins',
      'numpy', 'overflows', 'pop', 'read', 'remove', 'reverse', 'show', 'sort', 'title',
      'underflows', 'values', 'xlabels']
 
-Some code exists to view histograms in Pythonic plotting packages like Bokeh and Holoviews, but this is a wide-open area for future development. For now, uproot's ability to read histograms is useful for querying bin values in scripts.
+Code to view histograms in Pythonic plotting packages is in development, but this is a wide-open area for future development. For now, uproot's ability to read histograms is useful for querying bin values in scripts.
 
 Caching data
 """"""""""""
@@ -1063,32 +1068,7 @@ As a connector between ROOT and the scientific Python world, uproot has a growin
 
 This method takes the same **branches**, **entrystart**, **entrystop**, **cache**, **basketcache**, **keycache**, and **executor** methods as all the other array methods.
 
-Histograms have experimental connectors to Bokeh and Holoviews for plotting.
-
-.. code-block:: bash
-
-    pip install bokeh --user
-
-.. code-block:: python
-
-    >>> import uproot
-    >>> canvas = uproot.BokehCanvas()     # there's only one canvas; get it
-    >>> canvas.show()                     # opens a tab in your web browser
-
-    >>> file = uproot.open("histograms.root")
-    >>> file["one"].bokeh.plot()          # draws the histogram in the latest tab
-
-The interesting thing about Bokeh is that it can be running on a remote site (e.g. CERN or Fermilab), sending plots to your local web browser (though a WebSocket). For this configuration, show the canvas with a ``hosts`` argument— which IP addresses are allowed to view the plots (only ``"localhost"`` by default, but ``"*"`` for the world)— and an optional ``port`` (one will be assigned if not explicit).
-
-.. code-block:: python
-
-    # on the remote machine
-    >>> canvas.show(hosts="*", port=12345)
-    >>> canvas.url
-    'http://where.am.i:12345'
-
-Point your local web browser to the address returned by ``canvas.url`` and whenever you call ``hist.bokeh.plot()`` on the remote machine, you'll see plots in your web browser. (It sure beats forwarding X-Windows through ssh!)
-
+Note that ``pandas.DataFrame`` is also a recognized option for all **outputtype** parameters, so you can, for instance, iterate through DataFrames with ``uproot.iterate("files*.root", "treename", outputtype=pandas.DataFrame)``.
 
 
 

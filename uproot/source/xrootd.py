@@ -75,7 +75,7 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
             out.cache = self.cache
         else:
             out.cache = {}
-        out._source = self._source     # XRootD connections are *shared* among threads (I'm assuming they're thread-safe)
+        out._source = None             # XRootD connections are *not shared* among threads
         return out
 
     def _read(self, chunkindex):
@@ -89,4 +89,5 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
             self._source.close()
     
     def dismiss(self):
-        pass                           # XRootD connections are *shared* among threads
+        if self._source is not None:
+            self._source.close()       # XRootD connections are *not shared* among threads

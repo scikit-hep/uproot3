@@ -17,12 +17,11 @@ addons:
     packages:
       - python-setuptools
 
-install:
-  - pip install --upgrade pip
-  - pip install --upgrade setuptools_scm
-
 script:
   python setup.py test
+
+install:
+  - pip install --upgrade setuptools_scm
 
 notifications:
   slack: scikit-hep:b6cgBXwccPoaCNLn5VKFJFVy
