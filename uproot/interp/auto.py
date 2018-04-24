@@ -149,7 +149,7 @@ def interpret(branch, swapbytes=True):
                 try:
                     left, right = branch._streamer.fTitle.index(b"["), branch._streamer.fTitle.index(b"]")
                 except ValueError:
-                    return asdtype(">f4", "f8", dims, dims)
+                    out = asdtype(">f4", "f8", dims, dims)
                 else:
                     try:
                         spec = eval(compile(ast.Expression(transform(ast.parse(branch._streamer.fTitle[left : right + 1]).body[0].value)), repr(branch._streamer.fTitle), "eval"))
@@ -158,16 +158,17 @@ def interpret(branch, swapbytes=True):
                             numbits = 32
                         else:
                             low, high, numbits = spec
-                        return asdouble32(low, high, numbits, dims, dims)
+                        out = asdouble32(low, high, numbits, dims, dims)
                     except:
                         return None
-
-            fromdtype = _leaf2dtype(branch.fLeaves[0]).newbyteorder(">")
-
-            if swapbytes:
-                out = asdtype(fromdtype, fromdtype.newbyteorder("="), dims, dims)
+                    
             else:
-                out = asdtype(fromdtype, fromdtype, dims, dims)
+                fromdtype = _leaf2dtype(branch.fLeaves[0]).newbyteorder(">")
+
+                if swapbytes:
+                    out = asdtype(fromdtype, fromdtype.newbyteorder("="), dims, dims)
+                else:
+                    out = asdtype(fromdtype, fromdtype, dims, dims)
 
             if branch.fLeaves[0].fLeafCount is None:
                 return out
