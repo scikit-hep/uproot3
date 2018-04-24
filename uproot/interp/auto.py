@@ -29,12 +29,14 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import re
+import ast
 from functools import reduce
 
 import numpy
 
 import uproot.const
 from uproot.interp.numerical import asdtype
+from uproot.interp.numerical import asdouble32
 from uproot.interp.numerical import asarray
 from uproot.interp.numerical import asstlbitset
 from uproot.interp.jagged import asjagged
@@ -70,9 +72,9 @@ def _ftype2dtype(fType):
         return numpy.dtype(">i8")
     elif fType == uproot.const.kULong64:
         return numpy.dtype(">u8")
-    elif fType in (uproot.const.kFloat, uproot.const.kFloat16):
+    elif fType == uproot.const.kFloat:
         return numpy.dtype(">f4")
-    elif fType in (uproot.const.kDouble, uproot.const.kDouble32):
+    elif fType == uproot.const.kDouble:
         return numpy.dtype(">f8")
     else:
         raise _NotNumerical
@@ -110,10 +112,7 @@ def _leaf2dtype(leaf):
     else:
         raise _NotNumerical
 
-def interpret(branch, classes=None, swapbytes=True):
-    if classes is None:
-        classes = branch._context.classes
-
+def interpret(branch, swapbytes=True):
     dims = ()
     if len(branch.fLeaves) == 1:
         m = interpret._titlehasdims.match(branch.fLeaves[0].fTitle)
@@ -126,12 +125,51 @@ def interpret(branch, classes=None, swapbytes=True):
 
     try:
         if len(branch.fLeaves) == 1:
-            fromdtype = _leaf2dtype(branch.fLeaves[0]).newbyteorder(">")
+            if branch.fLeaves[0].__class__.__name__ == "TLeafElement" and branch.fLeaves[0].fType == uproot.const.kDouble32:
+                def transform(node, tofloat=True):
+                    if isinstance(node, ast.AST):
+                        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load) and node.id == "pi":
+                            out = ast.Num(3.141592653589793)  # TMath::Pi()
+                        elif isinstance(node, ast.Num):
+                            out = ast.Num(float(node.n))
+                        elif isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Add, ast.Sub, ast.Mult, ast.Div)):
+                            out = ast.BinOp(transform(node.left), node.op, transform(node.right))
+                        elif isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub):
+                            out = ast.UnaryOp(node.op, transform(node.operand))
+                        elif isinstance(node, ast.List) and isinstance(node.ctx, ast.Load) and len(node.elts) == 2:
+                            out = ast.List([transform(node.elts[0]), transform(node.elts[1])], node.ctx)
+                        elif isinstance(node, ast.List) and isinstance(node.ctx, ast.Load) and len(node.elts) == 3 and isinstance(node.elts[2], ast.Num):
+                            out = ast.List([transform(node.elts[0]), transform(node.elts[1]), node.elts[2]], node.ctx)
+                        else:
+                            raise Exception(ast.dump(node))
+                        out.lineno, out.col_offset = node.lineno, node.col_offset
+                        return out
+                    else:
+                        raise Exception(ast.dump(node))
 
-            if swapbytes:
-                out = asdtype(fromdtype, fromdtype.newbyteorder("="), dims, dims)
+                try:
+                    left, right = branch._streamer.fTitle.index(b"["), branch._streamer.fTitle.index(b"]")
+                except ValueError:
+                    out = asdtype(">f4", "f8", dims, dims)
+                else:
+                    try:
+                        spec = eval(compile(ast.Expression(transform(ast.parse(branch._streamer.fTitle[left : right + 1]).body[0].value)), repr(branch._streamer.fTitle), "eval"))
+                        if len(spec) == 2:
+                            low, high = spec
+                            numbits = 32
+                        else:
+                            low, high, numbits = spec
+                        out = asdouble32(low, high, numbits, dims, dims)
+                    except:
+                        return None
+                    
             else:
-                out = asdtype(fromdtype, fromdtype, dims, dims)
+                fromdtype = _leaf2dtype(branch.fLeaves[0]).newbyteorder(">")
+
+                if swapbytes:
+                    out = asdtype(fromdtype, fromdtype.newbyteorder("="), dims, dims)
+                else:
+                    out = asdtype(fromdtype, fromdtype, dims, dims)
 
             if branch.fLeaves[0].fLeafCount is None:
                 return out
