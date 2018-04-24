@@ -44,6 +44,24 @@ class TestTree(unittest.TestCase):
     def runTest(self):
         pass
 
+    ###################################################### double32
+
+    def test_double32(self):
+        t = uproot.open("tests/samples/demo-double32.root")["T"]
+        fD64 = t.array("fD64")
+        fF32 = t.array("fF32")
+        fI32 = t.array("fI32")
+        fI30 = t.array("fI30")
+        fI28 = t.array("fI28")
+        ratio_fF32 = fF32 / fD64
+        ratio_fI32 = fI32 / fD64
+        ratio_fI30 = fI30 / fD64
+        ratio_fI28 = fI28 / fD64
+        self.assertTrue(ratio_fF32.min() > 0.9999 and ratio_fF32.max() < 1.0001)
+        self.assertTrue(ratio_fI32.min() > 0.9999 and ratio_fI32.max() < 1.0001)
+        self.assertTrue(ratio_fI30.min() > 0.9999 and ratio_fI30.max() < 1.0001)
+        self.assertTrue(ratio_fI28.min() > 0.9999 and ratio_fI28.max() < 1.0001)
+
     ###################################################### basket
 
     def test_flat_basket(self):

@@ -29,6 +29,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import sys
+import numbers
+import math
 
 import numpy
 
@@ -45,9 +47,57 @@ def _dimsprod(dims):
         out *= x
     return out
 
-class asdtype(Interpretation):
+class _asnumeric(Interpretation):
+    @property
+    def dtype(self):
+        return numpy.dtype((self.todtype, self.todims))
+
+    def empty(self):
+        return numpy.empty((0,) + self.todims, dtype=self.todtype)
+
+    def compatible(self, other):
+        return (isinstance(self, (asdtype, asarray)) and isinstance(other, (asdtype, asarray)) and self.todtype == other.todtype and self.todims == other.todims) or \
+               (isinstance(self, asdouble32) and isinstance(other, asdouble32) and self.low == other.low and self.high == other.high and self.numbits == other.numbits and self.todtype == other.todtype and self.todims == other.todims) or \
+               (isinstance(self, asstlbitset) and isinstance(other, asstlbitset) and self.todtype == other.dtype and self.todims == (other.numbytes,))
+
+    _byteorder_transform = {"!": "B", ">": "B", "<": "L", "|": "L", "=": "B" if numpy.dtype(">f8").isnative else "L"}
+
+    def source_numitems(self, source):
+        return _dimsprod(source.shape)
+
+    def destination(self, numitems, numentries):
+        product = _dimsprod(self.todims)
+        if numitems % product != 0:
+            raise ValueError("cannot reshape {0} items as {1} (groups of {2})".format(numitems, self.todims, product))
+        return numpy.empty((numitems // product,) + self.todims, dtype=self.todtype)
+
+    def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
+        if self.fromdims == ():
+            flattened_source = source
+        else:
+            flattened_source = source.reshape(len(source) * _dimsprod(self.fromdims))
+
+        if self.todims == ():
+            flattened_destination = destination
+        else:
+            flattened_destination = destination.reshape(len(destination) * _dimsprod(self.todims))
+
+        flattened_destination[itemstart:itemstop] = flattened_source
+
+    def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
+        product = _dimsprod(self.todims)
+        assert itemstart % product == 0
+        assert itemstop % product == 0
+        return destination[itemstart // product : itemstop // product]
+        # FIXME: isn't the above equivalent to the following?
+        #     return destination[entrystart:entrystop]
+
+    def finalize(self, destination, branch):
+        return destination
+
+class asdtype(_asnumeric):
     # makes __doc__ attribute mutable before Python 3.3
-    __metaclass__ = type.__new__(type, "type", (Interpretation.__metaclass__,), {})
+    __metaclass__ = type.__new__(type, "type", (_asnumeric.__metaclass__,), {})
 
     def __init__(self, fromdtype, todtype=None, fromdims=(), todims=None):
         if isinstance(fromdtype, numpy.dtype):
@@ -92,8 +142,6 @@ class asdtype(Interpretation):
 
         return "asdtype(" + ", ".join(args) + ")"
 
-    _byteorder_transform = {"!": "B", ">": "B", "<": "L", "|": "L", "=": "B" if numpy.dtype(">f8").isnative else "L"}
-
     @property
     def identifier(self):
         fromdtype = "{0}{1}{2}".format(self._byteorder_transform[self.fromdtype.byteorder], self.fromdtype.kind, self.fromdtype.itemsize)
@@ -102,22 +150,8 @@ class asdtype(Interpretation):
         todims = "(" + ",".join(repr(x) for x in self.todims) + ")"
         return "asdtype({0},{1},{2},{3})".format(fromdtype, todtype, fromdims, todims)
 
-    @property
-    def dtype(self):
-        return numpy.dtype((self.todtype, self.todims))
-
-    def empty(self):
-        return numpy.empty((0,) + self.todims, dtype=self.todtype)
-
-    def compatible(self, other):
-        return (isinstance(other, (asdtype, asarray)) and self.todtype == other.todtype and self.todims == other.todims) or \
-               (isinstance(other, asstlbitset) and self.todtype == other.dtype and self.todims == (other.numbytes,))
-
     def numitems(self, numbytes, numentries):
         return numbytes // self.fromdtype.itemsize
-
-    def source_numitems(self, source):
-        return _dimsprod(source.shape)
 
     def fromroot(self, data, offsets, local_entrystart, local_entrystop):
         array = data.view(self.fromdtype)
@@ -127,35 +161,63 @@ class asdtype(Interpretation):
             array = array.reshape((len(array) // product,) + self.fromdims)
         return array[local_entrystart:local_entrystop]
 
-    def destination(self, numitems, numentries):
-        product = _dimsprod(self.todims)
-        if numitems % product != 0:
-            raise ValueError("cannot reshape {0} items as {1} (groups of {2})".format(numitems, self.todims, product))
-        return numpy.empty((numitems // product,) + self.todims, dtype=self.todtype)
+class asdouble32(_asnumeric):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (_asnumeric.__metaclass__,), {})
 
-    def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
-        if self.fromdims == ():
-            flattened_source = source
+    def __init__(self, low, high, numbits, fromdims=(), todims=None):
+        if not isinstance(numbits, numbers.Integral) or not 2 <= numbits <= 32:
+            raise TypeError("numbits must be an integer between 2 and 32 (inclusive)")
+        if low == 0.0 and high == 0.0:
+            raise NotImplementedError("Double32_t with dropped mantissa bits not yet implemented")
+        if high <= low:
+            raise ValueError("high ({0}) must be strictly greater than low ({1})".format(high, low))
+
+        self.low = low
+        self.high = high
+        self.numbits = numbits
+
+        self.fromdims = fromdims
+
+        if todims is None:
+            self.todims = todims
         else:
-            flattened_source = source.reshape(len(source) * _dimsprod(self.fromdims))
+            self.todims = fromdims
+    
+    def __repr__(self):
+        args = [repr(self.low), repr(self.high), repr(self.numbits)]
 
-        if self.todims == ():
-            flattened_destination = destination
-        else:
-            flattened_destination = destination.reshape(len(destination) * _dimsprod(self.todims))
+        if self.fromdims != ():
+            args.append(repr(self.fromdims))
 
-        flattened_destination[itemstart:itemstop] = flattened_source
+        if self.todims != self.fromdims:
+            args.append(repr(self.todims))
 
-    def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
-        product = _dimsprod(self.todims)
-        assert itemstart % product == 0
-        assert itemstop % product == 0
-        return destination[itemstart // product : itemstop // product]
-        # FIXME: isn't the above equivalent to the following?
-        #     return destination[entrystart:entrystop]
+        return "asdouble32(" + ", ".join(args) + ")"
 
-    def finalize(self, destination, branch):
-        return destination
+    @property
+    def todtype(self):
+        return numpy.dtype(numpy.float64)
+
+    @property
+    def identifier(self):
+        fromdims = "(" + ",".join(repr(x) for x in self.fromdims) + ")"
+        todims = "(" + ",".join(repr(x) for x in self.todims) + ")"
+        return "asdouble32({0},{1},{2},{3},{4})".format(self.low, self.high, self.numbits, fromdims, todims)
+
+    def numitems(self, numbytes, numentries):
+        return numbytes // 4
+
+    def fromroot(self, data, offsets, local_entrystart, local_entrystop):
+        array = data.view(">u4")
+        if self.fromdims != ():
+            product = _dimsprod(self.fromdims)
+            assert len(array) % product == 0, "{0} % {1} == {2} != 0".format(len(array), product, len(array) % product)
+            array = array.reshape((len(array) // product,) + self.fromdims)
+        array = array[local_entrystart:local_entrystop].astype(self.todtype)
+        numpy.multiply(array, (self.high - self.low) / (2.0**self.numbits), array)
+        numpy.add(array, self.low, array)
+        return array
 
 class asarray(asdtype):
     # makes __doc__ attribute mutable before Python 3.3
