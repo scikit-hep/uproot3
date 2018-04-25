@@ -38,15 +38,18 @@ from uproot.interp.interp import Interpretation
 from uproot.interp.numerical import asdtype
 from uproot.interp.numerical import _dimsprod
 
+
 def sizes2offsets(sizes):
     out = numpy.empty(len(sizes) + 1, dtype=sizes.dtype)
     out[0] = 0
     sizes.cumsum(out=out[1:])
     return out
 
+
 def _compactify(fromdata, fromstarts, fromstops, todata, tostarts, tostops):
     for i in range(len(fromstarts)):
         todata[tostarts[i]:tostops[i]] = fromdata[fromstarts[i]:fromstops[i]]
+
 
 try:
     import numba
@@ -54,6 +57,7 @@ except ImportError:
     pass
 else:
     _compactify = numba.njit(_compactify)
+
 
 class asjagged(Interpretation):
     # makes __doc__ attribute mutable before Python 3.3
@@ -98,7 +102,7 @@ class asjagged(Interpretation):
         return isinstance(other, asjagged) and self.asdtype.compatible(other.asdtype)
 
     def numitems(self, numbytes, numentries):
-        return self.asdtype.numitems(numbytes - numentries*self.skip_bytes, numentries)
+        return self.asdtype.numitems(numbytes - numentries * self.skip_bytes, numentries)
 
     def source_numitems(self, source):
         return self.asdtype.source_numitems(source.content)
@@ -110,12 +114,12 @@ class asjagged(Interpretation):
             itemsize = self.asdtype.fromdtype.itemsize * _dimsprod(self.asdtype.fromdims)
             if self.skip_bytes == 0:
                 numpy.floor_divide(offsets, itemsize, offsets)
-                starts = offsets[local_entrystart     : local_entrystop    ]
-                stops  = offsets[local_entrystart + 1 : local_entrystop + 1]
+                starts = offsets[local_entrystart: local_entrystop]
+                stops = offsets[local_entrystart + 1: local_entrystop + 1]
                 content = self.asdtype.fromroot(data, None, starts[0], stops[-1])
             else:
-                fromstarts = offsets[local_entrystart     : local_entrystop    ] + self.skip_bytes
-                fromstops  = offsets[local_entrystart + 1 : local_entrystop + 1]
+                fromstarts = offsets[local_entrystart: local_entrystop] + self.skip_bytes
+                fromstops = offsets[local_entrystart + 1: local_entrystop + 1]
                 newoffsets = numpy.empty(1 + local_entrystop - local_entrystart, dtype=offsets.dtype)
                 newoffsets[0] = 0
                 numpy.cumsum(fromstops - fromstarts, out=newoffsets[1:])
@@ -144,15 +148,17 @@ class asjagged(Interpretation):
     def finalize(self, destination, branch):
         offsets = sizes2offsets(destination.sizes)
         starts = offsets[:-1]
-        stops  = offsets[1:]
+        stops = offsets[1:]
         content = self.asdtype.finalize(destination.content, branch)
         leafcount = None
         if len(branch.fLeaves) == 1:
             leafcount = branch.fLeaves[0].fLeafCount
         return JaggedArray(content, starts, stops, leafcount=leafcount)
 
+
 def asstlvector(asdtype):
     return asjagged(asdtype, skip_bytes=10)
+
 
 def _jaggedarray_getitem(jaggedarray, index):
     stopslen = len(jaggedarray.stops)
@@ -160,10 +166,11 @@ def _jaggedarray_getitem(jaggedarray, index):
         index += stopslen
     if 0 <= index < stopslen:
         start = jaggedarray.starts[index]
-        stop  = jaggedarray.stops[index]
+        stop = jaggedarray.stops[index]
         return jaggedarray.content[start:stop]
     else:
         raise IndexError("index out of range for JaggedArray")
+
 
 class JaggedArray(object):
     # makes __doc__ attribute mutable before Python 3.3
@@ -196,7 +203,8 @@ class JaggedArray(object):
                 elif issubclass(x.dtype.type, numpy.complexfloating):
                     anycomplex = True
             else:
-                if not anybool and not anyint and not anyfloat and not anycomplex and any(isinstance(y, bool) for y in x):
+                if not anybool and not anyint and not anyfloat and not anycomplex and any(
+                        isinstance(y, bool) for y in x):
                     anybool = True
                 if not anyint and not anyfloat and not anycomplex and any(isinstance(y, int) for y in x):
                     anyint = True
@@ -204,7 +212,7 @@ class JaggedArray(object):
                     anyfloat = True
                 if not anycomplex and any(isinstance(y, complex) for y in x):
                     anycomplex = True
-                    
+
         if anycomplex:
             dtype = numpy.dtype(numpy.complex)
         elif anyfloat:
@@ -217,7 +225,7 @@ class JaggedArray(object):
             raise TypeError("no numerical types found in lists")
 
         starts = offsets[:-1]
-        stops  = offsets[1:]
+        stops = offsets[1:]
         content = numpy.empty(offsets[-1], dtype=dtype)
 
         for i, x in enumerate(lists):
@@ -253,10 +261,10 @@ class JaggedArray(object):
     @property
     def offsets(self):
         if self.starts.base is not None and self.stops.base is not None and self.starts.base is self.stops.base and \
-           self.starts.ctypes.data == self.starts.base.ctypes.data and \
-           self.stops.ctypes.data == self.stops.base.ctypes.data + self.starts.dtype.itemsize and \
-           len(self.starts) == len(self.starts.base) - 1 and \
-           len(self.stops) == len(self.starts.base) - 1:
+                self.starts.ctypes.data == self.starts.base.ctypes.data and \
+                self.stops.ctypes.data == self.stops.base.ctypes.data + self.starts.dtype.itemsize and \
+                len(self.starts) == len(self.starts.base) - 1 and \
+                len(self.stops) == len(self.starts.base) - 1:
             return self.starts.base
         elif numpy.array_equal(self.starts[1:], self.stops[:-1]):
             return numpy.append(self.starts, self.stops[-1])
@@ -278,7 +286,8 @@ class JaggedArray(object):
 
         elif isinstance(index, slice):
             if index.step is not None and index.step != 1:
-                raise NotImplementedError("cannot yet slice a JaggedArray with step != 1 (FIXME: this is possible, should be implemented)")
+                raise NotImplementedError(
+                    "cannot yet slice a JaggedArray with step != 1 (FIXME: this is possible, should be implemented)")
             else:
                 return JaggedArray(self.content, self.starts[index], self.stops[index])
 
@@ -305,7 +314,9 @@ class JaggedArray(object):
 
         def single(a):
             if len(a) > 6:
-                return numpy.array_str(a[:3], max_line_width=numpy.inf).rstrip("]") + " ... " + numpy.array_str(a[-3:], max_line_width=numpy.inf).lstrip("[")
+                return numpy.array_str(a[:3], max_line_width=numpy.inf).rstrip("]") + " ... " + numpy.array_str(a[-3:],
+                                                                                                                max_line_width=numpy.inf).lstrip(
+                    "[")
             else:
                 return numpy.array_str(a, max_line_width=numpy.inf)
 
@@ -314,7 +325,7 @@ class JaggedArray(object):
         else:
             content = [single(x) for x in self]
 
-        if sum(len(x) for x in content) + 2*(len(content) - 1) + 2 <= linewidth:
+        if sum(len(x) for x in content) + 2 * (len(content) - 1) + 2 <= linewidth:
             return "[" + ", ".join(content) + "]"
         else:
             return "[" + (",\n " + indent).join(content) + "]"
@@ -333,12 +344,13 @@ class JaggedArray(object):
         else:
             return numpy.array(self.content, dtype=dtype, copy=copy, order=order, subok=subok, ndmin=ndmin)
 
+
 class asvar(asjagged):
     def __init__(self, genclass, skip_bytes=0, args=()):
         self.genclass = genclass
         super(asvar, self).__init__(asdtype(numpy.dtype(numpy.uint8)), skip_bytes=skip_bytes)
         self.args = args
-    
+
     def __repr__(self):
         return self.identifier
 
@@ -357,19 +369,22 @@ class asvar(asjagged):
         return self.genclass(*((super(asvar, self).empty(),) + self.args))
 
     def compatible(self, other):
-        return isinstance(other, asvar) and self.genclass is other.genclass and super(asvar, self).compatible(other) and self.args == other.args
+        return isinstance(other, asvar) and self.genclass is other.genclass and super(asvar, self).compatible(
+            other) and self.args == other.args
 
     def source_numitems(self, source):
         return super(asvar, self).source_numitems(source.jaggedarray)
 
     def fromroot(self, data, offsets, local_entrystart, local_entrystop):
-        return self.genclass(*((super(asvar, self).fromroot(data, offsets, local_entrystart, local_entrystop),) + self.args))
+        return self.genclass(
+            *((super(asvar, self).fromroot(data, offsets, local_entrystart, local_entrystop),) + self.args))
 
     def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
         return super(asvar, self).fill(source.jaggedarray, destination, itemstart, itemstop, entrystart, entrystop)
 
     def finalize(self, destination, branch):
         return self.genclass(*((super(asvar, self).finalize(destination, branch),) + self.args))
+
 
 class VariableLength(object):
     def __init__(self, *args):
@@ -397,7 +412,8 @@ class VariableLength(object):
 
     def __str__(self):
         if len(self) > 6:
-            return "[{0} ... {1}]".format(" ".join(repr(self[i]) for i in range(3)), " ".join(repr(self[i]) for i in range(-3, 0)))
+            return "[{0} ... {1}]".format(" ".join(repr(self[i]) for i in range(3)),
+                                          " ".join(repr(self[i]) for i in range(-3, 0)))
         else:
             return "[{0}]".format(" ".join(repr(x) for x in self))
 
@@ -407,6 +423,7 @@ class VariableLength(object):
     @staticmethod
     def interpret(item):
         raise NotImplementedError
+
 
 class asobjs(asvar):
     def __init__(self, cls, context=None):
@@ -422,6 +439,7 @@ class asobjs(asvar):
     def dtype(self):
         return numpy.dtype((object, (0,)))
 
+
 class asobj(asvar):
     def __init__(self, cls, context=None):
         super(asobj, self).__init__(JaggedObject, skip_bytes=0, args=(cls, context))
@@ -435,12 +453,6 @@ class asobj(asvar):
     @property
     def dtype(self):
         return numpy.dtype((object, (0,)))
-
-def asjaggedobjects(cls, context=None):
-    return asobjs(cls, context=context)
-
-def asjaggedobject(cls, context=None):
-    return asobj(cls, context=context)
 
 class JaggedObjects(VariableLength):
     indexdtype = numpy.dtype(">i4")
@@ -461,7 +473,8 @@ class JaggedObjects(VariableLength):
 
     def __str__(self):
         if len(self) > 6:
-            return "[{0}\n ...\n{1}]".format(",\n".join(("" if i == 0 else " ") + repr(self[i]) for i in range(3)), ",\n".join(" " + repr(self[i]) for i in range(-3, 0)))
+            return "[{0}\n ...\n{1}]".format(",\n".join(("" if i == 0 else " ") + repr(self[i]) for i in range(3)),
+                                             ",\n".join(" " + repr(self[i]) for i in range(-3, 0)))
         else:
             return "[{0}]".format(", ".join(repr(x) for x in self))
 
@@ -478,8 +491,8 @@ class JaggedObjects(VariableLength):
         else:
             raise TypeError("{0} index must be an integer or a slice".format(self.__class__.__name__))
 
+
 class JaggedObject(VariableLength):
-    indexdtype = numpy.dtype(">i4")
 
     def __init__(self, jaggedarray, cls, context):
         super(JaggedObject, self).__init__(jaggedarray, cls)
@@ -493,7 +506,8 @@ class JaggedObject(VariableLength):
 
     def __str__(self):
         if len(self) > 6:
-            return "[{0}\n ...\n{1}]".format(",\n".join(("" if i == 0 else " ") + repr(self[i]) for i in range(3)), ",\n".join(" " + repr(self[i]) for i in range(-3, 0)))
+            return "[{0}\n ...\n{1}]".format(",\n".join(("" if i == 0 else " ") + repr(self[i]) for i in range(3)),
+                                             ",\n".join(" " + repr(self[i]) for i in range(-3, 0)))
         else:
             return "[{0}]".format(", ".join(repr(x) for x in self))
 
@@ -510,8 +524,10 @@ class JaggedObject(VariableLength):
         else:
             raise TypeError("{0} index must be an integer or a slice".format(self.__class__.__name__))
 
+
 def asstlvectorvector(fromdtype):
     return asvar(JaggedJaggedArray, skip_bytes=6, args=(numpy.dtype(fromdtype),))
+
 
 class JaggedJaggedArray(VariableLength):
     def __init__(self, jaggedarray, fromdtype):
@@ -529,16 +545,17 @@ class JaggedJaggedArray(VariableLength):
         i = 4
         out = []
         while i < len(item):
-            size, = item[i : i + 4].view(JaggedJaggedArray.indexdtype)
+            size, = item[i: i + 4].view(JaggedJaggedArray.indexdtype)
             i += 4
             numbytes = size * self.fromdtype.itemsize
-            out.append(item[i : i + numbytes].view(self.fromdtype))
+            out.append(item[i: i + numbytes].view(self.fromdtype))
             i += numbytes
         return out
 
     def __str__(self):
         if len(self) > 6:
-            return "[{0} ... {1}]".format(", ".join(repr([y.tolist() for y in self[i]]) for i in range(3)), ", ".join(repr([y.tolist() for y in self[i]]) for i in range(-3, 0)))
+            return "[{0} ... {1}]".format(", ".join(repr([y.tolist() for y in self[i]]) for i in range(3)),
+                                          ", ".join(repr([y.tolist() for y in self[i]]) for i in range(-3, 0)))
         else:
             return "[{0}]".format(", ".join(repr([y.tolist() for y in x]) for x in self))
 

@@ -42,8 +42,8 @@ from uproot.interp.numerical import asstlbitset
 from uproot.interp.jagged import asjagged
 from uproot.interp.jagged import asstlvector
 from uproot.interp.jagged import asstlvectorvector
-from uproot.interp.jagged import asjaggedobjects
-from uproot.interp.jagged import asjaggedobject
+from uproot.interp.jagged import asobjs
+from uproot.interp.jagged import asobj
 from uproot.interp.strings import asstrings
 from uproot.interp.strings import asstlvecstrings
 
@@ -248,7 +248,7 @@ def interpret(branch, swapbytes=True):
 
                     except _NotNumerical:
                         if branch._vecstreamer is not None:
-                            return asjaggedobjects(branch._vecstreamer.pyclass, branch._context)
+                            return asobjs(branch._vecstreamer.pyclass, branch._context)
 
                 if hasattr(branch._streamer, "fTypeName"):
                     m = re.match(b"bitset<([1-9][0-9]*)>", branch._streamer.fTypeName)
