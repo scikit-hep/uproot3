@@ -487,13 +487,9 @@ class JaggedObject(VariableLength):
         self._context = context
 
     def interpret(self, item):
-        size, = item[6:10].view(JaggedObject.indexdtype)
         source = uproot.source.source.Source(item)
         cursor = uproot.source.cursor.Cursor(0)
-        out = [None] * size
-        for i in range(size):
-            out[i] = self._class.read(source, cursor, self._context, None)
-        return out
+        return self._class.read(source, cursor, self._context, None)
 
     def __str__(self):
         if len(self) > 6:
@@ -530,9 +526,7 @@ class JaggedJaggedArray(VariableLength):
     indexdtype = numpy.dtype(">i4")
 
     def interpret(self, item):
-        i = 0
-        size, = item[i : i + 4].view(JaggedJaggedArray.indexdtype)
-        i += 4
+        i = 4
         out = []
         while i < len(item):
             size, = item[i : i + 4].view(JaggedJaggedArray.indexdtype)
