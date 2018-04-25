@@ -1538,7 +1538,7 @@ def numentries(path, treepath, total=True, localsource=MemmapSource.defaults, xr
         paths = _filename_explode(path)
     else:
         paths = [y for x in path for y in _filename_explode(x)]
-    return _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, executor, blocking, [])
+    return _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, executor, blocking, [None] * len(paths))
 
 def _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, executor, blocking, uuids):
     class _TTreeForNumEntries(uproot.rootio.ROOTStreamedObject):
@@ -1571,7 +1571,7 @@ def _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, e
             else:
                 return None
             finally:
-                source._source._mmap.close()
+                source.close()
 
     if executor is None:
         for i in range(len(paths)):

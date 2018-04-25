@@ -50,6 +50,9 @@ class Source(object):
     def dismiss(self):
         pass
 
+    def close(self):
+        self.dismiss()
+
     def data(self, start, stop, dtype=None):
         # assert start >= 0
         # assert stop >= 0
