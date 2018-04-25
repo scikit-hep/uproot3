@@ -194,7 +194,10 @@ def interpret(branch, swapbytes=True):
                 return asdtype(">i4")
 
             if isinstance(branch._streamer, uproot.rootio.TStreamerObject):
-                return asobj(branch._streamer.__class__, branch._context)
+                try:
+                    return asobj(branch._streamer.__class__, branch._context)
+                except:
+                    pass
 
             if branch.fLeaves[0].__class__.__name__ == "TLeafC":
                 return asstrings(skip_bytes=1, skip4_if_255=True)
