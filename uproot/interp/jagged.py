@@ -424,11 +424,7 @@ class asobjs(asvar):
 
 class asobj(asvar):
     def __init__(self, cls, context=None):
-        for i in range(0, 300):
-            try:
-                super(asobj, self).__init__(JaggedObjects, skip_bytes=i, args=(cls, context))
-            except:
-                continue
+        super(asobj, self).__init__(JaggedObject, skip_bytes=0, args=(cls, context))
         self.cls = cls
         self.context = context
 
@@ -478,6 +474,42 @@ class JaggedObjects(VariableLength):
 
         elif isinstance(index, slice):
             return JaggedObjects(self.jaggedarray[index], self._class, self._context)
+
+        else:
+            raise TypeError("{0} index must be an integer or a slice".format(self.__class__.__name__))
+
+class JaggedObject(VariableLength):
+    indexdtype = numpy.dtype(">i4")
+
+    def __init__(self, jaggedarray, cls, context):
+        super(JaggedObject, self).__init__(jaggedarray, cls)
+        self._class = cls
+        self._context = context
+
+    def interpret(self, item):
+        size, = item[6:10].view(JaggedObject.indexdtype)
+        source = uproot.source.source.Source(item)
+        cursor = uproot.source.cursor.Cursor(0)
+        out = [None] * size
+        for i in range(size):
+            out[i] = self._class.read(source, cursor, self._context, None)
+        return out
+
+    def __str__(self):
+        if len(self) > 6:
+            return "[{0}\n ...\n{1}]".format(",\n".join(("" if i == 0 else " ") + repr(self[i]) for i in range(3)), ",\n".join(" " + repr(self[i]) for i in range(-3, 0)))
+        else:
+            return "[{0}]".format(", ".join(repr(x) for x in self))
+
+    def __repr__(self):
+        return "<JaggedObject of {0} at {1:012x}>".format(self._class.__name__, id(self))
+
+    def __getitem__(self, index):
+        if isinstance(index, numbers.Integral):
+            return self.interpret(self.jaggedarray[index])
+
+        elif isinstance(index, slice):
+            return JaggedObject(self.jaggedarray[index], self._class, self._context)
 
         else:
             raise TypeError("{0} index must be an integer or a slice".format(self.__class__.__name__))
