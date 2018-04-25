@@ -1586,7 +1586,7 @@ def _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, e
         if total:
             return sum(out)
         else:
-            return dict(zip(paths, out))
+            return OrderedDict(zip(paths, out))
         
     if blocking:
         return wait()
