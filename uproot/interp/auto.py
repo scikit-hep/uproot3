@@ -193,6 +193,9 @@ def interpret(branch, swapbytes=True):
             if len(branch.fBranches) > 0 and all(len(x.fLeaves) == 1 and x.fLeaves[0].fLeafCount is branch.fLeaves[0] for x in branch.fBranches):
                 return asdtype(">i4")
 
+            if isinstance(branch._streamer, uproot.rootio.TStreamerObject):
+                return asobj(branch._streamer.__class__, branch._context)
+
             if branch.fLeaves[0].__class__.__name__ == "TLeafC":
                 return asstrings(skip_bytes=1, skip4_if_255=True)
 
