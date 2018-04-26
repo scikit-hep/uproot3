@@ -58,6 +58,9 @@ class MemmapSource(uproot.source.source.Source):
     def dismiss(self):
         pass
 
+    def close(self):
+        self._source._mmap.close()
+
     def data(self, start, stop, dtype=None):
         # assert start >= 0
         # assert stop >= 0

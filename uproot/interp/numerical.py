@@ -274,7 +274,7 @@ class asstlbitset(Interpretation):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (Interpretation.__metaclass__,), {})
 
-    dtype = numpy.dtype(numpy.bool_)
+    todtype = numpy.dtype(numpy.bool_)
 
     def __init__(self, numbytes):
         self.numbytes = numbytes
@@ -287,23 +287,23 @@ class asstlbitset(Interpretation):
         return "asstlbitset({0})".format(self.numbytes)
 
     def empty(self):
-        return numpy.empty((0,), dtype=self.dtype)
+        return numpy.empty((0,), dtype=self.todtype)
 
     def compatible(self, other):
         return (isinstance(other, asstlbitset) and self.numbytes == other.numbytes) or \
-               (isinstance(other, (asdtype, asarray)) and self.dtype == other.todtype and (self.numbytes,) == other.todims)
+               (isinstance(other, (asdtype, asarray)) and self.todtype == other.todtype and (self.numbytes,) == other.todims)
 
     def numitems(self, numbytes, numentries):
-        return max(0, numbytes // self.dtype.itemsize - 10*numentries)
+        return max(0, numbytes // self.todtype.itemsize - 10*numentries)
 
     def source_numitems(self, source):
         return _dimsprod(source.shape)
 
     def fromroot(self, data, offsets, local_entrystart, local_entrystop):
-        return data.view(self.dtype).reshape((-1, self.numbytes + 10))[local_entrystart:local_entrystop,10:]
+        return data.view(self.todtype).reshape((-1, self.numbytes + 10))[local_entrystart:local_entrystop,10:]
 
     def destination(self, numitems, numentries):
-        return numpy.empty((numitems // self.numbytes, self.numbytes), dtype=self.dtype)
+        return numpy.empty((numitems // self.numbytes, self.numbytes), dtype=self.todtype)
 
     def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
         destination[entrystart:entrystop] = source
