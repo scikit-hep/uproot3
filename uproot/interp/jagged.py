@@ -448,7 +448,8 @@ class asobj(asvar):
 
     @property
     def identifier(self):
-        return "asobj({0})".format(self.cls.__name__)
+        return "asobj()"
+        #return "asobj({0})".format(self.cls.__name__)
 
     @property
     def dtype(self):
@@ -542,7 +543,9 @@ class JaggedJaggedArray(VariableLength):
     indexdtype = numpy.dtype(">i4")
 
     def interpret(self, item):
-        i = 4
+        i = 0
+        size, = item[i: i + 4].view(JaggedJaggedArray.indexdtype)
+        i += 4
         out = []
         while i < len(item):
             size, = item[i: i + 4].view(JaggedJaggedArray.indexdtype)
