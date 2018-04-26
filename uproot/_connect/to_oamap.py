@@ -28,10 +28,24 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import re
+import numpy
 
-__version__ = "2.8.21"
-version = __version__
-version_info = tuple(re.split(r"[-\.]", __version__))
+class TTreeMethods_oamap(object):
+    def __init__(self, tree):
+        self._tree = tree
 
-del re
+    def __call__(self, namespace="", extension=None):
+        import oamap.backend.root
+        import oamap.extension.common
+        if extension is None:
+            extension = oamap.extension.common
+
+        return oamap.backend.root._proxy(self._tree, namespace=namespace, extension=extension)
+
+    def cmsnano(self, namespace="", extension=None):
+        import oamap.backend.root.cmsnano
+        import oamap.extension.common
+        if extension is None:
+            extension = oamap.extension.common
+
+        return oamap.backend.root.cmsnano._proxy(self._tree, namespace=namespace, extension=extension)

@@ -742,6 +742,11 @@ class TTreeMethods(object):
         import uproot._connect.to_pandas
         return uproot._connect.to_pandas.TTreeMethods_pandas(self)
 
+    @property
+    def oamap(self):
+        import uproot._connect.to_oamap
+        return uproot._connect.to_oamap.TTreeMethods_oamap(self)
+
 uproot.rootio.methods["TTree"] = TTreeMethods
 
 ################################################################ methods for TBranch
