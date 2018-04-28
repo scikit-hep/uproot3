@@ -448,8 +448,7 @@ class asobj(asvar):
 
     @property
     def identifier(self):
-        return "asobj()"
-        #return "asobj({0})".format(self.cls.__name__)
+        return "asobj({0})".format(self.cls.__name__)
 
     @property
     def dtype(self):
