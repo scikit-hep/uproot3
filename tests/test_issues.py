@@ -138,6 +138,6 @@ class TestIssues(unittest.TestCase):
         self.assertEqual(f.keys(), [])
 
     def test_issue74(self):
-        f = uproot.open("tests/samples/issue74.root")['Events']['bees.xyzPosition']
+        f = uproot.open("tests/samples/issue74.root")['Events']
         self.assertTrue(isinstance(y, uproot.rootio.TVector3) for x in f.array('bees.xyzPosition') for y in x)
 
