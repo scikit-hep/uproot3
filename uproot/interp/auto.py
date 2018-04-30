@@ -197,10 +197,7 @@ def interpret(branch, swapbytes=True):
             if isinstance(branch._streamer, uproot.rootio.TStreamerObject):
                 for x in all_classes:
                     if (branch._streamer.fTypeName == x._classname):
-                        try:
-                            return asobj(x, branch._context)
-                        except:
-                            pass
+                        return asobj(x, branch._context)
 
             if branch.fLeaves[0].__class__.__name__ == "TLeafC":
                 return asstrings(skip_bytes=1, skip4_if_255=True)

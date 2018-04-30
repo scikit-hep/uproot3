@@ -1266,4 +1266,4 @@ builtin_classes = {"TObject":    TObject,
                    "ROOT_3a3a_TIOFeatures": ROOT_3a3a_TIOFeatures}
 
 builtin_skip =    {"TBranch":    ["fBaskets"],
-                   "TTree": ["fUserInfo", "fBranchRef"]}
+                   "TTree":      ["fUserInfo", "fBranchRef"]}
