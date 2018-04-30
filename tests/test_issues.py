@@ -142,4 +142,6 @@ class TestIssues(unittest.TestCase):
         self.assertTrue(isinstance(y, uproot.rootio.TVector3) for x in f.array('bees.xyzPosition') for y in x)
         self.assertTrue(isinstance(y, uproot.rootio.TVector2) for x in f.array('bees.xyPosition') for y in x)
         for x in f.array('bees.xyzPosition'):
-            self.assertEqual(x, (1.0, 2.0, -1.0))
+            self.assertEqual(x.fX, 1.0)
+            self.assertEqual(x.fY, 2.0)
+            self.assertEqual(x.fZ, -1.0)
