@@ -114,7 +114,7 @@ class asjagged(Interpretation):
                 stops  = offsets[local_entrystart + 1 : local_entrystop + 1]
                 content = self.asdtype.fromroot(data, None, starts[0], stops[-1])
             else:
-                fromstarts = offsets[local_entrystart     : local_entrystop    ] + self.skip_bytes
+                fromstarts = offsets[local_entrystart     : local_entrystop  ] + self.skip_bytes
                 fromstops  = offsets[local_entrystart + 1 : local_entrystop + 1]
                 newoffsets = numpy.empty(1 + local_entrystop - local_entrystart, dtype=offsets.dtype)
                 newoffsets[0] = 0
@@ -204,7 +204,7 @@ class JaggedArray(object):
                     anyfloat = True
                 if not anycomplex and any(isinstance(y, complex) for y in x):
                     anycomplex = True
-                    
+
         if anycomplex:
             dtype = numpy.dtype(numpy.complex)
         elif anyfloat:
@@ -338,7 +338,7 @@ class asvar(asjagged):
         self.genclass = genclass
         super(asvar, self).__init__(asdtype(numpy.dtype(numpy.uint8)), skip_bytes=skip_bytes)
         self.args = args
-    
+
     def __repr__(self):
         return self.identifier
 
@@ -422,8 +422,19 @@ class asobjs(asvar):
     def dtype(self):
         return numpy.dtype((object, (0,)))
 
-def asjaggedobjects(cls, context=None):
-    return asobjs(cls, context=context)
+class asobj(asvar):
+    def __init__(self, cls, context=None):
+        super(asobj, self).__init__(JaggedObject, skip_bytes=0, args=(cls, context))
+        self.cls = cls
+        self.context = context
+
+    @property
+    def identifier(self):
+        return "asobj({0})".format(self.cls.__name__)
+
+    @property
+    def dtype(self):
+        return numpy.dtype((object, (0,)))
 
 class JaggedObjects(VariableLength):
     indexdtype = numpy.dtype(">i4")
@@ -460,6 +471,38 @@ class JaggedObjects(VariableLength):
 
         else:
             raise TypeError("{0} index must be an integer or a slice".format(self.__class__.__name__))
+
+class JaggedObject(VariableLength):
+
+    def __init__(self, jaggedarray, cls, context):
+        super(JaggedObject, self).__init__(jaggedarray, cls)
+        self._class = cls
+        self._context = context
+
+    def interpret(self, item):
+        source = uproot.source.source.Source(item)
+        cursor = uproot.source.cursor.Cursor(0)
+        return self._class.read(source, cursor, self._context, None)
+
+    def __str__(self):
+        if len(self) > 6:
+            return "[{0}\n ...\n{1}]".format(",\n".join(("" if i == 0 else " ") + repr(self[i]) for i in range(3)), ",\n".join(" " + repr(self[i]) for i in range(-3, 0)))
+        else:
+            return "[{0}]".format(", ".join(repr(x) for x in self))
+
+    def __repr__(self):
+        return "<JaggedObject of {0} at {1:012x}>".format(self._class.__name__, id(self))
+
+    def __getitem__(self, index):
+        if isinstance(index, numbers.Integral):
+            return self.interpret(self.jaggedarray[index])
+
+        elif isinstance(index, slice):
+            return JaggedObject(self.jaggedarray[index], self._class, self._context)
+
+        else:
+            raise TypeError("{0} index must be an integer or a slice".format(self.__class__.__name__))
+
 
 def asstlvectorvector(fromdtype):
     return asvar(JaggedJaggedArray, skip_bytes=6, args=(numpy.dtype(fromdtype),))

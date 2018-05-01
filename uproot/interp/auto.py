@@ -42,7 +42,8 @@ from uproot.interp.numerical import asstlbitset
 from uproot.interp.jagged import asjagged
 from uproot.interp.jagged import asstlvector
 from uproot.interp.jagged import asstlvectorvector
-from uproot.interp.jagged import asjaggedobjects
+from uproot.interp.jagged import asobjs
+from uproot.interp.jagged import asobj
 from uproot.interp.strings import asstrings
 from uproot.interp.strings import asstlvecstrings
 
@@ -192,6 +193,11 @@ def interpret(branch, swapbytes=True):
             if len(branch.fBranches) > 0 and all(len(x.fLeaves) == 1 and x.fLeaves[0].fLeafCount is branch.fLeaves[0] for x in branch.fBranches):
                 return asdtype(">i4")
 
+            if isinstance(branch._streamer, uproot.rootio.TStreamerObject):
+                obj = branch._streamer.fTypeName.decode("utf-8")
+                if obj in branch._context.classes:
+                    return asobj(branch._context.classes.get(obj), branch._context)
+
             if branch.fLeaves[0].__class__.__name__ == "TLeafC":
                 return asstrings(skip_bytes=1, skip4_if_255=True)
 
@@ -247,7 +253,7 @@ def interpret(branch, swapbytes=True):
 
                     except _NotNumerical:
                         if branch._vecstreamer is not None:
-                            return asjaggedobjects(branch._vecstreamer.pyclass, branch._context)
+                            return asobjs(branch._vecstreamer.pyclass, branch._context)
 
                 if hasattr(branch._streamer, "fTypeName"):
                     m = re.match(b"bitset<([1-9][0-9]*)>", branch._streamer.fTypeName)
