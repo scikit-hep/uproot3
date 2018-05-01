@@ -194,7 +194,7 @@ def interpret(branch, swapbytes=True):
                 return asdtype(">i4")
 
             if isinstance(branch._streamer, uproot.rootio.TStreamerObject):
-                obj = branch._streamer.fTypeName.decode('utf-8')
+                obj = branch._streamer.fTypeName.decode("utf-8")
                 if obj in branch._context.classes:
                     return asobj(branch._context.classes.get(obj), branch._context)
 

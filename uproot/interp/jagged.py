@@ -333,7 +333,6 @@ class JaggedArray(object):
         else:
             return numpy.array(self.content, dtype=dtype, copy=copy, order=order, subok=subok, ndmin=ndmin)
 
-
 class asvar(asjagged):
     def __init__(self, genclass, skip_bytes=0, args=()):
         self.genclass = genclass
