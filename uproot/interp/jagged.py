@@ -114,7 +114,7 @@ class asjagged(Interpretation):
                 stops  = offsets[local_entrystart + 1 : local_entrystop + 1]
                 content = self.asdtype.fromroot(data, None, starts[0], stops[-1])
             else:
-                fromstarts = offsets[local_entrystart     : local_entrystop ] + self.skip_bytes
+                fromstarts = offsets[local_entrystart     : local_entrystop  ] + self.skip_bytes
                 fromstops  = offsets[local_entrystart + 1 : local_entrystop + 1]
                 newoffsets = numpy.empty(1 + local_entrystop - local_entrystart, dtype=offsets.dtype)
                 newoffsets[0] = 0
@@ -164,7 +164,6 @@ def _jaggedarray_getitem(jaggedarray, index):
         return jaggedarray.content[start:stop]
     else:
         raise IndexError("index out of range for JaggedArray")
-
 
 class JaggedArray(object):
     # makes __doc__ attribute mutable before Python 3.3
@@ -254,10 +253,10 @@ class JaggedArray(object):
     @property
     def offsets(self):
         if self.starts.base is not None and self.stops.base is not None and self.starts.base is self.stops.base and \
-                self.starts.ctypes.data == self.starts.base.ctypes.data and \
-                self.stops.ctypes.data == self.stops.base.ctypes.data + self.starts.dtype.itemsize and \
-                len(self.starts) == len(self.starts.base) - 1 and \
-                len(self.stops) == len(self.starts.base) - 1:
+            self.starts.ctypes.data == self.starts.base.ctypes.data and \
+            self.stops.ctypes.data == self.stops.base.ctypes.data + self.starts.dtype.itemsize and \
+            len(self.starts) == len(self.starts.base) - 1 and \
+            len(self.stops) == len(self.starts.base) - 1:
             return self.starts.base
         elif numpy.array_equal(self.starts[1:], self.stops[:-1]):
             return numpy.append(self.starts, self.stops[-1])
@@ -306,7 +305,7 @@ class JaggedArray(object):
 
         def single(a):
             if len(a) > 6:
-                return numpy.array_str(a[:3], max_line_width=numpy.inf).rstrip("]") + " ... " + numpy.array_str(a[-3:],max_line_width=numpy.inf).lstrip("[")
+                return numpy.array_str(a[:3], max_line_width=numpy.inf).rstrip("]") + " ... " + numpy.array_str(a[-3:], max_line_width=numpy.inf).lstrip("[")
             else:
                 return numpy.array_str(a, max_line_width=numpy.inf)
 

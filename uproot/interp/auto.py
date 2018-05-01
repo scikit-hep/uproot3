@@ -34,7 +34,6 @@ from functools import reduce
 
 import numpy
 
-from uproot.rootio import all_classes
 import uproot.const
 from uproot.interp.numerical import asdtype
 from uproot.interp.numerical import asdouble32
@@ -195,9 +194,9 @@ def interpret(branch, swapbytes=True):
                 return asdtype(">i4")
 
             if isinstance(branch._streamer, uproot.rootio.TStreamerObject):
-                for x in all_classes:
-                    if (branch._streamer.fTypeName == x._classname):
-                        return asobj(x, branch._context)
+                obj = branch._streamer.fTypeName.decode('utf-8')
+                if obj in branch._context.classes:
+                    return asobj(branch._context.classes.get(obj), branch._context)
 
             if branch.fLeaves[0].__class__.__name__ == "TLeafC":
                 return asstrings(skip_bytes=1, skip4_if_255=True)

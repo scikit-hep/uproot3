@@ -50,7 +50,6 @@ from uproot.source.cursor import Cursor
 ################################################################ register mixins for user-facing ROOT classes
 
 methods = {}
-all_classes = []
 
 ################################################################ high-level interface
 
@@ -760,7 +759,6 @@ def _defineclasses(streamerinfos, classes):
 
             classes["versions"] = versions
             pyclass = _makeclass(streamerinfo.fName, id(streamerinfo), "\n".join(code), classes)
-            all_classes.append(pyclass)
             streamerinfo.pyclass = pyclass
             versions[pyclass._classversion] = pyclass
 
