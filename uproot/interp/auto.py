@@ -254,11 +254,12 @@ def interpret(branch, swapbytes=True):
                     except _NotNumerical:
                         if branch._vecstreamer is not None:
                             try:
-                                return asobjs(branch._vecstreamer.pyclass, branch._context)
+                                streamerClass = branch._vecstreamer.pyclass
                             except AttributeError:
                                 obj = branch._vecstreamer.fName.decode("utf-8")
                                 if obj in branch._context.classes:
-                                    return asobjs(branch._context.classes.get(obj), branch._context)
+                                    streamerClass = branch._context.classes.get(obj)
+                            return asobjs(streamerClass, branch._context)
 
                 if hasattr(branch._streamer, "fTypeName"):
                     m = re.match(b"bitset<([1-9][0-9]*)>", branch._streamer.fTypeName)
