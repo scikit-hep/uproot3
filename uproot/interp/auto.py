@@ -149,7 +149,7 @@ def interpret(branch, swapbytes=True):
 
                 try:
                     left, right = branch._streamer.fTitle.index(b"["), branch._streamer.fTitle.index(b"]")
-                except:
+                except (ValueError, AttributeError):
                     out = asdtype(">f4", "f8", dims, dims)
                 else:
                     try:
