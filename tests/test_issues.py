@@ -144,4 +144,4 @@ class TestIssues(unittest.TestCase):
 
     def test_issue76(self):
         t = uproot.open("tests/samples/issue76.root")["Events"]
-        self.assertEqual(list(t.array("rootStrings")[0]), [b'2', b'5'])
+        self.assertEqual(list(t.array("rootStrings")[0]), [b'2', b'4'])
