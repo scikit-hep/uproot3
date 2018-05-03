@@ -149,7 +149,7 @@ def interpret(branch, swapbytes=True):
 
                 try:
                     left, right = branch._streamer.fTitle.index(b"["), branch._streamer.fTitle.index(b"]")
-                except ValueError:
+                except:
                     out = asdtype(">f4", "f8", dims, dims)
                 else:
                     try:
@@ -253,7 +253,12 @@ def interpret(branch, swapbytes=True):
 
                     except _NotNumerical:
                         if branch._vecstreamer is not None:
-                            return asobjs(branch._vecstreamer.pyclass, branch._context)
+                            try:
+                                return asobjs(branch._vecstreamer.pyclass, branch._context)
+                            except AttributeError:
+                                obj = branch._vecstreamer.fName.decode("utf-8")
+                                if obj in branch._context.classes:
+                                    return asobjs(branch._context.classes.get(obj), branch._context)
 
                 if hasattr(branch._streamer, "fTypeName"):
                     m = re.match(b"bitset<([1-9][0-9]*)>", branch._streamer.fTypeName)

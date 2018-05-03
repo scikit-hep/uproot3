@@ -141,3 +141,7 @@ class TestIssues(unittest.TestCase):
         t = uproot.open("tests/samples/issue74.root")["Events"]
         self.assertTrue(all(isinstance(x, uproot.physics.TVector3Methods) for x in t.array("bees.xyzPosition")))
         self.assertEqual(list(t.array("bees.xyzPosition")[0]), [1.0, 2.0, -1.0])
+
+    def test_issue76(self):
+        t = uproot.open("tests/samples/issue76.root")["Events"]
+        self.assertEqual(list(t.array("rootStrings")[0]), [b'2', b'5'])
