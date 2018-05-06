@@ -127,7 +127,8 @@ def interpret(branch, swapbytes=True):
         if len(branch.fLeaves) == 1:
             if isinstance(branch._streamer, uproot.rootio.TStreamerObjectPointer):
                 obj = branch._streamer.fTypeName.decode("utf-8")
-                obj = obj[:-1]
+                if obj.endswith("*"):
+                    obj = obj[:-1]
                 if obj in branch._context.classes:
                     if obj == "TH1F":
                         return asobj(branch._context.classes.get(obj), branch._context)
