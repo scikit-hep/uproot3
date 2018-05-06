@@ -601,6 +601,6 @@ class TestTree(unittest.TestCase):
     def test_hist_in_tree(self):
         tree = uproot.open("tests/samples/Event.root")["T"]
         try:
-            tree.array('fH')[0].show()
+            tree.array("fH")[0].show()
         except:
             self.fail()
