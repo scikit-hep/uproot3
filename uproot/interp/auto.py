@@ -125,6 +125,14 @@ def interpret(branch, swapbytes=True):
 
     try:
         if len(branch.fLeaves) == 1:
+            if isinstance(branch._streamer, uproot.rootio.TStreamerObjectPointer):
+                obj = branch._streamer.fTypeName.decode("utf-8")
+                obj = list(obj)
+                obj[len(obj)-1] = ''
+                obj = "".join(obj)
+                if obj in branch._context.classes:
+                    return asobj(branch._context.classes.get(obj), branch._context)
+
             if branch.fLeaves[0].__class__.__name__ == "TLeafElement" and branch.fLeaves[0].fType == uproot.const.kDouble32:
                 def transform(node, tofloat=True):
                     if isinstance(node, ast.AST):
