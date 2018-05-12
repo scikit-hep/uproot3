@@ -1122,6 +1122,7 @@ class TObjArray(list, ROOTStreamedObject):
         if cls._copycontext:
             context = context.copy()
         out = cls.__new__(cls)
+        print (cursor.hexdump(source))
         out = cls._readinto(out, source, cursor, context, parent, asclass=asclass)
         out._postprocess(source, cursor, context, parent)
         return out
