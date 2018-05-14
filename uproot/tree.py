@@ -1471,9 +1471,11 @@ class TBranchMethods(object):
 
     def _recover(self):
         recoveredbaskets = [x for x in uproot.rootio.TObjArray.read(self._source, self.fBaskets._cursor, self._context, self, asclass=TBranchMethods._RecoveredTBasket) if x is not None]
-        entryoffsets = self.fBasketEntry[:self._numgoodbaskets].tolist()
+
         if self._numgoodbaskets == 0:
-            entryoffsets.append(0)
+            entryoffsets = [0]
+        else:
+            entryoffsets = self.fBasketEntry[:self._numgoodbaskets + 1].tolist()
 
         for basket in recoveredbaskets:
             entryoffsets.append(entryoffsets[-1] + basket.numentries)

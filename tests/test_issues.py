@@ -148,3 +148,9 @@ class TestIssues(unittest.TestCase):
         x, y = t.array("rootStrings")[0]
         self.assertTrue(isinstance(x, uproot.rootio.TString))
 
+    def test_issue79(self):
+        t = uproot.open("tests/samples/issue79.root")["taus"]
+        self.assertEqual(t["pt"].numbaskets, 2)
+        baskets = numpy.concatenate([t["pt"].basket(0), t["pt"].basket(1)])
+        self.assertEqual(baskets.shape, (t["pt"].numentries,))
+        self.assertTrue(numpy.array_equal(baskets, t["pt"].array()))
