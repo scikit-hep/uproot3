@@ -148,3 +148,10 @@ class TestIssues(unittest.TestCase):
         x, y = t.array("rootStrings")[0]
         self.assertTrue(isinstance(x, uproot.rootio.TString))
 
+    def test_issue79(self):
+        t = uproot.open("tests/samples/issue79.root")["taus"]
+        original = numpy.array(t["pt"].array()[:10])
+        compare = numpy.array([26.47025, 21.148115, 66.06361, 62.869083, 21.207523, 77.07928, 69.499504, 18.431166, 59.187378, 20.824547], dtype='f')
+        self.assertTrue(numpy.array_equal(original, compare))
+
+
