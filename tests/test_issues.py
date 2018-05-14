@@ -151,12 +151,6 @@ class TestIssues(unittest.TestCase):
     def test_issue79(self):
         t = uproot.open("tests/samples/issue79.root")["taus"]
         self.assertEqual(t["pt"].numbaskets, 2)
-        self.assertEqual(len(numpy.append(t["pt"].basket(0), t["pt"].basket(1))), t["pt"].numentries)
-        try:
-            t["pt"].array()
-            t["pt"].basket(0)
-            t["pt"].basket(1)
-        except:
-            self.fail("Branch pt still cannot be read properly")
-
-
+        baskets = numpy.concatenate([t["pt"].basket(0), t["pt"].basket(1)])
+        self.assertEqual(baskets.shape, (t["pt"].numentries,))
+        self.assertTrue(numpy.array_equal(baskets, t["pt"].array()))
