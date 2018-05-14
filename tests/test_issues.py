@@ -150,8 +150,13 @@ class TestIssues(unittest.TestCase):
 
     def test_issue79(self):
         t = uproot.open("tests/samples/issue79.root")["taus"]
-        original = numpy.array(t["pt"].array()[:10])
-        compare = numpy.array([26.47025, 21.148115, 66.06361, 62.869083, 21.207523, 77.07928, 69.499504, 18.431166, 59.187378, 20.824547], dtype="f")
-        self.assertTrue(numpy.array_equal(original, compare))
+        self.assertEqual(t["pt"].numbaskets, 2)
+        self.assertEqual(len(numpy.append(t["pt"].basket(0), t["pt"].basket(1))), t["pt"].numentries)
+        try:
+            t["pt"].array()
+            t["pt"].basket(0)
+            t["pt"].basket(1)
+        except:
+            self.fail("Branch pt still cannot be read properly")
 
 
