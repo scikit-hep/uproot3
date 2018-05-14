@@ -1470,8 +1470,29 @@ class TBranchMethods(object):
             return self.fNevBuf
 
     def _recover(self):
-        recoveredbaskets = [x for x in uproot.rootio.TObjArray.read(self._source, self.fBaskets._cursor, self._context, self, asclass=TBranchMethods._RecoveredTBasket) if x is not None]
-        entryoffsets = self.fBasketEntry[:self._numgoodbaskets].tolist()
+        count = 0
+        entryoffsets = 0
+        recoveredbaskets = []
+
+        for x in uproot.rootio.TObjArray.read(self._source, self.fBaskets._cursor, self._context, self, asclass=TBranchMethods._RecoveredTBasket):
+            if count == 0:
+                recoveredbaskets.append(x)
+            elif x is not None:
+                recoveredbaskets.append(x)
+            count = count + 1
+
+        count = 0
+
+        if recoveredbaskets[0] is None:
+            for i in range(0, len(self.fBasketEntry)):
+                if self.fBasketEntry[i] != 0 and count < self._numgoodbaskets:
+                    entryoffsets = entryoffsets + self.fBasketEntry[i]
+                    count = count + 1
+            entryoffsets = [entryoffsets]
+            recoveredbaskets.pop(0)
+        else:
+            entryoffsets = self.fBasketEntry[:self._numgoodbaskets].tolist()
+
         if self._numgoodbaskets == 0:
             entryoffsets.append(0)
 
