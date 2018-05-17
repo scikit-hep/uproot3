@@ -118,6 +118,10 @@ class CompressedSource(uproot.source.source.Source):
         self._compressedbytes = compressedbytes
         self._uncompressedbytes = uncompressedbytes
 
+    @property
+    def path(self):
+        return "(decompressed data)"
+
     def parent(self):
         return self._compressed
 
