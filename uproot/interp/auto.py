@@ -185,9 +185,9 @@ def interpret(branch, swapbytes=True):
                 return asjagged(out)
 
         elif len(branch.fLeaves) > 1:
-            fromdtype = numpy.dtype([(leaf.fName.decode("ascii"), _leaf2dtype(leaf).newbyteorder(">")) for leaf in branch.fLeaves])
+            fromdtype = numpy.dtype([(str(leaf.fName.decode("ascii")), _leaf2dtype(leaf).newbyteorder(">")) for leaf in branch.fLeaves])
             if swapbytes:
-                todtype = numpy.dtype([(leaf.fName.decode("ascii"), _leaf2dtype(leaf).newbyteorder("=")) for leaf in branch.fLeaves])
+                todtype = numpy.dtype([(str(leaf.fName.decode("ascii")), _leaf2dtype(leaf).newbyteorder("=")) for leaf in branch.fLeaves])
             else:
                 todtype = fromdtype
 
