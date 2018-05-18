@@ -130,8 +130,7 @@ def interpret(branch, swapbytes=True):
                 if obj.endswith("*"):
                     obj = obj[:-1]
                 if obj in branch._context.classes:
-                    if obj == "TH1F":
-                        return asobj(branch._context.classes.get(obj), branch._context)
+                    return asobj(branch._context.classes.get(obj), branch._context)
 
             if branch.fLeaves[0].__class__.__name__ == "TLeafElement" and branch.fLeaves[0].fType == uproot.const.kDouble32:
                 def transform(node, tofloat=True):
