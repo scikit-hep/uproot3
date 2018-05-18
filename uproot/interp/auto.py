@@ -202,9 +202,11 @@ def interpret(branch, swapbytes=True):
                 return asdtype(">i4")
 
             if isinstance(branch._streamer, uproot.rootio.TStreamerObject):
+                readable = ["TVector2", "TVector3", "TH2D", "TH1D"]
                 obj = branch._streamer.fTypeName.decode("utf-8")
                 if obj in branch._context.classes:
-                    return asobj(branch._context.classes.get(obj), branch._context)
+                    if obj in readable:
+                        return asobj(branch._context.classes.get(obj), branch._context)
 
             if branch.fLeaves[0].__class__.__name__ == "TLeafC":
                 return asstrings(skip_bytes=1, skip4_if_255=True)
