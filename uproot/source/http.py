@@ -49,7 +49,7 @@ class HTTPSource(uproot.source.chunked.ChunkedSource):
     
     @staticmethod
     def defaults(path):
-        return HTTPSource(path, chunkbytes=8*1024, limitbytes=1024**2)
+        return HTTPSource(path, chunkbytes=16*1024, limitbytes=16*1024**2)
 
     def _open(self):
         pass
