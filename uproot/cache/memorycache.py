@@ -82,7 +82,7 @@ class MemoryCache(dict):
         @staticmethod
         def sizeof(obj, recurse=True):
             if isinstance(obj, numpy.ndarray):
-                return sys.getsizeof(obj)
+                return sys.getsizeof(obj) + obj.nbytes
             elif isinstance(obj, dict):
                 if recurse:
                     return sys.getsizeof(obj) + sum(MemoryCache.sizeof(k) + MemoryCache.sizeof(v) for k, v in obj.items())

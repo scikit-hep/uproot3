@@ -41,10 +41,10 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
     def __init__(self, path, *args, **kwds):
         self._size = None
         super(XRootDSource, self).__init__(path, *args, **kwds)
-    
+
     @staticmethod
     def defaults(path):
-        return XRootDSource(path, chunkbytes=8*1024, limitbytes=1024**2)
+        return XRootDSource(path, chunkbytes=16*1024, limitbytes=16*1024**2)
 
     def _open(self):
         try:
@@ -52,7 +52,7 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
         except ImportError:
             raise ImportError("\n\nInstall pyxrootd package from source and configure PYTHONPATH and LD_LIBRARY_PATH:\n\n    http://xrootd.org/dload.html\n\nAlternatively, try a conda package:\n\n    https://anaconda.org/search?q=xrootd")
 
-        if self._source is None:
+        if self._source is None or not self._source.is_open():
             self._source = pyxrootd.client.File()
             status, dummy = self._source.open(self.path)
             if status.get("error", None):
@@ -79,6 +79,7 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
         return out
 
     def _read(self, chunkindex):
+        self._open()
         status, data = self._source.read(chunkindex * self._chunkbytes, self._chunkbytes)
         if status.get("error", None):
             raise OSError(status["message"])
@@ -89,5 +90,4 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
             self._source.close()
     
     def dismiss(self):
-        if self._source is not None:
-            self._source.close()       # XRootD connections are *not shared* among threads
+        pass

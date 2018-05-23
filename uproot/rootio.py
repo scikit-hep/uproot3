@@ -116,7 +116,6 @@ class ROOTDirectory(object):
         if len(args) == 0:
             try:
                 read_streamers = options.pop("read_streamers", True)
-                keep_source = options.pop("keep_source", False)
                 if len(options) > 0:
                     raise TypeError("unrecognized options: {0}".format(", ".join(options)))
 
@@ -164,8 +163,7 @@ class ROOTDirectory(object):
                     classes[methodclass.__name__] = methodclass
                 classes = _defineclasses(streamerinfos, classes)
                 context = ROOTDirectory._FileContext(source.path, streamerinfos, streamerinfosmap, classes, uproot.source.compressed.Compression(fCompress), tfile)
-                if keep_source:
-                    context.source = source
+                context.source = source
 
                 keycursor = Cursor(fBEGIN)
                 mykey = TKey.read(source, keycursor, context, None)
