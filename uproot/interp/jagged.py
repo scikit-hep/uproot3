@@ -250,13 +250,16 @@ class JaggedArray(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def _offsets_aliased(self):
+        return (self.starts.base is not None and self.stops.base is not None and self.starts.base is self.stops.base and
+                self.starts.ctypes.data == self.starts.base.ctypes.data and
+                self.stops.ctypes.data == self.stops.base.ctypes.data + self.starts.dtype.itemsize and
+                len(self.starts) == len(self.starts.base) - 1 and
+                len(self.stops) == len(self.starts.base) - 1)
+
     @property
     def offsets(self):
-        if self.starts.base is not None and self.stops.base is not None and self.starts.base is self.stops.base and \
-           self.starts.ctypes.data == self.starts.base.ctypes.data and \
-           self.stops.ctypes.data == self.stops.base.ctypes.data + self.starts.dtype.itemsize and \
-           len(self.starts) == len(self.starts.base) - 1 and \
-           len(self.stops) == len(self.starts.base) - 1:
+        if self._offsets_aliased():
             return self.starts.base
         elif numpy.array_equal(self.starts[1:], self.stops[:-1]):
             return numpy.append(self.starts, self.stops[-1])
@@ -332,6 +335,13 @@ class JaggedArray(object):
             return self.content
         else:
             return numpy.array(self.content, dtype=dtype, copy=copy, order=order, subok=subok, ndmin=ndmin)
+
+    @property
+    def nbytes(self):
+        if self._offsets_aliased():
+            return self.content.nbytes + self.starts.base.nbytes
+        else:
+            return self.content.nbytes + self.starts + self.stops
 
 class asvar(asjagged):
     def __init__(self, genclass, skip_bytes=0, args=()):
