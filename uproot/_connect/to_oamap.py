@@ -40,7 +40,7 @@ class TTreeMethods_oamap(object):
         if extension is None:
             extension = oamap.extension.common
 
-        return oamap.backend.root._proxy(self._tree, namespace=namespace, extension=extension)
+        return oamap.backend.root._proxy(self._tree, oamap.backend.root.ROOTBackend(self._context.sourcepath, self._context.treename), namespace=namespace, extension=extension)
 
     def cmsnano(self, namespace="", extension=None):
         import oamap.backend.root.cmsnano
@@ -48,4 +48,4 @@ class TTreeMethods_oamap(object):
         if extension is None:
             extension = oamap.extension.common
 
-        return oamap.backend.root.cmsnano._proxy(self._tree, namespace=namespace, extension=extension)
+        return oamap.backend.root.cmsnano._proxy(self._tree, oamap.backend.root.ROOTBackend(self._context.sourcepath, self._context.treename), namespace=namespace, extension=extension)

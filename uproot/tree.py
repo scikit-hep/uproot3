@@ -1564,7 +1564,7 @@ def _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, e
 
     def fill(i):
         try:
-            file = uproot.rootio.open(paths[i], localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, read_streamers=False, keep_source=True)
+            file = uproot.rootio.open(paths[i], localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, read_streamers=False)
         except:
             return sys.exc_info()
         else:
