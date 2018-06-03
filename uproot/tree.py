@@ -31,6 +31,7 @@
 import base64
 import glob
 import inspect
+import itertools
 import math
 import numbers
 import os.path
@@ -412,9 +413,15 @@ class TTreeMethods(object):
             initialcolumns = OrderedDict()
             for branch, interpretation in branches:
                 if isinstance(interpretation, asdtype):
-                    initialcolumns[branch.name] = interpretation.todtype.type(0)
+                    if interpretation.todims == ():
+                        initialcolumns[branch.name] = interpretation.todtype.type(0)
+                    else:
+                        for tup in itertools.product(*[range(x) for x in interpretation.todims]):
+                            initialcolumns["{0}[{1}]".format(branch.name, "][".join(str(x) for x in tup))] = interpretation.todtype.type(0)
+
                 elif isinstance(interpretation, asjagged):
                     initialcolumns[branch.name] = None
+
                 else:
                     raise TypeError("cannot convert interpretation {0} to DataFrame".format(interpretation))
 
@@ -422,7 +429,7 @@ class TTreeMethods(object):
             out = outputtype(data=initialcolumns, index=numpy.arange(entrystart, entrystop))
 
             # if we won't need to slice any destinations
-            if entrystart == 0 and entrystop == self.numentries:
+            if entrystart == 0 and entrystop == self.numentries and all(interpretation.todims == () for branch, interpretation in branches):
                 for i in range(len(branches)):
                     branch, interpretation = branches[i]
                     if isinstance(interpretation, asdtype):
@@ -442,7 +449,12 @@ class TTreeMethods(object):
                 for name, interpretation, future in futures:
                     if isinstance(interpretation, asdtype):
                         if not isinstance(interpretation, asarray):
-                            out[name] = future()       # not filled in place because entrystart-entrystop is not the whole branch
+                            if interpretation.todims == ():
+                                out[name] = future()   # not filled in place because entrystart-entrystop or todims is not the whole branch
+                            else:
+                                array = future()
+                                for tup in itertools.product(*[range(x) for x in interpretation.todims]):
+                                    out["{0}[{1}]".format(branch.name, "][".join(str(x) for x in tup))] = array[(slice(None),) + tup]
                         else:
                             future()                   # fills in place, but be sure it's done filling
                     elif isinstance(interpretation, asjagged):
