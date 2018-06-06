@@ -10,6 +10,16 @@ uproot
   :start-after: inclusion-marker-1-do-not-remove
   :end-before:  inclusion-marker-3-do-not-remove
 
+Tutorial
+--------
+
+See the `project homepage <https://github.com/scikit-hep/uproot>`__ for a `tutorial <https://github.com/scikit-hep/uproot#tutorial>`__.
+
+Interactive tutorial
+--------------------
+
+Run `this tutorial <???>`__ on Binder.
+
 Reference documentation
 -----------------------
 
