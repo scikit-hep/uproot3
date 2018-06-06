@@ -166,7 +166,8 @@ A jagged array behaves like an array of unequal-length arrays,
 
 .. code-block:: python
 
-    >>> for jetenergies in hzz.array("Jet_E"):
+    >>> jaggedarray = hzz.array("Jet_E")
+    >>> for jetenergies in jaggedarray:
     ...     print("event")
     ...     for jetenergy in jetenergies:
     ...         print(jetenergy)
@@ -247,7 +248,8 @@ As with a ``dict``, square brackets extract values by key. If you include ``"/"`
 
 .. code-block:: python
 
-    >>> file["one"]["two"]["tree"]
+    >>> tree = file["one"]["two"]["tree"]
+    >>> tree
     <TTree b'tree' at 0x783af8f8aed0>
 
 is equivalent to
@@ -633,7 +635,6 @@ One reason you might want to only part of an array is to get a sense of the data
     array([ 5,  6,  7,  8,  9, 10, 11, 12, 13, 14], dtype=int32)
     >>> len(basketcache)
     3
-    >>> import numpy
     >>> myarray[:]
     array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
            17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33,
@@ -922,18 +923,21 @@ Python ``dict`` objects will keep the arrays as long as the process lives (or th
 
     >>> cache = uproot.cache.MemoryCache(8*1024**3)    # 8 GB (typical)
     >>> import numpy
-    >>> cache["one"] = numpy.zeros(3*1024**3, dtype=numpy.uint8)   # 3 GB
+    >>> cache["one"] = numpy.zeros(1024**3, dtype=numpy.uint8)   # 1 GB
     >>> list(cache)
     ['one']
-    >>> cache["two"] = numpy.zeros(3*1024**3, dtype=numpy.uint8)   # 3 GB
+    >>> cache["two"] = numpy.zeros(1024**3, dtype=numpy.uint8)   # 1 GB
     >>> list(cache)
     ['one', 'two']
-    >>> cache["three"] = numpy.zeros(3*1024**3, dtype=numpy.uint8) # 3 GB causes eviction
+    >>> cache["three"] = numpy.zeros(3*1024**3, dtype=numpy.uint8) # 1 GB
     >>> list(cache)
-    ['two', 'three']
-    >>> cache["four"] = numpy.zeros(3*1024**3, dtype=numpy.uint8)  # 3 GB causes evication
+    ['one', 'two', 'three']
+    >>> cache["four"] = numpy.zeros(3*1024**3, dtype=numpy.uint8)  # 1 GB causes evication
     >>> list(cache)
-    ['three', 'four']
+    ['two', 'three', 'four']
+    >>> cache["five"] = numpy.zeros(3*1024**3, dtype=numpy.uint8)  # 1 GB causes evication
+    >>> list(cache)
+    ['three', 'four', 'five']
 
 Thus, you can pass a `MemoryCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-memorycache>`__ as the **cache** argument to get caching with an LRU policy. If you need it, there's also a `ThreadSafeMemoryCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-threadsafememorycache>`__ for parallel processing.
 

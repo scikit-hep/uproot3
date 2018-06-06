@@ -1,0 +1,6 @@
+wget http://scikit-hep.org/uproot/examples/Zmumu.root
+wget http://scikit-hep.org/uproot/examples/HZZ.root
+wget http://scikit-hep.org/uproot/examples/nesteddirs.root
+wget http://scikit-hep.org/uproot/examples/foriter.root
+wget http://scikit-hep.org/uproot/examples/histograms.root
+pip install pandas
