@@ -18,7 +18,7 @@ See the `project homepage <https://github.com/scikit-hep/uproot>`__ for a `tutor
 Interactive tutorial
 --------------------
 
-Run `this tutorial <???>`__ on Binder.
+Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Ftutorial.ipynb>`__ on Binder.
 
 Reference documentation
 -----------------------

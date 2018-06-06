@@ -79,7 +79,7 @@ Tutorial
 Interactive Tutorial
 ====================
 
-Run `this tutorial <???>`__ on Binder.
+Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Ftutorial.ipynb>`__ on Binder.
 
 Reference documentation
 =======================
