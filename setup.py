@@ -43,7 +43,7 @@ def get_version():
 def get_description():
     description = open("README.rst",'rb').read().decode('utf8', 'ignore')    
     start = description.index(".. inclusion-marker-1-5-do-not-remove")
-    stop = description.index(".. inclusion-marker-5-do-not-remove")
+    stop = description.index(".. inclusion-marker-3-do-not-remove")
     before = """.. image:: https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/source/logo-300px.png
    :alt: uproot
    :target: https://github.com/scikit-hep/uproot
@@ -52,16 +52,39 @@ def get_description():
 
     after = """
 
-.. _Exploring a file: https://github.com/scikit-hep/uproot#exploring-a-file
-.. _Array-reading parameters: https://github.com/scikit-hep/uproot#array-reading-parameters
-.. _Remote files through XRootD: https://github.com/scikit-hep/uproot#remote-files-through-xrootd
-.. _Reading only part of a TBranch: https://github.com/scikit-hep/uproot#reading-only-part-of-a-tbranch
-.. _Iterating over files (like TChain): https://github.com/scikit-hep/uproot#iterating-over-files-like-tchain
-.. _Non-flat TTrees\: jagged arrays and more: https://github.com/scikit-hep/uproot#non-flat-ttrees-jagged-arrays-and-more
-.. _Non-TTrees\: histograms and more: https://github.com/scikit-hep/uproot#non-ttrees-histograms-and-more
-.. _Caching data: https://github.com/scikit-hep/uproot#caching-data
-.. _Parallel processing: https://github.com/scikit-hep/uproot#parallel-processing
-.. _Connectors to other packages: https://github.com/scikit-hep/uproot#connectors-to-other-packages
+Tutorial
+========
+
+See the `project homepage <https://github.com/scikit-hep/uproot>`__ for a `tutorial <https://github.com/scikit-hep/uproot#tutorial>`__.
+
+Interactive tutorial
+====================
+
+Run `this tutorial <???>`__ on Binder.
+
+Reference documentation
+=======================
+
+* `Opening files <http://uproot.readthedocs.io/en/latest/opening-files.html>`__
+
+  - `uproot.open <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-open>`__
+  - `uproot.xrootd <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-xrootd>`__
+  - `uproot.iterate <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-iterate>`__
+
+* `ROOT I/O <http://uproot.readthedocs.io/en/latest/root-io.html>`__
+
+  - `uproot.rootio.ROOTDirectory <http://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootdirectory>`__
+  - `uproot.rootio.ROOTObject <http://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootobject>`__
+  - `uproot.rootio.ROOTStreamedObject <http://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootstreamedobject>`__
+
+* `TTree Handling <http://uproot.readthedocs.io/en/latest/ttree-handling.html>`__
+
+  - `uproot.tree.TTreeMethods <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__
+  - `uproot.tree.TBranchMethods <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods>`__
+
+* `Interpretation <http://uproot.readthedocs.io/en/latest/interpretation.html>`__
+* `Caches <http://uproot.readthedocs.io/en/latest/caches.html>`__
+* `Parallel I/O <http://uproot.readthedocs.io/en/latest/parallel-io.html>`__
 """
     return before + description[start:stop].strip() + after
 

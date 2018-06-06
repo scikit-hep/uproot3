@@ -22,10 +22,3 @@ Reference documentation
    interpretation
    caches
    parallel-io
-
-.. include:: ../../README.rst
-  :start-after: inclusion-marker-3-do-not-remove
-  :end-before:  inclusion-marker-4-do-not-remove
-
-.. include:: ../../README.rst
-  :start-after: inclusion-marker-5-do-not-remove

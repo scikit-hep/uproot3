@@ -20,14 +20,14 @@ ROOT I/O in pure Python and Numpy.
 
 .. inclusion-marker-1-5-do-not-remove
 
-uproot (originally μproot, for "micro-Python ROOT") is a reader and (someday) a writer of the `ROOT file format <https://root.cern/>`_ using only Python and Numpy. Unlike the standard C++ ROOT implementation, uproot is only an I/O library, primarily intended to stream data into machine learning libraries in Python. Unlike PyROOT and root_numpy, uproot does not depend on C++ ROOT. Instead, it uses Numpy calls to rapidly cast data blocks in the ROOT file as Numpy arrays.
+uproot (originally μproot, for "micro-Python ROOT") is a reader and (someday) a writer of the `ROOT file format <https://root.cern/>`__ using only Python and Numpy. Unlike the standard C++ ROOT implementation, uproot is only an I/O library, primarily intended to stream data into machine learning libraries in Python. Unlike PyROOT and root_numpy, uproot does not depend on C++ ROOT. Instead, it uses Numpy calls to rapidly cast data blocks in the ROOT file as Numpy arrays.
 
-It is important to note that uproot is *not* maintained by the ROOT project team, so post bug reports as `uproot GitHub issues <https://github.com/scikit-hep/uproot/issues>`_, not on any ROOT forum.
+It is important to note that uproot is *not* maintained by the ROOT project team, so post bug reports as `uproot GitHub issues <https://github.com/scikit-hep/uproot/issues>`__, not on any ROOT forum.
 
 .. inclusion-marker-2-do-not-remove
 
 Installation
-------------
+============
 
 Install uproot like any other Python package:
 
@@ -38,31 +38,77 @@ Install uproot like any other Python package:
 or similar (use ``sudo``, ``virtualenv``, or ``conda`` if you wish).
 
 Strict dependencies:
-""""""""""""""""""""
+====================
 
-- `Python <http://docs.python-guide.org/en/latest/starting/installation/>`_ (2.6+, 3.4+)
-- `Numpy <https://scipy.org/install.html>`_
+- `Python <http://docs.python-guide.org/en/latest/starting/installation/>`__ (2.6+, 3.4+)
+- `Numpy <https://scipy.org/install.html>`__
 
 Recommended dependencies:
-"""""""""""""""""""""""""
+=========================
 
-- `lz4 <https://anaconda.org/anaconda/lz4>`_ compression used by some ROOT files
-- `lzma <https://anaconda.org/conda-forge/backports.lzma>`_ compression used by some ROOT files; this is part of the Python 3 standard library, so only install for Python 2
+- `lz4 <https://anaconda.org/anaconda/lz4>`__ compression used by some ROOT files
+- `lzma <https://anaconda.org/conda-forge/backports.lzma>`__ compression used by some ROOT files; this is part of the Python 3 standard library, so only install for Python 2
 
 Optional dependencies:
-""""""""""""""""""""""
+======================
 
-- `XRootD <https://anaconda.org/nlesc/xrootd>`_ to access remote files
-- `futures <https://pypi.python.org/pypi/futures>`_ for parallel processing; this is part of the Python 3 standard library, so only install for Python 2
+- `XRootD <https://anaconda.org/nlesc/xrootd>`__ to access remote files
+- `futures <https://pypi.python.org/pypi/futures>`__ for parallel processing; this is part of the Python 3 standard library, so only install for Python 2
 
 **Reminder: you do not need C++ ROOT to run uproot.**
 
 .. inclusion-marker-3-do-not-remove
 
+Tutorial
+========
+
+**Table of contents:**
+
+* `Getting started <#getting-started>`__
+* `Exploring a file <#exploring-a-file>`__
+* `Array-reading parameters <#array-reading-parameters>`__
+* `Remote files through XRootD <#remote-files-through-xrootd>`__
+* `Reading only part of a TBranch <#reading-only-part-of-a-tbranch>`__
+* `Iterating over files (like TChain) <#iterating-over-files-like-tchain>`__
+* `Non-flat TTrees\: jagged arrays and more <#non-flat-ttrees-jagged-arrays-and-more>`__
+* `Non-TTrees\: histograms and more <#non-ttrees-histograms-and-more>`__
+* `Caching data <#caching-data>`__
+* `Parallel processing <#parallel-processing>`__
+* `Connectors to other packages <#connectors-to-other-packages>`__
+
+Interactive Tutorial
+====================
+
+Run `this tutorial <???>`__ on Binder.
+
+Reference documentation
+=======================
+
+* `Opening files <http://uproot.readthedocs.io/en/latest/opening-files.html>`__
+
+  - `uproot.open <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-open>`__
+  - `uproot.xrootd <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-xrootd>`__
+  - `uproot.iterate <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-iterate>`__
+
+* `ROOT I/O <http://uproot.readthedocs.io/en/latest/root-io.html>`__
+
+  - `uproot.rootio.ROOTDirectory <http://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootdirectory>`__
+  - `uproot.rootio.ROOTObject <http://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootobject>`__
+  - `uproot.rootio.ROOTStreamedObject <http://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootstreamedobject>`__
+
+* `TTree Handling <http://uproot.readthedocs.io/en/latest/ttree-handling.html>`__
+
+  - `uproot.tree.TTreeMethods <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__
+  - `uproot.tree.TBranchMethods <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods>`__
+
+* `Interpretation <http://uproot.readthedocs.io/en/latest/interpretation.html>`__
+* `Caches <http://uproot.readthedocs.io/en/latest/caches.html>`__
+* `Parallel I/O <http://uproot.readthedocs.io/en/latest/parallel-io.html>`__
+
 Getting started
 ---------------
 
-Download a Z → μμ `flat ntuple <http://scikit-hep.org/uproot/examples/Zmumu.root>`_ and a H → ZZ → eeμμ `structured TTree <http://scikit-hep.org/uproot/examples/HZZ.root>`_.
+Download a Z → μμ `flat ntuple <http://scikit-hep.org/uproot/examples/Zmumu.root>`__ and a H → ZZ → eeμμ `structured TTree <http://scikit-hep.org/uproot/examples/HZZ.root>`__.
 
 .. code-block:: bash
 
@@ -103,7 +149,7 @@ You can turn a chosen set of branches into Numpy arrays with the ``arrays`` meth
      b'py1': array([ 17.4332439 , -16.57036233, ..., 1.19940578,   1.2013503 ]),
      b'pz1': array([-68.96496181, -48.77524654, ..., -74.53243061, -74.80837247])}
 
-If the number of items per entry is not constant, such as the number of jets in an event, they can't be expressed as flat Numpy arrays. Instead, uproot loads them into `jagged arrays <https://en.wikipedia.org/wiki/Jagged_array>`_.
+If the number of items per entry is not constant, such as the number of jets in an event, they can't be expressed as flat Numpy arrays. Instead, uproot loads them into `jagged arrays <https://en.wikipedia.org/wiki/Jagged_array>`__.
 
 .. code-block:: python
 
@@ -146,40 +192,10 @@ But it's built out of regular Numpy arrays, for use in libraries that accept Num
     >>> jaggedarray.stops
     array([   0,    1,    1, ..., 2771, 2773, 2773])
 
-.. inclusion-marker-4-do-not-remove
-
-Reference documentation
------------------------
-
-The complete reference documentation is available on `uproot.readthedocs.io <http://uproot.readthedocs.io/en/latest/>`_. These are exhaustive descriptions of each function and its parameters, also available as Python help strings.
-
-- `Opening files <http://uproot.readthedocs.io/en/latest/opening-files.html>`_
-- `ROOT I/O <http://uproot.readthedocs.io/en/latest/root-io.html>`_
-- `TTree methods <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`_
-- `TBranch methods <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods>`_
-
-Introductory tutorials
-----------------------
-
-Reference documentation is not the place to start learning about a topic. Introductory tutorials are provided below.
-
-- `Exploring a file`_
-- `Array-reading parameters`_
-- `Remote files through XRootD`_
-- `Reading only part of a TBranch`_
-- `Iterating over files (like TChain)`_
-- `Non-flat TTrees\: jagged arrays and more`_
-- `Non-TTrees\: histograms and more`_
-- `Caching data`_
-- `Parallel processing`_
-- `Connectors to other packages`_
-
-.. inclusion-marker-5-do-not-remove
-
 Exploring a file
-""""""""""""""""
+----------------
 
-Download the `nesteddirs.root <http://scikit-hep.org/uproot/examples/nesteddirs.root>`_ sample and open it with uproot.
+Download the `nesteddirs.root <http://scikit-hep.org/uproot/examples/nesteddirs.root>`__ sample and open it with uproot.
 
 .. code-block:: bash
 
@@ -190,7 +206,7 @@ Download the `nesteddirs.root <http://scikit-hep.org/uproot/examples/nesteddirs.
     >>> import uproot
     >>> file = uproot.open("nesteddirs.root")
 
-This ``file`` is a `ROOTDirectory`_, a class that can represent either a whole ROOT file or a TDirectory within that file. It emulates a Python ``dict``, so if you're familiar with this interface, you don't have to remember many method names. The "keys" are the names ROOT uses to find objects in files and the "values" are the data themselves.
+This ``file`` is a `ROOTDirectory <http://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootdirectory>`__, a class that can represent either a whole ROOT file or a TDirectory within that file. It emulates a Python ``dict``, so if you're familiar with this interface, you don't have to remember many method names. The "keys" are the names ROOT uses to find objects in files and the "values" are the data themselves.
 
 .. code-block:: python
 
@@ -213,7 +229,7 @@ If you only ask for the keys, the data won't be loaded (which can be important f
     [(b'one;1', <ROOTDirectory b'one' at 0x783af8cf64d0>),
      (b'three;1', <ROOTDirectory b'three' at 0x783af8cf6810>)]
 
-In addition, `ROOTDirectory`_ has ``classes()``, ``iterclasses()`` and ``allclasses()`` to iterate over keys and class names of the contained objects. You can identify the class of an object before loading it.
+In addition, `ROOTDirectory <http://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootdirectory>`__ has ``classes()``, ``iterclasses()`` and ``allclasses()`` to iterate over keys and class names of the contained objects. You can identify the class of an object before loading it.
 
 .. code-block:: python
 
@@ -241,11 +257,11 @@ is equivalent to
     >>> file["one/two/tree"]
     <TTree b'tree' at 0x783af8cf6490>
 
-The memory management is explicit: each time you request a value from a `ROOTDirectory`_, it is deserialized from the file. This usually doesn't matter on the command-line, but it could in a loop.
+The memory management is explicit: each time you request a value from a `ROOTDirectory <http://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootdirectory>`__, it is deserialized from the file. This usually doesn't matter on the command-line, but it could in a loop.
 
-`TTree`_ objects are also ``dict``-like objects, but this time the keys and values are the `TBranch`_ names and objects. If you're not familiar with ROOT terminology, "tree" means a dataset and "branch" means one column or attribute of that dataset. The `TTree`_ class also has ``keys()``, ``iterkeys()``, ``allkeys()``, ``values()``, ``items()``, etc., because `TBranch`_ instances may be nested.
+`TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__ objects are also ``dict``-like objects, but this time the keys and values are the `TBranch <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods>`__ names and objects. If you're not familiar with ROOT terminology, "tree" means a dataset and "branch" means one column or attribute of that dataset. The `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__ class also has ``keys()``, ``iterkeys()``, ``allkeys()``, ``values()``, ``items()``, etc., because `TBranch <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods>`__ instances may be nested.
 
-The `TTree`_ also has the attributes you expect from ROOT, presented with Pythonic conventions (``numentries`` follows an uproot convention, in which all "number of" methods start with "num"),
+The `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__ also has the attributes you expect from ROOT, presented with Pythonic conventions (``numentries`` follows an uproot convention, in which all "number of" methods start with "num"),
 
 .. code-block:: python
 
@@ -265,7 +281,7 @@ as well as the raw data that was read from the file (C++ private members that st
      'fName', 'fSavedBytes', 'fScanField', 'fTimerInterval', 'fTitle', 'fTotBytes',
      'fTreeIndex', 'fUpdate', 'fUserInfo', 'fWeight', 'fZipBytes', 'filter']
 
-To get an overview of what arrays are available in the `TTree`_ and whether uproot can read it, call ``show()``.
+To get an overview of what arrays are available in the `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__ and whether uproot can read it, call ``show()``.
 
 .. code-block:: python
 
@@ -291,9 +307,9 @@ To get an overview of what arrays are available in the `TTree`_ and whether upro
     SliceFloat32               (no streamer)              asjagged(asdtype('>f4'))
     SliceFloat64               (no streamer)              asjagged(asdtype('>f8'))
 
-The first column shows `TBranch`_ names, the "streamers" in the second column are ROOT schemas in the file used to reconstruct complex user classes. (This file doesn't have any.) The third column shows uproot's default interpretation of the data. If any `TBranch`_ objects have ``None`` as the default interpretation, uproot cannot read it (but possibly will in the future, as more types are handled).
+The first column shows `TBranch <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods>`__ names, the "streamers" in the second column are ROOT schemas in the file used to reconstruct complex user classes. (This file doesn't have any.) The third column shows uproot's default interpretation of the data. If any `TBranch <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods>`__ objects have ``None`` as the default interpretation, uproot cannot read it (but possibly will in the future, as more types are handled).
 
-You can read each `TBranch`_ into an array by calling ``array()`` on the `TBranch`_.
+You can read each `TBranch <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods>`__ into an array by calling ``array()`` on the `TBranch <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods>`__.
 
 .. code-block:: python
 
@@ -317,7 +333,7 @@ You can read each `TBranch`_ into an array by calling ``array()`` on the `TBranc
                  [98 98 98 ... 98 98 98],
                  [99 99 99 ... 99 99 99]])
 
-or read many at once with a single ``arrays([...])`` call on the `TTree`_.
+or read many at once with a single ``arrays([...])`` call on the `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__.
 
 .. code-block:: python
 
@@ -327,19 +343,19 @@ or read many at once with a single ``arrays([...])`` call on the `TTree`_.
     ...
 
 Array-reading parameters
-""""""""""""""""""""""""
+------------------------
 
-The complete list of array-reading parameters is given in the `TTree`_ reference (`e.g. this link <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot.tree.TTreeMethods.arrays>`_), but here's a guide to what you should know.
+The complete list of array-reading parameters is given in the `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__ reference (`e.g. this link <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot.tree.TTreeMethods.arrays>`__), but here's a guide to what you should know.
 
-The **branches** parameter lets you specify which `TBranch`_ data to load and optionally, an interpretation other than the default.
+The **branches** parameter lets you specify which `TBranch <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods>`__ data to load and optionally, an interpretation other than the default.
 
 - If it's ``None`` or unspecified, you'll get all arrays.
 - If it's a single string, you'll either get the array you've named or all the arrays that match a glob pattern (if it includes ``*``, ``?``, or ``[...]``) or full regular expression (if it starts and ends with slashes with optional flags ``/pattern/i``).
 - If it's a list of strings, you'll get all the arrays you've named or specified by pattern-matching.
-- If it's a ``dict`` from name to `Interpretation`_, you'll read the requested arrays in the specified ways.
+- If it's a ``dict`` from name to `Interpretation <http://uproot.readthedocs.io/en/latest/interpretation.html>`__, you'll read the requested arrays in the specified ways.
 - There's also a functional form that gives more control at the cost of more complexity.
 
-An `Interpretation`_ lets you view the bytes of the ROOT file in different ways. Naturally, most of these are non-sensical:
+An `Interpretation <http://uproot.readthedocs.io/en/latest/interpretation.html>`__ lets you view the bytes of the ROOT file in different ways. Naturally, most of these are non-sensical:
 
 .. code-block:: python
 
@@ -457,20 +473,20 @@ A ``for`` loop over a ``dict`` just iterates over the names. We've read in three
      [ 2  2  2  2  2  2  2  2  2  2]
      [ 3  3  3  3  3  3  3  3  3  3]
 
-The **entrystart** and **entrystop** parameters let you slice an array while reading it, to avoid reading more than you want. See `Reading only part of a TBranch`_ below.
+The **entrystart** and **entrystop** parameters let you slice an array while reading it, to avoid reading more than you want. See `Reading only part of a TBranch`__ below.
 
-The **cache**, **basketcache**, and **keycache** parameters allow you to avoid re-reading data without significantly altering your code. See `Caching data`_ below.
+The **cache**, **basketcache**, and **keycache** parameters allow you to avoid re-reading data without significantly altering your code. See `Caching data`__ below.
 
-The **executor** and **blocking** parameters allow you to read and possibly decompress the branches in parallel. See `Parallel processing`_ below.
+The **executor** and **blocking** parameters allow you to read and possibly decompress the branches in parallel. See `Parallel processing`__ below.
 
-All of the `TTree`_ and `TBranch`_ methods that read data into arrays— ``array``, ``lazyarray``, ``arrays``,  ``lazyarrays``, ``iterate``, ``basket``, ``baskets``, and ``iterate_baskets``— all use these parameters consistently. If you understand what they do for one method, you understand them all.
+All of the `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__ and `TBranch <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods>`__ methods that read data into arrays— ``array``, ``lazyarray``, ``arrays``,  ``lazyarrays``, ``iterate``, ``basket``, ``baskets``, and ``iterate_baskets``— all use these parameters consistently. If you understand what they do for one method, you understand them all.
 
 Remote files through XRootD
-"""""""""""""""""""""""""""
+---------------------------
 
 XRootD is a remote file protocol that allows selective reading: if you only want a few arrays from a file that has hundreds, it can be much faster to leave the file on the server and read it through XRootD.
 
-To use XRootD with uproot, you need to have an XRootD installation with its Python interface (ships with XRootD 4 and up). You may `install XRootD with conda <https://anaconda.org/nlesc/xrootd>`_ or `install XRootD from source <http://xrootd.org/dload.html>`_, but in the latter case, be sure to configure ``PYTHONPATH`` and ``LD_LIBRARY_PATH`` such that
+To use XRootD with uproot, you need to have an XRootD installation with its Python interface (ships with XRootD 4 and up). You may `install XRootD with conda <https://anaconda.org/nlesc/xrootd>`__ or `install XRootD from source <http://xrootd.org/dload.html>`__, but in the latter case, be sure to configure ``PYTHONPATH`` and ``LD_LIBRARY_PATH`` such that
 
 .. code-block:: python
 
@@ -497,7 +513,7 @@ Once XRootD is installed, you can open remote files in uproot by specifying the 
     vxp_z                      (no streamer)              asdtype('>f4')
     ...
 
-Apart from possible network bandwidth issues, this `ROOTDirectory`_ and the objects it contains are indistinguishable from data from a local file.
+Apart from possible network bandwidth issues, this `ROOTDirectory <http://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootdirectory>`__ and the objects it contains are indistinguishable from data from a local file.
 
 Unlike a local file, however, remote files are buffered and cached by uproot. (The operating system buffers and caches local files!) For performance reasons, you may need to tune this buffering and caching: you do it through an **xrootdsource** parameter.
 
@@ -511,13 +527,13 @@ Unlike a local file, however, remote files are buffered and cached by uproot. (T
 These defaults have not been tuned. You might find improvements in throughput by tweaking them.
 
 Reading only part of a TBranch
-""""""""""""""""""""""""""""""
+------------------------------
 
 ROOT files can be very large— it wouldn't be unusual to encounter a file that is too big to load entirely into memory. Even in these cases, you may be able to load individual arrays into memory, but maybe you don't want to. uproot lets you slice an array before you load it from the file.
 
-Inside a ROOT file, `TBranch`_ data are split into chunks called baskets; each basket can be read and uncompressed independently of the others. Specifying a slice before reading, rather than loading a whole array and then slicing it, avoids reading baskets that aren't in the slice.
+Inside a ROOT file, `TBranch <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods>`__ data are split into chunks called baskets; each basket can be read and uncompressed independently of the others. Specifying a slice before reading, rather than loading a whole array and then slicing it, avoids reading baskets that aren't in the slice.
 
-The `foriter.root <http://scikit-hep.org/uproot/examples/foriter.root>`_ file has very small baskets to demonstrate.
+The `foriter.root <http://scikit-hep.org/uproot/examples/foriter.root>`__ file has very small baskets to demonstrate.
 
 .. code-block:: bash
 
@@ -546,7 +562,7 @@ When we ask for the whole array, all eight of the baskets would be read, decompr
     >>> branch.array(entrystart=5, entrystop=15)
     array([ 5,  6,  7,  8,  9, 10, 11, 12, 13, 14], dtype=int32)
 
-We can demonstrate that this is actually happening with a cache (see `Caching data`_ below).
+We can demonstrate that this is actually happening with a cache (see `Caching data`__ below).
 
 .. code-block:: python
 
@@ -627,9 +643,9 @@ One reason you might want to only part of an array is to get a sense of the data
 
 Whenever a lazy array is indexed or sliced, it loads as little as possible to yield the result. Slicing everything (``[:]``) gives you a normal array.
 
-Since caching in uproot is always explicit (for consistency: see `Caching data`_), repeatedly indexing the same value repeatedly reads from the file unless you specify a cache. You'd probably always want to provide lazy arrays with caches.
+Since caching in uproot is always explicit (for consistency: see `Caching data`__), repeatedly indexing the same value repeatedly reads from the file unless you specify a cache. You'd probably always want to provide lazy arrays with caches.
 
-Another reason to want to read part of an array is to efficiently iterate over data. `TTree`_ has an ``iterate`` method for that purpose (which, incidentally, also takes **entrystart** and **entrystop** parameters).
+Another reason to want to read part of an array is to efficiently iterate over data. `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__ has an ``iterate`` method for that purpose (which, incidentally, also takes **entrystart** and **entrystop** parameters).
 
 .. code-block:: python
 
@@ -662,9 +678,9 @@ Another reason to want to read part of an array is to efficiently iterate over d
 By default, the iteration step size is the minimum necessary to line up with basket boundaries, but you can specify an explicit **entrysteps** (fixed integer or iterable over start, stop pairs).
 
 Iterating over files (like TChain)
-""""""""""""""""""""""""""""""""""
+----------------------------------
 
-If one file doesn't fit in memory, a collection of them won't, so we need to iterate over a collection of files just as we iterate over one file. The interface for this is similar to the `TTree`_ ``iterate`` method:
+If one file doesn't fit in memory, a collection of them won't, so we need to iterate over a collection of files just as we iterate over one file. The interface for this is similar to the `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__ ``iterate`` method:
 
 .. code-block:: python
 
@@ -672,12 +688,12 @@ If one file doesn't fit in memory, a collection of them won't, so we need to ite
     ...         ["branch1", "branch2", "branch3"],entrysteps=10000):
     ...     do_something_with(arrays)
 
-The **branches** parameter is the same (usually, a list of `TBranch`_ names will do), as is **entrysteps**, **outputtype**, caching, and parallel processing parameters. Since this form must iterate over a collection of files, it also takes a **path** (string with wildcards or a list of strings) and a **treepath** (location of the `TTree`_ within each file; must be the same), as well as **xrootdsource** options, if relevant.
+The **branches** parameter is the same (usually, a list of `TBranch <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods>`__ names will do), as is **entrysteps**, **outputtype**, caching, and parallel processing parameters. Since this form must iterate over a collection of files, it also takes a **path** (string with wildcards or a list of strings) and a **treepath** (location of the `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__ within each file; must be the same), as well as **xrootdsource** options, if relevant.
 
 Non-flat TTrees\: jagged arrays and more
-""""""""""""""""""""""""""""""""""""""""
+----------------------------------------
 
-We have already seen non-scalar structure in the `H → ZZ → eeμμ sample <http://scikit-hep.org/uproot/examples/HZZ.root>`_.
+We have already seen non-scalar structure in the `H → ZZ → eeμμ sample <http://scikit-hep.org/uproot/examples/HZZ.root>`__.
 
 .. code-block:: bash
 
@@ -736,7 +752,7 @@ Jagged arrays are presented as Python objects with an array-like syntax (square 
      [112.09960289042792, 21.37544434752662],
      [101.37877704093872, 70.2069335164593]]
 
-But you can also take advantage of the fact that `JaggedArray`_ is backed by Numpy arrays to perform structure-preserving operations much more quickly. The following does the same thing as the above, but using only Numpy calls.
+But you can also take advantage of the fact that `JaggedArray <http://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-jagged-jaggedarray>`__ is backed by Numpy arrays to perform structure-preserving operations much more quickly. The following does the same thing as the above, but using only Numpy calls.
 
 .. code-block:: python
 
@@ -755,9 +771,9 @@ But you can also take advantage of the fact that `JaggedArray`_ is backed by Num
                  [112.09961   21.375444],
                  [101.37878  70.20693]])
 
-In the first code block, we used the Python interpreter and ``math`` library to compute momentum magnitudes, one for each muon, maintaining the event structure (one or two muons per event). In the second code block, we used Numpy to compute all the momentum magnitudes in one call (the loop is performed in compiled code) and packaged the result in a new `JaggedArray`_. Since we want the same structure as the original ``px``, we can reuse its ``starts`` and ``stops``.
+In the first code block, we used the Python interpreter and ``math`` library to compute momentum magnitudes, one for each muon, maintaining the event structure (one or two muons per event). In the second code block, we used Numpy to compute all the momentum magnitudes in one call (the loop is performed in compiled code) and packaged the result in a new `JaggedArray <http://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-jagged-jaggedarray>`__. Since we want the same structure as the original ``px``, we can reuse its ``starts`` and ``stops``.
 
-`JaggedArray`_ is a single Python type used to describe any list of lists of numbers from ROOT. In C++, it may be a branch with another branch as a counter (e.g. ``Muon_pt[nMuons]``), a ``std::vector<number>``, a numeric field from an exploded ``TClonesArray`` of class instances, etc. Jagged arrays are also the simplest kind of variable-sized object that can be found in a `TTree`_. More complex objects are deserialized into `JaggedArray`_ wrapped in classes that present them differently, for instance
+`JaggedArray <http://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-jagged-jaggedarray>`__ is a single Python type used to describe any list of lists of numbers from ROOT. In C++, it may be a branch with another branch as a counter (e.g. ``Muon_pt[nMuons]``), a ``std::vector<number>``, a numeric field from an exploded ``TClonesArray`` of class instances, etc. Jagged arrays are also the simplest kind of variable-sized object that can be found in a `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__. More complex objects are deserialized into `JaggedArray <http://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-jagged-jaggedarray>`__ wrapped in classes that present them differently, for instance
 
 .. code-block:: bash
 
@@ -770,7 +786,7 @@ In the first code block, we used the Python interpreter and ``math`` library to 
     >>> tree.array("Type")
     strings([b'GT' b'TT' b'GT' ... b'TT' b'GT' b'GG'])
 
-The `Strings`_ type represents a collection of strings, not as (memory-hogging) Python ``bytes``, but as a `JaggedArray`_ wrapper:
+The `Strings <http://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-strings-strings>`__ type represents a collection of strings, not as (memory-hogging) Python ``bytes``, but as a `JaggedArray <http://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-jagged-jaggedarray>`__ wrapper:
 
 .. code-block:: python
 
@@ -791,7 +807,7 @@ The "numeric" content is actually the ASCII representation of all the string dat
       TTTGTTTTTGTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGG
      ...
 
-The role of the `Strings`_ wrapper is to yield each item as a Python ``bytes`` on demand.
+The role of the `Strings <http://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-strings-strings>`__ wrapper is to yield each item as a Python ``bytes`` on demand.
 
 .. code-block:: python
 
@@ -804,16 +820,16 @@ The role of the `Strings`_ wrapper is to yield each item as a Python ``bytes`` o
     >>> strings[5:10].tolist()
     [b'TT', b'GT', b'GG', b'GT', b'TT']
 
-Again, it doesn't matter whether the strings were ``char*``, ``std::string``, or ``TString``, etc. in C++. They all translate into `Strings`_.
+Again, it doesn't matter whether the strings were ``char*``, ``std::string``, or ``TString``, etc. in C++. They all translate into `Strings <http://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-strings-strings>`__.
 
 At the time of this writing, ``std::vector<std::string>`` and ``std::vector<std::vector<numbers>>`` are also implemented this way. Eventually, uproot should be able to read any type, translating C++ classes into Python ``namedtuples``, filled on demand.
 
 Non-TTrees\: histograms and more
-""""""""""""""""""""""""""""""""
+--------------------------------
 
 The uproot implementation is fairly general, to be robust against changes in the ROOT format. ROOT has a wonderful backward-compatibility mechanism called "streamers," which specify how bytes translate into data fields for every type of object contained in the file. Even such basic types as ``TObjArray`` and ``TNamed`` are defined by streamers.
 
-To read a `TTree`_, uproot first consults the streamers in your ROOT file to know how to deserialize your particular version of `TTree`_. This is why the `TTree`_ class contains so many members starting with "f"— they are the C++ class private members, and uproot is literally following the prescription to deserialize the C++ class. Pythonic attributes like ``tree.name`` and ``tree.numentries`` are aliases for ``tree.fName`` and ``tree.fEntries``, etc.
+To read a `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__, uproot first consults the streamers in your ROOT file to know how to deserialize your particular version of `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__. This is why the `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__ class contains so many members starting with "f"— they are the C++ class private members, and uproot is literally following the prescription to deserialize the C++ class. Pythonic attributes like ``tree.name`` and ``tree.numentries`` are aliases for ``tree.fName`` and ``tree.fEntries``, etc.
 
 .. code-block:: python
 
@@ -826,9 +842,9 @@ To read a `TTree`_, uproot first consults the streamers in your ROOT file to kno
      'fName', 'fSavedBytes', 'fScanField', 'fTimerInterval', 'fTitle', 'fTotBytes',
      'fTreeIndex', 'fUpdate', 'fUserInfo', 'fWeight', 'fZipBytes', 'filter']
 
-This means that literally any kind of object may be read from a `ROOTDirectory`_. Even if the uproot authors have never heard of it, the new data type will have a streamer in the file, and uproot will follow that prescription to make an object with the appropriate private fields. What you do with that object is another story: the member functions, written in C++, are *not* serialized into the ROOT file, and thus the Python object will have data but no functionality.
+This means that literally any kind of object may be read from a `ROOTDirectory <http://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootdirectory>`__. Even if the uproot authors have never heard of it, the new data type will have a streamer in the file, and uproot will follow that prescription to make an object with the appropriate private fields. What you do with that object is another story: the member functions, written in C++, are *not* serialized into the ROOT file, and thus the Python object will have data but no functionality.
 
-We have to add functionality by writing the equivalent Python. The uproot `TTree`_ implementation is a bundle of functions that expect private members like ``fName``, ``fEntries``, and ``fBranches``. Other ROOT types can be wrapped in similar ways. Histograms are useful, and therefore the ``TH1`` classes are similarly wrapped:
+We have to add functionality by writing the equivalent Python. The uproot `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__ implementation is a bundle of functions that expect private members like ``fName``, ``fEntries``, and ``fBranches``. Other ROOT types can be wrapped in similar ways. Histograms are useful, and therefore the ``TH1`` classes are similarly wrapped:
 
 .. code-block:: bash
 
@@ -871,7 +887,7 @@ We have to add functionality by writing the equivalent Python. The uproot `TTree
 Code to view histograms in Pythonic plotting packages is in development, but this is a wide-open area for future development. For now, uproot's ability to read histograms is useful for querying bin values in scripts.
 
 Caching data
-""""""""""""
+------------
 
 Following Python's preference for explicit operations over implicit ones, uproot does not cache any data by default. If you say ``file["tree"]`` twice or ``tree["branch"].array()`` twice, uproot will go back to the file each time to extract the contents. It will not hold previously loaded objects or arrays in memory in case you want them again. You can keep them in memory yourself by assigning them to a variable; the price of having to be explicit is well worth not having to reverse engineer a memory-hogging cache.
 
@@ -898,9 +914,9 @@ The array methods will always check the cache first, and if it's empty, get the 
      'AAGUS3fQmKsR56dpAQAAf77v;events;Q2;asdtype(Bi4,Li4,(),());0-2304':
          array([-1,  1,  1, ..., -1, -1, -1], dtype=int32)}
 
-Key names are long because they encode a unique identifier to the file, the path to the `TTree`_, to the `TBranch`_, the `Interpretation`_, and the entry range, so that we don't confuse one cached array for another.
+Key names are long because they encode a unique identifier to the file, the path to the `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__, to the `TBranch <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods>`__, the `Interpretation <http://uproot.readthedocs.io/en/latest/interpretation.html>`__, and the entry range, so that we don't confuse one cached array for another.
 
-Python ``dict`` objects will keep the arrays as long as the process lives (or they're manually deleted, or the ``dict`` goes out of scope). Sometimes this is too long. Real caches typically have a Least Recently Used (LRU) eviction policy: they're capped at a given size and when adding a new array would exceed that size, they delete the ones that were least recently accessed. `MemoryCache`_ implements such a policy.
+Python ``dict`` objects will keep the arrays as long as the process lives (or they're manually deleted, or the ``dict`` goes out of scope). Sometimes this is too long. Real caches typically have a Least Recently Used (LRU) eviction policy: they're capped at a given size and when adding a new array would exceed that size, they delete the ones that were least recently accessed. `MemoryCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-memorycache>`__ implements such a policy.
 
 .. code-block:: python
 
@@ -919,9 +935,9 @@ Python ``dict`` objects will keep the arrays as long as the process lives (or th
     >>> list(cache)
     ['three', 'four']
 
-Thus, you can pass a `MemoryCache`_ as the **cache** argument to get caching with an LRU policy. If you need it, there's also a `ThreadSafeMemoryCache`_ for parallel processing.
+Thus, you can pass a `MemoryCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-memorycache>`__ as the **cache** argument to get caching with an LRU policy. If you need it, there's also a `ThreadSafeMemoryCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-threadsafememorycache>`__ for parallel processing.
 
-Sometimes, you might need a cache that survives from one process to another. For instance, you have a long-running script that fails on the last step and you want to get to that last step more quickly by not re-reading/re-decompressing/re-formatting the ROOT data as arrays. Use a `DiskCache`_.
+Sometimes, you might need a cache that survives from one process to another. For instance, you have a long-running script that fails on the last step and you want to get to that last step more quickly by not re-reading/re-decompressing/re-formatting the ROOT data as arrays. Use a `DiskCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-diskcache>`__.
 
 .. code-block:: python
 
@@ -953,7 +969,7 @@ The cache is a directory on disk (hint: use your SSD disk!) that has enough infr
     │   └── 01-one
     └── state.json
 
-You can use the `MemoryCache`_ and `DiskCache`_ as **cache** arguments to the uproot array methods, and you can even use them in your analysis for other purposes. They are ``dict``-like objects to which you can assign items explicitly or replace
+You can use the `MemoryCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-memorycache>`__ and `DiskCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-diskcache>`__ as **cache** arguments to the uproot array methods, and you can even use them in your analysis for other purposes. They are ``dict``-like objects to which you can assign items explicitly or replace
 
 .. code-block:: python
 
@@ -967,27 +983,27 @@ with
 
 where ``long_running_process`` is any function taking zero arguments. If ``"my cache key"`` is found, you quickly get the result from the cache; if not, it computes ``long_running_process``, sets the cache, and returns the result. This can considerably speed up oft-repeated analysis scripts without obscuring clarity.
 
-You can even create a `MemoryCache`_ that spills over to `DiskCache`_ when full. Just chain them:
+You can even create a `MemoryCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-memorycache>`__ that spills over to `DiskCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-diskcache>`__ when full. Just chain them:
 
 .. code-block:: python
 
     # an 8 GB memory cache backed up by a 500 GB disk cache
     >>> cache = uproot.cache.MemoryCache(8*1024**3, uproot.cache.DiskCache(500*1024**3))
 
-The ``spill_immediately`` parameter (``False`` by default) determines whether the `DiskCache`_ is a superset of the `MemoryCache`_ (by immediately copying new data to disk) or only contains data that have been evicted from the `MemoryCache`_ (often faster, but you don't have a backup if the process fails).
+The ``spill_immediately`` parameter (``False`` by default) determines whether the `DiskCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-diskcache>`__ is a superset of the `MemoryCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-memorycache>`__ (by immediately copying new data to disk) or only contains data that have been evicted from the `MemoryCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-memorycache>`__ (often faster, but you don't have a backup if the process fails).
 
 Finally, you may be wondering why the array methods have three cache parameters: **cache**, **basketcache**, and **keycache**. Here's what they mean.
 
-- **cache:** applies to fully constructed arrays. Thus, if you request the same branch with a different **entrystart**, **entrystop**, or `Interpretation`_ (e.g. ``dtype`` or ``dims``), it counts as a new array and *competes* with arrays already in the cache, rather than drawing on them. Pass a **cache** argument if you're extracting whole arrays or iterating with fixed **entrysteps**.
+- **cache:** applies to fully constructed arrays. Thus, if you request the same branch with a different **entrystart**, **entrystop**, or `Interpretation <http://uproot.readthedocs.io/en/latest/interpretation.html>`__ (e.g. ``dtype`` or ``dims``), it counts as a new array and *competes* with arrays already in the cache, rather than drawing on them. Pass a **cache** argument if you're extracting whole arrays or iterating with fixed **entrysteps**.
 - **basketcache:** applies to raw (but decompressed) basket data. This data can be re-sliced and re-interpreted many ways, and uproot finds what it needs in the cache. It's particularly useful for lazy arrays, which are frequently re-sliced.
 - **keycache:** applies to ROOT ``TKey`` objects, used to look up baskets. With a full **basketcache** and a **keycache**, uproot never needs to access the file. The reason **keycache** is separate from **basketcache** is because ``TKey`` objects are much smaller than most arrays and should have a different eviction priority than an array: use a cache with LRU for **basketcache** and a simple ``dict`` for **keycache**.
 
 Normally, you'd *either* set only **cache** *or* both **basketcache** and **keycache**. You can use the same ``dict``-like object for many applications (single pool) or different caches for different applications (to keep the priority queues distinct).
 
-As we have seen, uproot's XRootD handler has an even lower-level cache for bytes read over the network. This is implemented as a `MemoryCache`_. Local files are usually read as memory-mapped files, in which case the operating system does the low-level caching with the same mechanism as virtual memory. (For more control, you can `uproot.open`_ a file with ``localsource=dict(chunkbytes=8*1024, limitbytes=1024**2)`` to use a regular file handle and custom paging/cache size.)
+As we have seen, uproot's XRootD handler has an even lower-level cache for bytes read over the network. This is implemented as a `MemoryCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-memorycache>`__. Local files are usually read as memory-mapped files, in which case the operating system does the low-level caching with the same mechanism as virtual memory. (For more control, you can `uproot.open <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-open>`__ a file with ``localsource=dict(chunkbytes=8*1024, limitbytes=1024**2)`` to use a regular file handle and custom paging/cache size.)
 
 Parallel processing
-"""""""""""""""""""
+-------------------
 
 Just as caching must be explicit in uproot, parallel processing must be explicit as well. By default, every read, decompression, and array construction is single-threaded. To enable parallel processing, pass in a Python 3 executor.
 
@@ -1044,9 +1060,9 @@ Since the baskets are being read in parallel, you may want to read them in the b
 The ``blocking=False`` setting can be used without an executor (without parallel processing), but it doesn't make much sense to do that.
 
 Connectors to other packages
-""""""""""""""""""""""""""""
+----------------------------
 
-As a connector between ROOT and the scientific Python world, uproot has a growing set of extensions to ease these transitions. For instance, to get a Pandas DataFrame, call `tree.pandas.df`_:
+As a connector between ROOT and the scientific Python world, uproot has a growing set of extensions to ease these transitions. For instance, to get a Pandas DataFrame, call `tree.pandas.df <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot._connect.to_pandas.TTreeMethods_pandas.df>`__:
 
 .. code-block:: python
 
@@ -1070,27 +1086,6 @@ This method takes the same **branches**, **entrystart**, **entrystop**, **cache*
 
 Note that ``pandas.DataFrame`` is also a recognized option for all **outputtype** parameters, so you can, for instance, iterate through DataFrames with ``uproot.iterate("files*.root", "treename", outputtype=pandas.DataFrame)``.
 
+.. inclusion-marker-4-do-not-remove
 
-
-.. _Exploring a file: #exploring-a-file
-.. _Array-reading parameters: #array-reading-parameters
-.. _Remote files through XRootD: #remote-files-through-xrootd
-.. _Reading only part of a TBranch: #reading-only-part-of-a-tbranch
-.. _Iterating over files (like TChain): #iterating-over-files-like-tchain
-.. _Non-flat TTrees\: jagged arrays and more: #non-flat-ttrees-jagged-arrays-and-more
-.. _Non-TTrees\: histograms and more: #non-ttrees-histograms-and-more
-.. _Caching data: #caching-data
-.. _Parallel processing: #parallel-processing
-.. _Connectors to other packages: #connectors-to-other-packages
-
-.. _ROOTDirectory: http://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootdirectory
-.. _TTree: http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods
-.. _TBranch: http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods
-.. _Interpretation: http://uproot.readthedocs.io/en/latest/interpretation.html
-.. _JaggedArray: http://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-jagged-jaggedarray
-.. _Strings: http://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-strings-strings
-.. _MemoryCache: http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-memorycache
-.. _ThreadSafeMemoryCache: http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-threadsafememorycache
-.. _DiskCache: http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-diskcache
-.. _uproot.open: http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-open
-.. _tree.pandas.df: http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot._connect.to_pandas.TTreeMethods_pandas.df
+.. inclusion-marker-5-do-not-remove
