@@ -929,13 +929,13 @@ Python ``dict`` objects will keep the arrays as long as the process lives (or th
     >>> cache["two"] = numpy.zeros(1024**3, dtype=numpy.uint8)   # 1 GB
     >>> list(cache)
     ['one', 'two']
-    >>> cache["three"] = numpy.zeros(3*1024**3, dtype=numpy.uint8) # 1 GB
+    >>> cache["three"] = numpy.zeros(1024**3, dtype=numpy.uint8) # 1 GB
     >>> list(cache)
     ['one', 'two', 'three']
-    >>> cache["four"] = numpy.zeros(3*1024**3, dtype=numpy.uint8)  # 1 GB causes evication
+    >>> cache["four"] = numpy.zeros(1024**3, dtype=numpy.uint8)  # 1 GB causes evication
     >>> list(cache)
     ['two', 'three', 'four']
-    >>> cache["five"] = numpy.zeros(3*1024**3, dtype=numpy.uint8)  # 1 GB causes evication
+    >>> cache["five"] = numpy.zeros(1024**3, dtype=numpy.uint8)  # 1 GB causes evication
     >>> list(cache)
     ['three', 'four', 'five']
 
