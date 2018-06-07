@@ -1612,17 +1612,30 @@ def _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, e
     else:
         return wait
 
-def daskarray(path, treepath, branchname, interpretation=None, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None, chunks=None, name=None):
+def daskarray(path, treepath, branchname, interpretation=None, chunks=None, name=None, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
     return lazyarray(path, treepath, branchname, interpretation=interpretation, limitbytes=limitbytes, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor).dask.array(chunks=chunks, name=name)
 
-def daskarrays(path, treepath, branches=None, outputtype=dict, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None, chunks=None, name=None):
-    out = lazyarrays(path, treepath, branches=branches, outputtype=outputtype, limitbytes=limitbytes, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor)
-    if isinstance(outputtype, dict):
-        return outputtype([(n, x.dask.array(chunks=chunks, name=name)) for n, x in out.items()])
-    elif isinstance(outputtype, (list, tuple)):
-        return outputtype([x.dask.array(chunks=chunks, name=name) for x in out])
+def daskarrays(path, treepath, branches=None, chunks=None, outputtype=dict, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
+    out = lazyarrays(path, treepath, branches=branches, outputtype=OrderedDict, limitbytes=limitbytes, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor)
+    if outputtype == namedtuple:
+        outputtype = namedtuple("Arrays", [n.decode("ascii") for n in out])
+    if isinstance(outputtype, type) and issubclass(outputtype, dict):
+        return outputtype([(n, x.dask.array(chunks=chunks, name=n)) for n, x in out.items()])
+    elif isinstance(outputtype, type) and issubclass(outputtype, (list, tuple)):
+        return outputtype([x.dask.array(chunks=chunks, name=n) for n, x in out.items()])
     else:
-        return outputtype(*[x.dask.array(chunks=chunks, name=name) for x in out])
+        return outputtype(*[x.dask.array(chunks=chunks, name=n) for n, x in out.items()])
+
+def daskframe(path, treepath, branches=None, chunks=None, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
+    import dask.dataframe
+    out = daskarrays(path, treepath, branches=branches, chunks=chunks, outputtype=OrderedDict, limitbytes=limitbytes, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor)
+
+    # FIXME, TODO: any non-1d arrays must be split into x[0], x[1], x[2], ... columns
+    # just like you did for pandas.DataFrame
+
+    series = [dask.dataframe.from_dask_array(x, columns=n) for n, x in out.items()]
+
+    return dask.dataframe.concat(series)
 
 def lazyarray(path, treepath, branchname, interpretation=None, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
     if interpretation is None:

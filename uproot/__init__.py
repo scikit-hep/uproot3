@@ -30,7 +30,7 @@
 
 # high-level entry points
 from uproot.rootio import open, xrootd
-from uproot.tree import iterate, numentries, lazyarray, lazyarrays, daskarray, daskarrays
+from uproot.tree import iterate, numentries, lazyarray, lazyarrays, daskarray, daskarrays, daskframe
 from uproot.hist import hist
 
 from uproot.source.memmap import MemmapSource
