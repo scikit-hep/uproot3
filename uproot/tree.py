@@ -1628,14 +1628,18 @@ def daskarrays(path, treepath, branches=None, chunks=None, outputtype=dict, limi
 
 def daskframe(path, treepath, branches=None, chunks=None, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
     import dask.dataframe
-    out = daskarrays(path, treepath, branches=branches, chunks=chunks, outputtype=OrderedDict, limitbytes=limitbytes, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor)
-
-    # FIXME, TODO: any non-1d arrays must be split into x[0], x[1], x[2], ... columns
-    # just like you did for pandas.DataFrame
-
-    series = [dask.dataframe.from_dask_array(x, columns=n) for n, x in out.items()]
-
-    return dask.dataframe.concat(series)
+    out = lazyarrays(path, treepath, branches=branches, outputtype=OrderedDict, limitbytes=limitbytes, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor)
+    series = []
+    for n, x in out.items():
+        if len(x.shape) == 1:
+            array = x.dask.array(chunks=chunks, name=n)
+            series.append(dask.dataframe.from_dask_array(array, columns=n))
+        else:
+            for tup in itertools.product(*[range(y) for y in x.shape[1:]]):
+                name = "{0}[{1}]".format(n, "][".join(str(z) for z in tup))
+                array = x.dask.array(chunks=chunks, name=name)[(slice(None),) + tup]
+                series.append(dask.dataframe.from_dask_array(array, columns=name))
+    return dask.dataframe.concat(series, axis=1)
 
 def lazyarray(path, treepath, branchname, interpretation=None, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
     if interpretation is None:
