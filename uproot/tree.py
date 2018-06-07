@@ -1612,6 +1612,25 @@ def _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, e
     else:
         return wait
 
+def daskarray(path, treepath, branchname, interpretation=None, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None, chunks=None, name=None):
+    return lazyarray(path, treepath, branchname, interpretation=interpretation, limitbytes=limitbytes, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor).dask.array(chunks=chunks, name=name)
+
+def daskarrays(path, treepath, branches=None, outputtype=dict, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None, chunks=None, name=None):
+    out = lazyarrays(path, treepath, branches=branches, outputtype=outputtype, limitbytes=limitbytes, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor)
+    if isinstance(outputtype, dict):
+        return outputtype([(n, x.dask.array(chunks=chunks, name=name)) for n, x in out.items()])
+    elif isinstance(outputtype, (list, tuple)):
+        return outputtype([x.dask.array(chunks=chunks, name=name) for x in out])
+    else:
+        return outputtype(*[x.dask.array(chunks=chunks, name=name) for x in out])
+
+def lazyarray(path, treepath, branchname, interpretation=None, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
+    if interpretation is None:
+        branches = branchname
+    else:
+        branches = {branchname: interpretation}
+    return lazyarrays(path, treepath, branches=branches, outputtype=tuple, limitbytes=limitbytes, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor)[0]
+
 def lazyarrays(path, treepath, branches=None, outputtype=dict, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
     if isinstance(path, string_types):
         paths = _filename_explode(path)
@@ -1650,13 +1669,6 @@ def lazyarrays(path, treepath, branches=None, outputtype=dict, limitbytes=1024**
         return outputtype(LazyArray._frompaths(paths, uuids, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches)
     else:
         return outputtype(*[LazyArray._frompaths(paths, uuids, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
-
-def lazyarray(path, treepath, branchname, interpretation=None, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
-    if interpretation is None:
-        branches = branchname
-    else:
-        branches = {branchname: interpretation}
-    return lazyarrays(path, treepath, branches=branches, outputtype=tuple, limitbytes=limitbytes, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor)[0]
 
 class LazyArray(object):
     def __init__(self):
