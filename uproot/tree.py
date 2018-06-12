@@ -984,7 +984,10 @@ class TBranchMethods(object):
 
     @property
     def compression(self):
-        return uproot.source.compressed.Compression(self.fCompress)
+        try:
+            return uproot.source.compressed.Compression(self.fCompress)
+        except ValueError:
+            return self._context.compression
 
     def basket_entrystart(self, i):
         if self._recoveredbaskets is None:
@@ -1505,7 +1508,7 @@ class TBranchMethods(object):
 
     def _basketkey(self, source, i, complete):
         if 0 <= i < self._numgoodbaskets:
-            return self._BasketKey(source.parent(), Cursor(self.fBasketSeek[i]), uproot.source.compressed.Compression(self.fCompress), complete)
+            return self._BasketKey(source.parent(), Cursor(self.fBasketSeek[i]), self.compression, complete)
 
         elif self._numgoodbaskets <= i < self.numbaskets:
             return self._recoveredbaskets[i - self._numgoodbaskets]
