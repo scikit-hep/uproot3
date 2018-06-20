@@ -161,3 +161,13 @@ class TestVersions(unittest.TestCase):
             tests.append("lz4")
         for compression in tests:
             self.compare(uproot.open("tests/samples/sample-6.10.05-{0}.root".format(compression))["sample"].arrays())
+
+    def test_6_14_00(self):
+        # 2018-06-20, TTree version 20
+        tests = ["uncompressed", "zlib"]
+        if lzma is not None:
+            tests.append("lzma")
+        if lz4 is not None:
+            tests.append("lz4")
+        for compression in tests:
+            self.compare(uproot.open("tests/samples/sample-6.14.00-{0}.root".format(compression))["sample"].arrays())
