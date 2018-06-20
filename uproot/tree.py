@@ -317,7 +317,7 @@ class TTreeMethods(object):
     def items(self, recursive=False, filtername=nofilter, filtertitle=nofilter, aliases=True):
         return list(self.iteritems(recursive=recursive, filtername=filtername, filtertitle=filtertitle, aliases=aliases))
 
-    def allkeys(self, recursive=False, filtername=nofilter, filtertitle=nofilter, aliases=True):
+    def allkeys(self, filtername=nofilter, filtertitle=nofilter, aliases=True):
         return self.keys(recursive=True, filtername=filtername, filtertitle=filtertitle, aliases=aliases)
 
     def allvalues(self, filtername=nofilter, filtertitle=nofilter):
