@@ -261,6 +261,16 @@ class TH1Methods(object):
 
 uproot.rootio.methods["TH1"] = TH1Methods
 
+class TH2Methods(TH1Methods):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (TH1Methods.__metaclass__,), {})
+
+    # FIXME!
+    def hello(self):
+        return "world"
+
+uproot.rootio.methods["TH2"] = TH2Methods
+
 class TH1(TH1Methods, list):
     def _type(self):
         if all(isinstance(x, numbers.Integral) for x in self):
