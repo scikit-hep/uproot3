@@ -172,15 +172,15 @@ class TH1Methods(object):
 
     def __add__(self, other):
         if not isinstance(other, TH1Methods) or self.numbins != other.numbins or self.low != other.low or self.high != other.high:
-            raise TypeError("TH1 histograms can only be combined with other TH1 histograms")
-        return hist(self.numbins, self.low, self.high, name=(self.name if self.name is not None else other.name), title=(self.title if self.title is not None else other.title), values=[x + y for x, y in zip(self.values, other.values)])
+            raise TypeError("TH1 histograms can only be combined with other TH1 histograms with the same binning")
+        return hist(self.numbins, self.low, self.high, name=(self.name if self.name is not None else other.name), title=(self.title if self.title is not None else other.title), allvalues=(numpy.array(self) + numpy.array(other)))
 
     def __radd__(self, other):
         return self.__add__(other)
 
     def __iadd__(self, other):
         if not isinstance(other, TH1Methods) or self.numbins != other.numbins or self.low != other.low or self.high != other.high:
-            raise TypeError("TH1 histograms can only be combined with other TH1 histograms")
+            raise TypeError("TH1 histograms can only be combined with other TH1 histograms with the same binning")
         for i in range(len(self)):
             self[i] = other[i]
         return self
@@ -267,23 +267,23 @@ class TH2Methods(TH1Methods):
 
     @property
     def numbins(self):
-        return self.numXbins * self.numYbins
+        return self.xnumbins * self.ynumbins
 
     @property
-    def numXbins(self):
+    def xnumbins(self):
         return self.fXaxis.fNbins
 
     @property
-    def numYbins(self):
+    def ynumbins(self):
         return self.fYaxis.fNbins
 
     @property
     def low(self):
-        return (self.xlow,self.ylow)
+        return self.xlow, self.ylow
 
     @property
     def high(self):
-        return (self.xhigh,self.yhigh)
+        return self.xhigh, self.yhigh
 
     @property
     def xlow(self):
@@ -303,32 +303,44 @@ class TH2Methods(TH1Methods):
 
     @property
     def underflows(self):
-        """Underflow values for (x,y) :: xuf[0] == yuf[0] """
         uf = numpy.array(self.allvalues)
         xuf = uf[:,0]
         yuf = uf[0]
-        return (xuf,yuf)
+        return xuf, yuf
+
+    @property
+    def xunderflows(self):
+        return self.underflows[0]
+
+    @property
+    def yunderflows(self):
+        return self.underflows[1]
 
     @property
     def overflows(self):
-        """Overflow values for (x,y) :: xof[-1] == yof[-1] """
         of = numpy.array(self.allvalues)
         xof = of[:,-1]
         yof = of[-1]
-        return (xof,yof)
+        return xof, yof
+
+    @property
+    def xoverflows(self):
+        return self.overflows[0]
+
+    @property
+    def yoverflows(self):
+        return self.overflows[1]
 
     @property
     def values(self):
-        """Return all values that aren't overflow/underflow"""
         va = numpy.array(self.allvalues)
-        va = va[1:self.numYbins+1,1:self.numXbins+1]
+        va = va[1:self.ynumbins+1, 1:self.xnumbins+1]
         return va.tolist()
 
     @property
     def allvalues(self):
-        """Return all values"""
         v = numpy.array(self[:])
-        v = v.reshape( self.numYbins+2,self.numXbins+2 )
+        v = v.reshape(self.ynumbins + 2, self.xnumbins + 2)
         return v.tolist()
 
     @property
@@ -337,8 +349,8 @@ class TH2Methods(TH1Methods):
         xhigh = self.xhigh
         xbins = self.fXaxis.fXbins
         if not xbins:
-            norm   = (xhigh-xlow) / self.numXbins
-            xedges = numpy.array([i*norm + xlow for i in range(self.numXbins + 1)])
+            norm   = float(xhigh - xlow) / self.xnumbins
+            xedges = numpy.array([i*norm + xlow for i in range(self.xnumbins + 1)])
         else:
             xedges = numpy.array(xbins)
 
@@ -346,51 +358,57 @@ class TH2Methods(TH1Methods):
         yhigh = self.yhigh
         ybins = self.fYaxis.fXbins
         if not ybins:
-            norm   = (yhigh-ylow) / self.numYbins
-            yedges = numpy.array([i*norm + ylow for i in range(self.numYbins + 1)])
+            norm   = (yhigh - ylow) / self.ynumbins
+            yedges = numpy.array([i*norm + ylow for i in range(self.ynumbins + 1)])
         else:
             yedges = numpy.array(ybins)
 
         freq = numpy.array(self.values, dtype=self._dtype.newbyteorder("="))
 
-        return freq,(xedges,yedges)
+        return freq, (xedges, yedges)
 
-
-    def interval(self,ind,axis='x'):
-        if axis=='x':
+    def interval(self, index, axis):
+        if axis == "x":
             low   = self.xlow
             high  = self.xhigh
-            nbins = self.numXbins
+            nbins = self.xnumbins
             bins  = self.fXaxis.fXbins
-        else:
+        elif axis == "y":
             low   = self.ylow
             high  = self.yhigh
-            nbins = self.numYbins
+            nbins = self.ynumbins
             bins  = self.fYaxis.fXbins
+        else:
+            raise ValueError("axis must be 'x' or 'y'")
 
-        if ind<0:
-            ind += nbins
+        if index < 0:
+            index += nbins
 
-        if ind==0:
-            return (float("-inf"), low)
-        elif ind==nbins+2:
-            return (high, float("inf"))
+        if index == 0:
+            return float("-inf"), low
+        elif index == nbins + 1:
+            return high, float("inf")
         else:
             if not bins:
-                norm   = (high-low) / nbins
-                xedges = (ind-1)*norm + low, ind*norm + low
+                norm   = float(high-low) / nbins
+                xedges = (index-1)*norm + low, index*norm + low
             else:
-                xedges = bins[ind-1],bins[ind]
+                xedges = bins[index-1], bins[index]
             return xedges
 
+    def xinterval(self, index):
+        return self.interval(index, "x")
 
-    def index(self,data,axis='x'):
-        if axis=='x':
+    def yinterval(self, index):
+        return self.interval(index, "y")
+
+    def index(self, data, axis):
+        if axis == "x":
             ind = 0
-            nbins = self.numXbins
-        elif axis=='y':
+            nbins = self.xnumbins
+        elif axis == "y":
             ind = 1
-            nbins = self.numYbins
+            nbins = self.ynumbins
         else:
             raise TypeError("Axis must be either 'x' or 'y' to obtain an index.")
 
@@ -404,28 +422,34 @@ class TH2Methods(TH1Methods):
         elif not math.isnan(data):
             return int(math.floor(nbins*(data-low) / (high-low))) + 1
 
-    def fill(self,datumx,datumy):
-        self.fillw(datumx,datumy,1.0)
+    def xindex(self, data):
+        return self.index(data, "x")
 
-    def fillw(self,datumx,datumy,weight):
-        numXbins = self.numXbins
+    def yindex(self, data):
+        return self.index(data, "y")
+
+    def fill(self, datumx, datumy):
+        self.fillw(datumx,datumy, 1.0)
+
+    def fillw(self, datumx, datumy, weight):
+        xnumbins = self.xnumbins
         xlow     = self.xlow
         xhigh    = self.xhigh
-        numYbins = self.numYbins
+        ynumbins = self.ynumbins
         ylow     = self.ylow
         yhigh    = self.yhigh
 
-        binx = self.index(datumx,'x')    # get the x bin
-        biny = self.index(datumy,'y')    # get the y bin
+        binx = self.index(datumx, "x")    # get the x bin
+        biny = self.index(datumy, "y")    # get the y bin
 
         # translate biny,binx into index for self[index]
-        bin = biny*(numXbins+2) + binx
+        bin = biny*(xnumbins + 2) + binx
         self[bin] += weight
 
-    def fillall(self,datax,datay):
-        self.fillallw(datax,datay,weights=None)
+    def fillall(self, datax, datay):
+        self.fillallw(datax, datay, weights=None)
 
-    def fillallw(self,datax,datay,weights):
+    def fillallw(self, datax, datay, weights):
         xbins    = self.fXaxis.fXbins
         xlow     = self.xlow
         xhigh    = self.xhigh
@@ -433,8 +457,8 @@ class TH2Methods(TH1Methods):
         ylow     = self.ylow
         yhigh    = self.yhigh
 
-        if not xbins: xbins = self.numXbins
-        if not ybins: ybins = self.numYbins
+        if not xbins: xbins = self.xnumbins
+        if not ybins: ybins = self.ynumbins
 
         if not isinstance(datax, numpy.ndarray):
             datax = numpy.array(datax)
@@ -446,9 +470,12 @@ class TH2Methods(TH1Methods):
             weights = numpy.empty_like(datax)
             weights.fill(tmp_weight)            # assign all elements of the array to the initial value
 
-        freq,xedges,yedges = numpy.histogram2d(datax,datay, bins=[xbins,ybins],
-                                               range=[[xlow,xhigh],[ylow,yhigh]],
-                                               weights=weights, density=False)
+        freq, xedges, yedges = numpy.histogram2d(datax,
+                                                 datay,
+                                                 bins=[xbins, ybins],
+                                                 range=[[xlow, xhigh], [ylow, yhigh]],
+                                                 weights=weights,
+                                                 normed=False)
         freq = freq.flatten().tolist()
         for i, x in enumerate(freq):
             self[i+1] += x
@@ -472,7 +499,7 @@ class TH2Methods(TH1Methods):
                 biny = self.index(datay[d],'y')    # get the y bin
 
                 # translate biny,binx into index for self[index]
-                bin = biny*(numXbins+2) + binx
+                bin = biny*(xnumbins+2) + binx
                 self[bin] += 1
         else:
             for d in data_uo:
@@ -480,24 +507,23 @@ class TH2Methods(TH1Methods):
                 biny = self.index(datay[d],'y')    # get the y bin
 
                 # translate biny,binx into index for self[index]
-                bin = biny*(numXbins+2) + binx
+                bin = biny*(xnumbins+2) + binx
                 self[bin] += weights[d]
 
     def __add__(self, other):
         if not isinstance(other, TH2Methods) or self.numbins != other.numbins or self.low != other.low or self.high != other.high:
-            raise TypeError("TH2 histograms can only be combined with other similar TH2 histograms")
-        return hist(self.numbins, self.low, self.high, name=(self.name if self.name is not None else other.name), title=(self.title if self.title is not None else other.title), values=[x + y for x, y in zip(self.values, other.values)])
+            raise TypeError("TH2 histograms can only be combined with other TH2 histograms with the same binning")
+        return hist2d(self.xnumbins, self.xlow, self.xhigh, self.ynumbins, self.ylow, self.yhigh, name=(self.name if self.name is not None else other.name), title=(self.title if self.title is not None else other.title), allvalues=(numpy.array(self) + numpy.array(other)))
 
     def __radd__(self, other):
         return self.__add__(other)
 
     def __iadd__(self, other):
         if not isinstance(other, TH2Methods) or self.numbins != other.numbins or self.low != other.low or self.high != other.high:
-            raise TypeError("TH2 histograms can only be combined with other similar TH2 histograms")
-        for i,s in enumerate(self):
+            raise TypeError("TH2 histograms can only be combined with other TH2 histograms with the same binning")
+        for i in range(len(self)):
             self[i] = other[i]
         return self
-
 
     @property
     def ylabels(self):
@@ -505,7 +531,6 @@ class TH2Methods(TH1Methods):
             return None
         else:
             return [str(x) for x in self.fYaxis.fLabels]
-
 
     def show(self, width=80, minimum=None, maximum=None, stream=sys.stdout):
         if minimum is None:
@@ -534,10 +559,10 @@ class TH2Methods(TH1Methods):
         all_values     = []
         for y in allvals:
             if self.xlabels is None:
-                intervals = ["[{0:<.5g}, {1:<.5g})".format(l,h) for l,h in [self.interval(i) for i,s in enumerate(y)]]
+                intervals = ["[{0:<.5g}, {1:<.5g})".format(l, h) for l, h in [self.yinterval(i) for i in range(len(y))]]
                 intervals[-1] = intervals[-1][:-1] + "]"   # last interval is closed on top edge
             else:
-                intervals = ["(underflow)"] + [self.xlabels[i] if i < len(self.xlabels) else self.interval(i+1) for i in range(self.numbins)] + ["(overflow)"]
+                intervals = ["(underflow)"] + [self.xlabels[i] if i < len(self.xlabels) else self.xinterval(i + 1) for i in range(self.xnumbins)] + ["(overflow)"]
             tmp_intervalswidth = max(len(x) for x in intervals)
             if tmp_intervalswidth > intervalswidth: intervalswidth = tmp_intervalswidth
             values = ["{0:<.5g}".format(float(x)) for x in y]
@@ -564,7 +589,6 @@ class TH2Methods(TH1Methods):
 
         # Make the drawing
         for j,y in enumerate(allvals):
-
             values = all_values[j]
             y_interval = self.interval(j,axis='y')
             y_int_text = " y : [{0:<.5g}, {1:<.5g})".format(y_interval[0],y_interval[1])
@@ -593,11 +617,6 @@ class TH2Methods(TH1Methods):
         else:
             stream.write(out)
             stream.write("\n")
-
-
-
-
-
 
 uproot.rootio.methods["TH2"] = TH2Methods
 
@@ -657,5 +676,35 @@ def hist(numbins, low, high, name=None, title=None, values=None, allvalues=None,
     # and filldata is accumulated on top of any values/allvalues
     if filldata is not None:
         out.fillall(filldata)
+
+    return out
+
+def hist2d(xnumbins, xlow, xhigh, ynumbins, ylow, yhigh, name=None, title=None, values=None, allvalues=None, xfilldata=None, yfilldata=None):
+    out = TH1()
+    out.fXaxis = TAxis()
+    out.fXaxis.fNbins = int(xnumbins)
+    out.fXaxis.fXmin = float(xlow)
+    out.fXaxis.fXmax = float(xhigh)
+    out.fYaxis = TAxis()
+    out.fYaxis.fNbins = int(ynumbins)
+    out.fYaxis.fXmin = float(ylow)
+    out.fYaxis.fXmax = float(yhigh)
+    out.fName = name
+    out.fTitle = title
+
+    if values is None and allvalues is None:
+        raise NotImplementedError
+
+    if values is not None:
+        raise NotImplementedError
+
+    # allvalues takes precedence
+    if allvalues is not None:
+        # FIXME: add length check
+        out.extend(allvalues)
+
+    # and filldata is accumulated on top of any values/allvalues
+    if xfilldata is not None and yfilldata is not None:
+        out.fillall(xfilldata, yfilldata)
 
     return out
