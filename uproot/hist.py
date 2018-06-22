@@ -265,10 +265,6 @@ class TH2Methods(TH1Methods):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (TH1Methods.__metaclass__,), {})
 
-    # FIXME!
-    def hello(self):
-        return "world"
-
     @property
     def numbins(self):
         return self.numXbins * self.numYbins
