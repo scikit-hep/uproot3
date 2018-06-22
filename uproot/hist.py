@@ -718,15 +718,37 @@ def hist2d(xnumbins, xlow, xhigh, ynumbins, ylow, yhigh, name=None, title=None, 
     out.fName = name
     out.fTitle = title
 
+    numbins     = xnumbins*ynumbins
+    numbins_tot = (xnumbins+2)*(ynumbins+2)       # include overflow/underflow
+    uoflow      = [0 for _ in range(xnumbins+2)]  # represents the underflow/overflow data for y bin of 2d histogram
+
     if values is None and allvalues is None:
-        raise NotImplementedError
+        out.extend([0 for _ in range(numbins_tot)])
 
     if values is not None:
-        raise NotImplementedError
+        try:
+            assert len(values) == numbins and all(isinstance(x, numbers.Real) for x in values)
+        except (TypeError, AssertionError):
+            raise ValueError("values must be an iterable of numbers with length numbins")
+
+        # reshape list into 2d array to make it easier to add underflow/overflow
+        values = numpy.array(values)
+        values = values.reshape(ynumbins,xnumbins).tolist()  # doesn't include overflow/underflow
+        # add 0 for underflow/overflow bins
+        for i,v in enumerate(values):
+            values[i] = [0] + v + [0]  # add underflow/overflow in x
+        values.insert(0,list(uoflow))  # add underflow bin in y
+        values.append( list(uoflow) )  # add overflow bin in y
+
+        values = [item for sublist in values for item in sublist]   # flatten to 1d list with (xnumbins+2)*(ynumbins+2)
+        out.extend(values)
 
     # allvalues takes precedence
     if allvalues is not None:
-        # FIXME: add length check
+        try:
+            assert len(allvalues) == numbins_tot and all(isinstance(x, numbers.Real) for x in allvalues)
+        except (TypeError, AssertionError):
+            raise ValueError("allvalues must be an iterable of numbers with length (xnumbins+2)*(ynumbins+2)")
         out.extend(allvalues)
 
     # and filldata is accumulated on top of any values/allvalues
