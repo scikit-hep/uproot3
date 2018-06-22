@@ -643,8 +643,34 @@ class TH1(TH1Methods, list):
         else:
             return numpy.dtype(">f8")
 
+class TH2(TH2Methods, list):
+    def _type(self):
+        if all(isinstance(x, numbers.Integral) for x in self):
+            return int
+        elif all(isinstance(x, numbers.Real) for x in self):
+            return float
+        else:
+            raise TypeError("histogram bin values must be integers or floats")
+
+    @property
+    def _classname(self):
+        if self._type() is int:
+            return "TH2I"
+        else:
+            return "TH2D"
+
+    @property
+    def _dtype(self):
+        if self._type() is int:
+            return numpy.dtype(">i4")
+        else:
+            return numpy.dtype(">f8")
+
 class TAxis(object):
     _classname = "TAxis"
+    def __init__(self):
+        self.fLabels = None
+        self.fXbins = uproot.rootio.TArrayD()
 
 def hist(numbins, low, high, name=None, title=None, values=None, allvalues=None, filldata=None):
     out = TH1()
@@ -680,7 +706,7 @@ def hist(numbins, low, high, name=None, title=None, values=None, allvalues=None,
     return out
 
 def hist2d(xnumbins, xlow, xhigh, ynumbins, ylow, yhigh, name=None, title=None, values=None, allvalues=None, xfilldata=None, yfilldata=None):
-    out = TH1()
+    out = TH2()
     out.fXaxis = TAxis()
     out.fXaxis.fNbins = int(xnumbins)
     out.fXaxis.fXmin = float(xlow)
