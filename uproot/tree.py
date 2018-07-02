@@ -411,7 +411,7 @@ class TTreeMethods(object):
             entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
             
             if flatten:
-                out = [outputtype(index=pandas.MultiIndex.from_arrays([numpy.arange(entrystart, entrystop, dtype=numpy.int64), numpy.zeros(entrystop - entrystart, dtype=numpy.int64)]))]
+                out = [outputtype(index=pandas.MultiIndex.from_arrays([numpy.arange(entrystart, entrystop, dtype=numpy.int64), numpy.zeros(entrystop - entrystart, dtype=numpy.int64)], names=["entry", "subentry"]))]
 
             else:
                 initialcolumns = OrderedDict()
@@ -455,7 +455,7 @@ class TTreeMethods(object):
                     for name, interpretation, future in futures:
                         if isinstance(interpretation, asdtype):
                             array = future()
-                            df = pandas.DataFrame(index=pandas.MultiIndex.from_arrays([numpy.arange(entrystart, entrystop, dtype=numpy.int64), numpy.zeros(entrystop - entrystart, dtype=numpy.int64)]))
+                            df = pandas.DataFrame(index=pandas.MultiIndex.from_arrays([numpy.arange(entrystart, entrystop, dtype=numpy.int64), numpy.zeros(entrystop - entrystart, dtype=numpy.int64)], names=["entry", "subentry"]))
                             if interpretation.todims == ():
                                 df[name] = array
                             else:
@@ -476,7 +476,7 @@ class TTreeMethods(object):
                                 subentries[starts[i]:stops[i]] = numpy.arange(stops[i] - starts[i])
                                 i += 1
 
-                            df = pandas.DataFrame(index=pandas.MultiIndex.from_arrays([entries, subentries]))
+                            df = pandas.DataFrame(index=pandas.MultiIndex.from_arrays([entries, subentries], names=["entry", "subentry"]))
                             if interpretation.asdtype.todims == ():
                                 df[name] = array.content
                             else:
