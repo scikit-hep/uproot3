@@ -1401,7 +1401,8 @@ u"""Create a Pandas DataFrame from some branches.
 
     {entrystop}
 
-    {flatten}
+    flatten : bool
+        if ``True`` *(default)*, convert JaggedArrays into flat Numpy arrays and turn the DataFrame index into a two-level MultiIndex to represent the structure.
 
     {cache}
 
