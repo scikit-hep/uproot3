@@ -461,7 +461,7 @@ class TTreeMethods(object):
                             else:
                                 for tup in itertools.product(*[range(x) for x in interpretation.todims]):
                                     df["{0}[{1}]".format(name, "][".join(str(x) for x in tup))] = array[(slice(None),) + tup]
-                            out[0] = pandas.merge(out[0], df, how="outer", left_index=True, right_index=True, sort=True)
+                            out[0] = pandas.merge(out[0], df, how="outer", left_index=True, right_index=True)
 
                         elif isinstance(interpretation, asjagged):
                             array = future()
@@ -483,7 +483,7 @@ class TTreeMethods(object):
                                 for tup in itertools.product(*[range(x) for x in interpretation.asdtype.todims]):
                                         df["{0}[{1}]".format(name, "][".join(str(x) for x in tup))] = array[(slice(None),) + tup].content
 
-                            out[0] = pandas.merge(out[0], df, how="outer", left_index=True, right_index=True, sort=True)
+                            out[0] = pandas.merge(out[0], df, how="outer", left_index=True, right_index=True)
 
                 else:
                     for name, interpretation, future in futures:
