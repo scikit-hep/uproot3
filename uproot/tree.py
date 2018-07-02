@@ -430,13 +430,13 @@ class TTreeMethods(object):
 
                 out = [outputtype(data=initialcolumns, index=numpy.arange(entrystart, entrystop, dtype=numpy.int64))]
 
-            # if we won't need to slice any destinations
-            if entrystart == 0 and entrystop == self.numentries and all(isinstance(interpretation, asdtype) and interpretation.todims == () for branch, interpretation in branches):
-                for i in range(len(branches)):
-                    branch, interpretation = branches[i]
-                    if isinstance(interpretation, asdtype):
-                        # set up numeric output to fill Pandas in-place (destination is the DataFrame, no intermediate allocations)
-                        branches[i] = (branch, interpretation.toarray(out[0][branch.name].values))
+                # if we won't need to slice any destinations
+                if entrystart == 0 and entrystop == self.numentries and all(isinstance(interpretation, asdtype) and interpretation.todims == () for branch, interpretation in branches):
+                    for i in range(len(branches)):
+                        branch, interpretation = branches[i]
+                        if isinstance(interpretation, asdtype):
+                            # set up numeric output to fill Pandas in-place (destination is the DataFrame, no intermediate allocations)
+                            branches[i] = (branch, interpretation.toarray(out[0][branch.name].values))
 
         # start the job of filling the arrays
         futures = [(branch.name, interpretation, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=(flatten and not ispandas), cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=False)) for branch, interpretation in branches]
