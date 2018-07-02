@@ -447,6 +447,10 @@ tree_fragments = {
     "reportentries": u"""reportentries : bool
         if ``False`` *(default)*, yield only arrays (as ``outputtype``); otherwise, yield 3-tuple: *(entry start, entry stop, arrays)*, where *entry start* is inclusive and *entry stop* is exclusive.""",
 
+    # flatten
+    "flatten": u"""flatten : bool
+        if ``True`` *(not default)*, convert JaggedArrays into flat Numpy arrays.""",
+
     # cache
     "cache": u"""cache : ``None`` or ``dict``-like object
         if not ``None`` *(default)*, fully interpreted arrays will be saved in the ``dict``-like object for later use. Accessing the same arrays with a different interpretation or a different entry range results in a cache miss.""",
@@ -508,6 +512,8 @@ u"""Opens a series of ROOT files (local or remote), yielding the same number of 
     {outputtype}
 
     {reportentries}
+
+    {flatten}
 
     {cache}
 
@@ -758,6 +764,8 @@ u"""Read one branch into an array (or other object if provided an alternate *int
 
     {entrystop}
 
+    {flatten}
+
     {cache}
 
     {basketcache}
@@ -808,6 +816,8 @@ u"""Read many branches into arrays (or other objects if provided alternate *inte
     {entrystart}
 
     {entrystop}
+
+    {flatten}
 
     {cache}
 
@@ -866,6 +876,8 @@ u"""Iterate over many arrays at once, yielding the same number of entries from a
     {entrystart}
 
     {entrystop}
+
+    {flatten}
 
     {cache}
 
@@ -1252,6 +1264,8 @@ u"""Read the branch into an array (or other object if provided an alternate *int
 
     {entrystop}
 
+    {flatten}
+
     {cache}
 
     {basketcache}
@@ -1302,6 +1316,8 @@ u"""Read a single basket into an array.
 
     {entrystop}
 
+    {flatten}
+
     {cache}
 
     {basketcache}
@@ -1324,6 +1340,8 @@ u"""Read baskets into a list of arrays.
     {entrystart}
 
     {entrystop}
+
+    {flatten}
 
     {cache}
 
@@ -1354,6 +1372,8 @@ u"""Iterate over baskets.
 
     {entrystop}
 
+    {flatten}
+
     {cache}
 
     {basketcache}
@@ -1380,6 +1400,9 @@ u"""Create a Pandas DataFrame from some branches.
     {entrystart}
 
     {entrystop}
+
+    flatten : bool
+        if ``True`` *(default)*, convert JaggedArrays into flat Numpy arrays and turn the DataFrame index into a two-level MultiIndex to represent the structure.
 
     {cache}
 
