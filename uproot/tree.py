@@ -407,13 +407,15 @@ class TTreeMethods(object):
         # for the case of outputtype == pandas.DataFrame, do some preparation to fill DataFrames efficiently
         ispandas = getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame"
         if ispandas:
+            import pandas
             entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
-
-            initialcolumns = OrderedDict()
+            
             if flatten:
-                initialcolumns["#"] = numpy.arange(entrystart, entrystop)
-                initialcolumns["#.#"] = 0
+                out = [outputtype(index=pandas.MultiIndex.from_arrays([numpy.arange(entrystart, entrystop, dtype=numpy.int64), numpy.zeros(entrystop - entrystart, dtype=numpy.int64)]))]
+
             else:
+                initialcolumns = OrderedDict()
+
                 for branch, interpretation in branches:
                     if isinstance(interpretation, asdtype):
                         if interpretation.todims == ():
@@ -426,7 +428,7 @@ class TTreeMethods(object):
                     else:
                         raise TypeError("cannot convert interpretation {0} to DataFrame".format(interpretation))
 
-            out = [outputtype(data=initialcolumns, index=numpy.arange(entrystart, entrystop))]
+                out = [outputtype(data=initialcolumns, index=numpy.arange(entrystart, entrystop, dtype=numpy.int64))]
 
             # if we won't need to slice any destinations
             if entrystart == 0 and entrystop == self.numentries and all(isinstance(interpretation, asdtype) and interpretation.todims == () for branch, interpretation in branches):
@@ -447,18 +449,19 @@ class TTreeMethods(object):
 
         elif ispandas:
             import pandas
+
             def wait():
                 if flatten:
                     for name, interpretation, future in futures:
                         if isinstance(interpretation, asdtype):
                             array = future()
+                            df = pandas.DataFrame(index=pandas.MultiIndex.from_arrays([numpy.arange(entrystart, entrystop, dtype=numpy.int64), numpy.zeros(entrystop - entrystart, dtype=numpy.int64)]))
                             if interpretation.todims == ():
-                                df = pandas.DataFrame(data={"#": numpy.arange(entrystart, entrystop), "#.#": 0, name: array})
+                                df[name] = array
                             else:
-                                df = pandas.DataFrame(data={"#": numpy.arange(entrystart, entrystop), "#.#": 0})
                                 for tup in itertools.product(*[range(x) for x in interpretation.todims]):
                                     df["{0}[{1}]".format(name, "][".join(str(x) for x in tup))] = array[(slice(None),) + tup]
-                            out[0] = pandas.merge(out[0], df, how="outer", on=["#", "#.#"], sort=True)
+                            out[0] = pandas.merge(out[0], df, how="outer", left_index=True, right_index=True, sort=True)
 
                         elif isinstance(interpretation, asjagged):
                             array = future()
@@ -466,20 +469,21 @@ class TTreeMethods(object):
                             entries = numpy.empty(len(array.content), dtype=numpy.int64)
                             subentries = numpy.empty(len(array.content), dtype=numpy.int64)
                             starts, stops = array.starts, array.stops
-                            i = entrystart
-                            while i < entrystop:
-                                entries[starts[i]:stops[i]] = i
+                            i = 0
+                            numentries = entrystop - entrystart
+                            while i < numentries:
+                                entries[starts[i]:stops[i]] = i + entrystart
                                 subentries[starts[i]:stops[i]] = numpy.arange(stops[i] - starts[i])
                                 i += 1
 
-                            df = pandas.DataFrame(data={"#": entries, "#.#": subentries})
+                            df = pandas.DataFrame(index=pandas.MultiIndex.from_arrays([entries, subentries]))
                             if interpretation.asdtype.todims == ():
                                 df[name] = array.content
                             else:
                                 for tup in itertools.product(*[range(x) for x in interpretation.asdtype.todims]):
                                         df["{0}[{1}]".format(name, "][".join(str(x) for x in tup))] = array[(slice(None),) + tup].content
 
-                            out[0] = pandas.merge(out[0], df, how="outer", on=["#", "#.#"], sort=True)
+                            out[0] = pandas.merge(out[0], df, how="outer", left_index=True, right_index=True, sort=True)
 
                 else:
                     for name, interpretation, future in futures:
