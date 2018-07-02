@@ -405,63 +405,108 @@ class TTreeMethods(object):
         branches = list(self._normalize_branches(branches))
 
         # for the case of outputtype == pandas.DataFrame, do some preparation to fill DataFrames efficiently
-        if getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame":
-            initialcolumns = OrderedDict()
-            for branch, interpretation in branches:
-                if isinstance(interpretation, asdtype):
-                    if interpretation.todims == ():
-                        initialcolumns[branch.name] = interpretation.todtype.type(0)
-                    else:
-                        for tup in itertools.product(*[range(x) for x in interpretation.todims]):
-                            initialcolumns["{0}[{1}]".format(branch.name, "][".join(str(x) for x in tup))] = interpretation.todtype.type(0)
-
-                elif isinstance(interpretation, asjagged):
-                    initialcolumns[branch.name] = None
-
-                else:
-                    raise TypeError("cannot convert interpretation {0} to DataFrame".format(interpretation))
-
+        ispandas = getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame"
+        if ispandas:
             entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
-            out = outputtype(data=initialcolumns, index=numpy.arange(entrystart, entrystop))
+
+            initialcolumns = OrderedDict()
+            if flatten:
+                initialcolumns["#"] = numpy.arange(entrystart, entrystop)
+                initialcolumns["#.#"] = 0
+            else:
+                for branch, interpretation in branches:
+                    if isinstance(interpretation, asdtype):
+                        if interpretation.todims == ():
+                            initialcolumns[branch.name] = interpretation.todtype.type(0)
+                        else:
+                            for tup in itertools.product(*[range(x) for x in interpretation.todims]):
+                                initialcolumns["{0}[{1}]".format(branch.name, "][".join(str(x) for x in tup))] = interpretation.todtype.type(0)
+                    elif isinstance(interpretation, asjagged):
+                        initialcolumns[branch.name] = None
+                    else:
+                        raise TypeError("cannot convert interpretation {0} to DataFrame".format(interpretation))
+
+            out = [outputtype(data=initialcolumns, index=numpy.arange(entrystart, entrystop))]
 
             # if we won't need to slice any destinations
-            if entrystart == 0 and entrystop == self.numentries and all(interpretation.todims == () for branch, interpretation in branches):
+            if entrystart == 0 and entrystop == self.numentries and all(isinstance(interpretation, asdtype) and interpretation.todims == () for branch, interpretation in branches):
                 for i in range(len(branches)):
                     branch, interpretation = branches[i]
                     if isinstance(interpretation, asdtype):
                         # set up numeric output to fill Pandas in-place (destination is the DataFrame, no intermediate allocations)
-                        branches[i] = (branch, interpretation.toarray(out[branch.name].values))
+                        branches[i] = (branch, interpretation.toarray(out[0][branch.name].values))
 
         # start the job of filling the arrays
-        futures = [(branch.name, interpretation, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=False)) for branch, interpretation in branches]
+        futures = [(branch.name, interpretation, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=(flatten and not ispandas), cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=False)) for branch, interpretation in branches]
 
         # make functions that wait for the filling job to be done and return the right outputtype
         if outputtype == namedtuple:
             outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
             def wait():
                 return outputtype(*[future() for name, interpretation, future in futures])
-        elif getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame":
+
+        elif ispandas:
+            import pandas
             def wait():
-                for name, interpretation, future in futures:
-                    if isinstance(interpretation, asdtype):
-                        if not isinstance(interpretation, asarray):
+                if flatten:
+                    for name, interpretation, future in futures:
+                        if isinstance(interpretation, asdtype):
+                            array = future()
                             if interpretation.todims == ():
-                                out[name] = future()   # not filled in place because entrystart-entrystop or todims is not the whole branch
+                                df = pandas.DataFrame(data={"#": numpy.arange(entrystart, entrystop), "#.#": 0, name: array})
                             else:
-                                array = future()
+                                df = pandas.DataFrame(data={"#": numpy.arange(entrystart, entrystop), "#.#": 0})
                                 for tup in itertools.product(*[range(x) for x in interpretation.todims]):
-                                    out["{0}[{1}]".format(branch.name, "][".join(str(x) for x in tup))] = array[(slice(None),) + tup]
-                        else:
-                            future()                   # fills in place, but be sure it's done filling
-                    elif isinstance(interpretation, asjagged):
-                        out[name] = list(future())     # must be serialized as a Python list for Pandas to accept it
-                return out
+                                    df["{0}[{1}]".format(name, "][".join(str(x) for x in tup))] = array[(slice(None),) + tup]
+                            out[0] = pandas.merge(out[0], df, how="outer", on=["#", "#.#"], sort=True)
+
+                        elif isinstance(interpretation, asjagged):
+                            array = future()
+
+                            entries = numpy.empty(len(array.content), dtype=numpy.int64)
+                            subentries = numpy.empty(len(array.content), dtype=numpy.int64)
+                            starts, stops = array.starts, array.stops
+                            i = entrystart
+                            while i < entrystop:
+                                entries[starts[i]:stops[i]] = i
+                                subentries[starts[i]:stops[i]] = numpy.arange(stops[i] - starts[i])
+                                i += 1
+
+                            df = pandas.DataFrame(data={"#": entries, "#.#": subentries})
+                            if interpretation.asdtype.todims == ():
+                                df[name] = array.content
+                            else:
+                                for tup in itertools.product(*[range(x) for x in interpretation.asdtype.todims]):
+                                        df["{0}[{1}]".format(name, "][".join(str(x) for x in tup))] = array[(slice(None),) + tup].content
+
+                            out[0] = pandas.merge(out[0], df, how="outer", on=["#", "#.#"], sort=True)
+
+                else:
+                    for name, interpretation, future in futures:
+                        if isinstance(interpretation, asdtype):
+                            if not isinstance(interpretation, asarray):
+                                array = future()
+                                if interpretation.todims == ():
+                                    out[0][name] = array      # not filled in place because entrystart-entrystop or todims is not the whole branch
+                                else:
+                                    for tup in itertools.product(*[range(x) for x in interpretation.todims]):
+                                        out[0]["{0}[{1}]".format(name, "][".join(str(x) for x in tup))] = array[(slice(None),) + tup]
+                            else:
+                                future()                      # fills in place, but be sure it's done filling
+
+                        elif isinstance(interpretation, asjagged):
+                            out[0][name] = list(future())     # must be serialized as a Python list for Pandas to accept it
+                
+                return out[0]
+
         elif isinstance(outputtype, type) and issubclass(outputtype, dict):
             def wait():
                 return outputtype((name, future()) for name, interpretation, future in futures)
+
         elif isinstance(outputtype, type) and issubclass(outputtype, (list, tuple)):
             def wait():
                 return outputtype(future() for name, interpretation, future in futures)
+
         else:
             def wait():
                 return outputtype(*[future() for name, interpretation, future in futures])
@@ -540,7 +585,9 @@ class TTreeMethods(object):
                 out = interpretation.finalize(future(), branch)
                 if cache is not None:
                     cache[cachekey] = out
-                if pythonize:
+                if flatten and isinstance(interpretation, asjagged):
+                    return out.content
+                elif pythonize:
                     return list(out)
                 else:
                     return out
@@ -1096,7 +1143,10 @@ class TBranchMethods(object):
             cachekey = self._cachekey(interpretation, entrystart, entrystop)
             out = cache.get(cachekey, None)
             if out is not None:
-                return out
+                if flatten and isinstance(interpretation, asjagged):
+                    return out.content
+                else:
+                    return out
 
         source = self._basket(i, interpretation, local_entrystart, local_entrystop, basketcache, keycache)
         numitems = interpretation.source_numitems(source)
@@ -1107,7 +1157,10 @@ class TBranchMethods(object):
 
         if cache is not None:
             cache[cachekey] = out
-        return out
+        if flatten and isinstance(interpretation, asjagged):
+            return out.content
+        else:
+            return out
 
     def _basketstartstop(self, entrystart, entrystop):
         basketstart, basketstop = None, None
@@ -1220,6 +1273,8 @@ class TBranchMethods(object):
             cachekey = self._cachekey(interpretation, entrystart, entrystop)
             out = cache.get(cachekey, None)
             if out is not None:
+                if flatten and isinstance(interpretation, asjagged):
+                    out = out.content
                 if blocking:
                     return out
                 else:
@@ -1295,7 +1350,10 @@ class TBranchMethods(object):
             out = interpretation.finalize(clipped, self)
             if cache is not None:
                 cache[cachekey] = out
-            return out
+            if flatten and isinstance(interpretation, asjagged):
+                return out.content
+            else:
+                return out
 
         if blocking:
             return wait()
