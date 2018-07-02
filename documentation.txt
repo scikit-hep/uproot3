@@ -1,0 +1,43 @@
+Header
+
+fBEGIN = 100 (Follow ROOT)
+
+fNbytesFree = No. of junk bytes in the file
+
+fVersion = Version of ROOT being used(Follow ROOT)
+
+fUUID = Identifier unique to each ROOT file
+
+fEND = Size of file
+
+fSeekFree ?
+
+nfree = 1 ?
+
+fUnits = 4 ?
+
+fCompress = Compression(Can be set manually while writing ROOT file)
+
+fSeekInfo ?
+
+fNbytesInfo ?
+
+
+TKey
+
+fNbytes = fObjlen + fKeylen = Number of bytes occupied by this TKey
+
+(Summation of fNbytes of all TKey) + fBEGIN + fNbytesFree = fEND
+
+fVersion = Version of that instance(Follow ROOT)
+
+fDatime = Date and time (Need to figure out format)
+
+fSeekKey ?
+
+fSeekPdir = 100?
+
+fCycle = Recursive Iteration level?
+
+
+
