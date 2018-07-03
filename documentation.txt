@@ -33,9 +33,9 @@ fVersion = Version of that instance(Follow ROOT)
 
 fDatime = Date and time (Need to figure out format)
 
-fSeekKey ?
+fSeekKey = cursor?
 
-fSeekPdir = 100?
+fSeekPdir = 100? (0 for first cursor location?)
 
 fCycle = Recursive Iteration level?
 
