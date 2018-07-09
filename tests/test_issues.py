@@ -154,3 +154,8 @@ class TestIssues(unittest.TestCase):
         baskets = numpy.concatenate([t["pt"].basket(0), t["pt"].basket(1)])
         self.assertEqual(baskets.shape, (t["pt"].numentries,))
         self.assertTrue(numpy.array_equal(baskets, t["pt"].array()))
+    
+    def test_issue96(self):
+        t = uproot.open("tests/samples/issue96.root")["tree"]
+        self.assertTrue(all(isinstance(x, uproot.physics.TLorentzVectorMethods) for x in t.array("jet1P4")))
+        #self.assertEqual(list(t.array("jet1P4")[0]), TLorentzVector(-2.081e+05, 6.695e+05, -4.692e+05, 8.448e+05))
