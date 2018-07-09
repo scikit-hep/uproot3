@@ -1,0 +1,14 @@
+Byte differences
+15 -> Wrong number
+144-154 -> Repitition of name of file
+185-203
+219-317 -> Copy of last key
+389-444[Important]
+467 - 483 -> TObjArray[Important]
+492-497
+510-532 -> TStreamerBase[Important]
+551-556[Important]
+631-654[Important]
+674-679(Same as 492-497)
+761 -> Wrong number
+877-927
