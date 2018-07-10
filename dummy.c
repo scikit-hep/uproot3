@@ -6,7 +6,7 @@ void dummy()
 {
 // Create a new ROOT file to contain TObjString
 
-    TFile *tfile = new TFile("dummy2.root", "RECREATE");
+    TFile *tfile = new TFile("dummy.root", "RECREATE");
     tfile->SetCompressionLevel(0);
 
     TObjString  Comment("Hello World");

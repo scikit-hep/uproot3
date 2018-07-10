@@ -229,7 +229,8 @@ class ROOTDirectory(object):
                 print ("Header Key")
                 headerkey = TKey.read(source, subcursor, context, None)
                 
-                print ("format = ", ROOTDirectory._format5)
+                print ("format = >i")
+                print ("cursor = ", cursor.index)
                 nkeys = subcursor.field(source, ROOTDirectory._format5)
                 print ("nkeys = ", nkeys)
                 keys = [TKey.read(source, subcursor, context, None) for i in range(nkeys)]
