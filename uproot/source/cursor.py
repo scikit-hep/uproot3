@@ -77,6 +77,10 @@ class Cursor(object):
     def bytes(self, source, length):
         start = self.index
         stop = self.index = start + length
+        print ("unpacked bytes")
+        print ("start = ", start)
+        print ("data = ", source.data(start, stop))
+        print ("stop = ", stop)
         return source.data(start, stop)
 
     def array(self, source, length, dtype):
