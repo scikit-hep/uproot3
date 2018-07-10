@@ -128,25 +128,7 @@ class ROOTDirectory(object):
                     fBEGIN, fEND, fSeekFree, fNbytesFree, nfree, fNbytesName, fUnits, fCompress, fSeekInfo, fNbytesInfo, fUUID = cursor.fields(source, ROOTDirectory._format2_small)
                 else:
                     fBEGIN, fEND, fSeekFree, fNbytesFree, nfree, fNbytesName, fUnits, fCompress, fSeekInfo, fNbytesInfo, fUUID = cursor.fields(source, ROOTDirectory._format2_big)
-                    
-                print("")
-                print("fBEGIN = ", fBEGIN)
-                print ("fEND = ", fEND)
-                print ("fSeekFree = ", fSeekFree)
-                print ("fNbytesFree = ", fNbytesFree)
-                print ("nfree = ", nfree)
-                print ("fNbytesName = ", fNbytesName)
-                print ("fUnits = ", fUnits)
-                print ("fCompress = ", fCompress)
-                print ("fSeekInfo = ", fSeekInfo)
-                print ("fNbytesInfo = ", fNbytesInfo)
-                print ("fUUID = ", fUUID)
-                if fVersion < 1000000:
-                    packer = ">iiiiiiBiii18s"
-                else:
-                    packer = ">iqqiiiBiqi18s"
-                print ("format = ", packer)
-                
+
                 tfile = {"fVersion": fVersion, "fBEGIN": fBEGIN, "fEND": fEND, "fSeekFree": fSeekFree, "fNbytesFree": fNbytesFree, "nfree": nfree, "fNbytesName": fNbytesName, "fUnits": fUnits, "fCompress": fCompress, "fSeekInfo": fSeekInfo, "fNbytesInfo": fNbytesInfo, "fUUID": fUUID}
 
                 # classes requried to read streamers (bootstrap)
@@ -167,11 +149,9 @@ class ROOTDirectory(object):
                                    "TList":                     TList,
                                    "TObjArray":                 TObjArray,
                                    "TObjString":                TObjString}
-                
+
                 if read_streamers and fSeekInfo != 0:
                     streamercontext = ROOTDirectory._FileContext(source.path, None, None, streamerclasses, uproot.source.compressed.Compression(fCompress), tfile)
-                    print ("")
-                    print ("Streamer Key")
                     streamerkey = TKey.read(source, Cursor(fSeekInfo), streamercontext, None)
                     streamerinfos, streamerinfosmap, streamerrules = _readstreamers(streamerkey._source, streamerkey._cursor, streamercontext, None)
                 else:
@@ -186,9 +166,8 @@ class ROOTDirectory(object):
                 context.source = source
 
                 keycursor = Cursor(fBEGIN)
-                print ("First Key")
                 mykey = TKey.read(source, keycursor, context, None)
-                
+
                 return ROOTDirectory.read(source, Cursor(fBEGIN + fNbytesName), context, mykey)
 
             except:
@@ -201,35 +180,18 @@ class ROOTDirectory(object):
                     raise TypeError("unrecognized options: {0}".format(", ".join(options)))
 
                 cursor, context, mykey = args
-                
-                print ("")
-                print ("Directory Information")
-                print ("Cursor = ", cursor.index)
+
                 # See https://root.cern/doc/master/classTDirectoryFile.html.
                 fVersion, fDatimeC, fDatimeM, fNbytesKeys, fNbytesName = cursor.fields(source, ROOTDirectory._format3)
                 if fVersion <= 1000:
                     fSeekDir, fSeekParent, fSeekKeys = cursor.fields(source, ROOTDirectory._format4_small)
                 else:
                     fSeekDir, fSeekParent, fSeekKeys = cursor.fields(source, ROOTDirectory._format4_big)
-                    
-                print ("fVersion = ", fVersion)
-                print ("fDatimeC = ", fDatimeC)
-                print ("fDatimeM = ", fDatimeM)
-                print ("fNbytesKeys = ", fNbytesKeys)
-                print ("fNbytesName = ", fNbytesName)
-                print ("fSeekDir = ", fSeekDir)
-                print ("fSeekParent = ", fSeekParent)
-                print ("fSeekKeys = ", fSeekKeys)
-                print ("")
 
                 subcursor = Cursor(fSeekKeys)
-                print("Header Key")
                 headerkey = TKey.read(source, subcursor, context, None)
-                
-                print ("Cursor at no. of keys = ", subcursor.index)
+
                 nkeys = subcursor.field(source, ROOTDirectory._format5)
-                print ("nkeys = ", nkeys)
-                print ("format =", ROOTDirectory._format5)
                 keys = [TKey.read(source, subcursor, context, None) for i in range(nkeys)]
 
                 out = ROOTDirectory(mykey.fName, context, keys)
@@ -408,11 +370,7 @@ def _bytesid(x):
 
 def _startcheck(source, cursor):
     start = cursor.index
-    print ("cursor = ", start)
     cnt, vers = cursor.fields(source, _startcheck._format_cntvers)
-    print ("cnt = ", cnt)
-    print ("vers = ", vers)
-    print ("format = >IH")
     cnt = int(numpy.int64(cnt) & ~uproot.const.kByteCountMask)
     return start, cnt + 4, vers
 _startcheck._format_cntvers = struct.Struct(">IH")
@@ -434,14 +392,10 @@ _skiptobj._format1 = struct.Struct(">h")
 _skiptobj._format2 = struct.Struct(">II")
 
 def _nametitle(source, cursor):
-    print ("Name Title")
     start, cnt, vers = _startcheck(source, cursor)
     _skiptobj(source, cursor)
-    print ("Start cursor =", cursor.index)
     name = cursor.string(source)
-    print("name String =", name)
     title = cursor.string(source)
-    print("title String =", title)
     _endcheck(start, cursor, cnt)
     return name, title
 
@@ -671,13 +625,9 @@ def _defineclasses(streamerinfos, classes):
         if isinstance(streamerinfo, TStreamerInfo) and pyclassname not in builtin_classes and (pyclassname not in classes or hasattr(classes[pyclassname], "_versions")):
             code = ["    @classmethod",
                     "    def _readinto(cls, self, source, cursor, context, parent):",
-                    "        print ("")",
-                    "        print ('HELLO WORLD!')",
-                    "        print (' ')",
                     "        start, cnt, classversion = _startcheck(source, cursor)",
                     "        if cls._classversion != classversion:",
                     "            cursor.index = start",
-                    "            print ('newpos = ', start)",
                     "            if classversion in cls._versions:",
                     "                return cls._versions[classversion]._readinto(self, source, cursor, context, parent)",
                     "            else:",
@@ -705,9 +655,7 @@ def _defineclasses(streamerinfos, classes):
 
                     dtypename = "_dtype{0}".format(len(dtypes) + 1)
                     dtypes[dtypename] = _ftype2dtype(fType)
-                    code.append("        print ('start = ', cursor.index)")
                     code.append("        self.{0} = cursor.array(source, self.{1}, cls.{2})".format(_safename(element.fName), _safename(element.fCountName), dtypename))
-                    code.append("        print ('Array = ', self.{0})".format(_safename(element.fName)))
                     fields.append(_safename(element.fName))
 
                 elif isinstance(element, TStreamerBasicType):
@@ -719,16 +667,11 @@ def _defineclasses(streamerinfos, classes):
                         if elementi + 1 == len(streamerinfo.fElements) or not isinstance(streamerinfo.fElements[elementi + 1], TStreamerBasicType) or streamerinfo.fElements[elementi + 1].fArrayLength != 0:
                             formatnum = len(formats) + 1
                             formats["_format{0}".format(formatnum)] = "struct.Struct('>{0}')".format(basicletters)
-                            code.append("print ('Packer = ', _format{0})".format(formatnum))
-                            code.append("print ('newpos = ', cursor.index)")
 
                             if len(basicnames) == 1:
                                 code.append("        {0} = cursor.field(source, cls._format{1})".format(basicnames[0], formatnum))
-                                code.append("        print ('{0} =', {0})".format(", ".join(basicnames[0])))
                             else:
                                 code.append("        {0} = cursor.fields(source, cls._format{1})".format(", ".join(basicnames), formatnum))
-                                code.append("        print ('{0} =', {0})".format(", ".join(basicnames)))
-                            
 
                             basicnames = []
                             basicletters = ""
@@ -736,9 +679,7 @@ def _defineclasses(streamerinfos, classes):
                     else:
                         dtypename = "_dtype{0}".format(len(dtypes) + 1)
                         dtypes[dtypename] = _ftype2dtype(element.fType)
-                        code.append("        print ('newpos = ', cursor.index)")
                         code.append("        self.{0} = cursor.array(source, {1}, cls.{2})".format(_safename(element.fName), element.fArrayLength, dtypename))
-                        code.append("        print ('self.{0} = ', self.{0})".format(_safename(element.fName)))
                         fields.append(_safename(element.fName))
 
                 elif isinstance(element, TStreamerLoop):
@@ -865,36 +806,15 @@ class TKey(ROOTObject):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start = cursor.index
-        print ("TKey cursor.index = ", cursor.index)
-        
+
         self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir = cursor.fields(source, self._format_small)
         if self.fVersion > 1000:
             cursor.index = start
-            print ("Moved cursor = ", cursor.index)
             self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir = cursor.fields(source, self._format_big)
-        
-        print ("fNbytes = ", self.fNbytes)
-        print ("fVersion = ", self.fVersion)
-        print ("fObjlen = ", self.fObjlen)
-        print ("fDatime = ", self.fDatime)
-        print ("fKeylen = ", self.fKeylen)
-        print ("fCycle = ", self.fCycle)
-        print ("fSeekKey = ", self.fSeekKey)
-        print ("fSeekPdir = ", self.fSeekPdir)
-        if self.fVersion > 1000:
-            packer = ">ihiIhhii"
-        else:
-            packer = ">ihiIhhqq"
-        print ("format = ", packer)
-        
-        print ("new cursor = ", cursor.index)
+
         self.fClassName = cursor.string(source)
-        print("fClassName String = ", self.fClassName)
         self.fName = cursor.string(source)
-        print ("fName = String ", self.fName)
         self.fTitle = cursor.string(source)
-        print ("fTitle = String ", self.fTitle)
-        print (" ")
 
         if source.size() is not None:
             if source.size() - self.fSeekKey < self.fNbytes:
@@ -942,15 +862,9 @@ class TKey(ROOTObject):
 class TStreamerInfo(ROOTObject):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
-        print("")
-        print("TStreamerInfo Streamer")
         start, cnt, self._classversion = _startcheck(source, cursor)
         self.fName, _ = _nametitle(source, cursor)
-        print("cursor =", cursor.index)
         self.fCheckSum, self.fClassVersion = cursor.fields(source, TStreamerInfo._format)
-        print ("fCheckSum = ", self.fCheckSum)
-        print ("fClassVersion = ", self.fClassVersion)
-        print ("format = >Ii")
         self.fElements = _readobjany(source, cursor, context, parent)
         assert isinstance(self.fElements, list)
         _endcheck(start, cursor, cnt)
@@ -969,38 +883,20 @@ class TStreamerInfo(ROOTObject):
 class TStreamerElement(ROOTObject):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):    
-        print ("")
-        print ("TStreamerElement Streamer")
         start, cnt, self._classversion = _startcheck(source, cursor)
 
         self.fOffset = 0
         # https://github.com/root-project/root/blob/master/core/meta/src/TStreamerElement.cxx#L505
         self.fName, self.fTitle = _nametitle(source, cursor)
-        print ("Cursor = ", cursor.index)
         self.fType, self.fSize, self.fArrayLength, self.fArrayDim = cursor.fields(source, TStreamerElement._format1)
-        print ("fType = ", self.fType)
-        print ("fSize = ", self.fSize)
-        print ("fArrayLength = ", self.fArrayLength)
-        print ("fArrayDim = ", self.fArrayDim)
-        print ("format = >iiii")
 
         if self._classversion == 1:
-            print ("newpos = ", cursor.index)
             n = cursor.field(source, TStreamerElement._format2)
-            print ("n = ", n)
-            print ("format = >i")
             self.fMaxIndex = cursor.array(source, n, ">i4")
-            print ("fMaxIndex Array = ", self.fMaxIndex)
-            print ("format = >i4")
         else:
-            print ("newpos = ", cursor.index)
             self.fMaxIndex = cursor.array(source, 5, ">i4")
-            print ("fMaxIndex Array = ", self.fMaxIndex)
-            print ("format = >i4")
-        
-        print ("newpos = ", cursor.index)
+
         self.fTypeName = cursor.string(source)
-        print ("fTypeName string = ", self.fTypeName)
 
         if self.fType == 11 and (self.fTypeName == "Bool_t" or self.fTypeName == "bool"):
             self.fType = 18
@@ -1011,13 +907,8 @@ class TStreamerElement(ROOTObject):
             pass
 
         self.fXmin, self.fXmax, self.fFactor = 0.0, 0.0, 0.0
-        print ("cursor = ", cursor.index)
         if self._classversion == 3:
             self.fXmin, self.fXmax, self.fFactor = cursor.fields(source, TStreamerElement._format3)
-            print ("fXmin = ", self.fXmin)
-            print ("fXmax = ", self.fXmax)
-            print ("fFactor = ", self.fFactor)
-            print ("format = >ddd")
         if self._classversion > 3:
             # FIXME
             # if (TestBit(kHasRange)) GetRange(GetTitle(),fXmin,fXmax,fFactor)
@@ -1041,8 +932,6 @@ class TStreamerElement(ROOTObject):
 class TStreamerArtificial(TStreamerElement):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
-        print ("")
-        print ("TStreamerArtificial Streamer")
         start, cnt, self._classversion = _startcheck(source, cursor)
         super(TStreamerArtificial, self)._readinto(self, source, cursor, context, parent)
         _endcheck(start, cursor, cnt)
@@ -1051,15 +940,10 @@ class TStreamerArtificial(TStreamerElement):
 class TStreamerBase(TStreamerElement):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
-        print ("")
-        print ("TStreamerBase Streamer")
         start, cnt, self._classversion = _startcheck(source, cursor)
         super(TStreamerBase, self)._readinto(self, source, cursor, context, parent)
-        print ("newpos = ", cursor.index)
         if self._classversion > 2:
             self.fBaseVersion = cursor.field(source, TStreamerBase._format)
-            print ("fBaseVersion = ", self.fBaseVersion)
-            print ("format = >i")
         _endcheck(start, cursor, cnt)
         return self
 
@@ -1068,18 +952,11 @@ class TStreamerBase(TStreamerElement):
 class TStreamerBasicPointer(TStreamerElement):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
-        print ("")
-        print ("TStreamerBasicPointer Streamer")
         start, cnt, self._classversion = _startcheck(source, cursor)
         super(TStreamerBasicPointer, self)._readinto(self, source, cursor, context, parent)
-        print ("newpos = ", cursor.index)
         self.fCountVersion = cursor.field(source, TStreamerBasicPointer._format)
-        print ("fCountVersion = ", self.fCountVersion)
-        print ("format = >i")
         self.fCountName = cursor.string(source)
-        print ("fCountName String = ", self.fCountName)
         self.fCountClass = cursor.string(source)
-        print ("fCountClass = ", self.fCountClass)
         _endcheck(start, cursor, cnt)
         return self
 
@@ -1088,8 +965,6 @@ class TStreamerBasicPointer(TStreamerElement):
 class TStreamerBasicType(TStreamerElement):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
-        print ("")
-        print ("TStreamerBasicType Streamer")
         start, cnt, self._classversion = _startcheck(source, cursor)
         super(TStreamerBasicType, self)._readinto(self, source, cursor, context, parent)
 
@@ -1123,18 +998,11 @@ class TStreamerBasicType(TStreamerElement):
 class TStreamerLoop(TStreamerElement):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
-        print ("")
-        print ("TStreamerLoop Streamer")
         start, cnt, self._classversion = _startcheck(source, cursor)
         super(TStreamerLoop, self)._readinto(self, source, cursor, context, parent)
-        print ("newpos = ", cursor.index)
         self.fCountVersion = cursor.field(source, TStreamerLoop._format)
-        print ("fCountVersion = ", self.fCountVersion)
-        print ("format = >i")
         self.fCountName = cursor.string(source)
-        print ("fCountName String = ", self.fCountName)
         self.fCountClass = cursor.string(source)
-        print ("fCountClass String = ", self.fCountClass)
         _endcheck(start, cursor, cnt)
         return self
 
@@ -1143,8 +1011,6 @@ class TStreamerLoop(TStreamerElement):
 class TStreamerObject(TStreamerElement):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
-        print ("")
-        print ("TStreamerObject Streamer")
         start, cnt, self._classversion = _startcheck(source, cursor)
         super(TStreamerObject, self)._readinto(self, source, cursor, context, parent)
         _endcheck(start, cursor, cnt)
@@ -1153,8 +1019,6 @@ class TStreamerObject(TStreamerElement):
 class TStreamerObjectAny(TStreamerElement):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
-        print ("")
-        print ("TStreamerObjectAny Streamer")
         start, cnt, self._classversion = _startcheck(source, cursor)
         super(TStreamerObjectAny, self)._readinto(self, source, cursor, context, parent)
         _endcheck(start, cursor, cnt)
@@ -1163,8 +1027,6 @@ class TStreamerObjectAny(TStreamerElement):
 class TStreamerObjectAnyPointer(TStreamerElement):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
-        print ("")
-        print ("TStreamerObjectAnyPointer Streamer")
         start, cnt, self._classversion = _startcheck(source, cursor)
         super(TStreamerObjectAnyPointer, self)._readinto(self, source, cursor, context, parent)
         _endcheck(start, cursor, cnt)
@@ -1173,8 +1035,6 @@ class TStreamerObjectAnyPointer(TStreamerElement):
 class TStreamerObjectPointer(TStreamerElement):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
-        print ("")
-        print ("TStreamerObjectPointer Streamer")
         start, cnt, self._classversion = _startcheck(source, cursor)
         super(TStreamerObjectPointer, self)._readinto(self, source, cursor, context, parent)
         _endcheck(start, cursor, cnt)
@@ -1183,16 +1043,10 @@ class TStreamerObjectPointer(TStreamerElement):
 class TStreamerSTL(TStreamerElement):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
-        print ("")
-        print ("TStreamerSTL Streamer")
         start, cnt, self._classversion = _startcheck(source, cursor)
         super(TStreamerSTL, self)._readinto(self, source, cursor, context, parent)
-        
-        print ("newpos = ", cursor.index)
+
         self.fSTLtype, self.fCtype = cursor.fields(source, TStreamerSTL._format)
-        print ("fSTLtype = ", self.fSTLtype)
-        print ("fCtype = ", self.fCtype)
-        print ("format = >ii")
 
         if self.fSTLtype == uproot.const.kSTLmultimap or self.fSTLtype == uproot.const.kSTLset:
             if self.fTypeName.startswith(b"std::set") or self.fTypeName.startswith(b"set"):
@@ -1216,8 +1070,6 @@ class TStreamerSTL(TStreamerElement):
 class TStreamerSTLstring(TStreamerSTL):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
-        print ("")
-        print ("TStreamerSTLstring Streamer")
         start, cnt, self._classversion = _startcheck(source, cursor)
         super(TStreamerSTLstring, self)._readinto(self, source, cursor, context, parent)
         _endcheck(start, cursor, cnt)
@@ -1226,8 +1078,6 @@ class TStreamerSTLstring(TStreamerSTL):
 class TStreamerString(TStreamerElement):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
-        print ("")
-        print ("TStreamerString Streamer")
         start, cnt, self._classversion = _startcheck(source, cursor)
         super(TStreamerString, self)._readinto(self, source, cursor, context, parent)
         _endcheck(start, cursor, cnt)
@@ -1257,15 +1107,10 @@ class TString(bytes, ROOTStreamedObject):
 class TNamed(TObject):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
-        print("TNamed Streamer")
-        print ("")
         start, cnt, self._classversion = _startcheck(source, cursor)
         TObject._readinto(self, source, cursor, context, parent)
-        print ("cursor = ", cursor.index)
         self.fName = cursor.string(source)
-        print ("fName String = ", self.fName)
         self.fTitle = cursor.string(source)
-        print ("fTitle String = ", self.fTitle)
         _endcheck(start, cursor, cnt)
         return self
 
@@ -1281,17 +1126,10 @@ class TObjArray(list, ROOTStreamedObject):
 
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent, asclass=None):
-        print ("")
-        print ("TObjArray Streamer")
         start, cnt, self._classversion = _startcheck(source, cursor)
         _skiptobj(source, cursor)
-        print ("cursor = ", cursor.index)
         name = cursor.string(source)
-        print ("name String = ", name)
         size, low = cursor.fields(source, struct.Struct(">ii"))
-        print ("size = ", size)
-        print ("low = ", low)
-        print ("format = >ii")
         self.extend([_readobjany(source, cursor, context, parent, asclass=asclass) for i in range(size)])
         _endcheck(start, cursor, cnt)
         return self
@@ -1299,13 +1137,9 @@ class TObjArray(list, ROOTStreamedObject):
 class TObjString(bytes, ROOTStreamedObject):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
-        print ("")
-        print ("TObjString Streamer")
         start, cnt, self._classversion = _startcheck(source, cursor)
         _skiptobj(source, cursor)
-        print ("cursor = ", cursor.index)
         string = cursor.string(source)
-        print ("string String = ", string)
         _endcheck(start, cursor, cnt)
         return TObjString(string)
 
@@ -1315,22 +1149,13 @@ class TObjString(bytes, ROOTStreamedObject):
 class TList(list, ROOTStreamedObject):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
-        print ("")
-        print ("TList Streamer")
         start, cnt, self._classversion = _startcheck(source, cursor)
         _skiptobj(source, cursor)
-        print ("cursor = ", cursor.index)
         name = cursor.string(source)
-        print ("name String = ", name)
         size = cursor.field(source, struct.Struct(">i"))
-        print ("Size = ", size)
-        print ("format = >i")
         for i in range(size):
             self.append(_readobjany(source, cursor, context, parent))
-            print ("newpos = ", cursor.index)
             n = cursor.field(source, TList._format_n)  # ignore option
-            print ("n = ", n)
-            print ("format = >B")
             cursor.bytes(source, n)                    # 
         _endcheck(start, cursor, cnt)
         return self
@@ -1345,11 +1170,7 @@ class THashList(TList):
 class TArray(list, ROOTStreamedObject):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
-        print ("")
-        print ("TArray Streamer")
         length = cursor.field(source, TArray._format)
-        print ("length = ", length)
-        print ("format = >i")
         self.extend(cursor.array(source, length, self._dtype))
         return self
     _format = struct.Struct(">i")
@@ -1412,8 +1233,6 @@ class Undefined(ROOTStreamedObject):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         self._cursor = cursor.copied()
-        print("")
-        print("Undefined Streamer")
         start, cnt, self._classversion = _startcheck(source, cursor)
         cursor.skip(cnt - 6)
         _endcheck(start, cursor, cnt)
