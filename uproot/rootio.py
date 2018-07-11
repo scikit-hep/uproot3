@@ -1275,8 +1275,13 @@ class TObjArray(list, ROOTStreamedObject):
         print ("TObjArray Streamer")
         start, cnt, self._classversion = _startcheck(source, cursor)
         _skiptobj(source, cursor)
+        print ("cursor = ", cursor.index)
         name = cursor.string(source)
+        print ("name String = ", name)
         size, low = cursor.fields(source, struct.Struct(">ii"))
+        print ("size = ", size)
+        print ("low = ", low)
+        print ("format = >ii")
         self.extend([_readobjany(source, cursor, context, parent, asclass=asclass) for i in range(size)])
         _endcheck(start, cursor, cnt)
         return self
