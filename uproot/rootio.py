@@ -1271,6 +1271,8 @@ class TObjArray(list, ROOTStreamedObject):
 
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent, asclass=None):
+        print ("")
+        print ("TObjArray Streamer")
         start, cnt, self._classversion = _startcheck(source, cursor)
         _skiptobj(source, cursor)
         name = cursor.string(source)
