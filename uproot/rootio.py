@@ -427,10 +427,19 @@ def _endcheck(start, cursor, cnt):
         raise ValueError("object has {0} bytes; expected {1}".format(observed, cnt))
 
 def _skiptobj(source, cursor):
+    print ("")
+    print ("skiptobj")
+    print ("cursor = ", cursor.index)
     version = cursor.field(source, _skiptobj._format1)
+    print ("version = ", version)
+    print ("format = >h")
     if numpy.int64(version) & uproot.const.kByteCountVMask:
         cursor.skip(4)
+    print ("cursor = ", cursor.index)
     fUniqueID, fBits = cursor.fields(source, _skiptobj._format2)
+    print ("fUniqueID = ", fUniqueID)
+    print ("fBits = ", fBits)
+    print ("format = >II")
     fBits = numpy.uint32(fBits) | uproot.const.kIsOnHeap
     if fBits & uproot.const.kIsReferenced:
         cursor.skip(2)
@@ -455,7 +464,11 @@ def _readobjany(source, cursor, context, parent, asclass=None):
     # https://github.com/root-project/root/blob/c4aa801d24d0b1eeb6c1623fd18160ef2397ee54/io/io/src/TBufferFile.cxx#L2404
 
     beg = cursor.index - cursor.origin
+    print ("")
+    print ("cursor = ", cursor.index)
     bcnt = cursor.field(source, struct.Struct(">I"))
+    print ("bcnt = ", bcnt)
+    print ("format = >I")
 
     if numpy.int64(bcnt) & uproot.const.kByteCountMask == 0 or numpy.int64(bcnt) == uproot.const.kNewClassTag:
         vers = 0
@@ -465,7 +478,10 @@ def _readobjany(source, cursor, context, parent, asclass=None):
     else:
         vers = 1
         start = cursor.index - cursor.origin
+        print ("cursor = ", cursor.index)
         tag = cursor.field(source, struct.Struct(">I"))
+        print ("tag = ", tag)
+        print ("format = >I")
 
     if numpy.int64(tag) & uproot.const.kClassMask == 0:
         # reference object
@@ -485,7 +501,10 @@ def _readobjany(source, cursor, context, parent, asclass=None):
 
     elif tag == uproot.const.kNewClassTag:
         # new class and object
+        print ("cursor = ", cursor.index)
         cname = cursor.cstring(source).decode("ascii")
+        print ("cname string = ", cname)
+        
             
         fct = context.classes.get(cname, Undefined)
 

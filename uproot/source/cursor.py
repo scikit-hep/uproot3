@@ -100,6 +100,10 @@ class Cursor(object):
             length = source.data(start, stop, numpy.dtype(">u4"))[0]
         start = self.index
         stop = self.index = start + length
+        print ("")
+        print ("For strings")
+        print ("start = ", start)
+        print ("stop = ", stop)
         return source.data(start, stop).tostring()
 
     def cstring(self, source):
