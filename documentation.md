@@ -1,6 +1,6 @@
-#ROOT File Trends
+# ROOT File Trends
 
-##Header
+## Header
 
 fBEGIN = 100 (Follow ROOT)
 
@@ -10,9 +10,9 @@ fVersion = Version of ROOT being used(Follow ROOT)
 
 fUUID = Identifier unique to each ROOT file
 
-fEND = Size of file
+fEND = Size of file = fSeekFree + fNbytesFree
 
-fSeekFree = Last userful byte location
+fSeekFree = Last useful byte location
 
 nfree = 1 ?
 
@@ -20,12 +20,12 @@ fUnits = 4 ?
 
 fCompress = Compression(Can be set manually while writing ROOT file)
 
-fSeekInfo ?
+fSeekInfo = Points to first key
 
 fNbytesInfo = fNBytes of Streamer Key
 
 
-##TKey
+## TKey
 
 fNbytes = fObjlen + fKeylen = Number of bytes occupied by this TKey
 
@@ -42,7 +42,7 @@ fSeekPdir = 100? (0 for first cursor location?)
 fCycle = Recursive Iteration level?
 
 
-##Streamer Trends
+## Streamer Trends
 
 StreamerKey fClassName points to first streamer
 cname points to next Streamer
@@ -51,8 +51,8 @@ First Cursor = Streamer Key -> Initial cursor + fKeyLen = End of previous cursor
 Cursor = Previous end of pointer + 1
 
 TStreamerBase, TStreamerString is followed by TStreamer Element 
-*Cursor = end of previous cursor
-*No indication to show that it is followed by TStreamer Element
+- Cursor = end of previous cursor
+- No indication to show that it is followed by TStreamer Element
 
 
 
