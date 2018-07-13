@@ -44,16 +44,15 @@ fCycle = Recursive Iteration level?
 
 ## Streamer Trends
 
-StreamerKey fClassName points to first streamer
+StreamerKey fClassName points to first streamer  
 cname points to next Streamer
 
-First Cursor = Streamer Key -> Initial cursor + fKeyLen = End of previous cursor
+First Cursor = Streamer Key -> Initial cursor + fKeyLen = End of previous cursor  
 Cursor = Previous end of pointer + 1
 
-TStreamerBase, TStreamerString is followed by TStreamer Element 
+TStreamerBase, TStreamerString is followed by TStreamer Element
 - Cursor = end of previous cursor
 - No indication to show that it is followed by TStreamer Element
-
 
 
 
