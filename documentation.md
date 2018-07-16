@@ -14,10 +14,10 @@ fCompress = Compression(Can be set manually while writing ROOT file)
 fSeekInfo = Points to first key  
 fNbytesInfo = fNBytes of first key  
 fUUID = Identifier unique to each ROOT file  
-
+  
 ## TKey
 There is a streamer key, a header key and 1 more key.  
-
+  
 Starting point = fSeekInfo  
 fNbytes = fNbytesInfo = fObjlen + fKeylen = Number of bytes occupied by this TKey  
 fObjlen = ?  
@@ -30,9 +30,9 @@ fSeekPdir = 100? (0 for first cursor location?)
 fClassName = ?  
 fName = ?  
 fTitle = ?  
-
+  
 ## Directory
-
+  
 Start position = ?  
 fVersion = Version of that instance(Follow ROOT)  
 fDatimeC = Date and time (Need to figure out format)  
