@@ -22,14 +22,14 @@ Starting point = fSeekInfo
 fNbytes = fNbytesInfo = fObjlen + fKeylen = Number of bytes occupied by this TKey  
 fObjlen = ?  
 fDatime = Date and time (Need to figure out format)  
-fKeylen = Last sensible byte  
+fKeylen = ?
 fCycle = Instance of creation of the key  
 fSeekKey = ?  
 fVersion = Version of that instance(Follow ROOT)  
 fSeekPdir = 100? (0 for first cursor location?)  
-fClassName = ?  
+fClassName = Name of class of objects being pointed to.  
 fName = ?  
-fTitle = ?  
+fTitle = Title of the object.(Not important)  
   
 ## Directory
   
@@ -72,7 +72,7 @@ fArrayLength = ?
 fArrayDim = ?  
 fMaxIndex = ?  
 
-fTypeName = ?  
+fTypeName = C++ type Name.   
 
 fBaseVersion = ?  
 

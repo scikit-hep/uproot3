@@ -1,0 +1,35 @@
+import numpy
+import struct
+
+class Pointer(object):
+
+    def __init__(self, index, origin=0):
+        self.index = index
+        if origin is 0:
+            self.origin = index
+        else:
+            self.origin = origin
+
+    def skip(self, numbytes):
+        self.index += numbytes
+        self.origin += numbytes
+        
+    def push(self, packer, *args):
+        toadd = numpy.frombuffer(struct.pack(packer, *args), dtype = numpy.uint8)
+        self.index += len(toadd)
+        return toadd
+    
+    def precheck(self, put):
+        toadd = bytes(str(len(put)),"ascii")
+        self.skip(1)
+        return toadd
+    
+    def string(self, put):
+        toadd = numpy.frombuffer(put, dtype = numpy.uint8)
+        self.index += len(toadd)
+        return toadd
+    
+        
+
+    
+
