@@ -29,7 +29,20 @@ class Pointer(object):
         self.index += len(toadd)
         return toadd
     
-        
+    def array_place(self, packer, array):
+        buffer = bytearray()
+        packer = ">i"
+        for x in array:
+            buffer = buffer + struct.pack(packer, x)
+        toadd = numpy.frombuffer(buffer, dtype = numpy.uint8)
+        self.index += len(toadd)
+        return toadd
+    
+    def empty_array(self):
+        data = bytearray()
+        toadd = numpy.frombuffer(data, dtype = numpy.uint8)
+        self.index += len(toadd)
+        return toadd
 
     
 
