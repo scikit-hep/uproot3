@@ -421,7 +421,7 @@ class TTreeMethods(object):
             import pandas
 
             def wait():
-                if not flatten or all(not isinstance(interpretation, asjagged) for name, interpretation, future in futures):
+                if not flatten or all(interpretation.__class__ is not asjagged for name, interpretation, future in futures):
                     columns = []
                     data = {}
                     for name, interpretation, future in futures:
