@@ -224,21 +224,27 @@ class ROOTDirectory(object):
                 print ("fSeekParent = ", fSeekParent)
                 print ("fSeekkeys = ", fSeekKeys)
                 
-                subcursor = Cursor(fSeekKeys)
-                print ("")
-                print ("Header Key")
-                headerkey = TKey.read(source, subcursor, context, None)
+                if fSeekKeys == 0:
+                    out = ROOTDirectory(b"(empty)", context, [])
                 
-                print ("format = >i")
-                print ("cursor = ", subcursor.index)
+                else:
+                    subcursor = Cursor(fSeekKeys)
+                    print ("")
+                    print ("Header Key")
+                    headerkey = TKey.read(source, subcursor, context, None)
                 
-                nkeys = subcursor.field(source, ROOTDirectory._format5)
-                print ("nkeys = ", nkeys)
-                keys = [TKey.read(source, subcursor, context, None) for i in range(nkeys)]
+                    print ("format = >i")
+                    print ("cursor = ", subcursor.index)
+                
+                    nkeys = subcursor.field(source, ROOTDirectory._format5)
+                    print ("nkeys = ", nkeys)
+                    keys = [TKey.read(source, subcursor, context, None) for i in range(nkeys)]
 
-                out = ROOTDirectory(mykey.fName, context, keys)
+                    out = ROOTDirectory(mykey.fName, context, keys)
+                    out._headerkey = headerkey
+                    
                 out.fVersion, out.fDatimeC, out.fDatimeM, out.fNbytesKeys, out.fNbytesName, out.fSeekDir, out.fSeekParent, out.fSeekKeys = fVersion, fDatimeC, fDatimeM, fNbytesKeys, fNbytesName, fSeekDir, fSeekParent, fSeekKeys
-                out._headerkey = headerkey
+                
                 out.source = source
                 return out
 
