@@ -447,9 +447,9 @@ class TTreeMethods(object):
                     out = outputtype(index=index)
 
                     for name, interpretation, future in futures:
-                        if isinstance(interpretation, asjagged):
-                            array = future()
+                        array = future()
 
+                        if isinstance(array, uproot.interp.jagged.JaggedArray):
                             entries = numpy.empty(len(array.content), dtype=numpy.int64)
                             subentries = numpy.empty(len(array.content), dtype=numpy.int64)
                             starts, stops = array.starts, array.stops
@@ -470,14 +470,13 @@ class TTreeMethods(object):
                         elif isinstance(interpretation, asdtype):
                             df = outputtype(index=index)
                             if interpretation.todims == ():
-                                df[name] = future()
+                                df[name] = array
                             else:
-                                array = future()
                                 for tup in itertools.product(*[range(x) for x in interpretation.todims]):
                                     df["{0}[{1}]".format(name, "][".join(str(x) for x in tup))] = array[(slice(None),) + tup]
 
                         else:
-                            df = outputtype(index=index, columns=[name], data={name: list(future())})
+                            df = outputtype(index=index, columns=[name], data={name: list(array)})
 
                         out = pandas.merge(out, df, how="outer", left_index=True, right_index=True)
                             
