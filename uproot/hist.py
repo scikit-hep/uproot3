@@ -620,6 +620,15 @@ class TH2Methods(TH1Methods):
 
 uproot.rootio.methods["TH2"] = TH2Methods
 
+class THnSparseMethods(object):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (TH1Methods.__metaclass__,), {})
+
+    def hello(self):
+        return "world", len(dir(self))
+
+uproot.rootio.methods["THnSparse"] = THnSparseMethods
+
 class TH1(TH1Methods, list):
     def _type(self):
         if all(isinstance(x, numbers.Integral) for x in self):
