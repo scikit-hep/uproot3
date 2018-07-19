@@ -1080,11 +1080,11 @@ class ROOTStreamedObject(ROOTObject):
     _fields = []
 
     @classmethod
-    def rootfields(cls):
+    def _members(cls):
         out = []
         for t in cls.__bases__:
             if issubclass(t, ROOTStreamedObject):
-                out.extend(t.rootfields())
+                out.extend(t._members())
         out.extend(cls._fields)
         return out
         
