@@ -130,7 +130,7 @@ class ROOTDirectory(object):
                     fBEGIN, fEND, fSeekFree, fNbytesFree, nfree, fNbytesName, fUnits, fCompress, fSeekInfo, fNbytesInfo, fUUID = cursor.fields(source, ROOTDirectory._format2_small)
                 else:
                     fBEGIN, fEND, fSeekFree, fNbytesFree, nfree, fNbytesName, fUnits, fCompress, fSeekInfo, fNbytesInfo, fUUID = cursor.fields(source, ROOTDirectory._format2_big)
-                
+
                 print ("")
                 print ("fBEGIN = ", fBEGIN)
                 print ("fEND = ", fEND)
@@ -148,7 +148,7 @@ class ROOTDirectory(object):
                 else:
                     packer = ">iqqiiiBiqi18s"
                 print("format = ", packer)
-                
+
                 tfile = {"fVersion": fVersion, "fBEGIN": fBEGIN, "fEND": fEND, "fSeekFree": fSeekFree, "fNbytesFree": fNbytesFree, "nfree": nfree, "fNbytesName": fNbytesName, "fUnits": fUnits, "fCompress": fCompress, "fSeekInfo": fSeekInfo, "fNbytesInfo": fNbytesInfo, "fUUID": fUUID}
 
                 # classes requried to read streamers (bootstrap)
@@ -204,7 +204,7 @@ class ROOTDirectory(object):
                     raise TypeError("unrecognized options: {0}".format(", ".join(options)))
 
                 cursor, context, mykey = args
-                
+
                 print ("")
                 print ("Directory Information")
                 print ("Cursor = ", cursor.index)
@@ -215,36 +215,35 @@ class ROOTDirectory(object):
                     fSeekDir, fSeekParent, fSeekKeys = cursor.fields(source, ROOTDirectory._format4_small)
                 else:
                     fSeekDir, fSeekParent, fSeekKeys = cursor.fields(source, ROOTDirectory._format4_big)
-                
-                print ("fVersion = ", fVersion)
-                print ("fDatimeC = ", fDatimeC)
-                print ("fDatimeM = ", fDatimeM)
-                print ("fNbytesKeys = ", fNbytesKeys)
-                print ("fSeekDir = ", fSeekDir)
-                print ("fSeekParent = ", fSeekParent)
-                print ("fSeekkeys = ", fSeekKeys)
-                
+
+                print("fVersion = ", fVersion)
+                print("fDatimeC = ", fDatimeC)
+                print("fDatimeM = ", fDatimeM)
+                print("fNbytesKeys = ", fNbytesKeys)
+                print("fSeekDir = ", fSeekDir)
+                print("fSeekParent = ", fSeekParent)
+                print("fSeekkeys = ", fSeekKeys)
+
                 if fSeekKeys == 0:
                     out = ROOTDirectory(b"(empty)", context, [])
-                
+
                 else:
                     subcursor = Cursor(fSeekKeys)
-                    print ("")
-                    print ("Header Key")
+                    print("")
+                    print("Header Key")
                     headerkey = TKey.read(source, subcursor, context, None)
-                
-                    print ("format = >i")
-                    print ("cursor = ", subcursor.index)
-                
+
+                    print("format = >i")
+                    print("cursor = ", subcursor.index)
+
                     nkeys = subcursor.field(source, ROOTDirectory._format5)
-                    print ("nkeys = ", nkeys)
+                    print("nkeys = ", nkeys)
                     keys = [TKey.read(source, subcursor, context, None) for i in range(nkeys)]
 
                     out = ROOTDirectory(mykey.fName, context, keys)
                     out._headerkey = headerkey
-                    
+
                 out.fVersion, out.fDatimeC, out.fDatimeM, out.fNbytesKeys, out.fNbytesName, out.fSeekDir, out.fSeekParent, out.fSeekKeys = fVersion, fDatimeC, fDatimeM, fNbytesKeys, fNbytesName, fSeekDir, fSeekParent, fSeekKeys
-                
                 out.source = source
                 return out
 
@@ -510,8 +509,8 @@ def _readobjany(source, cursor, context, parent, asclass=None):
         print ("cursor = ", cursor.index)
         cname = cursor.cstring(source).decode("ascii")
         print ("cname string = ", cname)
-        
-            
+
+
         fct = context.classes.get(cname, Undefined)
 
         if vers > 0:
@@ -882,13 +881,13 @@ class TKey(ROOTObject):
     def _readinto(cls, self, source, cursor, context, parent):
         start = cursor.index
         print ("TKey cursor = ", cursor.index)
-        
+
         self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir = cursor.fields(source, self._format_small)
         if self.fVersion > 1000:
             cursor.index = start
             print ("Moved Cursor = ", cursor.index)
             self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir = cursor.fields(source, self._format_big)
-            
+
         print ("fNbytes = ", self.fNbytes)
         print ("fVersion = ", self.fVersion)
         print ("fObjlen = ", self.fObjlen)
@@ -1012,7 +1011,7 @@ class TStreamerElement(ROOTObject):
             self.fMaxIndex = cursor.array(source, 5, ">i4")
             print ("fMaxIndex Array = ", self.fMaxIndex)
             print ("format = >i4")
-        
+
         print ("newpos = ", cursor.index)
         self.fTypeName = cursor.string(source)
         print ("fTypeName string = ", self.fTypeName)
@@ -1202,7 +1201,7 @@ class TStreamerSTL(TStreamerElement):
         print ("TStreamerSTL Streamer")
         start, cnt, self._classversion = _startcheck(source, cursor)
         super(TStreamerSTL, self)._readinto(self, source, cursor, context, parent)
-        
+
         print ("newpos = ", cursor.index)
         self.fSTLtype, self.fCtype = cursor.fields(source, TStreamerSTL._format)
         print ("fSTLtype = ", self.fSTLtype)
@@ -1346,7 +1345,7 @@ class TList(list, ROOTStreamedObject):
             n = cursor.field(source, TList._format_n)  # ignore option
             print ("n = ", n)
             print ("format = >B")
-            cursor.bytes(source, n)                    # 
+            cursor.bytes(source, n)                    #
         _endcheck(start, cursor, cnt)
         return self
     _format_n = struct.Struct(">B")
