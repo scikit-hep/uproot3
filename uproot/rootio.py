@@ -692,17 +692,14 @@ def _defineclasses(streamerinfos, classes):
                                  "        for index in range(self.{0}):".format(_safename(element.fCountName)),
                                  "            self.{0} = {1}.read(source, cursor, context, self)".format(_safename(element.fName), _safename(element.fTypeName.rstrip(b"*")))])
 
-                elif isinstance(element, TStreamerObjectAnyPointer):
-                    code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
-
-                elif isinstance(element, TStreamerObjectPointer):
-                    if element.fType == uproot.const.kObjectp:
+                elif isinstance(element, (TStreamerObjectAnyPointer, TStreamerObjectPointer)):
+                    if element.fType == uproot.const.kObjectp or element.fType == uproot.const.kAnyp:
                         if pyclassname in skip and _safename(element.fName) in skip[pyclassname]:
                             code.append("        Undefined.read(source, cursor, context, self)")
                         else:
                             code.append("        self.{0} = {1}.read(source, cursor, context, self)".format(_safename(element.fName), _safename(element.fTypeName.rstrip(b"*"))))
                             fields.append(_safename(element.fName))
-                    elif element.fType == uproot.const.kObjectP:
+                    elif element.fType == uproot.const.kObjectP or element.fType == uproot.const.kAnyP:
                         if pyclassname in skip and _safename(element.fName) in skip[pyclassname]:
                             code.append("        _readobjany(source, cursor, context, parent, asclass=Undefined)")
                         else:
@@ -752,7 +749,7 @@ def _defineclasses(streamerinfos, classes):
                 code.insert(0, "    _classname = {0}".format(repr(streamerinfo.fName)))
             else:
                 code.insert(0, "    _classname = b{0}".format(repr(streamerinfo.fName)))
-            code.insert(0, "    _fields = [{0}]".format(", ".join(repr(x) for x in fields)))
+            code.insert(0, "    _fields = [{0}]".format(", ".join(repr(str(x)) for x in fields)))
             code.insert(0, "class {0}({1}):".format(pyclassname, ", ".join(bases)))
 
             if pyclassname in classes:
@@ -1080,11 +1077,18 @@ class TStreamerString(TStreamerElement):
 ################################################################ streamed classes (with some overrides)
 
 class ROOTStreamedObject(ROOTObject):
-    pass
-
-class TObject(ROOTStreamedObject):
     _fields = []
 
+    @classmethod
+    def rootfields(cls):
+        out = []
+        for t in cls.__bases__:
+            if issubclass(t, ROOTStreamedObject):
+                out.extend(t.rootfields())
+        out.extend(cls._fields)
+        return out
+        
+class TObject(ROOTStreamedObject):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         _skiptobj(source, cursor)
@@ -1099,6 +1103,8 @@ class TString(bytes, ROOTStreamedObject):
         return self.decode("utf-8", "replace")
 
 class TNamed(TObject):
+    _fields = ["fName", "fTitle"]
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
