@@ -79,7 +79,7 @@ fBaseVersion = ?
 ### Number of keys
 
 Starting position = ?  
-nkeys = Number of extra keys in the file  
+nkeys = Number of extra keys in the file  = Starting position of the keys
 
 
 name = ?  
