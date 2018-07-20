@@ -32,8 +32,10 @@ fName = ?
 fTitle = Title of the object.(Not important)  
   
 ## Directory
+
+TKey before Directory information -> fTitle = b""  
   
-Start position = ?  
+Start position = Pointer after fName of previous key is added to the end of that key    
 fVersion = Version of that instance(Follow ROOT)  
 fDatimeC = Date and time (Need to figure out format)  
 fDatimeM = Date and time (Need to figure out format)  
@@ -79,7 +81,7 @@ fBaseVersion = ?
 ### Number of keys
 
 Starting position = ?  
-nkeys = Number of extra keys in the file  = Starting position of the keys
+nkeys = Number of extra keys in the file  = Starting position of the keys  
 
 
 name = ?  
