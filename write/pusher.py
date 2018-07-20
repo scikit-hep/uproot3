@@ -11,7 +11,8 @@ class Pusher(object):
         cursor.origin = cursor.index
         
     def stringer(self, cursor, toput):
-        cursor, self.file[cursor.index] = cursor.precheck(toput)
+        self.file[cursor.index] = cursor.precheck(toput)
+        cursor.skip(1)
         toadd = cursor.string(toput)
         self.file[cursor.origin:cursor.index] = toadd
         cursor.origin = cursor.index
