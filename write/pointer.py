@@ -22,7 +22,7 @@ class Pointer(object):
     def precheck(self, put):
         toadd = bytes(str(len(put)),"ascii")
         self.skip(1)
-        return toadd
+        return self, toadd
     
     def string(self, put):
         toadd = numpy.frombuffer(put, dtype = numpy.uint8)
