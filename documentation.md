@@ -11,12 +11,13 @@ nfree = 1 ?
 fNbytesName = ?  
 fUnits = 4 ?  
 fCompress = Compression(Can be set manually while writing ROOT file)  
-fSeekInfo = Points to first key  
+fSeekInfo = Points to first key = Where branch informations end  
 fNbytesInfo = fNBytes of first key  
 fUUID = Identifier unique to each ROOT file  
   
 ## TKey
 There is a streamer key, a header key and 1 more key.  
+The streamer key has the same fClassName, fName and fTitle for all files.  
   
 Starting point = fSeekInfo  
 fNbytes = fNbytesInfo = fObjlen + fKeylen = Number of bytes occupied by this TKey  
@@ -35,7 +36,7 @@ fTitle = Title of the object.(Not important)
 
 TKey before Directory information -> fTitle = b""  
   
-Start position = Pointer after fName of previous key is added to the end of that key    
+Start position = Pointer after fName of previous key is added to the end of that key + 1  
 fVersion = Version of that instance(Follow ROOT)  
 fDatimeC = Date and time (Need to figure out format)  
 fDatimeM = Date and time (Need to figure out format)  
