@@ -1,4 +1,5 @@
 from write.pointer import Pointer
+from write.first_key import First_Key
 
 class Pusher(object):
     
@@ -31,6 +32,13 @@ class Pusher(object):
         toadd = cursor.empty_array()
         self.file[cursor.origin:cursor.index] = toadd
         cursor.origin = cursor.index
+        
+    def first_keyer(self, cursor, fNbytes, fObjlen):
+        packer, fNbytes, fVersion, fObjlen, fDatime, fKeylen, fCycle, fSeekKey, fSeekPdir, fClassName, fName, fTitle = First_Key(cursor, fNbytes, fObjlen).values()
+        self.numbers(cursor, packer, fNbytes, fVersion, fObjlen, fDatime, fKeylen, fCycle, fSeekKey, fSeekPdir)
+        self.stringer(cursor, fClassName)
+        self.stringer(cursor, fName)
+        self.stringer(cursor, fTitle)
         
         
         
