@@ -1006,7 +1006,7 @@ class TBranchMethods(object):
         if self._recoveredbaskets is None:
             self._tryrecover()
         interpretation = self._normalize_interpretation(interpretation)
-        return sum(interpretation.numitems(key.border, self.basket_numentries(i)) for i, key in enumerate(_threadsafe_iterate_keys(keycache, True)))
+        return sum(interpretation.numitems(key.border, self.basket_numentries(i)) for i, key in enumerate(self._threadsafe_iterate_keys(keycache, True)))
 
     @property
     def compression(self):
