@@ -1,6 +1,3 @@
-from write.pointer import Pointer
-from write.first_key import First_Key
-
 class Pusher(object):
     
     def __init__(self, file):
@@ -33,12 +30,20 @@ class Pusher(object):
         self.file[cursor.origin:cursor.index] = toadd
         cursor.origin = cursor.index
         
-    def first_keyer(self, cursor, fNbytes, fObjlen):
-        packer, fNbytes, fVersion, fObjlen, fDatime, fKeylen, fCycle, fSeekKey, fSeekPdir, fClassName, fName, fTitle = First_Key(cursor, fNbytes, fObjlen).values()
+    def keyer(self, cursor, key):
+        packer, fNbytes, fVersion, fObjlen, fDatime, fKeylen, fCycle, fSeekKey, fSeekPdir, fClassName, fName, fTitle = key.values()
         self.numbers(cursor, packer, fNbytes, fVersion, fObjlen, fDatime, fKeylen, fCycle, fSeekKey, fSeekPdir)
         self.stringer(cursor, fClassName)
         self.stringer(cursor, fName)
         self.stringer(cursor, fTitle)
+        
+    def director(self, cursor, directory):
+        cursor.skip(1)
+        packer, fVersion, fDatimeC, fDatimeM, fNbytesKeys, fNbytesName = directory.first()
+        self.numbers(cursor, packer, fVersion, fDatimeC, fDatimeM, fNbytesKeys, fNbytesName)
+        packer, fSeekDir, fSeekParent, fSeekKeys = directory.second()
+        self.numbers(cursor, packer, fSeekDir, fSeekParent, fSeekKeys)
+        
         
         
         
