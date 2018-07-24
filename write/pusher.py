@@ -1,3 +1,5 @@
+from write.utils import resizer
+
 class Pusher(object):
     
     def __init__(self, file):
@@ -5,6 +7,8 @@ class Pusher(object):
     
     def numbers(self, cursor, packer, *args):
         toadd = cursor.push(packer, *args)
+        if cursor.index > self.file.size:
+            self.file = resizer(self.file, cursor.index+1)
         self.file[cursor.origin:cursor.index] = toadd
         cursor.origin = cursor.index
         
@@ -12,21 +16,29 @@ class Pusher(object):
         self.file[cursor.index] = cursor.precheck(toput)
         cursor.skip(1)
         toadd = cursor.string(toput)
+        if cursor.index > self.file.size:
+            self.file = resizer(self.file, cursor.index+1)
         self.file[cursor.origin:cursor.index] = toadd
         cursor.origin = cursor.index
     
     def cnamer(self, cursor, toput):
         toadd = cursor.string(toput)
+        if cursor.index > self.file.size:
+            self.file = resizer(self.file, cursor.index+1)
         self.file[cursor.origin:cursor.index] = toadd
         cursor.origin = cursor.index
         
     def array_pusher(self, cursor, packer, array):
         toadd = cursor.array_place(packer, array)
+        if cursor.index > self.file.size:
+            self.file = resizer(self.file, cursor.index+1)
         self.file[cursor.origin:cursor.index] = toadd
         cursor.origin = cursor.index
         
     def empty_array_pusher(self, cursor):
         toadd = cursor.empty_array()
+        if cursor.index > self.file.size:
+            self.file = resizer(self.file, cursor.index+1)
         self.file[cursor.origin:cursor.index] = toadd
         cursor.origin = cursor.index
         
@@ -43,8 +55,3 @@ class Pusher(object):
         self.numbers(cursor, packer, fVersion, fDatimeC, fDatimeM, fNbytesKeys, fNbytesName)
         packer, fSeekDir, fSeekParent, fSeekKeys = directory.second()
         self.numbers(cursor, packer, fSeekDir, fSeekParent, fSeekKeys)
-        
-        
-        
-        
-        
