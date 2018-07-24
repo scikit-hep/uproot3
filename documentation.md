@@ -8,7 +8,7 @@ fEND = Size of file = fSeekFree + fNbytesFree
 fSeekFree = Last useful byte location = fBEGIN + (Summation of fNbytes of all TKeys)  
 fNbytesFree = No. of junk bytes in the file  
 nfree = 1 ?  
-fNbytesName = ?  
+fNbytesName = Starting position of DirectoryInfo - fBEGIN  
 fUnits = 4 ?  
 fCompress = Compression(Can be set manually while writing ROOT file)  
 fSeekInfo = Points to first key = Where branch informations end  
@@ -36,7 +36,7 @@ fTitle = Title of the object.(Not important)
 
 TKey before Directory information -> fTitle = b""  
   
-Start position = Pointer after fName of previous key is added to the end of that key + 1  
+Start position = Pointer after fName of previous key is added to the end of that key + 1  = fBEGIN + fNbytesName  
 fVersion = Version of that instance(Follow ROOT)  
 fDatimeC = Date and time (Need to figure out format)  
 fDatimeM = Date and time (Need to figure out format)  
