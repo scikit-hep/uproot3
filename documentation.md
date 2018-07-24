@@ -8,7 +8,7 @@ fEND = Size of file = fSeekFree + fNbytesFree
 fSeekFree = Last useful byte location = fBEGIN + (Summation of fNbytes of all TKeys)  
 fNbytesFree = No. of junk bytes in the file  
 nfree = 1 ?  
-fNbytesName = Starting position of DirectoryInfo - fBEGIN  
+fNbytesName = Starting position of DirectoryInfo - fBEGIN  = 36 + 2 times the length of the name of the file in bytes  
 fUnits = 4 ?  
 fCompress = Compression(Can be set manually while writing ROOT file)  
 fSeekInfo = Points to first key = Where branch informations end  
