@@ -55,3 +55,8 @@ class Pusher(object):
         self.numbers(cursor, packer, fVersion, fDatimeC, fDatimeM, fNbytesKeys, fNbytesName)
         packer, fSeekDir, fSeekParent, fSeekKeys = directory.second()
         self.numbers(cursor, packer, fSeekDir, fSeekParent, fSeekKeys)
+        
+    def empty_fill(self, size):
+        self.file = resizer(self.file, size+1)
+        
+        
