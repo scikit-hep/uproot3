@@ -1,11 +1,11 @@
 class First_Key(object):
     
-    def __init__(self, pointer, fNbytesInfo, fObjlen):
-        self.fNbytes = fNbytesInfo
+    def __init__(self, pointer, fObjlen):
         self.fVersion = 4
         self.fObjlen = fObjlen
         self.fDatime = 1573188772
         self.fKeylen = 64
+        self.fNbytes = self.fObjlen + self.fKeylen
         self.fCycle = 1
         self.fSeekKey = pointer.index
         self.fSeekPdir = 100

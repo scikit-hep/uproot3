@@ -59,4 +59,9 @@ class Pusher(object):
     def empty_fill(self, size):
         self.file = resizer(self.file, size+1)
         
+    def head_push(self, cursor, header):
+        packer, magic, fVersion = header.valuestop()
+        self.numbers(cursor, packer, magic, fVersion)
+        packer, fBEGIN, fEND, fSeekFree, fNbytesFree, nfree, fNbytesName, fUnits, fCompress, fSeekInfo, fNbytesInfo, fUUID = header.valuesbot()
+        self.numbers(cursor, packer, fBEGIN, fEND, fSeekFree, fNbytesFree, nfree, fNbytesName, fUnits, fCompress, fSeekInfo, fNbytesInfo, fUUID)
         
