@@ -10,9 +10,7 @@ void dummy()
     tfile->SetCompressionLevel(0);
 
     TObjString  Comment("Hello World");
-    printf(">>>%s<<<", Comment.GetName());
-    printf(">>>%s<<<", Comment.GetString().Data());
-
+	
     Comment.Write();
     
     tfile -> Close();
