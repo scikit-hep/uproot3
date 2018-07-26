@@ -1,6 +1,6 @@
 class Header(object):
     
-    def __init__(self, fEND, fSeekFree, bytename, fCompress, fSeekInfo, fNbytesInfo):
+    def __init__(self, fEND, fSeekFree, bytename, fCompress, fSeekInfo):
         self.magic = b"root"
         self.fVersion = 61400
         self.fBEGIN = 100
@@ -12,7 +12,7 @@ class Header(object):
         self.fUnits = 4
         self.fCompress = fCompress
         self.fSeekInfo = fSeekInfo
-        self.fNbytesInfo = fNbytesInfo
+        self.fNbytesInfo = 0
         self.fUUID = b"\x00\x010\xd5\xf5\xea~\x0b\x11\xe8\xa2D~S\x1f\xac\xbe\xef"
         
     def valuestop(self):
