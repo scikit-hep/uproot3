@@ -1,11 +1,11 @@
 class Header(object):
     
-    def __init__(self, fEND, fSeekFree, bytename, fCompress, fSeekInfo):
+    def __init__(self, bytename, fCompress, fSeekInfo):
         self.magic = b"root"
         self.fVersion = 61400
         self.fBEGIN = 100
-        self.fEND = fEND
-        self.fSeekFree = fSeekFree
+        self.fEND = 1
+        self.fSeekFree = 1
         self.fNbytesFree = self.fEND - self.fSeekFree
         self.nfree = 1
         self.fNbytesName = 36 + (2*(len(bytename)))
