@@ -1713,7 +1713,10 @@ def lazyarrays(path, treepath, branches=None, outputtype=dict, limitbytes=1024**
     cache[LazyArray._cachekey(uuids[0], treepath)] = tree
 
     def chunksize(branch):
-        return max(branch.basket_numentries(i) for i in range(branch.numbaskets))
+        if branch.numbaskets == 0:
+            return 0
+        else:
+            return max(branch.basket_numentries(i) for i in range(branch.numbaskets))
 
     if outputtype == namedtuple:
         outputtype = namedtuple("Arrays", [branch.name.decode("ascii") for branch, interpretation in branches])
@@ -1739,7 +1742,7 @@ class LazyArray(object):
         self._uuids = (None,)
         self._treepath = None
         self._branchname = onlybranch.name
-        self._chunksize = max(onlybranch.basket_numentries(i) for i in range(onlybranch.numbaskets))
+        self._chunksize = max(onlybranch.basket_numentries(i) for i in range(onlybranch.numbaskets)) if onlybranch.numbaskets > 0 else 1
         self._interpretation = interpretation
         self._globalentryoffset = numpy.array([0, onlybranch.numentries], dtype=numpy.int64)
         self._cache = cache
