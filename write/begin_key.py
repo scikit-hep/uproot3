@@ -1,11 +1,11 @@
 class Begin_Key(object):
     
-    def __init__(self, fName):
-        self.fNbytes = 116
+    def __init__(self, fName, fNbytes, fKeylen):
+        self.fNbytes = fNbytes
         self.fVersion = 4
-        self.fObjlen = 72
+        self.fObjlen = 0
         self.fDatime = 1573188772
-        self.fKeylen = 44
+        self.fKeylen = fKeylen
         self.fCycle = 1
         self.fSeekKey = 100
         self.fSeekPdir = 0
