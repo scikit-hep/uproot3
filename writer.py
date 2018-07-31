@@ -91,7 +91,7 @@ class Writer(object):
         fSeekKeys = self.pointer.index
 
         self.directory.fSeekKeys = self.pointer.index
-        self.pusher.director(self.pointer, self.directory)
+        self.pusher.director(Pointer(self.directory_pointcheck), self.directory)
 
         head_key_pointcheck = self.pointer.index
         fVersion = 4
