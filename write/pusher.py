@@ -65,3 +65,11 @@ class Pusher(object):
         packer, fBEGIN, fEND, fSeekFree, fNbytesFree, nfree, fNbytesName, fUnits, fCompress, fSeekInfo, fNbytesInfo, fUUID = header.valuesbot()
         self.numbers(cursor, packer, fBEGIN, fEND, fSeekFree, fNbytesFree, nfree, fNbytesName, fUnits, fCompress, fSeekInfo, fNbytesInfo, fUUID)
         
+    def push_object(self, cursor, Object):
+        packer, cnt, vers = Object.values1()
+        self.numbers(cursor, packer, cnt, vers)
+        version, packer = Object.values2()
+        self.numbers(cursor, packer, version)
+        fUniqueID, fBits, packer = Object.values3()
+        self.numbers(cursor, packer, fUniqueID, fBits)
+        self.stringer(cursor, Object.string)

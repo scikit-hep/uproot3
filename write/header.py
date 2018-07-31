@@ -1,6 +1,6 @@
 class Header(object):
     
-    def __init__(self, bytename, fCompress, fSeekInfo):
+    def __init__(self, bytename, fCompress, fSeekInfo = 0):
         self.magic = b"root"
         self.fVersion = 61400
         self.fBEGIN = 100
