@@ -1,7 +1,7 @@
 import numpy
 from write.pusher import Pusher
 from write.pointer import Pointer
-from write.key import Key as HeadKey
+from write.headkey import HeadKey
 from write.TObjString.stringobject import StringObject
 from write.TObjString.key import Key as StringKey
 
@@ -20,7 +20,7 @@ class Writer(object):
         from write.header import Header
         fCompress = 0 #Constant for now
         self.header = Header(self.bytename, fCompress)
-        #Have to add modified fSeekInfo later
+        #self.header.fSeekInfo modified later
         self.pusher.head_push(self.pointer, self.header)
         
         from write.begin_key import Begin_Key
@@ -96,20 +96,10 @@ class Writer(object):
         self.pusher.director(Pointer(self.directory_pointcheck), self.directory)
 
         head_key_pointcheck = self.pointer.index
-        fVersion = 4
         fNbytes = self.directory.fNbytesKeys
-        fObjlen = 0
-        fDatime = 1573188772
-        fKeylen = 0
-        fCycle = 1
         fSeekKey = self.directory.fSeekKeys
-        fSeekPdir = 100
-        fClassName = b'TFile'
         fName = self.bytename
-        fTitle = b''
-        packer = ">ihiIhhii"
-        head_key = HeadKey(packer, fNbytes, fVersion, fObjlen, fDatime, fKeylen, fCycle, fSeekKey, fSeekPdir, fClassName,
-                       fName, fTitle)
+        head_key = HeadKey(fNbytes, fSeekKey, fName)
         self.pusher.keyer(self.pointer, head_key)
         head_key_end = self.pointer.index
 
@@ -117,6 +107,7 @@ class Writer(object):
         packer = ">i"
         self.pusher.numbers(self.pointer, packer, nkeys)
 
+        #TObjString stuff
         for x in range(nkeys):
             key = StringKey(self.strings[x], self.stringloc[x])
             pointcheck = self.pointer.index
@@ -124,7 +115,6 @@ class Writer(object):
             key.fKeylen = self.pointer.index - pointcheck
             key.fNbytes = key.fKeylen + key.fObjlen
             self.pusher.keyer(Pointer(pointcheck), key)
-
 
         self.header.fEND = self.pointer.index
         self.header.fSeekFree = self.pointer.index
@@ -139,11 +129,3 @@ class Writer(object):
         self.pusher.keyer(Pointer(head_key_pointcheck), head_key)
 
 
-
-
-
-
-        
-        
-                                
-        
