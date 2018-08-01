@@ -68,6 +68,8 @@ class Writer(object):
         stringobject = StringObject(temp)
         self.pusher.push_object(self.pointer, stringobject)
 
+        self.create()
+
     def create(self):
         self.header.fSeekInfo = self.pointer.index
         self.pusher.head_push(Pointer(0), self.header)
