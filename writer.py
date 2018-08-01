@@ -117,7 +117,12 @@ class Writer(object):
 
         for x in range(nkeys):
             key = StringKey(self.strings[x], self.stringloc[x])
+            pointcheck = self.pointer.index
             self.pusher.keyer(self.pointer, key)
+            key.fKeylen = self.pointer.index - pointcheck
+            key.fNbytes = key.fKeylen + key.fObjlen
+            self.pusher.keyer(Pointer(pointcheck), key)
+
 
         self.header.fEND = self.pointer.index
         self.header.fSeekFree = self.pointer.index
