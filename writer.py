@@ -4,11 +4,12 @@ from write.pointer import Pointer
 from write.headkey import HeadKey
 from write.TObjString.stringobject import StringObject
 from write.TObjString.key import Key as StringKey
+from write.diskarray import DiskArray
 
 class Writer(object):
     
     def __init__(self, filename):
-        self.file = numpy.memmap(filename = filename, dtype = numpy.uint8, mode = "w+", shape = (1,))
+        self.file = DiskArray(filename, shape = (0,), dtype = numpy.uint8)
         self.bytename = filename.encode("utf-8")
         
         self.pusher = Pusher(self.file)
