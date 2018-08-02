@@ -2,7 +2,7 @@ import numpy
 from write.pusher import Pusher
 from write.pointer import Pointer
 from write.headkey import HeadKey
-from write.TObjString.stringobject import StringObject
+from write.TObjString.tobjstring import TObjString
 from write.TObjString.key import Key as StringKey
 from write.diskarray import DiskArray
 
@@ -15,9 +15,10 @@ class Writer(object):
         self.pusher = Pusher(self.file)
         self.pointer = Pointer(0)
         
-        self.strings = []
-        self.stringloc = []
-        
+        self.objects = []
+        self.loc = []
+        self.streamers = []
+
         from write.header import Header
         fCompress = 0 #Constant for now
         self.header = Header(self.bytename, fCompress)
@@ -51,23 +52,33 @@ class Writer(object):
         self.header.fEND = self.pointer.index
         self.header.fSeekFree = self.pointer.index
         self.pusher.head_push(Pointer(0), self.header)
+
+        self.create()
         
     def __setitem__(self, item):
-        temp = str(item)
-        temp = temp.encode("utf-8")
-        self.strings.append(temp)
-        self.stringloc.append(self.pointer.index)
+
+        #item = TObjString("Hello World")
+
+        if type(item) is TObjString:
+            temp = str(item.string)
+            temp = temp.encode("utf-8")
+            self.objects.append(temp)
+            self.loc.append(self.pointer.index)
         
-        from write.TObjString.junkkey import JunkKey
-        pointcheck = self.pointer.index
-        junkkey = JunkKey(temp)
-        self.pusher.keyer(self.pointer, junkkey)
-        junkkey.fKeylen = self.pointer.index - pointcheck
-        junkkey.fNbytes = junkkey.fKeylen + junkkey.fObjlen
-        self.pusher.keyer(Pointer(pointcheck), junkkey)
+            from write.TObjString.junkkey import JunkKey
+            pointcheck = self.pointer.index
+            junkkey = JunkKey(temp)
+            self.pusher.keyer(self.pointer, junkkey)
+            junkkey.fKeylen = self.pointer.index - pointcheck
+            junkkey.fNbytes = junkkey.fKeylen + junkkey.fObjlen
+            self.pusher.keyer(Pointer(pointcheck), junkkey)
         
-        stringobject = StringObject(temp)
-        self.pusher.push_object(self.pointer, stringobject)
+            stringobject = TObjString(temp)
+            self.pusher.push_object(self.pointer, stringobject)
+
+            #Streamername
+            if "TObjString" not in self.streamers:
+                self.streamers.append("TObjString")
 
         self.create()
 
@@ -87,9 +98,11 @@ class Writer(object):
         self.header.fNbytesInfo = key.fNbytes
         self.pusher.head_push(Pointer(0), self.header)
 
-        from write.TObjString.streamers import TObjString
-        tobjstring = TObjString(self.pusher, self.pointer)
-        tobjstring.write()
+        for x in self.streamers:
+            if x == "TObjString":
+                from write.TObjString.streamers import TObjString
+                tobjstring = TObjString(self.pusher, self.pointer)
+                tobjstring.write()
 
         fSeekKeys = self.pointer.index
 
@@ -104,13 +117,13 @@ class Writer(object):
         self.pusher.keyer(self.pointer, head_key)
         head_key_end = self.pointer.index
 
-        nkeys = len(self.strings)
+        nkeys = len(self.objects)
         packer = ">i"
         self.pusher.numbers(self.pointer, packer, nkeys)
 
         #TObjString stuff
         for x in range(nkeys):
-            key = StringKey(self.strings[x], self.stringloc[x])
+            key = StringKey(self.objects[x], self.loc[x])
             pointcheck = self.pointer.index
             self.pusher.keyer(self.pointer, key)
             key.fKeylen = self.pointer.index - pointcheck

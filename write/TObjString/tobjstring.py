@@ -1,6 +1,6 @@
 import numpy
 
-class StringObject(object):
+class TObjString(object):
     
     def __init__(self, string):
         self.string = string
