@@ -1,4 +1,6 @@
-class JunkKey(object):
+from write.key import Key
+
+class JunkKey(Key):
     
     def __init__(self, string):
         self.string = string
@@ -14,6 +16,6 @@ class JunkKey(object):
         self.fClassName = b'TObjString'
         self.fName = self.string
         self.fTitle = b'Collectable string class'
-        
-    def values(self):
-        return self.packer, self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir, self.fClassName, self.fName, self.fTitle
+        Key.__init__(self, self.packer, self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle,
+                     self.fSeekKey, self.fSeekPdir, self.fClassName, self.fName, self.fTitle)
+

@@ -1,4 +1,6 @@
-class HeadKey(object):
+from write.key import Key
+
+class HeadKey(Key):
 
     def __init__(self, fNbytes,fSeekKey, fName):
         self.packer = ">ihiIhhii"
@@ -13,6 +15,5 @@ class HeadKey(object):
         self.fClassName = b'TFile'
         self.fName = fName
         self.fTitle = b''
-
-    def values(self):
-        return self.packer, self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir, self.fClassName, self.fName, self.fTitle
+        Key.__init__(self, self.packer, self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle,
+                     self.fSeekKey, self.fSeekPdir, self.fClassName, self.fName, self.fTitle)

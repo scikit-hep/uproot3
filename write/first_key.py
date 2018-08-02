@@ -1,4 +1,6 @@
-class First_Key(object):
+from write.key import Key
+
+class First_Key(Key):
     
     def __init__(self, pointer, fKeylen):
         self.fVersion = 4
@@ -13,7 +15,6 @@ class First_Key(object):
         self.fClassName = b'TList'
         self.fName = b'StreamerInfo'
         self.fTitle = b'Doubly linked list'
-        
-    def values(self):
-        return self.packer, self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir, self.fClassName, self.fName, self.fTitle
+        Key.__init__(self, self.packer, self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle,
+                     self.fSeekKey, self.fSeekPdir, self.fClassName, self.fName, self.fTitle)
     

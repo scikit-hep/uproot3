@@ -1,4 +1,6 @@
-class Key(object):
+from write.key import Key as SuperKey
+
+class Key(SuperKey):
 
     def __init__(self, string, stringloc):
         self.string = string
@@ -14,6 +16,6 @@ class Key(object):
         self.fClassName = b'TObjString'
         self.fName = self.string
         self.fTitle = b'Collectable string class'
+        SuperKey.__init__(self, self.packer, self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle,
+                     self.fSeekKey, self.fSeekPdir, self.fClassName, self.fName, self.fTitle)
 
-    def values(self):
-        return self.packer, self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir, self.fClassName, self.fName, self.fTitle
