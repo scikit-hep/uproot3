@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import base64
+import codecs
 import glob
 import inspect
 import itertools
@@ -413,7 +414,7 @@ class TTreeMethods(object):
 
         # make functions that wait for the filling job to be done and return the right outputtype
         if outputtype == namedtuple:
-            outputtype = namedtuple("Arrays", [branch.name.decode("ascii", errors="replace") if namedecode is None else branch.name.decode(namedecode) for branch, interpretation in branches])
+            outputtype = namedtuple("Arrays", [codecs.ascii_decode(branch.name, "replace")[0] if namedecode is None else branch.name.decode(namedecode) for branch, interpretation in branches])
             def wait():
                 return outputtype(*[future() for name, interpretation, future in futures])
 
@@ -514,7 +515,7 @@ class TTreeMethods(object):
         lazyarrays = [(branch.name if namedecode is None else branch.name.decode(namedecode), branch.lazyarray(interpretation=interpretation, limitbytes=limitbytes, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor)) for branch, interpretation in branches]
 
         if outputtype == namedtuple:
-            outputtype = namedtuple("Arrays", [branch.name.decode("ascii", errors="replace") if namedecode is None else branch.name.decode(namedecode) for branch, interpretation in branches])
+            outputtype = namedtuple("Arrays", [codecs.ascii_decode(branch.name, "replace")[0] if namedecode is None else branch.name.decode(namedecode) for branch, interpretation in branches])
             return outputtype(*[lazyarray for name, lazyarray in lazyarrays])
         elif getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame":
             raise TypeError("pandas.DataFrame cannot store lazyarrays")
@@ -576,7 +577,7 @@ class TTreeMethods(object):
                     return out
 
         if outputtype == namedtuple:
-            outputtype = namedtuple("Arrays", [branch.name.decode("ascii", errors="replace") if namedecode is None else branch.name.decode(namedecode) for branch, interpretation in branches])
+            outputtype = namedtuple("Arrays", [codecs.ascii_decode(branch.name, "replace")[0] if namedecode is None else branch.name.decode(namedecode) for branch, interpretation in branches])
             def wrap_for_python_scope(futures, start, stop):
                 return lambda: outputtype(*[evaluate(branch, interpretation, future, past, cachekey, False) for branch, interpretation, future, past, cachekey in futures])
         elif getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame":
@@ -1666,7 +1667,7 @@ def daskarrays(path, treepath, branches=None, chunks=None, outputtype=dict, name
     else:
         return outputtype(*[x.dask.array(chunks=chunks, name=n) for n, x in out.items()])
 
-def daskframe(path, treepath, branches=None, chunks=None, namedecode=None, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
+def daskframe(path, treepath, branches=None, chunks=None, namedecode="utf-8", limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
     import dask.dataframe
     out = lazyarrays(path, treepath, branches=branches, outputtype=OrderedDict, namedecode=namedecode, limitbytes=limitbytes, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor)
     series = []
@@ -1719,7 +1720,7 @@ def lazyarrays(path, treepath, branches=None, outputtype=dict, namedecode=None, 
             return max(branch.basket_numentries(i) for i in range(branch.numbaskets))
 
     if outputtype == namedtuple:
-        outputtype = namedtuple("Arrays", [branch.name.decode("ascii", errors="replace") if namedecode is None else branch.name.decode(namedecode) for branch, interpretation in branches])
+        outputtype = namedtuple("Arrays", [codecs.ascii_decode(branch.name, "replace")[0] if namedecode is None else branch.name.decode(namedecode) for branch, interpretation in branches])
         return outputtype(*[LazyArray._frompaths(paths, uuids, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
     elif getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame":
         raise TypeError("pandas.DataFrame cannot store lazyarrays")
