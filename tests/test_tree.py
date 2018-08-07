@@ -265,6 +265,15 @@ class TestTree(unittest.TestCase):
         self.assertEqual(arrays[b"two"].tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
         self.assertEqual(arrays[b"three"].tolist(), [b"uno", b"dos", b"tres", b"quatro"])
 
+    def test_tree_arrays_namedecode(self):
+        file = uproot.open("tests/samples/simple.root")
+
+        tree = file["tree"]
+        arrays = tree.arrays(namedecode="utf-8")
+        self.assertEqual(arrays["one"].tolist(), [1, 2, 3, 4])
+        self.assertEqual(arrays["two"].tolist(), numpy.array([1.1, 2.2, 3.3, 4.4], dtype=numpy.float32).tolist())
+        self.assertEqual(arrays["three"].tolist(), [b"uno", b"dos", b"tres", b"quatro"])
+
     def test_tree_iterator1(self):
         # one big array
         for arrays in uproot.open("tests/samples/foriter.root")["foriter"].iterate(entrysteps=1000):

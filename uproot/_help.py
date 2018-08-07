@@ -443,6 +443,10 @@ tree_fragments = {
     "outputtype": u"""outputtype : type
         constructor for the desired yield type, such as ``dict`` *(default)*, ``OrderedDict``, ``tuple``, ``namedtuple``, custom user class, etc.""",
 
+    # namedecode
+    "namedecode": u"""namedecode : None or str
+        if ``None`` *(default)* return names as uninterpreted byte strings (type ``bytes`` in Python 3); if a string like ``"ascii"`` or ``"utf-8"``, decode bytes to a string using the specified encoding.""",
+
     # reportentries
     "reportentries": u"""reportentries : bool
         if ``False`` *(default)*, yield only arrays (as ``outputtype``); otherwise, yield 3-tuple: *(entry start, entry stop, arrays)*, where *entry start* is inclusive and *entry stop* is exclusive.""",
@@ -510,6 +514,8 @@ u"""Opens a series of ROOT files (local or remote), yielding the same number of 
     {entrysteps}
 
     {outputtype}
+
+    {namedecode}
 
     {reportentries}
 
@@ -813,6 +819,8 @@ u"""Read many branches into arrays (or other objects if provided alternate *inte
 
     {outputtype}
 
+    {namedecode}
+
     {entrystart}
 
     {entrystop}
@@ -844,6 +852,8 @@ u"""Create many lazy arrays.
 
     {outputtype}
 
+    {namedecode}
+
     {cache}
 
     {basketcache}
@@ -870,6 +880,8 @@ u"""Iterate over many arrays at once, yielding the same number of entries from a
     {entrysteps}
 
     {outputtype}
+
+    {namedecode}
 
     {reportentries}
 
@@ -1396,6 +1408,9 @@ u"""Create a Pandas DataFrame from some branches.
     Parameters
     ----------
     {branches}
+
+    namedecode : None or str
+        if ``"utf-8"`` *(default)* or other encoding name, decode column names as strings; if ``None``, return names as uninterpreted byte strings (type ``bytes`` in Python 3).
 
     {entrystart}
 
