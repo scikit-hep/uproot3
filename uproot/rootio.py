@@ -639,6 +639,7 @@ def _defineclasses(streamerinfos, classes):
                     "                return Undefined.read(source, cursor, context, parent, cls.__name__)"]
 
             fields = []
+            recarray = []
             bases = []
             formats = {}
             dtypes = {}
@@ -662,11 +663,17 @@ def _defineclasses(streamerinfos, classes):
                     dtypes[dtypename] = _ftype2dtype(fType)
                     code.append("        self.{0} = cursor.array(source, self.{1}, cls.{2})".format(_safename(element.fName), _safename(element.fCountName), dtypename))
                     fields.append(_safename(element.fName))
+                    recarray.append("raise ValueError('not a recarray')")
 
                 elif isinstance(element, TStreamerBasicType):
                     if element.fArrayLength == 0:
                         basicnames.append("self.{0}".format(_safename(element.fName)))
                         fields.append(_safename(element.fName))
+                        fielddtype = _ftype2dtype(element.fType)
+                        if fielddtype == "None":
+                            recarray.append("raise ValueError('not a recarray')")
+                        else:
+                            recarray.append("out.append((cls._fields[{0}], {1}))".format(len(recarray), fielddtype))
                         basicletters += _ftype2struct(element.fType)
 
                         if elementi + 1 == len(streamerinfo.fElements) or not isinstance(streamerinfo.fElements[elementi + 1], TStreamerBasicType) or streamerinfo.fElements[elementi + 1].fArrayLength != 0:
@@ -683,10 +690,14 @@ def _defineclasses(streamerinfos, classes):
 
                     else:
                         dtypename = "_dtype{0}".format(len(dtypes) + 1)
-                        dtypes[dtypename] = _ftype2dtype(element.fType)
+                        fielddtype = dtypes[dtypename] = _ftype2dtype(element.fType)
                         code.append("        self.{0} = cursor.array(source, {1}, cls.{2})".format(_safename(element.fName), element.fArrayLength, dtypename))
                         fields.append(_safename(element.fName))
-
+                        if fielddtype == "None":
+                            recarray.append("raise ValueError('not a recarray')")
+                        else:
+                            recarray.append("out.append((cls._fields[{0}], {1}, {2}))".format(len(recarray), fielddtype, element.fArrayLength))
+                    
                 elif isinstance(element, TStreamerLoop):
                     code.extend(["        cursor.skip(6)",
                                  "        for index in range(self.{0}):".format(_safename(element.fCountName)),
@@ -702,12 +713,14 @@ def _defineclasses(streamerinfos, classes):
                         else:
                             code.append("        self.{0} = {1}.read(source, cursor, context, self)".format(_safename(element.fName), _safename(element.fTypeName.rstrip(b"*"))))
                             fields.append(_safename(element.fName))
+                            recarray.append("out.extend({0}._recarray())".format(_safename(element.fName)))
                     elif element.fType == uproot.const.kObjectP:
                         if pyclassname in skip and _safename(element.fName) in skip[pyclassname]:
                             code.append("        _readobjany(source, cursor, context, parent, asclass=Undefined)")
                         else:
                             code.append("        self.{0} = _readobjany(source, cursor, context, parent)".format(_safename(element.fName)))
                             fields.append(_safename(element.fName))
+                            recarray.append("raise ValueError('not a recarray')")
                     else:
                         code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
 
@@ -723,6 +736,7 @@ def _defineclasses(streamerinfos, classes):
                     else:
                         code.append("        self.{0} = {1}.read(source, cursor, context, self)".format(_safename(element.fName), _safename(element.fTypeName)))
                         fields.append(_safename(element.fName))
+                        recarray.append("out.extend({0}._recarray())".format(_safename(element.fTypeName)))
 
                 else:
                     raise AssertionError
@@ -736,11 +750,6 @@ def _defineclasses(streamerinfos, classes):
                          "            return Undefined.read(source, cursor, context, parent, cls.__name__)",
                          "        return self"])
 
-            if len(bases) == 0:
-                bases.append("ROOTStreamedObject")
-            if pyclassname in methods:
-                bases.insert(0, methods[pyclassname].__name__)
-
             for n, v in sorted(formats.items()):
                 code.append("    {0} = {1}".format(n, v))
             for n, v in sorted(dtypes.items()):
@@ -753,6 +762,14 @@ def _defineclasses(streamerinfos, classes):
             else:
                 code.insert(0, "    _classname = b{0}".format(repr(streamerinfo.fName)))
             code.insert(0, "    _fields = [{0}]".format(", ".join(repr(x) for x in fields)))
+            code.insert(0, "    @classmethod\n    def _recarray(cls):\n        out = []\n        for base in cls._bases:\n            out.extend(base._recarray())\n        {0}\n        return out".format("\n        ".join(recarray)))
+            code.insert(0, "    _bases = [{0}]".format(", ".join(bases)))
+
+            if len(bases) == 0:
+                bases.append("ROOTStreamedObject")
+            if pyclassname in methods:
+                bases.insert(0, methods[pyclassname].__name__)
+
             code.insert(0, "class {0}({1}):".format(pyclassname, ", ".join(bases)))
 
             if pyclassname in classes:
@@ -1091,10 +1108,35 @@ class TStreamerString(TStreamerElement):
 ################################################################ streamed classes (with some overrides)
 
 class ROOTStreamedObject(ROOTObject):
-    pass
+    @classmethod
+    def _recarray(cls):
+        raise ValueError("not a recarray")
+
+    @classmethod
+    def _recarray_dtype(cls):
+        dtypesin = cls._recarray()
+        dtypesout = []
+        used = set()
+        for name, dtype in dtypesin:
+            if name in used:
+                i = 2
+                trial = name + str(i)
+                while trial in used:
+                    i += 1
+                    trial = name + str(i)
+                name = trial
+
+            dtypesout.append((name, dtype))
+            used.add(name)
+
+        return numpy.dtype(dtypesout)
 
 class TObject(ROOTStreamedObject):
     _fields = []
+
+    @classmethod
+    def _recarray(cls):
+        return [("fBits", numpy.dtype(">u8")), ("fUniqueID", numpy.dtype(">u8"))]
 
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
@@ -1110,6 +1152,10 @@ class TString(bytes, ROOTStreamedObject):
         return self.decode("utf-8", "replace")
 
 class TNamed(TObject):
+    @classmethod
+    def _recarray(cls):
+        raise ValueError("not a recarray")
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
