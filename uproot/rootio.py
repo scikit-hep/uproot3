@@ -54,6 +54,13 @@ methods = {}
 ################################################################ high-level interface
 
 def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
+    if hasattr(path, "__fspath__"):
+        path = path.__fspath__()
+    if path.__class__.__module__ == "pathlib":
+        import pathlib
+        if isinstance(path, pathlib.Path):
+            path = str(path)
+
     parsed = urlparse(path)
     if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0:
         path = parsed.netloc + parsed.path
