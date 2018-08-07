@@ -1,4 +1,4 @@
-class TObjString(object):
+class TObjStringStreamers(object):
     
     def __init__(self, pusher, cursor):
         self.pusher = pusher
