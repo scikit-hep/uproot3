@@ -5,14 +5,14 @@ class Sink(object):
     def __init__(self, file):
         self.file = file
     
-    def numbers(self, cursor, packer, *args):
+    def set_numbers(self, cursor, packer, *args):
         toadd = cursor.push(packer, *args)
         if cursor.index > len(self.file):
             self.file.resize(cursor.index+1)
         self.file[cursor.origin:cursor.index] = toadd
         cursor.origin = cursor.index
         
-    def stringer(self, cursor, toput):
+    def set_strings(self, cursor, toput):
         self.file.resize(len(self.file) + 1)
         try:
             self.file[cursor.index] = cursor.precheck(toput)
@@ -26,52 +26,52 @@ class Sink(object):
         self.file[cursor.origin:cursor.index] = toadd
         cursor.origin = cursor.index
     
-    def cnamer(self, cursor, toput):
+    def set_cname(self, cursor, toput):
         toadd = cursor.read_string(toput)
         if cursor.index > len(self.file):
             self.file.resize(cursor.index + 1)
         self.file[cursor.origin:cursor.index] = toadd
         cursor.origin = cursor.index
         
-    def array_pusher(self, cursor, packer, array):
+    def set_array(self, cursor, packer, array):
         toadd = cursor.array_place(packer, array)
         if cursor.index > len(self.file):
             self.file.resize(cursor.index + 1)
         self.file[cursor.origin:cursor.index] = toadd
         cursor.origin = cursor.index
         
-    def empty_array_pusher(self, cursor):
+    def set_empty_array(self, cursor):
         toadd = cursor.empty_array()
         if cursor.index > len(self.file):
             self.file.resize(cursor.index + 1)
         self.file[cursor.origin:cursor.index] = toadd
         cursor.origin = cursor.index
         
-    def keyer(self, cursor, key):
+    def set_key(self, cursor, key):
         packer, fNbytes, fVersion, fObjlen, fDatime, fKeylen, fCycle, fSeekKey, fSeekPdir, fClassName, fName, fTitle = key.values()
-        self.numbers(cursor, packer, fNbytes, fVersion, fObjlen, fDatime, fKeylen, fCycle, fSeekKey, fSeekPdir)
-        self.stringer(cursor, fClassName)
-        self.stringer(cursor, fName)
-        self.stringer(cursor, fTitle)
+        self.set_numbers(cursor, packer, fNbytes, fVersion, fObjlen, fDatime, fKeylen, fCycle, fSeekKey, fSeekPdir)
+        self.set_strings(cursor, fClassName)
+        self.set_strings(cursor, fName)
+        self.set_strings(cursor, fTitle)
         
-    def director(self, cursor, directory):
+    def set_directoryinfo(self, cursor, directory):
         cursor.skip(1)
         packer, fVersion, fDatimeC, fDatimeM, fNbytesKeys, fNbytesName = directory.first()
-        self.numbers(cursor, packer, fVersion, fDatimeC, fDatimeM, fNbytesKeys, fNbytesName)
+        self.set_numbers(cursor, packer, fVersion, fDatimeC, fDatimeM, fNbytesKeys, fNbytesName)
         packer, fSeekDir, fSeekParent, fSeekKeys = directory.second()
-        self.numbers(cursor, packer, fSeekDir, fSeekParent, fSeekKeys)
+        self.set_numbers(cursor, packer, fSeekDir, fSeekParent, fSeekKeys)
         
-    def head_push(self, cursor, header):
+    def set_header(self, cursor, header):
         packer, magic, fVersion = header.valuestop()
-        self.numbers(cursor, packer, magic, fVersion)
+        self.set_numbers(cursor, packer, magic, fVersion)
         packer, fBEGIN, fEND, fSeekFree, fNbytesFree, nfree, fNbytesName, fUnits, fCompress, fSeekInfo, fNbytesInfo, fUUID = header.valuesbot()
-        self.numbers(cursor, packer, fBEGIN, fEND, fSeekFree, fNbytesFree, nfree, fNbytesName, fUnits, fCompress, fSeekInfo, fNbytesInfo, fUUID)
+        self.set_numbers(cursor, packer, fBEGIN, fEND, fSeekFree, fNbytesFree, nfree, fNbytesName, fUnits, fCompress, fSeekInfo, fNbytesInfo, fUUID)
         
-    def push_object(self, cursor, Object):
+    def set_object(self, cursor, Object):
         packer, cnt, vers = Object.values1()
-        self.numbers(cursor, packer, cnt, vers)
+        self.set_numbers(cursor, packer, cnt, vers)
         version, packer = Object.values2()
-        self.numbers(cursor, packer, version)
+        self.set_numbers(cursor, packer, version)
         fUniqueID, fBits, packer = Object.values3()
-        self.numbers(cursor, packer, fUniqueID, fBits)
-        self.stringer(cursor, Object.string)
+        self.set_numbers(cursor, packer, fUniqueID, fBits)
+        self.set_strings(cursor, Object.string)
