@@ -1,6 +1,6 @@
 import numpy
 
-class Pusher(object):
+class Sink(object):
     
     def __init__(self, file):
         self.file = file
@@ -20,14 +20,14 @@ class Pusher(object):
             self.file.resize(len(self.file) + 1)
             self.file[cursor.index] = cursor.precheck(toput)
         cursor.skip(1)
-        toadd = cursor.string(toput)
+        toadd = cursor.read_string(toput)
         if cursor.index > len(self.file):
             self.file.resize(cursor.index + 1)
         self.file[cursor.origin:cursor.index] = toadd
         cursor.origin = cursor.index
     
     def cnamer(self, cursor, toput):
-        toadd = cursor.string(toput)
+        toadd = cursor.read_string(toput)
         if cursor.index > len(self.file):
             self.file.resize(cursor.index + 1)
         self.file[cursor.origin:cursor.index] = toadd

@@ -1,7 +1,7 @@
 import numpy
 import struct
 
-class Pointer(object):
+class Cursor(object):
 
     def __init__(self, index, origin=0):
         self.index = index
@@ -23,7 +23,7 @@ class Pointer(object):
         toadd = bytes(str(len(put)),"ascii")
         return toadd
     
-    def string(self, put):
+    def read_string(self, put):
         toadd = numpy.frombuffer(put, dtype = numpy.uint8)
         self.index += len(toadd)
         return toadd
