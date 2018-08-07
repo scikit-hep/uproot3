@@ -99,6 +99,8 @@ def _delayedraise(excinfo):
             raise err.with_traceback(trc)
 
 def _filename_explode(x):
+    if hasattr(x, "__fspath__"):
+        x = x.__fspath__()
     if x.__class__.__module__ == "pathlib":
         import pathlib
         if isinstance(x, pathlib.Path):

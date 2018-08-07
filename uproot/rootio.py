@@ -54,6 +54,8 @@ methods = {}
 ################################################################ high-level interface
 
 def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
+    if hasattr(path, "__fspath__"):
+        path = path.__fspath__()
     if path.__class__.__module__ == "pathlib":
         import pathlib
         if isinstance(path, pathlib.Path):
