@@ -18,14 +18,15 @@ class Writer(object):
     
     def __init__(self, filename):
         self.file = DiskArray(filename, shape = (0,), dtype = numpy.uint8)
+        filename = filename[(filename.rfind("/") + 1):]
         self.bytename = filename.encode("utf-8")
         
         self.sink = Sink(self.file)
         self.cursor = Cursor(0)
 
-        self.objects = []
         self.loc = []
         self.streamers = []
+        self.keynames = []
 
         fCompress = 0 #Constant for now
         self.header = Header(self.bytename, fCompress)
@@ -58,16 +59,16 @@ class Writer(object):
         self.header.fSeekFree = self.cursor.index
         self.sink.set_header(Cursor(0), self.header)
 
-        self.create()
+        #self.create()
 
-    def __setitem__(self, item):
+    def __setitem__(self, keyname, item):
 
         #item = TObjString("Hello World")
 
+        self.keynames.append(keyname)
+
         if type(item) is TObjString:
-            temp = str(item.string)
-            temp = temp.encode("utf-8")
-            self.objects.append(temp)
+            temp = keyname.encode("utf-8")
             self.loc.append(self.cursor.index)
 
             pointcheck = self.cursor.index
@@ -119,13 +120,13 @@ class Writer(object):
         self.sink.set_key(self.cursor, head_key)
         head_key_end = self.cursor.index
 
-        nkeys = len(self.objects)
+        nkeys = len(self.keynames)
         packer = ">i"
         self.sink.set_numbers(self.cursor, packer, nkeys)
 
         #TObjString stuff
         for x in range(nkeys):
-            key = StringKey(self.objects[x], self.loc[x])
+            key = StringKey(self.keynames[x].encode("utf-8"), self.loc[x])
             pointcheck = self.cursor.index
             self.sink.set_key(self.cursor, key)
             key.fKeylen = self.cursor.index - pointcheck
@@ -134,6 +135,7 @@ class Writer(object):
 
         self.header.fEND = self.cursor.index
         self.header.fSeekFree = self.cursor.index
+        self.sink.set_header(Cursor(0), self.header)
 
         # Replacing Values
         self.directory.fNbytesKeys = self.header.fEND - fSeekKeys

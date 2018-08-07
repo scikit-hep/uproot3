@@ -223,6 +223,7 @@ class ROOTDirectory(object):
                 print("fSeekDir = ", fSeekDir)
                 print("fSeekParent = ", fSeekParent)
                 print("fSeekkeys = ", fSeekKeys)
+                print ("end = ", cursor.index)
 
                 if fSeekKeys == 0:
                     out = ROOTDirectory(b"(empty)", context, [])

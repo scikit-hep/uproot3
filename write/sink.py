@@ -1,4 +1,3 @@
-import numpy
 
 class Sink(object):
     
