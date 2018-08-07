@@ -14,6 +14,6 @@ class Begin_Key(object):
         self.fName = fName
         self.fTitle = b''
         
-    def values(self):
+    def get_values(self):
         return self.packer, self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir, self.fClassName, self.fName, self.fTitle
     

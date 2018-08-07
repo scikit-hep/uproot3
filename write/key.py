@@ -14,5 +14,5 @@ class Key(object):
         self.fName = fName
         self.fTitle = fTitle
         
-    def values(self):
+    def get_values(self):
         return self.packer, self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir, self.fClassName, self.fName, self.fTitle

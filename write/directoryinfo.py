@@ -10,11 +10,11 @@ class DirectoryInfo(object):
         self.fSeekParent =  0
         self.fSeekKeys = fSeekKeys
         
-    def first(self):
+    def get_values1(self):
         packer = ">hIIii"
         return packer, self.fVersion, self.fDatimeC, self.fDatimeM, self.fNbytesKeys, self.fNbytesName
     
-    def second(self):
+    def get_values2(self):
         packer = ">iii"
         return packer, self.fSeekDir, self.fSeekParent, self.fSeekKeys
         

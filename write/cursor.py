@@ -28,7 +28,7 @@ class Cursor(object):
         self.index += len(toadd)
         return toadd
     
-    def array_place(self, packer, array):
+    def read_array(self, packer, array):
         buffer = bytearray()
         packer = ">i"
         for x in array:
@@ -37,7 +37,7 @@ class Cursor(object):
         self.index += len(toadd)
         return toadd
     
-    def empty_array(self):
+    def read_empty_array(self):
         data = bytearray()
         toadd = numpy.frombuffer(data, dtype = numpy.uint8)
         self.index += len(toadd)

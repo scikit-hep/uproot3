@@ -15,11 +15,11 @@ class Header(object):
         self.fNbytesInfo = 0
         self.fUUID = b"\x00\x010\xd5\xf5\xea~\x0b\x11\xe8\xa2D~S\x1f\xac\xbe\xef"
         
-    def valuestop(self):
+    def get_values1(self):
         packer = ">4si"
         return packer, self.magic, self.fVersion
     
-    def valuesbot(self):
+    def get_values2(self):
         if self.fVersion < 1000000:
             packer = ">iiiiiiBiii18s"
         else:                

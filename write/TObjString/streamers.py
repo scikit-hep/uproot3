@@ -236,11 +236,3 @@ class TObjStringStreamers(object):
 
         self.pusher.set_empty_array(self.cursor)
 
-
-
-        
-        
-
-        
-        
-        
