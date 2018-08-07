@@ -99,6 +99,10 @@ def _delayedraise(excinfo):
             raise err.with_traceback(trc)
 
 def _filename_explode(x):
+    if x.__class__.__module__ == "pathlib":
+        import pathlib
+        if isinstance(x, pathlib.Path):
+            x = str(x)
     parsed = urlparse(x)
     if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0:
         pattern = os.path.expanduser(parsed.netloc + parsed.path)
