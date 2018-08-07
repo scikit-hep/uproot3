@@ -38,6 +38,6 @@ class TTreeMethods_pandas(object):
     def __init__(self, tree):
         self._tree = tree
 
-    def df(self, branches=None, entrystart=None, entrystop=None, flatten=True, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+    def df(self, branches=None, namedecode="utf-8", entrystart=None, entrystop=None, flatten=True, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         import pandas
-        return self._tree.arrays(branches=branches, outputtype=pandas.DataFrame, entrystart=entrystart, entrystop=entrystop, flatten=flatten, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
+        return self._tree.arrays(branches=branches, outputtype=pandas.DataFrame, namedecode=namedecode, entrystart=entrystart, entrystop=entrystop, flatten=flatten, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
