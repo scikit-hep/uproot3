@@ -78,8 +78,10 @@ class Writer(object):
             junkkey.fNbytes = junkkey.fKeylen + junkkey.fObjlen
             self.sink.set_key(Cursor(pointcheck), junkkey)
 
-            stringobject = TObjString(temp)
-            self.sink.set_object(self.cursor, stringobject)
+            if type(item.string) is str:
+                item.string = item.string.encode("utf-8")
+
+            self.sink.set_object(self.cursor, item)
 
             #Streamername
             if "TObjString" not in self.streamers:
