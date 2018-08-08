@@ -8,6 +8,7 @@ from write.header import Header
 from write.begin_key import Begin_Key
 from write.directoryinfo import DirectoryInfo
 from write.first_key import First_Key
+from write.allstreamer import AllStreamers
 
 from write.TObjString.tobjstring import TObjString
 from write.TObjString.key import Key as StringKey
@@ -88,6 +89,7 @@ class Writer(object):
                 self.streamers.append("TObjString")
 
         self.create()
+        self.file.flush()
 
     def create(self):
         self.header.fSeekInfo = self.cursor.index
@@ -103,6 +105,9 @@ class Writer(object):
 
         self.header.fNbytesInfo = key.fNbytes
         self.sink.set_header(Cursor(0), self.header)
+
+        streamer = AllStreamers(self.sink, self.cursor)
+        streamer.write()
 
         for x in self.streamers:
             if x == "TObjString":

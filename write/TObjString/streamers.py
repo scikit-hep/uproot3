@@ -5,26 +5,6 @@ class TObjStringStreamers(object):
         self.cursor = cursor
         
     def write(self):
-        #TList Streamer
-        cnt = 1073742190
-        vers = 5
-        packer = ">IH"
-        self.sink.set_numbers(self.cursor, packer, cnt, vers)
-
-        version = 1
-        packer = ">h"
-        self.sink.set_numbers(self.cursor, packer, version)
-
-        fUniqueID =  0
-        fBits =  33554432
-        packer = ">II"
-        self.sink.set_numbers(self.cursor, packer, fUniqueID, fBits)
-        
-        name = b""
-        self.sink.set_strings(self.cursor, name)
-        size = 1
-        packer = ">i"
-        self.sink.set_numbers(self.cursor, packer, size)
 
         bcnt =  1073742168
         packer = ">I"
