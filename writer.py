@@ -7,7 +7,7 @@ from write.headkey import HeadKey
 from write.header import Header
 from write.begin_key import Begin_Key
 from write.directoryinfo import DirectoryInfo
-from write.first_key import First_Key
+from write.streamerkey import StreamerKey
 from write.allstreamer import AllStreamers
 
 from write.TObjString.tobjstring import TObjString
@@ -96,7 +96,7 @@ class Writer(object):
         self.sink.set_header(Cursor(0), self.header)
 
         pointcheck = self.cursor.index
-        key = First_Key(self.cursor, 0)
+        key = StreamerKey(self.cursor, 0)
         self.sink.set_key(self.cursor, key)
 
         key.fKeylen = self.cursor.index - pointcheck
@@ -106,7 +106,8 @@ class Writer(object):
         self.header.fNbytesInfo = key.fNbytes
         self.sink.set_header(Cursor(0), self.header)
 
-        streamer = AllStreamers(self.sink, self.cursor)
+        #Permanent Streamers
+        streamer = AllStreamers(self.sink, self.cursor, size=1)
         streamer.write()
 
         for x in self.streamers:

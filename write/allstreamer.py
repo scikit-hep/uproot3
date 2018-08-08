@@ -1,8 +1,9 @@
 class AllStreamers(object):
 
-    def __init__(self, sink, cursor):
+    def __init__(self, sink, cursor, size=0):
         self.sink = sink
         self.cursor = cursor
+        self.size = size
 
     def write(self):
         # TList Streamer
@@ -22,6 +23,5 @@ class AllStreamers(object):
 
         name = b""
         self.sink.set_strings(self.cursor, name)
-        size = 1
         packer = ">i"
-        self.sink.set_numbers(self.cursor, packer, size)
+        self.sink.set_numbers(self.cursor, packer, self.size)

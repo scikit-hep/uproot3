@@ -1,6 +1,6 @@
 from write.key import Key
 
-class First_Key(Key):
+class StreamerKey(Key):
     
     def __init__(self, pointer, fKeylen):
         self.fVersion = 4
