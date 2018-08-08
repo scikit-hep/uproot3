@@ -27,6 +27,8 @@ class NewWriter(object):
 
         self.streamers = []
         self.objend = 0
+        self.expander = 500
+        self.expanderpow = 2
 
         #Header Bytes
         fCompress = 0  # Constant for now
@@ -69,17 +71,24 @@ class NewWriter(object):
 
         #Allocate space for streamers
         streamerstart = self.cursor.index
-        self.file.resize(self.cursor.index + 3000)
+        self.file.resize(self.cursor.index + self.expander)
         streamers = AllStreamers(self.sink, self.cursor, size = 1)
         streamers.write()
         self.streamerend = self.cursor
+        self.streamerlimit = self.cursor.index + self.expander
 
         #Starting after space allocated for streamers
-        self.cursor = Cursor(streamerstart + 3000)
+        self.cursor = Cursor(streamerstart + self.expander)
 
         #directory.fSeekKeys points to Header Key
         self.directory.fSeekKeys = self.cursor.index
         self.sink.set_directoryinfo(Cursor(self.directory_pointcheck), self.directory)
+
+        # Allocate space for keys
+        self.keystart = self.cursor.index
+        self.file.resize(self.cursor.index + self.expander)
+        self.keyend = self.cursor
+        self.keylimit = self.keystart + self.expander
 
         #Head Key
         self.head_key_pointcheck = self.cursor.index
@@ -95,22 +104,18 @@ class NewWriter(object):
         packer = ">i"
         self.sink.set_numbers(self.cursor, packer, self.nkeys)
 
-        #Allocate space for keys
-        self.keystart = self.cursor.index
-        self.file.resize(self.cursor.index + 3000)
         self.keyend = self.cursor
 
         self.header.fSeekFree = self.cursor.index
-        self.header.fEND = self.header.fSeekFree + 3000
+        self.header.fEND = self.header.fSeekFree + self.expander
         self.sink.set_header(Cursor(0), self.header)
 
-        self.objend = self.header.fSeekFree + 3000
 
     def __setitem__(self, keyname, item):
 
         #item = TObjString("Hello World")
 
-        self.cursor = Cursor(self.objend)
+        self.cursor = Cursor(self.header.fEND)
 
         if type(item) is TObjString:
 
@@ -126,10 +131,21 @@ class NewWriter(object):
                 item.string = item.string.encode("utf-8")
 
             self.sink.set_object(self.cursor, item)
-            self.objend = self.cursor.index
 
             #Place Key
             key = StringKey(keyname.encode("utf-8"), pointcheck)
+
+            #Check for Key re-allocation
+            if self.keylimit - self.keyend.index < 200:
+                self.file.resize(self.header.fEND + (self.expander ** self.expanderpow))
+                self.file[self.header.fEND:self.header.fEND + self.expander] = self.file[self.directory.fSeekKeys:self.directory.fSeekKeys + self.expander]
+                self.keyend = Cursor(self.header.fEND + self.keyend.index - self.directory.fSeekKeys)
+                self.directory.fSeekKeys = self.header.fEND
+                self.keylimit = self.header.fEND + (self.expander ** self.expanderpow)
+                self.header.fEND = self.keylimit
+                self.header.fSeekFree = self.keylimit
+                self.sink.set_directoryinfo(Cursor(self.directory_pointcheck), self.directory)
+
             pointcheck = self.keyend.index
             self.sink.set_key(self.keyend, key)
             key.fKeylen = self.keyend.index - pointcheck
@@ -139,7 +155,19 @@ class NewWriter(object):
             #Place Streamers
             if "TObjString" not in self.streamers:
                 self.streamers.append("TObjString")
+
                 tobjstring = TObjStringStreamers(self.sink, self.streamerend)
+
+                # Check for streamer reallocation
+                if self.streamerlimit - self.streamerend.index < 500:
+                    self.file[self.header.fEND:self.header.fEND + self.expander] = self.file[self.header.fSeekInfo:self.header.fSeekInfo + self.expander]
+                    self.streamerend = Cursor(self.header.fEND + self.streamerend.index - self.header.fSeekInfo)
+                    self.header.fSeekInfo = self.header.fEND
+                    self.streamerlimit = self.header.fEND + (self.expander ** self.expanderpow)
+                    self.header.fEND = self.streamerlimit
+                    self.header.fSeekFree = self.streamerlimit
+                    tobjstring = TObjStringStreamers(self.sink, self.streamerend)
+
                 tobjstring.write()
 
         #Update Number of Keys
@@ -158,8 +186,10 @@ class NewWriter(object):
         self.sink.set_key(Cursor(self.head_key_pointcheck), self.head_key)
 
         #Updating header bytes
-        self.header.fSeekFree = self.cursor.index
-        self.header.fEND = self.cursor.index
+        if self.cursor.index > self.header.fEND:
+            self.header.fSeekFree = self.cursor.index
+            self.header.fEND = self.cursor.index
+
         self.sink.set_header(Cursor(0), self.header)
 
         self.file.flush()
