@@ -54,6 +54,13 @@ methods = {}
 ################################################################ high-level interface
 
 def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
+    if hasattr(path, "__fspath__"):
+        path = path.__fspath__()
+    if path.__class__.__module__ == "pathlib":
+        import pathlib
+        if isinstance(path, pathlib.Path):
+            path = str(path)
+
     parsed = urlparse(path)
     if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0:
         path = parsed.netloc + parsed.path
@@ -294,18 +301,9 @@ class ROOTDirectory(object):
                 if filtername(x.fName):
                     x.show(stream=stream)
 
-    def _classof(self, classname):
-        if classname == b"TDirectory" or classname == b"TDirectoryFile":
-            cls = ROOTDirectory
-        else:
-            cls = self._context.classes.get(classname, None)
-            if cls is None:
-                cls = ROOTObject.__metaclass__("Undefined_" + str(_safename(classname)), (Undefined,), {"_classname": classname})
-        return cls
-
     def iterkeys(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         for key in self._keys:
-            cls = self._classof(key.fClassName)
+            cls = _classof(self._context, key.fClassName)
             if filtername(key.fName) and filterclass(cls):
                 yield self._withcycle(key)
 
@@ -315,7 +313,7 @@ class ROOTDirectory(object):
 
     def itervalues(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         for key in self._keys:
-            cls = self._classof(key.fClassName)
+            cls = _classof(self._context, key.fClassName)
             if filtername(key.fName) and filterclass(cls):
                 yield key.get()
 
@@ -325,7 +323,7 @@ class ROOTDirectory(object):
 
     def iteritems(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         for key in self._keys:
-            cls = self._classof(key.fClassName)
+            cls = _classof(self._context, key.fClassName)
             if filtername(key.fName) and filterclass(cls):
                 yield self._withcycle(key), key.get()
 
@@ -335,7 +333,7 @@ class ROOTDirectory(object):
 
     def iterclasses(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         for key in self._keys:
-            cls = self._classof(key.fClassName)
+            cls = _classof(self._context, key.fClassName)
             if filtername(key.fName) and filterclass(cls):
                 yield self._withcycle(key), cls
 
@@ -558,6 +556,15 @@ def _readobjany(source, cursor, context, parent, asclass=None):
 
         return obj                                              # return object
 
+def _classof(context, classname):
+    if classname == b"TDirectory" or classname == b"TDirectoryFile":
+        cls = ROOTDirectory
+    else:
+        cls = context.classes.get(_safename(classname), None)
+        if cls is None:
+            cls = ROOTObject.__metaclass__("Undefined_" + str(_safename(classname)), (Undefined,), {"_classname": classname})
+    return cls
+
 def _readstreamers(source, cursor, context, parent):
     tlist = TList.read(source, cursor, context, parent)
 
@@ -762,17 +769,14 @@ def _defineclasses(streamerinfos, classes):
                                  "        for index in range(self.{0}):".format(_safename(element.fCountName)),
                                  "            self.{0} = {1}.read(source, cursor, context, self)".format(_safename(element.fName), _safename(element.fTypeName.rstrip(b"*")))])
 
-                elif isinstance(element, TStreamerObjectAnyPointer):
-                    code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
-
-                elif isinstance(element, TStreamerObjectPointer):
-                    if element.fType == uproot.const.kObjectp:
+                elif isinstance(element, (TStreamerObjectAnyPointer, TStreamerObjectPointer)):
+                    if element.fType == uproot.const.kObjectp or element.fType == uproot.const.kAnyp:
                         if pyclassname in skip and _safename(element.fName) in skip[pyclassname]:
                             code.append("        Undefined.read(source, cursor, context, self)")
                         else:
                             code.append("        self.{0} = {1}.read(source, cursor, context, self)".format(_safename(element.fName), _safename(element.fTypeName.rstrip(b"*"))))
                             fields.append(_safename(element.fName))
-                    elif element.fType == uproot.const.kObjectP:
+                    elif element.fType == uproot.const.kObjectP or element.fType == uproot.const.kAnyP:
                         if pyclassname in skip and _safename(element.fName) in skip[pyclassname]:
                             code.append("        _readobjany(source, cursor, context, parent, asclass=Undefined)")
                         else:
@@ -795,7 +799,7 @@ def _defineclasses(streamerinfos, classes):
                         fields.append(_safename(element.fName))
 
                 else:
-                    raise AssertionError
+                    raise AssertionError(element)
 
             code.extend(["        if self.__class__.__name__ == cls.__name__:",
                          "            self.__class__ = cls._versions[classversion]",
@@ -822,7 +826,7 @@ def _defineclasses(streamerinfos, classes):
                 code.insert(0, "    _classname = {0}".format(repr(streamerinfo.fName)))
             else:
                 code.insert(0, "    _classname = b{0}".format(repr(streamerinfo.fName)))
-            code.insert(0, "    _fields = [{0}]".format(", ".join(repr(x) for x in fields)))
+            code.insert(0, "    _fields = [{0}]".format(", ".join(repr(str(x)) for x in fields)))
             code.insert(0, "class {0}({1}):".format(pyclassname, ", ".join(bases)))
 
             if pyclassname in classes:
@@ -937,19 +941,8 @@ class TKey(ROOTObject):
         Objects are not read or decompressed until this function is explicitly called.
         """
 
-        classname = self.fClassName.decode("ascii")
         try:
-            if classname == "TDirectory" or classname == "TDirectoryFile":
-                return ROOTDirectory.read(self._source, self._cursor.copied(), self._context, self)
-
-            elif classname in self._context.classes:
-                return self._context.classes[classname].read(self._source, self._cursor.copied(), self._context, self)
-
-            else:
-                out = Undefined.read(self._source, self._cursor.copied(), self._context, self)
-                out._classname = classname
-                return out
-
+            return _classof(self._context, self.fClassName).read(self._source, self._cursor.copied(), self._context, self)
         finally:
             if dismiss:
                 self._source.dismiss()
@@ -1251,11 +1244,18 @@ class TStreamerString(TStreamerElement):
 ################################################################ streamed classes (with some overrides)
 
 class ROOTStreamedObject(ROOTObject):
-    pass
-
-class TObject(ROOTStreamedObject):
     _fields = []
 
+    @classmethod
+    def _members(cls):
+        out = []
+        for t in cls.__bases__:
+            if issubclass(t, ROOTStreamedObject):
+                out.extend(t._members())
+        out.extend(cls._fields)
+        return out
+        
+class TObject(ROOTStreamedObject):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         _skiptobj(source, cursor)
@@ -1270,6 +1270,8 @@ class TString(bytes, ROOTStreamedObject):
         return self.decode("utf-8", "replace")
 
 class TNamed(TObject):
+    _fields = ["fName", "fTitle"]
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         print ("")
