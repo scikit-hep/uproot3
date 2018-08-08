@@ -26,6 +26,7 @@ class NewWriter(object):
         self.cursor = Cursor(0)
 
         self.streamers = []
+        self.objend = 0
 
         #Header Bytes
         fCompress = 0  # Constant for now
@@ -103,11 +104,13 @@ class NewWriter(object):
         self.header.fEND = self.header.fSeekFree + 3000
         self.sink.set_header(Cursor(0), self.header)
 
+        self.objend = self.header.fSeekFree + 3000
+
     def __setitem__(self, keyname, item):
 
         #item = TObjString("Hello World")
 
-        self.cursor = Cursor(self.header.fSeekFree)
+        self.cursor = Cursor(self.objend)
 
         if type(item) is TObjString:
 
@@ -123,6 +126,7 @@ class NewWriter(object):
                 item.string = item.string.encode("utf-8")
 
             self.sink.set_object(self.cursor, item)
+            self.objend = self.cursor.index
 
             #Place Key
             key = StringKey(keyname.encode("utf-8"), pointcheck)
