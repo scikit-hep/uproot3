@@ -12,8 +12,6 @@ from write.TObjString.key import Key as StringKey
 from write.TObjString.junkkey import JunkKey
 from write.TObjString.streamers import TObjStringStreamers
 
-import numpy
-
 class Writer(object):
 
     def __init__(self, filename):
@@ -150,7 +148,6 @@ class Writer(object):
 
             #Check for Key Re-alocation
             if self.keylimit - self.keyend < 200:
-                print ("Hi")
                 self.file.seek(self.directory.fSeekKeys)
                 temp = self.file.read(self.expander)
                 self.expander = self.expander * self.expandermultiple
@@ -176,8 +173,6 @@ class Writer(object):
             if "TObjString" not in self.streamers:
                 self.streamers.append("TObjString")
 
-                tobjstring = TObjStringStreamers(self.sink, self.streamerend)
-
                 # Updating Header Bytes
                 if self.pos > self.header.fEND:
                     self.header.fSeekFree = self.pos
@@ -185,7 +180,7 @@ class Writer(object):
 
                 self.sink.set_header(self.header)
 
-                #Check for streamer reallocation
+                #Check for streamer reallocation - UNTESTED
                 if self.streamerlimit - self.streamerend < 500:
                     self.file.seek(self.header.fSeekInfo)
                     temp = self.file.read(self.expander)
@@ -198,8 +193,8 @@ class Writer(object):
                     self.streamerlimit = self.header.fEND + self.expander
                     self.header.fEND = self.streamerlimit
                     self.header.fSeekFree = self.streamerlimit
-                    tobjstring = TObjStringStreamers(self.sink, self.streamerend)
 
+                tobjstring = TObjStringStreamers(self.sink, self.streamerend)
                 tobjstring.write()
                 self.streamerend = self.file.tell()
 
