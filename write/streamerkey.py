@@ -9,7 +9,7 @@ class StreamerKey(Key):
         self.fKeylen = fKeylen
         self.fNbytes = self.fObjlen + self.fKeylen
         self.fCycle = 1
-        self.fSeekKey = pointer.index
+        self.fSeekKey = pointer
         self.fSeekPdir = 100
         self.packer = ">ihiIhhii"
         self.fClassName = b'TList'
