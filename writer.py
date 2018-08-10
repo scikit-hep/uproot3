@@ -23,7 +23,7 @@ class Writer(object):
         self.pos = 0
 
         self.streamers = []
-        self.expander = 500
+        self.expander = 1000
         self.expandermultiple = 2
 
         self.nkeypos = 0
