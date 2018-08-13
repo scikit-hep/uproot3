@@ -47,9 +47,7 @@ from uproot.source.xrootd import XRootDSource
 from uproot.source.http import HTTPSource
 from uproot.source.cursor import Cursor
 
-################################################################ register mixins for user-facing ROOT classes
-
-methods = {}
+import uproot_methods.classes
 
 ################################################################ high-level interface
 
@@ -115,11 +113,6 @@ class ROOTDirectory(object):
 
     @staticmethod
     def read(source, *args, **options):
-        # make sure that all methods classes have been loaded
-        import uproot.tree
-        import uproot.hist
-        import uproot.physics
-
         if len(args) == 0:
             try:
                 read_streamers = options.pop("read_streamers", True)
@@ -166,8 +159,6 @@ class ROOTDirectory(object):
 
                 classes = dict(globals())
                 classes.update(builtin_classes)
-                for methodclass in methods.values():
-                    classes[methodclass.__name__] = methodclass
                 classes = _defineclasses(streamerinfos, classes)
                 context = ROOTDirectory._FileContext(source.path, streamerinfos, streamerinfosmap, classes, uproot.source.compressed.Compression(fCompress), tfile)
                 context.source = source
@@ -771,8 +762,13 @@ def _defineclasses(streamerinfos, classes):
 
             if len(bases) == 0:
                 bases.append("ROOTStreamedObject")
-            if pyclassname in methods:
-                bases.insert(0, methods[pyclassname].__name__)
+
+            if pyclassname == "TTree":
+                bases.insert(0, "uproot.tree.TTreeMethods")
+            if pyclassname == "TBranch":
+                bases.insert(0, "uproot.tree.TBranchMethods")
+            if uproot_methods.classes.hasmethods(pyclassname):
+                bases.insert(0, "uproot_methods.classes.{0}.Methods".format(pyclassname))
 
             code.insert(0, "class {0}({1}):".format(pyclassname, ", ".join(bases)))
 
@@ -1299,21 +1295,22 @@ class Undefined(ROOTStreamedObject):
         else:
             return "<{0} at 0x{1:012x}>".format(self.__class__.__name__, id(self))
 
-builtin_classes = {"TObject":    TObject,
-                   "TString":    TString,
-                   "TNamed":     TNamed,
-                   "TObjArray":  TObjArray,
-                   "TObjString": TObjString,
-                   "TList":      TList,
-                   "THashList":  THashList,
-                   "TArray":     TArray,
-                   "TArrayC":    TArrayC,
-                   "TArrayS":    TArrayS,
-                   "TArrayI":    TArrayI,
-                   "TArrayL":    TArrayL,
-                   "TArrayL64":  TArrayL64,
-                   "TArrayF":    TArrayF,
-                   "TArrayD":    TArrayD,
+builtin_classes = {"uproot_methods": uproot_methods,
+                   "TObject":        TObject,
+                   "TString":        TString,
+                   "TNamed":         TNamed,
+                   "TObjArray":      TObjArray,
+                   "TObjString":     TObjString,
+                   "TList":          TList,
+                   "THashList":      THashList,
+                   "TArray":         TArray,
+                   "TArrayC":        TArrayC,
+                   "TArrayS":        TArrayS,
+                   "TArrayI":        TArrayI,
+                   "TArrayL":        TArrayL,
+                   "TArrayL64":      TArrayL64,
+                   "TArrayF":        TArrayF,
+                   "TArrayD":        TArrayD,
                    "ROOT_3a3a_TIOFeatures": ROOT_3a3a_TIOFeatures}
 
 builtin_skip =    {"TBranch":    ["fBaskets"],

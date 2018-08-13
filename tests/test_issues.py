@@ -35,6 +35,9 @@ import numpy
 
 import uproot
 
+import uproot_methods.classes.TVector3
+import uproot_methods.classes.TLorentzVector
+
 class TestIssues(unittest.TestCase):
     def runTest(self):
         pass
@@ -102,8 +105,8 @@ class TestIssues(unittest.TestCase):
 
     def test_issue57(self):
         tree = uproot.open("tests/samples/issue57.root")["outtree"]
-        self.assertTrue(all(isinstance(y, uproot.physics.TLorentzVectorMethods) and isinstance(y.fP, uproot.physics.TVector3Methods) for x in tree["sel_lep"].array() for y in x))
-        self.assertTrue(all(isinstance(y, uproot.physics.TLorentzVectorMethods) and isinstance(y.fP, uproot.physics.TVector3Methods) for x in tree["selJet"].array() for y in x))
+        self.assertTrue(all(isinstance(y, uproot_methods.classes.TLorentzVector.Methods) and isinstance(y.fP, uproot_methods.classes.TVector3.Methods) for x in tree["sel_lep"].array() for y in x))
+        self.assertTrue(all(isinstance(y, uproot_methods.classes.TLorentzVector.Methods) and isinstance(y.fP, uproot_methods.classes.TVector3.Methods) for x in tree["selJet"].array() for y in x))
 
     def test_issue60(self):
         t = uproot.open("tests/samples/issue60.root")["nllscan"]
@@ -139,7 +142,7 @@ class TestIssues(unittest.TestCase):
 
     def test_issue74(self):
         t = uproot.open("tests/samples/issue74.root")["Events"]
-        self.assertTrue(all(isinstance(x, uproot.physics.TVector3Methods) for x in t.array("bees.xyzPosition")))
+        self.assertTrue(all(isinstance(x, uproot_methods.classes.TVector3.Methods) for x in t.array("bees.xyzPosition")))
         self.assertEqual(list(t.array("bees.xyzPosition")[0]), [1.0, 2.0, -1.0])
 
     def test_issue76(self):
@@ -157,4 +160,4 @@ class TestIssues(unittest.TestCase):
     
     def test_issue96(self):
         t = uproot.open("tests/samples/issue96.root")["tree"]
-        self.assertTrue(all(isinstance(x, uproot.physics.TLorentzVectorMethods) for x in t.array("jet1P4")))
+        self.assertTrue(all(isinstance(x, uproot_methods.classes.TLorentzVector.Methods) for x in t.array("jet1P4")))

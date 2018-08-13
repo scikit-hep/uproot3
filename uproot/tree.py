@@ -792,8 +792,6 @@ class TTreeMethods(object):
         import uproot._connect.to_oamap
         return uproot._connect.to_oamap.TTreeMethods_oamap(self)
 
-uproot.rootio.methods["TTree"] = TTreeMethods
-
 ################################################################ methods for TBranch
 
 class TBranchMethods(object):
@@ -1594,8 +1592,6 @@ class TBranchMethods(object):
     def __iter__(self):
         # prevent Python's attempt to interpret __len__ and __getitem__ as iteration
         raise TypeError("'TBranch' object is not iterable")
-
-uproot.rootio.methods["TBranch"] = TBranchMethods
 
 ################################################################ for quickly getting numentries
 
