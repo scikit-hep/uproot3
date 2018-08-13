@@ -1,4 +1,4 @@
-class TNamed(object):
+class TAxis(object):
 
     def __init__(self, sink, pos, string):
         self.sink = sink
