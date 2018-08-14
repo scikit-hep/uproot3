@@ -10,7 +10,8 @@ from write.utils import resize
 from write.TObjString.tobjstring import TObjString
 from write.TObjString.key import Key as StringKey
 from write.TObjString.junkkey import JunkKey
-from write.TObjString.streamers import TObjStringStreamers
+
+import pickle
 
 class Writer(object):
 
@@ -171,7 +172,13 @@ class Writer(object):
 
             #Place Streamers
             if "TObjString" not in self.streamers:
-                self.streamers.append("TObjString")
+
+                streamers = ["TObjString", "TObject", "TString"]
+                streamers_toadd = []
+                for x in streamers:
+                    if x not in self.streamers:
+                        self.streamers.append(x)
+                        streamers_toadd.append(x)
 
                 # Updating Header Bytes
                 if self.pos > self.header.fEND:
@@ -194,8 +201,10 @@ class Writer(object):
                     self.header.fEND = self.streamerlimit
                     self.header.fSeekFree = self.streamerlimit
 
-                tobjstring = TObjStringStreamers(self.sink, self.streamerend)
-                tobjstring.write()
+                self.sink.file.seek(self.streamerend)
+                for x in streamers_toadd:
+                    streamer = pickle.load(open("write/streamers.pickle", "rb"))
+                    self.sink.file.write(streamer[x])
                 self.streamerend = self.file.tell()
 
         #Update number of keys
