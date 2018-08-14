@@ -15,7 +15,7 @@ from write.TObjString.streamers import TObjStringStreamers
 class Writer(object):
 
     def __init__(self, filename):
-        self.file = open(filename, "br+")
+        self.file = open(filename, "wb+")
         filename = filename[(filename.rfind("/") + 1):]
         self.bytename = filename.encode("utf-8")
 
