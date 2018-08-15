@@ -125,13 +125,12 @@ class Writer(object):
             junkkey = TObjStringJunkKey(keyname.encode("utf-8"))
             key = StringKey(keyname.encode("utf-8"), pointcheck)
 
-            streamers = ["TObjString", "TObject", "TString"]
+            streamers = ["TObjString"]
             streamers_toadd = []
             for x in streamers:
                 if x not in self.streamers:
                     self.streamers.append(x)
                     streamers_toadd.append(x)
-
 
         self.sink.set_key(self.pos, junkkey)
         self.pos = self.file.tell()
