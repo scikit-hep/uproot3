@@ -11,6 +11,10 @@ from write.TObjString.tobjstring import TObjString
 from write.TObjString.key import Key as StringKey
 from write.TObjString.junkkey import JunkKey as TObjStringJunkKey
 
+from write.TAxis.taxis import TAxis
+from write.TAxis.key import Key as AxisKey
+from write.TAxis.junkkey import JunkKey as TAxisJunkKey
+
 import pickle
 
 class Writer(object):
@@ -131,6 +135,18 @@ class Writer(object):
                 if x not in self.streamers:
                     self.streamers.append(x)
                     streamers_toadd.append(x)
+
+        if type(item) is TAxis:
+            junkkey = TAxisJunkKey(keyname.encode("utf-8"))
+            key = AxisKey(keyname.encode("utf-8"), pointcheck)
+
+            streamers = ["TNamed", "TObject", "TAttAxis", "THashList", "TCollection", "TString", "TAxis", "TSeqCollection", "TList"]
+            streamers_toadd = []
+            for x in streamers:
+                if x not in self.streamers:
+                    self.streamers.append(x)
+                    streamers_toadd.append(x)
+
 
         self.sink.set_key(self.pos, junkkey)
         self.pos = self.file.tell()
