@@ -9,7 +9,7 @@ from write.utils import resize
 
 from write.TObjString.tobjstring import TObjString
 from write.TObjString.key import Key as StringKey
-from write.TObjString.junkkey import JunkKey
+from write.TObjString.junkkey import JunkKey as TObjStringJunkKey
 
 import pickle
 
@@ -119,93 +119,91 @@ class Writer(object):
     def __setitem__(self, keyname, item):
 
         self.pos = self.header.fEND
+        pointcheck = self.pos
 
         if type(item) is TObjString:
-            pointcheck = self.pos
-            #Place TObjString
-            junkkey = JunkKey(keyname.encode("utf-8"))
-            self.sink.set_key(self.pos, junkkey)
-            self.pos = self.file.tell()
-            junkkey.fKeylen = self.pos - pointcheck
-            junkkey.fNbytes = junkkey.fKeylen + junkkey.fObjlen
-            self.sink.set_key(pointcheck, junkkey)
-            self.pos = self.file.tell()
-
-            if type(item.string) is str:
-                item.string = item.string.encode("utf-8")
-
-            self.sink.set_object(self.pos, item)
-            self.pos = self.file.tell()
-
-            #Place Key
+            junkkey = TObjStringJunkKey(keyname.encode("utf-8"))
             key = StringKey(keyname.encode("utf-8"), pointcheck)
 
-            # Updating Header Bytes
-            if self.pos > self.header.fEND:
-                self.header.fSeekFree = self.pos
-                self.header.fEND = self.pos
+            streamers = ["TObjString", "TObject", "TString"]
+            streamers_toadd = []
+            for x in streamers:
+                if x not in self.streamers:
+                    self.streamers.append(x)
+                    streamers_toadd.append(x)
 
-            self.sink.set_header(self.header)
 
-            #Check for Key Re-alocation
-            if self.keylimit - self.keyend < 200:
-                self.file.seek(self.directory.fSeekKeys)
+        self.sink.set_key(self.pos, junkkey)
+        self.pos = self.file.tell()
+        junkkey.fKeylen = self.pos - pointcheck
+        junkkey.fNbytes = junkkey.fKeylen + junkkey.fObjlen
+        self.sink.set_key(pointcheck, junkkey)
+        self.pos = self.file.tell()
+
+        if type(item.string) is str:
+            item.string = item.string.encode("utf-8")
+
+        self.sink.set_object(self.pos, item)
+        self.pos = self.file.tell()
+
+        # Updating Header Bytes
+        if self.pos > self.header.fEND:
+            self.header.fSeekFree = self.pos
+            self.header.fEND = self.pos
+
+        self.sink.set_header(self.header)
+
+        #Check for Key Re-alocation
+        if self.keylimit - self.keyend < 200:
+            self.file.seek(self.directory.fSeekKeys)
+            temp = self.file.read(self.expander)
+            self.expander = self.expander * self.expandermultiple
+            self.file = resize(self.file, self.header.fEND + self.expander)
+            self.file.seek(self.header.fEND)
+            self.file.write(temp)
+            self.keyend = self.header.fEND + self.keyend - self.directory.fSeekKeys
+            self.directory.fSeekKeys = self.header.fEND
+            self.keylimit = self.header.fEND + self.expander
+            self.header.fEND = self.keylimit
+            self.header.fSeekFree = self.keylimit
+            self.sink.set_directoryinfo(self.directory_pointcheck, self.directory)
+            self.head_key_end = self.directory.fSeekKeys + self.nkeypos
+
+        pointcheck = self.keyend
+        self.sink.set_key(self.keyend, key)
+        self.keyend = self.file.tell()
+        key.fKeylen = self.keyend - pointcheck
+        key.fNbytes = key.fKeylen + key.fObjlen
+        self.sink.set_key(pointcheck, key)
+
+
+        # Updating Header Bytes
+        if self.pos > self.header.fEND:
+            self.header.fSeekFree = self.pos
+            self.header.fEND = self.pos
+
+        self.sink.set_header(self.header)
+
+        self.sink.file.seek(self.streamerend)
+        for x in streamers_toadd:
+            streamer = pickle.load(open("write/streamers.pickle", "rb"))
+
+            # Check for streamer reallocation - UNTESTED
+            if self.streamerlimit - self.streamerend < 500:
+                self.file.seek(self.header.fSeekInfo)
                 temp = self.file.read(self.expander)
                 self.expander = self.expander * self.expandermultiple
                 self.file = resize(self.file, self.header.fEND + self.expander)
                 self.file.seek(self.header.fEND)
                 self.file.write(temp)
-                self.keyend = self.header.fEND + self.keyend - self.directory.fSeekKeys
-                self.directory.fSeekKeys = self.header.fEND
-                self.keylimit = self.header.fEND + self.expander
-                self.header.fEND = self.keylimit
-                self.header.fSeekFree = self.keylimit
-                self.sink.set_directoryinfo(self.directory_pointcheck, self.directory)
-                self.head_key_end = self.directory.fSeekKeys + self.nkeypos
+                self.streamerend = self.header.fEND + self.streamerend - self.header.fSeekInfo
+                self.header.fSeekInfo = self.header.fEND
+                self.streamerlimit = self.header.fEND + self.expander
+                self.header.fEND = self.streamerlimit
+                self.header.fSeekFree = self.streamerlimit
 
-            pointcheck = self.keyend
-            self.sink.set_key(self.keyend, key)
-            self.keyend = self.file.tell()
-            key.fKeylen = self.keyend - pointcheck
-            key.fNbytes = key.fKeylen + key.fObjlen
-            self.sink.set_key(pointcheck, key)
-
-            #Place Streamers
-            if "TObjString" not in self.streamers:
-
-                streamers = ["TObjString", "TObject", "TString"]
-                streamers_toadd = []
-                for x in streamers:
-                    if x not in self.streamers:
-                        self.streamers.append(x)
-                        streamers_toadd.append(x)
-
-                # Updating Header Bytes
-                if self.pos > self.header.fEND:
-                    self.header.fSeekFree = self.pos
-                    self.header.fEND = self.pos
-
-                self.sink.set_header(self.header)
-
-                #Check for streamer reallocation - UNTESTED
-                if self.streamerlimit - self.streamerend < 500:
-                    self.file.seek(self.header.fSeekInfo)
-                    temp = self.file.read(self.expander)
-                    self.expander = self.expander * self.expandermultiple
-                    self.file = resize(self.file, self.header.fEND + self.expander)
-                    self.file.seek(self.header.fEND)
-                    self.file.write(temp)
-                    self.streamerend = self.header.fEND + self.streamerend - self.header.fSeekInfo
-                    self.header.fSeekInfo = self.header.fEND
-                    self.streamerlimit = self.header.fEND + self.expander
-                    self.header.fEND = self.streamerlimit
-                    self.header.fSeekFree = self.streamerlimit
-
-                self.sink.file.seek(self.streamerend)
-                for x in streamers_toadd:
-                    streamer = pickle.load(open("write/streamers.pickle", "rb"))
-                    self.sink.file.write(streamer[x])
-                self.streamerend = self.file.tell()
+            self.sink.file.write(streamer[x])
+        self.streamerend = self.file.tell()
 
         #Update number of keys
         self.nkeypos = self.head_key_end - self.directory.fSeekKeys
