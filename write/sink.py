@@ -84,7 +84,7 @@ class Sink(object):
         packer, fSeekDir, fSeekParent, fSeekKeys = directory.get_values2()
         self.set_numbers(pos, packer, fSeekDir, fSeekParent, fSeekKeys)
 
-    def set_object(self, pos, Object):
+    def set_tobjstring(self, pos, Object):
         packer, cnt, vers = Object.values1()
         self.set_numbers(pos, packer, cnt, vers)
         pos = self.file.tell()
@@ -95,5 +95,9 @@ class Sink(object):
         self.set_numbers(pos, packer, fUniqueID, fBits)
         pos = self.file.tell()
         self.set_strings(pos, Object.string)
+
+    def set_taxis(self, pos, Object, keyname):
+        #Have to implement
+        pass
 
 

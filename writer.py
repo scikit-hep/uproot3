@@ -140,7 +140,7 @@ class Writer(object):
             junkkey = TAxisJunkKey(keyname.encode("utf-8"))
             key = AxisKey(keyname.encode("utf-8"), pointcheck)
 
-            streamers = ["TNamed", "TObject", "TAttAxis", "THashList", "TCollection", "TString", "TAxis", "TSeqCollection", "TList"]
+            streamers = ["TAxis", "TNamed", "TObject", "TAttAxis", "THashList", "TList", "TSeqCollection", "TCollection", "TString"]
             streamers_toadd = []
             for x in streamers:
                 if x not in self.streamers:
@@ -158,7 +158,11 @@ class Writer(object):
         if type(item.string) is str:
             item.string = item.string.encode("utf-8")
 
-        self.sink.set_object(self.pos, item)
+        if type(item) is TObjString:
+            self.sink.set_tobjstring(self.pos, item)
+        if type(item) is TAxis:
+            self.sink.set_taxis(self.pos, item, keyname)
+
         self.pos = self.file.tell()
 
         # Updating Header Bytes
