@@ -45,17 +45,25 @@ else:
 
 _byteorder = {"!": "B", ">": "B", "<": "L", "|": "L", "=": "B" if numpy.dtype(">f8").isnative else "L"}
 
+def _dtypeshape(obj):
+    out = ()
+    while obj.subdtype is not None:
+        obj, shape = obj.subdtype
+        out = out + shape
+    return obj, out
+
 def _flatlen(obj):
     if isinstance(obj, numpy.dtype):
-        return _flatlen(numpy.empty((), obj))
+        dtype, shape = _dtypeshape(obj)
+        return int(numpy.prod(shape))
     else:
         return int(numpy.prod(obj.shape))
-
+        
 class _asnumeric(Interpretation):
     @property
     def type(self):
-        tmp = numpy.empty((), self.todtype)
-        return awkward.type.ArrayType(*((numpy.inf,) + tmp.shape + (tmp.dtype,)))
+        dtype, shape = _dtypeshape(self.todtype)
+        return awkward.type.ArrayType(*((numpy.inf,) + shape + (dtype,)))
 
     def empty(self):
         return numpy.empty(0, self.todtype)
@@ -106,8 +114,16 @@ class asdtype(_asnumeric):
         else:
             self.todtype = numpy.dtype(todtype).newbyteorder("=")
 
-    def to(self, todtype, toshape=()):
-        return asdtype(self.fromdtype, numpy.dtype((todtype, toshape)))
+    def to(self, todtype=None, todims=None):
+        if todtype is None:
+            dtype, shape = _dtypeshape(self.todtype)
+            if todims is not None:
+                shape = todims
+        else:
+            dtype, shape = _dtypeshape(todtype)
+            if todims is not None:
+                shape = todims + shape
+        return asdtype(self.fromdtype, numpy.dtype((dtype, shape)))
 
     def toarray(self, array):
         return asarray(self.fromdtype, array)
@@ -120,10 +136,10 @@ class asdtype(_asnumeric):
 
     @property
     def identifier(self):
-        tmp = numpy.empty((), self.fromdtype)
-        fromdtype = "{0}{1}{2}({3})".format(_byteorder[tmp.dtype.byteorder], tmp.dtype.kind, tmp.dtype.itemsize, ",".join(repr(x) for x in tmp.shape))
-        tmp = numpy.empty((), self.todtype)
-        todtype = "{0}{1}{2}({3})".format(_byteorder[tmp.dtype.byteorder], tmp.dtype.kind, tmp.dtype.itemsize, ",".join(repr(x) for x in tmp.shape))
+        dtype, shape = _dtypeshape(self.fromdtype)
+        fromdtype = "{0}{1}{2}({3})".format(_byteorder[dtype.byteorder], dtype.kind, dtype.itemsize, ",".join(repr(x) for x in shape))
+        dtype, shape = _dtypeshape(self.todtype)
+        todtype = "{0}{1}{2}({3})".format(_byteorder[dtype.byteorder], dtype.kind, dtype.itemsize, ",".join(repr(x) for x in shape))
         return "asdtype({0},{1})".format(fromdtype, todtype)
 
     def compatible(self, other):
@@ -135,7 +151,8 @@ class asdtype(_asnumeric):
         return quotient
 
     def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop):
-        return data.view(self.fromdtype)[local_entrystart:local_entrystop]
+        dtype, shape = _dtypeshape(self.fromdtype)
+        return data.view(dtype).reshape((-1,) + shape)[local_entrystart:local_entrystop]
 
 class asarray(asdtype):
     # makes __doc__ attribute mutable before Python 3.3
