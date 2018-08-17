@@ -37,7 +37,7 @@ import numpy
 import awkward.type
 import awkward.util
 
-from uproot.interp.interp import Interpretation
+import uproot.interp.interp
 
 if sys.version_info[0] <= 2:
     string_types = (unicode, str)
@@ -58,11 +58,14 @@ def _flatlen(obj):
     else:
         return int(awkward.util.numpy.prod(obj.shape))
         
-class _asnumeric(Interpretation):
+class _asnumeric(uproot.interp.interp.Interpretation):
     @property
     def type(self):
-        dtype, shape = _dtypeshape(self.todtype)
-        return awkward.type.ArrayType(*((awkward.util.numpy.inf,) + shape + (dtype,)))
+        dtype, shape = _dtypeshape()
+        if shape == ():
+            return dtype
+        else:
+            return awkward.type.ArrayType(*(shape + (dtype,)))
 
     def empty(self):
         return awkward.util.numpy.empty(0, self.todtype)
@@ -200,9 +203,15 @@ class asarray(asdtype):
         return array[:stop]
 
 class asdouble32(_asnumeric):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (_asnumeric.__metaclass__,), {})
+
     def compatible(self, other):
         return isinstance(other, asdouble32) and self.low == other.low and self.high == other.high and self.numbits == other.numbits and self.todtype == other.dtype
 
-class asstlbitset(Interpretation):
+class asstlbitset(uproot.interp.interp.Interpretation):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (uproot.interp.interp.Interpretation.__metaclass__,), {})
+
     def compatible(self, other):
         return isinstance(other, asstlbitset) and self.numbytes == other.numbytes

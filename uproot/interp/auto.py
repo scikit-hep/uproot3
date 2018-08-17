@@ -205,7 +205,7 @@ def interpret(branch, swapbytes=True):
                     return asobj(branch._context.classes.get(obj), branch._context)
 
             if branch.fLeaves[0].__class__.__name__ == "TLeafC":
-                return asstrings(skip_bytes=1, skip4_if_255=True)
+                return asstring()
 
             elif branch.fLeaves[0].__class__.__name__ == "TLeafElement":
                 if isinstance(branch._streamer, uproot.rootio.TStreamerBasicType):
@@ -240,13 +240,13 @@ def interpret(branch, swapbytes=True):
                                 return asjagged(asdtype(fromdtype, todtype), skip_bytes=1)
                             
                 if isinstance(branch._streamer, uproot.rootio.TStreamerString):
-                    return asstrings(skip_bytes=1, skip4_if_255=True)
+                    return asstring()
 
                 if isinstance(branch._streamer, uproot.rootio.TStreamerSTLstring):
-                    return asstrings(skip_bytes=7, skip4_if_255=True)   # FIXME: not sure about skip4_if_255
+                    return asstlstring()
 
                 if getattr(branch._streamer, "fType", None) == uproot.const.kCharStar:
-                    return asstrings(skip_bytes=4, skip4_if_255=False)
+                    return ascharstring()
 
                 if getattr(branch._streamer, "fSTLtype", None) == uproot.const.kSTLvector:
                     try:
@@ -325,7 +325,7 @@ def interpret(branch, swapbytes=True):
                     return asstlbitset(int(m.group(1)))
 
                 if branch.fClassName == b"string":
-                    return asstrings()
+                    return asstlstring()
 
                 if branch.fClassName == b"vector<bool>":
                     return asstlvector(asdtype(numpy.bool_))

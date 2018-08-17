@@ -32,9 +32,7 @@ import awkward.type
 import awkward.util
 import awkward.array.jagged
 
-from uproot.interp.interp import Interpretation
-from uproot.interp.numerical import asdtype
-from uproot.interp.numerical import _flatlen
+import uproot.interp.interp
 
 class JaggedArray(awkward.array.jagged.JaggedArray):
     class _Prep(object):
@@ -55,9 +53,9 @@ def _destructive_divide(array, divisor):
         awkward.util.numpy.floor_divide(array, divisor, out=array)
     return array
 
-class asjagged(Interpretation):
+class asjagged(uproot.interp.interp.Interpretation):
     # makes __doc__ attribute mutable before Python 3.3
-    __metaclass__ = type.__new__(type, "type", (Interpretation.__metaclass__,), {})
+    __metaclass__ = type.__new__(type, "type", (uproot.interp.interp.Interpretation.__metaclass__,), {})
 
     def __init__(self, content, skipbytes=0):
         self.content = content
