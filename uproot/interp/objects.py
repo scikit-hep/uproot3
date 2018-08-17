@@ -28,6 +28,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import struct
+
 import awkward.type
 import awkward.util
 import awkward.array.virtual
@@ -46,11 +48,10 @@ class STLVector(object):
     def __repr__(self):
         return "STLVector({0})".format(self.cls)
 
-    _indexdtype = awkward.util.numpy.dtype(">i4")
+    _format1 = struct.Struct(">i")
 
     def read(self, source, cursor, context, parent):
-        numitems, = cursor.array(source, 1, self._indexdtype)
-
+        numitems = cursor.field(source, self._format1)
         if isinstance(self.cls, uproot.interp.numerical.asdtype):
             out = cursor.array(source, numitems, self.cls.fromdtype)
             if out.dtype != self.cls.todtype:
@@ -69,12 +70,11 @@ class STLString(object):
     def __repr__(self):
         return "STLString()"
 
-    _indexdtype = awkward.util.numpy.dtype(">i4")
+    _format1 = struct.Struct("B")
 
     def read(self, source, cursor, context, parent):
-        cursor.skip(3)
-        numitems, = cursor.array(source, 1, self._indexdtype)
-        return cursor.data(source, numitems).tostring()
+        numitems = cursor.field(source, self._format1)
+        return cursor.array(source, numitems, awkward.util.CHARTYPE).tostring()
 
 class _variable(uproot.interp.interp.Interpretation):
     def __init__(self, content, generator, *args, **kwargs):

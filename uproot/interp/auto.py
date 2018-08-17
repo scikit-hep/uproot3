@@ -130,7 +130,7 @@ def interpret(branch, swapbytes=True):
                 if obj.endswith("*"):
                     obj = obj[:-1]
                 if obj in branch._context.classes:
-                    return asobj(branch._context.classes.get(obj), branch._context)
+                    return asobj(branch._context.classes.get(obj), branch._context, 0)
 
             if branch.fLeaves[0].__class__.__name__ == "TLeafElement" and branch.fLeaves[0].fType == uproot.const.kDouble32:
                 def transform(node, tofloat=True):
@@ -203,12 +203,12 @@ def interpret(branch, swapbytes=True):
             if isinstance(branch._streamer, uproot.rootio.TStreamerObject):
                 obj = branch._streamer.fTypeName.decode("utf-8")
                 if obj in branch._context.classes:
-                    return asobj(branch._context.classes.get(obj), branch._context)
+                    return asobj(branch._context.classes.get(obj), branch._context, 0)
                 
             if isinstance(branch._streamer, uproot.rootio.TStreamerInfo):
                 obj = branch._streamer.fName.decode("utf-8")
                 if obj in branch._context.classes:
-                    return asobj(branch._context.classes.get(obj), branch._context)
+                    return asobj(branch._context.classes.get(obj), branch._context, 0)
 
             if branch.fLeaves[0].__class__.__name__ == "TLeafC":
                 return asstring()

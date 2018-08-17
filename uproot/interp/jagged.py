@@ -103,7 +103,7 @@ class asjagged(uproot.interp.interp.Interpretation):
                 bytestarts = byteoffsets[local_entrystart     : local_entrystop    ] + self.skipbytes
                 bytestops  = byteoffsets[local_entrystart + 1 : local_entrystop + 1]
                 content = self.content.fromroot(data, None, 0, bytestops[-1])
-                return JaggedArray.fromjagged(awkward.array.jagged.ByteJaggedArray(bytestarts, bytestops, content, awkward.util.CHARTYPE))
+                return JaggedArray.fromjagged(awkward.array.jagged.ByteJaggedArray(bytestarts, bytestops, content, self.content.fromdtype))
 
     def destination(self, numitems, numentries):
         content = self.content.destination(numitems, numentries)
