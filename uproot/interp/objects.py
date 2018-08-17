@@ -103,8 +103,12 @@ class asobj(_variable):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (_variable.__metaclass__,), {})
 
-    def __init__(self, cls):
-        super(asobj, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(awkward.util.CHARTYPE)), cls)
+    def __init__(self, cls, context):
+        def interpret(bytes):
+            source = uproot.source.source.Source(bytes)
+            cursor = uproot.source.cursor.Cursor(0)
+            return cls.read(source, cursor, context, None)
+        super(asobj, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(awkward.util.CHARTYPE)), interpret)
 
     def __repr__(self):
         return "asobj({0})".format(self.generator)
@@ -118,6 +122,9 @@ class asstring(_variable):
 
     def __repr__(self):
         return "asstring()"
+
+    def compatible(self, other):
+        return isinstance(other, asstring)
 
 class ascharstring(asstring):
     # makes __doc__ attribute mutable before Python 3.3

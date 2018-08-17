@@ -40,6 +40,7 @@ from uproot.interp.numerical import asdouble32
 from uproot.interp.numerical import asarray
 from uproot.interp.numerical import asstlbitset
 from uproot.interp.jagged import asjagged
+from uproot.interp.objects import asobj
 from uproot.interp.objects import asstring
 from uproot.interp.objects import ascharstring
 from uproot.interp.objects import asstlstring
