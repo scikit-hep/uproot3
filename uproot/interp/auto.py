@@ -36,13 +36,13 @@ import numpy
 
 import uproot.const
 from uproot.interp.numerical import asdtype
-from uproot.interp.numerical import asdouble32
 from uproot.interp.numerical import asarray
+from uproot.interp.numerical import asdouble32
 from uproot.interp.numerical import asstlbitset
 from uproot.interp.jagged import asjagged
 from uproot.interp.objects import asobj
 from uproot.interp.objects import asstring
-from uproot.interp.objects import ascharstring
+from uproot.interp.objects import asrawstring
 from uproot.interp.objects import asstlstring
 from uproot.interp.objects import STLVector
 from uproot.interp.objects import STLString
@@ -252,7 +252,7 @@ def interpret(branch, swapbytes=True):
                     return asstlstring()
 
                 if getattr(branch._streamer, "fType", None) == uproot.const.kCharStar:
-                    return ascharstring()
+                    return asrawstring()
 
                 if getattr(branch._streamer, "fSTLtype", None) == uproot.const.kSTLvector:
                     try:

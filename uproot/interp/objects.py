@@ -146,7 +146,7 @@ class asstring(_variable):
     def compatible(self, other):
         return isinstance(other, asstring)
 
-class ascharstring(asstring):
+class asrawstring(asstring):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (asstring.__metaclass__,), {})
 
@@ -154,7 +154,7 @@ class ascharstring(asstring):
         super(asstring, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(awkward.util.CHARTYPE), skipbytes=4), bytes)
 
     def __repr__(self):
-        return "ascharstring()"
+        return "asrawstring()"
 
 class asstlstring(asstring):
     # makes __doc__ attribute mutable before Python 3.3

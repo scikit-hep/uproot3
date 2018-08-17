@@ -44,9 +44,11 @@ from uproot.interp.numerical import asstlbitset
 from uproot.interp.jagged import asjagged
 from uproot.interp.objects import asobj
 from uproot.interp.objects import asstring
-from uproot.interp.objects import ascharstring
+from uproot.interp.objects import asrawstring
 from uproot.interp.objects import asstlstring
-# asdebug = asjagged(asdtype("u1"))
+from uproot.interp.objects import STLVector
+from uproot.interp.objects import STLString
+asdebug = asjagged(asdtype("u1"))
 
 # put help strings on everything (they're long, too disruptive to intersperse
 # in the code, and are built programmatically to avoid duplication; Python's

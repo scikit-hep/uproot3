@@ -210,8 +210,70 @@ class asdouble32(_asnumeric):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (_asnumeric.__metaclass__,), {})
 
+    def __init__(self, low, high, numbits, fromdims=(), todims=None):
+        if not isinstance(numbits, numbers.Integral) or not 2 <= numbits <= 32:
+            raise TypeError("numbits must be an integer between 2 and 32 (inclusive)")
+        if low == 0.0 and high == 0.0:
+            raise NotImplementedError("Double32_t with dropped mantissa bits not yet implemented")
+        if high <= low:
+            raise ValueError("high ({0}) must be strictly greater than low ({1})".format(high, low))
+
+        self.low = low
+        self.high = high
+        self.numbits = numbits
+
+        self.fromdims = fromdims
+
+        if todims is None:
+            self._todims = todims
+        else:
+            self._todims = fromdims
+
+    @property
+    def todtype(self):
+        return numpy.dtype((numpy.float64, self.todims))
+
+    @property
+    def todims(self):
+        return self._todims
+
+    def __repr__(self):
+        args = [repr(self.low), repr(self.high), repr(self.numbits)]
+
+        if self.fromdims != ():
+            args.append(repr(self.fromdims))
+
+        if self.todims != self.fromdims:
+            args.append(repr(self.todims))
+
+        return "asdouble32(" + ", ".join(args) + ")"
+
+    @property
+    def identifier(self):
+        fromdims = "(" + ",".join(repr(x) for x in self.fromdims) + ")"
+        todims = "(" + ",".join(repr(x) for x in self.todims) + ")"
+        return "asdouble32({0},{1},{2},{3},{4})".format(self.low, self.high, self.numbits, fromdims, todims)
+
     def compatible(self, other):
         return isinstance(other, asdouble32) and self.low == other.low and self.high == other.high and self.numbits == other.numbits and self.todtype == other.dtype
+
+    def numitems(self, numbytes, numentries):
+        quotient, remainder = divmod(numbytes, 4)
+        assert remainder == 0
+        return quotient
+
+    def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop):
+        array = data.view(">u4")
+        if self.fromdims != ():
+            product = int(awkward.util.numpy.prod(self.fromdims))
+            quotient, remainder = divmod(len(array), product)
+            assert remainder == 0, "{0} % {1} == {2} != 0".format(len(array), product, len(array) % product)
+            array = array.reshape((quotient,) + self.fromdims)
+
+        array = array[local_entrystart:local_entrystop].astype(self.todtype)
+        numpy.multiply(array, float(self.high - self.low) / (1 << self.numbits), out=array)
+        numpy.add(array, self.low, out=array)
+        return array
 
 class asstlbitset(uproot.interp.interp.Interpretation):
     # makes __doc__ attribute mutable before Python 3.3
