@@ -96,12 +96,21 @@ class Test(unittest.TestCase):
         nooffsets = uproot.open("tests/samples/small-dy-nooffsets.root")["tree"]
         self.assertTrue(numpy.array_equal(withoffsets.array("nJet"), nooffsets.array("nJet")))
         self.assertTrue(numpy.array_equal(withoffsets.array("nMuon"), nooffsets.array("nMuon")))
-        self.assertTrue(numpy.array_equal(withoffsets.array("Jet_jetId"), nooffsets.array("Jet_jetId")))
-        self.assertTrue(numpy.array_equal(withoffsets.array("Jet_pt"), nooffsets.array("Jet_pt")))
-        self.assertTrue(numpy.array_equal(withoffsets.array("MET_pt"), nooffsets.array("MET_pt")))
-        self.assertTrue(numpy.array_equal(withoffsets.array("Muon_charge"), nooffsets.array("Muon_charge")))
-        self.assertTrue(numpy.array_equal(withoffsets.array("Muon_pt"), nooffsets.array("Muon_pt")))
-        self.assertTrue(numpy.array_equal(withoffsets.array("event"), nooffsets.array("event")))
+
+        def equal(left, right):
+            if len(left) != len(right):
+                return False
+            for x, y in zip(left, right):
+                if not numpy.array_equal(x, y):
+                    return False
+            return True
+
+        self.assertTrue(equal(withoffsets.array("Jet_jetId"), nooffsets.array("Jet_jetId")))
+        self.assertTrue(equal(withoffsets.array("Jet_pt"), nooffsets.array("Jet_pt")))
+        self.assertTrue(equal(withoffsets.array("MET_pt"), nooffsets.array("MET_pt")))
+        self.assertTrue(equal(withoffsets.array("Muon_charge"), nooffsets.array("Muon_charge")))
+        self.assertTrue(equal(withoffsets.array("Muon_pt"), nooffsets.array("Muon_pt")))
+        self.assertTrue(equal(withoffsets.array("event"), nooffsets.array("event")))
 
     def test_issue57(self):
         tree = uproot.open("tests/samples/issue57.root")["outtree"]
@@ -121,7 +130,6 @@ class Test(unittest.TestCase):
 
     def test_issue63(self):
         t = uproot.open("tests/samples/issue63.root")["WtLoop_meta"]
-
         self.assertEqual(t["initialState"].array().tolist(), [b"Wt"])
         self.assertEqual(t["generator"].array().tolist(), [b"PowhegPythia6"])
         self.assertEqual(t["sampleType"].array().tolist(), [b"Nominal"])

@@ -163,7 +163,7 @@ class asstlstring(asstring):
     __metaclass__ = type.__new__(type, "type", (asstring.__metaclass__,), {})
 
     def __init__(self):
-        super(asstring, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(awkward.util.CHARTYPE), skipbytes=7), bytes)
+        super(asstring, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(awkward.util.CHARTYPE), skipbytes=1), bytes)
 
     def __repr__(self):
         return "asstlstring()"
