@@ -39,9 +39,6 @@ import uproot.interp.jagged
 class ObjectArray(awkward.array.virtual.ObjectArray):
     pass
 
-class STLVectorObjectArray(ObjectArray):
-    pass
-
 class STLVector(object):
     def __init__(self, cls):
         self.cls = cls
@@ -51,8 +48,31 @@ class STLVector(object):
 
     _indexdtype = awkward.util.numpy.dtype(">i4")
 
-    def __call__(self, bytes):
-        raise NotImplementedError
+    def read(self, source, cursor, context, parent):
+        if isinstance(self.cls, awkward.util.numpy.dtype):
+            numitems, = cursor.array(source, 4, self._indexdtype)
+            return cursor.array(source, numitems * self.cls.itemsize, self.cls)
+        else:
+            cursor.skip(6)
+            numitems, = cursor.array(source, 4, self._indexdtype)
+            out = [None] * numitems
+            for i in range(numitems):
+                out[i] = self.cls.read(source, cursor, context, parent)
+            return out
+
+class STLString(object):
+    def __init__(self):
+        pass
+
+    def __repr__(self):
+        return "STLString()"
+
+    _indexdtype = awkward.util.numpy.dtype(">i4")
+
+    def read(self, source, cursor, context, parent):
+        cursor.skip(3)
+        numitems, = cursor.array(source, 4, self._indexdtype)
+        return cursor.data(source, numitems).tostring()
 
 class _variable(uproot.interp.interp.Interpretation):
     def __init__(self, content, generator, *args, **kwargs):
