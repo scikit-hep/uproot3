@@ -49,7 +49,7 @@ class STLVector(object):
     def __repr__(self):
         return "STLVector({0})".format(self.cls)
 
-    _indexdtype = numpy.dtype(">i4")
+    _indexdtype = awkward.util.numpy.dtype(">i4")
 
     def __call__(self, bytes):
         raise NotImplementedError
@@ -78,17 +78,26 @@ class _variable(uproot.interp.interp.Interpretation):
     def compatible(self, other):
         return isinstance(other, asobj) and self.content.compatible(other) and self.generator == other.generator and self.args == other.args and self.kwargs == other.kwargs
 
+    def numitems(self, numbytes, numentries):
+        return self.content.numitems(numbytes, numentries)
+
     def source_numitems(self, source):
         return self.content.source_numitems(source)
 
     def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop):
         return self.content.fromroot(data, byteoffsets, local_entrystart, local_entrystop)
 
+    def destination(self, numitems, numentries):
+        return self.content.destination(numitems, numentries)
+
     def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
         return self.content.fill(source, destination, itemstart, itemstop, entrystart, entrystop)
 
+    def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
+        return self.content.clip(destination, itemstart, itemstop, entrystart, entrystop)
+
     def finalize(self, destination, branch):
-        return ObjectArray(destination, self.generator, *self.args, **self.kwargs)
+        return ObjectArray(self.content.finalize(destination, branch), self.generator, *self.args, **self.kwargs)
 
 class asobj(_variable):
     # makes __doc__ attribute mutable before Python 3.3

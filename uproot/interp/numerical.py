@@ -60,6 +60,10 @@ def _flatlen(obj):
         
 class _asnumeric(uproot.interp.interp.Interpretation):
     @property
+    def todims(self):
+        return _dtypeshape(self.todtype)[1]
+
+    @property
     def type(self):
         dtype, shape = _dtypeshape()
         if shape == ():
