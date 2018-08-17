@@ -139,31 +139,11 @@ class asstring(_variable):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (_variable.__metaclass__,), {})
 
-    def __init__(self):
-        super(asstring, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(awkward.util.CHARTYPE), skipbytes=1), bytes)
+    def __init__(self, skipbytes=1):
+        super(asstring, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(awkward.util.CHARTYPE), skipbytes=skipbytes), bytes)
 
     def __repr__(self):
-        return "asstring()"
+        return "asstring({0})".format("" if self.content.skipbytes == 1 else repr(self.content.skipbytes))
 
     def compatible(self, other):
         return isinstance(other, asstring)
-
-class asrawstring(asstring):
-    # makes __doc__ attribute mutable before Python 3.3
-    __metaclass__ = type.__new__(type, "type", (asstring.__metaclass__,), {})
-
-    def __init__(self):
-        super(asstring, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(awkward.util.CHARTYPE), skipbytes=4), bytes)
-
-    def __repr__(self):
-        return "asrawstring()"
-
-class asstlstring(asstring):
-    # makes __doc__ attribute mutable before Python 3.3
-    __metaclass__ = type.__new__(type, "type", (asstring.__metaclass__,), {})
-
-    def __init__(self):
-        super(asstring, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(awkward.util.CHARTYPE), skipbytes=1), bytes)
-
-    def __repr__(self):
-        return "asstlstring()"

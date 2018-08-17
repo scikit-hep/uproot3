@@ -42,8 +42,6 @@ from uproot.interp.numerical import asstlbitset
 from uproot.interp.jagged import asjagged
 from uproot.interp.objects import asobj
 from uproot.interp.objects import asstring
-from uproot.interp.objects import asrawstring
-from uproot.interp.objects import asstlstring
 from uproot.interp.objects import STLVector
 from uproot.interp.objects import STLString
 
@@ -211,7 +209,7 @@ def interpret(branch, swapbytes=True):
                     return asobj(branch._context.classes.get(obj), branch._context, 0)
 
             if branch.fLeaves[0].__class__.__name__ == "TLeafC":
-                return asstring()
+                return asstring(skipbytes=1)
 
             elif branch.fLeaves[0].__class__.__name__ == "TLeafElement":
                 if isinstance(branch._streamer, uproot.rootio.TStreamerBasicType):
@@ -246,13 +244,13 @@ def interpret(branch, swapbytes=True):
                                 return asjagged(asdtype(fromdtype, todtype), skipbytes=1)
                             
                 if isinstance(branch._streamer, uproot.rootio.TStreamerString):
-                    return asstring()
+                    return asstring(skipbytes=1)
 
                 if isinstance(branch._streamer, uproot.rootio.TStreamerSTLstring):
-                    return asstlstring()
+                    return asstring(skipbytes=7)
 
                 if getattr(branch._streamer, "fType", None) == uproot.const.kCharStar:
-                    return asrawstring()
+                    return asstring(skipbytes=4)
 
                 if getattr(branch._streamer, "fSTLtype", None) == uproot.const.kSTLvector:
                     try:
@@ -331,7 +329,7 @@ def interpret(branch, swapbytes=True):
                     return asstlbitset(int(m.group(1)))
 
                 if branch.fClassName == b"string":
-                    return asstlstring()
+                    return asstring(skipbytes=1)
 
                 if branch.fClassName == b"vector<bool>":
                     return asobj(STLVector(asdtype(numpy.bool_)), branch._context, 6)

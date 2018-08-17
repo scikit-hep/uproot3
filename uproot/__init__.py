@@ -44,8 +44,6 @@ from uproot.interp.numerical import asstlbitset
 from uproot.interp.jagged import asjagged
 from uproot.interp.objects import asobj
 from uproot.interp.objects import asstring
-from uproot.interp.objects import asrawstring
-from uproot.interp.objects import asstlstring
 from uproot.interp.objects import STLVector
 from uproot.interp.objects import STLString
 asdebug = asjagged(asdtype("u1"))
