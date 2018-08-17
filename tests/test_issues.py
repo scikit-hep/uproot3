@@ -81,7 +81,7 @@ class Test(unittest.TestCase):
 
     def test_issue46(self):
         t = uproot.open("tests/samples/issue46.root")["tree"]
-        t["evt"].array(uproot.interp.asdebug)
+        t["evt"].array(uproot.asdebug)
 
     def test_issue49(self):
         t = uproot.open("tests/samples/issue49.root")["nllscan"]

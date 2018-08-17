@@ -49,12 +49,14 @@ class STLVector(object):
     _indexdtype = awkward.util.numpy.dtype(">i4")
 
     def read(self, source, cursor, context, parent):
-        if isinstance(self.cls, awkward.util.numpy.dtype):
-            numitems, = cursor.array(source, 4, self._indexdtype)
-            return cursor.array(source, numitems * self.cls.itemsize, self.cls)
+        numitems, = cursor.array(source, 1, self._indexdtype)
+
+        if isinstance(self.cls, uproot.interp.numerical.asdtype):
+            out = cursor.array(source, numitems, self.cls.fromdtype)
+            if out.dtype != self.cls.todtype:
+                out = out.astype(self.cls.todtype)
+            return list(out)
         else:
-            cursor.skip(6)
-            numitems, = cursor.array(source, 4, self._indexdtype)
             out = [None] * numitems
             for i in range(numitems):
                 out[i] = self.cls.read(source, cursor, context, parent)
@@ -71,7 +73,7 @@ class STLString(object):
 
     def read(self, source, cursor, context, parent):
         cursor.skip(3)
-        numitems, = cursor.array(source, 4, self._indexdtype)
+        numitems, = cursor.array(source, 1, self._indexdtype)
         return cursor.data(source, numitems).tostring()
 
 class _variable(uproot.interp.interp.Interpretation):
@@ -123,12 +125,12 @@ class asobj(_variable):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (_variable.__metaclass__,), {})
 
-    def __init__(self, cls, context):
+    def __init__(self, cls, context, skipbytes):
         def interpret(bytes):
             source = uproot.source.source.Source(bytes)
             cursor = uproot.source.cursor.Cursor(0)
             return cls.read(source, cursor, context, None)
-        super(asobj, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(awkward.util.CHARTYPE)), interpret)
+        super(asobj, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(awkward.util.CHARTYPE), skipbytes=skipbytes), interpret)
 
     def __repr__(self):
         return "asobj({0})".format(self.generator)
