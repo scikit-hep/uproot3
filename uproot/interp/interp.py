@@ -37,8 +37,8 @@ class Interpretation(object):
         raise NotImplementedError
 
     @property
-    def dtype(self):
-        raise NotImplementedError
+    def type(self):
+        raise NotImplementedError   # awkward.type.Type
     
     def empty(self):
         raise NotImplementedError
@@ -52,7 +52,7 @@ class Interpretation(object):
     def source_numitems(self, source):
         raise NotImplementedError
 
-    def fromroot(self, data, offsets, local_entrystart, local_entrystop):
+    def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop):
         raise NotImplementedError
 
     def destination(self, numitems, numentries):

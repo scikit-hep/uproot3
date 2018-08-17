@@ -42,7 +42,7 @@ except ImportError:
 
 import uproot
 
-class TestCompression(unittest.TestCase):
+class Test(unittest.TestCase):
     def runTest(self):
         pass
     

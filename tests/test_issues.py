@@ -38,7 +38,7 @@ import uproot
 import uproot_methods.classes.TVector3
 import uproot_methods.classes.TLorentzVector
 
-class TestIssues(unittest.TestCase):
+class Test(unittest.TestCase):
     def runTest(self):
         pass
 

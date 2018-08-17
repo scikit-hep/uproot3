@@ -39,13 +39,6 @@ from uproot.interp.numerical import asdtype
 from uproot.interp.numerical import asdouble32
 from uproot.interp.numerical import asarray
 from uproot.interp.numerical import asstlbitset
-from uproot.interp.jagged import asjagged
-from uproot.interp.jagged import asstlvector
-from uproot.interp.jagged import asstlvectorvector
-from uproot.interp.jagged import asobjs
-from uproot.interp.jagged import asobj
-from uproot.interp.strings import asstrings
-from uproot.interp.strings import asstlvecstrings
 
 class _NotNumerical(Exception): pass
 
@@ -157,7 +150,7 @@ def interpret(branch, swapbytes=True):
                 try:
                     left, right = branch._streamer.fTitle.index(b"["), branch._streamer.fTitle.index(b"]")
                 except (ValueError, AttributeError):
-                    out = asdtype(">f4", "f8", dims, dims)
+                    out = asdtype(numpy.dtype((">f4", dims)), numpy.dtype(("f8", dims)))
                 else:
                     try:
                         spec = eval(compile(ast.Expression(transform(ast.parse(branch._streamer.fTitle[left : right + 1]).body[0].value)), repr(branch._streamer.fTitle), "eval"))
@@ -174,9 +167,9 @@ def interpret(branch, swapbytes=True):
                 fromdtype = _leaf2dtype(branch.fLeaves[0]).newbyteorder(">")
 
                 if swapbytes:
-                    out = asdtype(fromdtype, fromdtype.newbyteorder("="), dims, dims)
+                    out = asdtype(numpy.dtype((fromdtype, dims)), numpy.dtype((fromdtype.newbyteorder("="), dims)))
                 else:
-                    out = asdtype(fromdtype, fromdtype, dims, dims)
+                    out = asdtype(numpy.dtype((fromdtype, dims)), numpy.dtype((fromdtype, dims)))
 
             if branch.fLeaves[0].fLeafCount is None:
                 return out
@@ -191,7 +184,7 @@ def interpret(branch, swapbytes=True):
                 todtype = fromdtype
 
             if all(leaf.fLeafCount is None for leaf in branch.fLeaves):
-                return asdtype(fromdtype, todtype, dims, dims)
+                return asdtype(numpy.dtype((fromdtype, dims)), numpy.dtype((todtype, dims)))
             else:
                 return None
 
@@ -229,7 +222,7 @@ def interpret(branch, swapbytes=True):
                             todims = dims
                             if reduce(lambda x, y: x * y, todims, 1) != fromdims:
                                 todims = (fromdims,)
-                            return asdtype(fromdtype, todtype, (fromdims,), todims)
+                            return asdtype(numpy.dtype((fromdtype, (fromdims,))), numpy.dtype((todtype, todims)))
 
                 if isinstance(branch._streamer, uproot.rootio.TStreamerBasicPointer):
                     if uproot.const.kOffsetP < branch._streamer.fType < uproot.const.kOffsetP + 20:

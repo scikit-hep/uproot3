@@ -37,6 +37,11 @@ from uproot.source.file import FileSource
 from uproot.source.xrootd import XRootDSource
 
 from uproot.interp.auto import interpret
+from uproot.interp.numerical import asdtype
+from uproot.interp.numerical import asarray
+from uproot.interp.numerical import asdouble32
+from uproot.interp.numerical import asstlbitset
+# asdebug = asjagged(asdtype("u1"))
 
 # put help strings on everything (they're long, too disruptive to intersperse
 # in the code, and are built programmatically to avoid duplication; Python's

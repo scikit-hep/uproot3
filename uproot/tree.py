@@ -77,7 +77,6 @@ import uproot.rootio
 from uproot.rootio import _bytesid
 from uproot.rootio import nofilter
 from uproot.interp.auto import interpret
-from uproot.interp.jagged import asjagged
 from uproot.interp.numerical import asdtype
 from uproot.interp.numerical import asarray
 from uproot.source.cursor import Cursor
@@ -1091,27 +1090,27 @@ class TBranchMethods(object):
             basketcache[basketcachekey] = basketdata
 
         if key.fObjlen == key.border:
-            data, offsets = basketdata, None
+            data, byteoffsets = basketdata, None
 
             if self._countbranch is not None and numpy.uint8(self._tree_iofeatures) & numpy.uint8(uproot.const.kGenerateOffsetMap) != 0:
                 counts = self._countbranch.array(entrystart=(local_entrystart + self.basket_entrystart(i)),
                                                  entrystop=(local_entrystop + self.basket_entrystart(i)))
                 itemsize = 1
                 if isinstance(interpretation, asjagged):
-                    itemsize = interpretation.asdtype.fromdtype.itemsize
+                    itemsize = interpretation.content.fromdtype.itemsize
                 numpy.multiply(counts, itemsize, counts)
-                offsets = numpy.empty(len(counts) + 1, dtype=numpy.int32)
-                offsets[0] = 0
-                numpy.cumsum(counts, out=offsets[1:])
+                byteoffsets = numpy.empty(len(counts) + 1, dtype=numpy.int32)
+                byteoffsets[0] = 0
+                numpy.cumsum(counts, out=byteoffsets[1:])
 
         else:
             data = basketdata[:key.border]
-            offsets = numpy.empty((key.fObjlen - key.border - 4) // 4, dtype=numpy.int32)  # native endian
-            offsets[:-1] = basketdata[key.border + 4 : -4].view(">i4")                     # read as big-endian and convert
-            offsets[-1] = key.fLast
-            numpy.subtract(offsets, key.fKeylen, offsets)
+            byteoffsets = numpy.empty((key.fObjlen - key.border - 4) // 4, dtype=numpy.int32)  # native endian
+            byteoffsets[:-1] = basketdata[key.border + 4 : -4].view(">i4")                     # read as big-endian and convert
+            byteoffsets[-1] = key.fLast
+            numpy.subtract(byteoffsets, key.fKeylen, byteoffsets)
 
-        return interpretation.fromroot(data, offsets, local_entrystart, local_entrystop)
+        return interpretation.fromroot(data, byteoffsets, local_entrystart, local_entrystop)
 
     def basket(self, i, interpretation=None, entrystart=None, entrystop=None, flatten=False, cache=None, basketcache=None, keycache=None):
         if self._recoveredbaskets is None:
@@ -1495,7 +1494,7 @@ class TBranchMethods(object):
 
             # then if you have offsets data, read them in
             if self.fNevBufSize > 8:
-                offsets = cursor.bytes(source, self.fNevBuf * 4 + 8)
+                byteoffsets = cursor.bytes(source, self.fNevBuf * 4 + 8)
                 cursor.skip(-4)
 
             # there's a second TKey here, but it doesn't contain any new information (in fact, less)
@@ -1508,8 +1507,8 @@ class TBranchMethods(object):
 
             # put the offsets back in, in the way that we expect it
             if self.fNevBufSize > 8:
-                self.contents = numpy.concatenate((self.contents, offsets))
-                size += offsets.nbytes
+                self.contents = numpy.concatenate((self.contents, byteoffsets))
+                size += byteoffsets.nbytes
 
             self.fObjlen = size
             self.fNbytes = self.fObjlen + self.fKeylen

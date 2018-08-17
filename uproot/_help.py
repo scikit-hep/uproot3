@@ -1637,138 +1637,50 @@ _method(uproot.interp.numerical.asarray.finalize).__doc__ = interp_fragments["se
 
 ################################################################ uproot.interp.jagged.asjagged
 
-uproot.interp.jagged.asjagged.__doc__ = \
-u"""Interpret branch as a jagged array (array of non-uniformly sized arrays).
+# uproot.interp.jagged.asjagged.__doc__ = \
+# u"""Interpret branch as a jagged array (array of non-uniformly sized arrays).
 
-    This interpretation directs branch-reading to fill contiguous arrays and present them to the user in a :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>` interface. Such an object behaves as though it were an array of non-uniformly sized arrays, but it is more memory and cache-line efficient because the underlying data are contiguous.
+#     This interpretation directs branch-reading to fill contiguous arrays and present them to the user in a :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>` interface. Such an object behaves as though it were an array of non-uniformly sized arrays, but it is more memory and cache-line efficient because the underlying data are contiguous.
 
-    In this interpretation, "items" (for ``numitems``, ``itemstart``, ``itemstop``, etc.) are the items of the inner array (however that is defined), and "entries" are elements of the outer array. The outer array is always one-dimensional.
+#     In this interpretation, "items" (for ``numitems``, ``itemstart``, ``itemstop``, etc.) are the items of the inner array (however that is defined), and "entries" are elements of the outer array. The outer array is always one-dimensional.
 
-    Parameters
-    ----------
-    asdtype : :py:class:`asdtype <uproot.interp.numerical.asdtype>`
-        interpretation for the inner arrays.
+#     Parameters
+#     ----------
+#     asdtype : :py:class:`asdtype <uproot.interp.numerical.asdtype>`
+#         interpretation for the inner arrays.
 
-    Notes
-    -----
+#     Notes
+#     -----
 
-    {see2}
-""".format(**interp_fragments)
+#     {see2}
+# """.format(**interp_fragments)
 
-_method(uproot.interp.jagged.asjagged.to).__doc__ = \
-u"""Create a new :py:class:`asjagged <uproot.interp.jagged.asjagged>` interpretation from this one.
+# _method(uproot.interp.jagged.asjagged.to).__doc__ = \
+# u"""Create a new :py:class:`asjagged <uproot.interp.jagged.asjagged>` interpretation from this one.
 
-    Parameters
-    ----------
-    todtype : ``None`` or ``numpy.dtype``
-        if not ``None``, change the destination type of inner arrays.
+#     Parameters
+#     ----------
+#     todtype : ``None`` or ``numpy.dtype``
+#         if not ``None``, change the destination type of inner arrays.
 
-    todims : ``None`` or tuple of ints
-        if not ``None``, change the destination dimensions of inner arrays.
+#     todims : ``None`` or tuple of ints
+#         if not ``None``, change the destination dimensions of inner arrays.
 
-    Returns
-    -------
-    :py:class:`asjagged <uproot.interp.jagged.asjagged>`
-        new interpretation.
-"""
+#     Returns
+#     -------
+#     :py:class:`asjagged <uproot.interp.jagged.asjagged>`
+#         new interpretation.
+# """
 
-_method(uproot.interp.jagged.asjagged.empty).__doc__ = interp_fragments["see1"]
-_method(uproot.interp.jagged.asjagged.compatible).__doc__ = interp_fragments["see1"]
-_method(uproot.interp.jagged.asjagged.numitems).__doc__ = interp_fragments["see1"]
-_method(uproot.interp.jagged.asjagged.source_numitems).__doc__ = interp_fragments["see1"]
-_method(uproot.interp.jagged.asjagged.fromroot).__doc__ = interp_fragments["see1"]
-_method(uproot.interp.jagged.asjagged.destination).__doc__ = interp_fragments["see1"]
-_method(uproot.interp.jagged.asjagged.fill).__doc__ = interp_fragments["see1"]
-_method(uproot.interp.jagged.asjagged.clip).__doc__ = interp_fragments["see1"]
-_method(uproot.interp.jagged.asjagged.finalize).__doc__ = interp_fragments["see1"]
-
-################################################################ uproot.interp.jagged.JaggedArray
-
-uproot.interp.jagged.JaggedArray.__doc__ = \
-u"""Array of non-uniformly sized arrays, implemented with contiguous *content* and *offsets*.
-
-    Objects of this type can be sliced and indexed as an array of arrays, where each of the interior arrays may have a different length, but it is stored as three contiguous arrays:
-
-    - *content*: the interior data without array boundaries;
-    - *starts*: the starting index of each interior array (inclusive);
-    - *stops*: the stopping index of each interior array (exclusive).
-
-    The *starts* and *stops* may overlap significantly::
-
-        starts, stops = offsets[:-1], offsets[1:]
-
-    Stored this way, memory usage and fragmentation are minimized, and sequential access is cache-efficient if *starts* is monotonic (the usual case). Providing both a *starts* and a *stops* array allows jagged arrays to be arbitrarily sliced or sorted without copying the *content*.
-
-    This class has array-like semantics:
-
-    - square brackets (``__getitem__``) returns an inner array if the argument is an integer and a :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>` if the argument is a slice.
-    - the ``len`` function (``__len__``) returns the number of inner arrays.
-    - iteration (``__iter__``) iterates over inner arrays.
-
-    Parameters
-    ----------
-    content : ``numpy.ndarray``
-        the *content* array, as defined above.
-
-    starts : ``numpy.ndarray``
-        the *starts* array, as defined above. Must be one-dimensional with an integer dtype.
-
-    stops : ``numpy.ndarray``
-        the *stops* array, as defined above. Must be one-dimensional with an integer dtype and the same length as *starts*.
-"""
-
-_method(uproot.interp.jagged.JaggedArray.fromlists).__doc__ = \
-u"""Create a :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>` from Python iterables.
-
-    The Numpy types will be inferred from the content.
-
-    Parameters
-    ----------
-    lists : iterable of iterables of numbers
-        the data to be converted.
-
-    Returns
-    -------
-    :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>`
-        the jagged array.
-"""
-
-################################################################ uproot.interp.strings.Strings
-
-uproot.interp.strings.Strings.__doc__ = \
-u"""Array of non-uniformly sized strings, implemented with contiguous *content* and *offsets*.
-
-    Objects of this type can be sliced and indexed as an array of strings, where each of the strings may have a different length, but it is stored as a :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>` of ``numpy.uint8``.
-
-    Numpy's string-handling options either force fixed-size strings (the ``"S"`` dtype) or non-contiguous Python objects (the ``"O"`` dtype).
-
-    This class has array-like semantics:
-
-    - square brackets (``__getitem__``) returns a string if the argument is an integer and a :py:class:`Strings <uproot.interp.strings.Strings>` if the argument is a slice.
-    - the ``len`` function (``__len__``) returns the number of strings.
-    - iteration (``__iter__``) iterates over strings.
-
-    In Python 3, these "strings" are ``bytes`` objects.
-
-    Parameters
-    ----------
-    jaggedarray : :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>`
-        a jagged array with one-dimensional ``numpy.uint8`` content.
-"""
-
-_method(uproot.interp.strings.Strings.fromstrs).__doc__ = \
-u"""Create a :py:class:`Strings <uproot.interp.strings.Strings>` from Python strings.
-
-    Parameters
-    ----------
-    strs : iterable of Python strings
-        strings to convert. If any strings are Python 2 ``unicode`` or Python 3 ``str`` objects, they will be encoded as ``bytes`` with ``"utf-8"`` encoding, ``"replace"`` error semantics.
-
-    Returns
-    -------
-    :py:class:`Strings <uproot.interp.strings.Strings>`
-        the contiguous strings.
-"""
+# _method(uproot.interp.jagged.asjagged.empty).__doc__ = interp_fragments["see1"]
+# _method(uproot.interp.jagged.asjagged.compatible).__doc__ = interp_fragments["see1"]
+# _method(uproot.interp.jagged.asjagged.numitems).__doc__ = interp_fragments["see1"]
+# _method(uproot.interp.jagged.asjagged.source_numitems).__doc__ = interp_fragments["see1"]
+# _method(uproot.interp.jagged.asjagged.fromroot).__doc__ = interp_fragments["see1"]
+# _method(uproot.interp.jagged.asjagged.destination).__doc__ = interp_fragments["see1"]
+# _method(uproot.interp.jagged.asjagged.fill).__doc__ = interp_fragments["see1"]
+# _method(uproot.interp.jagged.asjagged.clip).__doc__ = interp_fragments["see1"]
+# _method(uproot.interp.jagged.asjagged.finalize).__doc__ = interp_fragments["see1"]
 
 ################################################################ uproot.cache.MemoryCache
 

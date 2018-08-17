@@ -35,7 +35,7 @@ import numpy
 
 import uproot
 
-class TestCache(unittest.TestCase):
+class Test(unittest.TestCase):
     def runTest(self):
         pass
 

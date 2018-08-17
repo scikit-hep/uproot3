@@ -40,7 +40,7 @@ def basest(array):
         array = array.base
     return array
 
-class TestTree(unittest.TestCase):
+class Test(unittest.TestCase):
     def runTest(self):
         pass
 
