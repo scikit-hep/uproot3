@@ -60,6 +60,10 @@ def _flatlen(obj):
         
 class _asnumeric(uproot.interp.interp.Interpretation):
     @property
+    def todtypeflat(self):
+        return _dtypeshape(self.todtype)[0]
+
+    @property
     def todims(self):
         return _dtypeshape(self.todtype)[1]
 
@@ -232,6 +236,10 @@ class asdouble32(_asnumeric):
     @property
     def todtype(self):
         return numpy.dtype((numpy.float64, self.todims))
+
+    @property
+    def todtypeflat(self):
+        return numpy.dtype(numpy.float64)
 
     @property
     def todims(self):

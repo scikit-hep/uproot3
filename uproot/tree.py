@@ -1802,7 +1802,7 @@ class LazyArray(object):
     @property
     def dtype(self):
         if isinstance(self._interpretation, asdtype):
-            return self._interpretation.todtype
+            return self._interpretation.todtypeflat
         else:
             return numpy.dtype(numpy.object_)
 
