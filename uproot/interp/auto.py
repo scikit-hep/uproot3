@@ -39,6 +39,7 @@ from uproot.interp.numerical import asdtype
 from uproot.interp.numerical import asdouble32
 from uproot.interp.numerical import asarray
 from uproot.interp.numerical import asstlbitset
+from uproot.interp.jagged import asjagged
 
 class _NotNumerical(Exception): pass
 

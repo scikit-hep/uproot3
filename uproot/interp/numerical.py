@@ -35,6 +35,7 @@ import math
 import numpy
 
 import awkward.type
+import awkward.util
 
 from uproot.interp.interp import Interpretation
 
@@ -42,8 +43,6 @@ if sys.version_info[0] <= 2:
     string_types = (unicode, str)
 else:
     string_types = (str, bytes)
-
-_byteorder = {"!": "B", ">": "B", "<": "L", "|": "L", "=": "B" if numpy.dtype(">f8").isnative else "L"}
 
 def _dtypeshape(obj):
     out = ()
@@ -53,20 +52,20 @@ def _dtypeshape(obj):
     return obj, out
 
 def _flatlen(obj):
-    if isinstance(obj, numpy.dtype):
+    if isinstance(obj, awkward.util.numpy.dtype):
         dtype, shape = _dtypeshape(obj)
-        return int(numpy.prod(shape))
+        return int(awkward.util.numpy.prod(shape))
     else:
-        return int(numpy.prod(obj.shape))
+        return int(awkward.util.numpy.prod(obj.shape))
         
 class _asnumeric(Interpretation):
     @property
     def type(self):
         dtype, shape = _dtypeshape(self.todtype)
-        return awkward.type.ArrayType(*((numpy.inf,) + shape + (dtype,)))
+        return awkward.type.ArrayType(*((awkward.util.numpy.inf,) + shape + (dtype,)))
 
     def empty(self):
-        return numpy.empty(0, self.todtype)
+        return awkward.util.numpy.empty(0, self.todtype)
 
     def source_numitems(self, source):
         return _flatlen(source)
@@ -75,7 +74,7 @@ class _asnumeric(Interpretation):
         quotient, remainder = divmod(numitems, _flatlen(self.todtype))
         if remainder != 0:
             raise ValueError("cannot reshape {0} items as {1} (i.e. groups of {2})".format(numitems, self.todtype.shape, _flatlen(self.todtype)))
-        return numpy.empty(quotient, dtype=self.todtype)
+        return awkward.util.numpy.empty(quotient, dtype=self.todtype)
 
     def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
         destination.reshape(-1)[itemstart:itemstop] = source.reshape(-1)
@@ -98,21 +97,21 @@ class asdtype(_asnumeric):
     __metaclass__ = type.__new__(type, "type", (_asnumeric.__metaclass__,), {})
 
     def __init__(self, fromdtype, todtype=None):
-        if isinstance(fromdtype, numpy.dtype):
+        if isinstance(fromdtype, awkward.util.numpy.dtype):
             self.fromdtype = fromdtype
         elif isinstance(fromdtype, string_types) and len(fromdtype) > 0 and fromdtype[0] in (">", "<", "=", "|", b">", b"<", b"=", b"|"):
-            self.fromdtype = numpy.dtype(fromdtype)
+            self.fromdtype = awkward.util.numpy.dtype(fromdtype)
         else:
-            self.fromdtype = numpy.dtype(fromdtype).newbyteorder(">")
+            self.fromdtype = awkward.util.numpy.dtype(fromdtype).newbyteorder(">")
 
         if todtype is None:
             self.todtype = self.fromdtype.newbyteorder("=")
-        elif isinstance(todtype, numpy.dtype):
+        elif isinstance(todtype, awkward.util.numpy.dtype):
             self.todtype = todtype
         elif isinstance(todtype, string_types) and len(todtype) > 0 and todtype[0] in (">", "<", "=", "|", b">", b"<", b"=", b"|"):
-            self.todtype = numpy.dtype(todtype)
+            self.todtype = awkward.util.numpy.dtype(todtype)
         else:
-            self.todtype = numpy.dtype(todtype).newbyteorder("=")
+            self.todtype = awkward.util.numpy.dtype(todtype).newbyteorder("=")
 
     def to(self, todtype=None, todims=None):
         if todtype is None:
@@ -123,7 +122,7 @@ class asdtype(_asnumeric):
             dtype, shape = _dtypeshape(todtype)
             if todims is not None:
                 shape = todims + shape
-        return asdtype(self.fromdtype, numpy.dtype((dtype, shape)))
+        return asdtype(self.fromdtype, awkward.util.numpy.dtype((dtype, shape)))
 
     def toarray(self, array):
         return asarray(self.fromdtype, array)
@@ -136,6 +135,7 @@ class asdtype(_asnumeric):
 
     @property
     def identifier(self):
+        _byteorder = {"!": "B", ">": "B", "<": "L", "|": "L", "=": "B" if awkward.util.numpy.dtype(">f8").isnative else "L"}
         dtype, shape = _dtypeshape(self.fromdtype)
         fromdtype = "{0}{1}{2}({3})".format(_byteorder[dtype.byteorder], dtype.kind, dtype.itemsize, ",".join(repr(x) for x in shape))
         dtype, shape = _dtypeshape(self.todtype)
@@ -160,17 +160,17 @@ class asarray(asdtype):
     __metaclass__ = type.__new__(type, "type", (asdtype.__metaclass__,), {})
 
     def __init__(self, fromdtype, toarray):
-        if isinstance(fromdtype, numpy.dtype):
+        if isinstance(fromdtype, awkward.util.numpy.dtype):
             self.fromdtype = fromdtype
         elif isinstance(fromdtype, string_types) and len(fromdtype) > 0 and fromdtype[0] in (">", "<", "=", "|", b">", b"<", b"=", b"|"):
-            self.fromdtype = numpy.dtype(fromdtype)
+            self.fromdtype = awkward.util.numpy.dtype(fromdtype)
         else:
-            self.fromdtype = numpy.dtype(fromdtype).newbyteorder(">")
+            self.fromdtype = awkward.util.numpy.dtype(fromdtype).newbyteorder(">")
         self.toarray = toarray
 
     @property
     def todtype(self):
-        return numpy.dtype((self.toarray.dtype, self.toarray.shape[1:]))
+        return awkward.util.numpy.dtype((self.toarray.dtype, self.toarray.shape[1:]))
 
     def __repr__(self):
         return "asarray({0}, <array {1} {2} at 0x{3:012x}>)".format(repr(str(self.fromdtype)), self.toarray.dtype, self.toarray.shape, id(self.toarray))

@@ -78,7 +78,7 @@ from uproot.rootio import _bytesid
 from uproot.rootio import nofilter
 from uproot.interp.auto import interpret
 from uproot.interp.numerical import asdtype
-from uproot.interp.numerical import asarray
+from uproot.interp.jagged import asjagged
 from uproot.source.cursor import Cursor
 from uproot.source.memmap import MemmapSource
 from uproot.source.xrootd import XRootDSource
