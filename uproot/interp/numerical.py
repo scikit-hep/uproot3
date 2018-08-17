@@ -146,7 +146,8 @@ class asdtype(_asnumeric):
         return isinstance(other, asdtype) and self.todtype == other.todtype
 
     def numitems(self, numbytes, numentries):
-        quotient, remainder = divmod(numbytes, _flatlen(self.todtype))
+        dtype, shape = _dtypeshape(self.fromdtype)
+        quotient, remainder = divmod(numbytes, dtype.itemsize)
         assert remainder == 0
         return quotient
 

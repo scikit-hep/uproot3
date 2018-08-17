@@ -1282,7 +1282,7 @@ class TBranchMethods(object):
         basket_entryoffset = self._basket_entryoffset(basketstart, basketstop)
 
         destination = interpretation.destination(basket_itemoffset[-1], basket_entryoffset[-1])
-
+        
         def fill(j):
             try:
                 i = j + basketstart
