@@ -45,9 +45,9 @@ else:
 
 _byteorder = {"!": "B", ">": "B", "<": "L", "|": "L", "=": "B" if numpy.dtype(">f8").isnative else "L"}
 
-def flatlen(obj):
+def _flatlen(obj):
     if isinstance(obj, numpy.dtype):
-        return flatlen(numpy.empty((), obj))
+        return _flatlen(numpy.empty((), obj))
     else:
         return int(numpy.prod(obj.shape))
 
@@ -61,19 +61,19 @@ class _asnumeric(Interpretation):
         return numpy.empty(0, self.todtype)
 
     def source_numitems(self, source):
-        return flatlen(source)
+        return _flatlen(source)
 
     def destination(self, numitems, numentries):
-        quotient, remainder = divmod(numitems, flatlen(self.todtype))
+        quotient, remainder = divmod(numitems, _flatlen(self.todtype))
         if remainder != 0:
-            raise ValueError("cannot reshape {0} items as {1} (i.e. groups of {2})".format(numitems, self.todtype.shape, flatlen(self.todtype)))
+            raise ValueError("cannot reshape {0} items as {1} (i.e. groups of {2})".format(numitems, self.todtype.shape, _flatlen(self.todtype)))
         return numpy.empty(quotient, dtype=self.todtype)
 
     def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
         destination.reshape(-1)[itemstart:itemstop] = source.reshape(-1)
 
     def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
-        length = flatlen(self.todtype)
+        length = _flatlen(self.todtype)
         startquotient, startremainder = divmod(itemstart, length)
         stopquotient, stopremainder = divmod(itemstop, length)
         assert startremainder == 0
@@ -130,7 +130,7 @@ class asdtype(_asnumeric):
         return isinstance(other, asdtype) and self.todtype == other.todtype
 
     def numitems(self, numbytes, numentries):
-        quotient, remainder = divmod(numbytes, flatlen(self.todtype))
+        quotient, remainder = divmod(numbytes, _flatlen(self.todtype))
         assert remainder == 0
         return quotient
 
@@ -138,7 +138,48 @@ class asdtype(_asnumeric):
         return data.view(self.fromdtype)[local_entrystart:local_entrystop]
 
 class asarray(asdtype):
-    pass
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (asdtype.__metaclass__,), {})
+
+    def __init__(self, fromdtype, toarray):
+        if isinstance(fromdtype, numpy.dtype):
+            self.fromdtype = fromdtype
+        elif isinstance(fromdtype, string_types) and len(fromdtype) > 0 and fromdtype[0] in (">", "<", "=", "|", b">", b"<", b"=", b"|"):
+            self.fromdtype = numpy.dtype(fromdtype)
+        else:
+            self.fromdtype = numpy.dtype(fromdtype).newbyteorder(">")
+        self.toarray = toarray
+
+    @property
+    def todtype(self):
+        return numpy.dtype((self.toarray.dtype, self.toarray.shape[1:]))
+
+    def __repr__(self):
+        return "asarray({0}, <array {1} {2} at 0x{3:012x}>)".format(repr(str(self.fromdtype)), self.toarray.dtype, self.toarray.shape, id(self.toarray))
+
+    @property
+    def identifier(self):
+        return "asarray" + super(asarray, self).identifier[7:]
+
+    def destination(self, numitems, numentries):
+        quotient, remainder = divmod(numitems, _flatlen(self.todtype))
+        if remainder != 0:
+            raise ValueError("cannot reshape {0} items as {1} (i.e. groups of {2})".format(numitems, self.todtype.shape, _flatlen(self.todtype)))
+        if _flatlen(self.toarray) < numitems:
+            raise ValueError("cannot put {0} items into an array of {1} items".format(numitems, _flatlen(self.toarray)))
+        return self.toarray, quotient
+
+    def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
+        array, stop = destination
+        super(asarray, self).fill(source, array, itemstart, itemstop, entrystart, entrystop)
+
+    def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
+        array, stop = destination
+        return super(asarray, self).clip(array, itemstart, itemstop, entrystart, entrystop), stop
+
+    def finalize(self, destination, branch):
+        array, stop = destination
+        return array[:stop]
 
 class asdouble32(_asnumeric):
     def compatible(self, other):
