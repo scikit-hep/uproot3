@@ -43,10 +43,10 @@ from uproot.interp.numerical import asdouble32
 from uproot.interp.numerical import asstlbitset
 from uproot.interp.jagged import asjagged
 from uproot.interp.objects import asobj
+from uproot.interp.objects import asvarobj
 from uproot.interp.objects import asstring
 from uproot.interp.objects import STLVector
 from uproot.interp.objects import STLString
-from uproot.interp.wrapped import aswrapped
 asdebug = asjagged(asdtype("u1"))
 
 # put help strings on everything (they're long, too disruptive to intersperse

@@ -60,12 +60,13 @@ class asjagged(uproot.interp.interp.Interpretation):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (uproot.interp.interp.Interpretation.__metaclass__,), {})
 
-    def __init__(self, content, skipbytes=0):
+    def __init__(self, content, skipbytes=0, methods=None):
         self.content = content
         self.skipbytes = skipbytes
+        self.methods = methods
 
     def __repr__(self):
-        return "asjagged({0}{1})".format(repr(self.content), "" if self.skipbytes == 0 else ", skipbytes={0}".format(self.skipbytes))
+        return "asjagged({0}{1}{2})".format(repr(self.content), "" if self.skipbytes == 0 else ", skipbytes={0}".format(self.skipbytes), "" if self.methods is None else ", methods={0}".format(self.methods))
 
     def to(self, todtype=None, todims=None, skipbytes=None):
         if skipbytes is None:
@@ -74,7 +75,7 @@ class asjagged(uproot.interp.interp.Interpretation):
 
     @property
     def identifier(self):
-        return "asjagged({0}{1})".format(repr(self.content), "" if self.skipbytes == 0 else ",{0}".format(self.skipbytes))
+        return "asjagged({0}{1}{2})".format(repr(self.content), "" if self.skipbytes == 0 else ",{0}".format(self.skipbytes), "" if self.methods == None else ",{0}".format(self.methods))
 
     @property
     def type(self):
