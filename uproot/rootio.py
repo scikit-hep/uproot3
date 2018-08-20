@@ -742,7 +742,7 @@ def _defineclasses(streamerinfos, classes):
 
                     dtypename = "_dtype{0}".format(len(dtypes) + 1)
                     dtypes[dtypename] = _ftype2dtype(fType)
-                    code.append("        print ('cursor = ', cursor.index')")
+                    code.append("        print ('cursor = ', cursor.index)")
                     code.append("        self.{0} = cursor.array(source, self.{1}, cls.{2})".format(_safename(element.fName), _safename(element.fCountName), dtypename))
                     code.append("        print ('{0} = ', self.{1})".format(_safename(element.fName), _safename(element.fName)))
                     fields.append(_safename(element.fName))
