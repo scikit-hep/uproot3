@@ -46,7 +46,10 @@ class STLVector(object):
         self.cls = cls
 
     def __repr__(self):
-        return "STLVector({0})".format(self.cls)
+        if isinstance(self.cls, type):
+            return "STLVector({0})".format(self.cls.__name__)
+        else:
+            return "STLVector({0})".format(repr(self.cls))
 
     _format1 = struct.Struct(">i")
 
@@ -125,12 +128,22 @@ class asobj(_variable):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (_variable.__metaclass__,), {})
 
-    def __init__(self, cls, context, skipbytes):
-        def interpret(bytes):
+    class _Wrapper(object):
+        def __init__(self, cls, context):
+            self.cls = cls
+            self.context = context
+        def __call__(self, bytes):
             source = uproot.source.source.Source(bytes)
             cursor = uproot.source.cursor.Cursor(0)
-            return cls.read(source, cursor, context, None)
-        super(asobj, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(awkward.util.CHARTYPE), skipbytes=skipbytes), interpret)
+            return self.cls.read(source, cursor, self.context, None)
+        def __repr__(self):
+            if isinstance(self.cls, type):
+                return self.cls.__name__
+            else:
+                return repr(self.cls)
+
+    def __init__(self, cls, context, skipbytes):
+        super(asobj, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(awkward.util.CHARTYPE), skipbytes=skipbytes), asobj._Wrapper(cls, context))
 
     def __repr__(self):
         return "asobj({0})".format(self.generator)
