@@ -154,7 +154,7 @@ class ROOTDirectory(object):
                     packer = ">iiiiiiBiii18s"
                 else:
                     packer = ">iqqiiiBiqi18s"
-                print("format = ", packer)
+                print ("format = ", packer)
 
                 tfile = {"fVersion": fVersion, "fBEGIN": fBEGIN, "fEND": fEND, "fSeekFree": fSeekFree, "fNbytesFree": fNbytesFree, "nfree": nfree, "fNbytesName": fNbytesName, "fUnits": fUnits, "fCompress": fCompress, "fSeekInfo": fSeekInfo, "fNbytesInfo": fNbytesInfo, "fUUID": fUUID}
 
@@ -420,7 +420,7 @@ def _startcheck(source, cursor):
     cnt, vers = cursor.fields(source, _startcheck._format_cntvers)
     print ("cnt = ", cnt)
     print ("vers = ", vers)
-    print ("format = >IH")
+    print ("packer = >IH")
     cnt = int(numpy.int64(cnt) & ~uproot.const.kByteCountMask)
     return start, cnt + 4, vers
 _startcheck._format_cntvers = struct.Struct(">IH")
@@ -436,14 +436,15 @@ def _skiptobj(source, cursor):
     print ("cursor = ", cursor.index)
     version = cursor.field(source, _skiptobj._format1)
     print ("version = ", version)
-    print ("format = >h")
+    print ("packer = >h")
+    print ("")
     if numpy.int64(version) & uproot.const.kByteCountVMask:
         cursor.skip(4)
     print ("cursor = ", cursor.index)
     fUniqueID, fBits = cursor.fields(source, _skiptobj._format2)
     print ("fUniqueID = ", fUniqueID)
     print ("fBits = ", fBits)
-    print ("format = >II")
+    print ("packer = >II")
     fBits = numpy.uint32(fBits) | uproot.const.kIsOnHeap
     if fBits & uproot.const.kIsReferenced:
         cursor.skip(2)
@@ -472,7 +473,7 @@ def _readobjany(source, cursor, context, parent, asclass=None):
     print ("cursor = ", cursor.index)
     bcnt = cursor.field(source, struct.Struct(">I"))
     print ("bcnt = ", bcnt)
-    print ("format = >I")
+    print ("packer = >I")
 
     if numpy.int64(bcnt) & uproot.const.kByteCountMask == 0 or numpy.int64(bcnt) == uproot.const.kNewClassTag:
         vers = 0
@@ -485,8 +486,8 @@ def _readobjany(source, cursor, context, parent, asclass=None):
         print ("cursor = ", cursor.index)
         tag = cursor.field(source, struct.Struct(">I"))
         print ("tag = ", tag)
-        print ("format = >I")
-
+        print ("packer = >I")
+        
     if numpy.int64(tag) & uproot.const.kClassMask == 0:
         # reference object
         if tag == 0:
@@ -707,7 +708,11 @@ def _defineclasses(streamerinfos, classes):
         if isinstance(streamerinfo, TStreamerInfo) and pyclassname not in builtin_classes and (pyclassname not in classes or hasattr(classes[pyclassname], "_versions")):
             code = ["    @classmethod",
                     "    def _readinto(cls, self, source, cursor, context, parent):",
+                    "        print ('cursor = ', cursor.index)",
                     "        start, cnt, classversion = _startcheck(source, cursor)",
+                    "        print ('start = ', start)",
+                    "        print ('cnt = ', cnt)",
+                    "        print ('classversion = ', classversion)",
                     "        if cls._classversion != classversion:",
                     "            cursor.index = start",
                     "            if classversion in cls._versions:",
@@ -737,7 +742,9 @@ def _defineclasses(streamerinfos, classes):
 
                     dtypename = "_dtype{0}".format(len(dtypes) + 1)
                     dtypes[dtypename] = _ftype2dtype(fType)
+                    code.append("        print ('cursor = ', cursor.index')")
                     code.append("        self.{0} = cursor.array(source, self.{1}, cls.{2})".format(_safename(element.fName), _safename(element.fCountName), dtypename))
+                    code.append("        print ('{0} = ', self.{1})".format(_safename(element.fName), _safename(element.fName)))
                     fields.append(_safename(element.fName))
 
                 elif isinstance(element, TStreamerBasicType):
@@ -751,36 +758,47 @@ def _defineclasses(streamerinfos, classes):
                             formats["_format{0}".format(formatnum)] = "struct.Struct('>{0}')".format(basicletters)
 
                             if len(basicnames) == 1:
+                                code.append("        print ('cursor = ', cursor.index)")
                                 code.append("        {0} = cursor.field(source, cls._format{1})".format(basicnames[0], formatnum))
+                                code.append("        print ('{0} = ', {0})".format(basicnames[0]))
                             else:
+                                code.append("        print ('cursor = ', cursor.index)")
                                 code.append("        {0} = cursor.fields(source, cls._format{1})".format(", ".join(basicnames), formatnum))
-
+                                code.append("        print ('{0} = ', {0})".format(", ".join(basicnames)))
                             basicnames = []
                             basicletters = ""
 
                     else:
                         dtypename = "_dtype{0}".format(len(dtypes) + 1)
                         dtypes[dtypename] = _ftype2dtype(element.fType)
+                        code.append("        print ('cursor = ', cursor.index)")
                         code.append("        self.{0} = cursor.array(source, {1}, cls.{2})".format(_safename(element.fName), element.fArrayLength, dtypename))
+                        code.append("        print ('{0} = ', self.{0})".format(_safename(element.fName)))
                         fields.append(_safename(element.fName))
 
                 elif isinstance(element, TStreamerLoop):
                     code.extend(["        cursor.skip(6)",
                                  "        for index in range(self.{0}):".format(_safename(element.fCountName)),
-                                 "            self.{0} = {1}.read(source, cursor, context, self)".format(_safename(element.fName), _safename(element.fTypeName.rstrip(b"*")))])
+                                 "            print ('cursor = ', cursor.index)",
+                                 "            self.{0} = {1}.read(source, cursor, context, self)".format(_safename(element.fName), _safename(element.fTypeName.rstrip(b"*"))),
+                                 "            print('{0} = ', self.{0})".format(_safename(element.fName))])
 
                 elif isinstance(element, (TStreamerObjectAnyPointer, TStreamerObjectPointer)):
                     if element.fType == uproot.const.kObjectp or element.fType == uproot.const.kAnyp:
                         if pyclassname in skip and _safename(element.fName) in skip[pyclassname]:
                             code.append("        Undefined.read(source, cursor, context, self)")
                         else:
+                            code.append("        print ('cursor = ', cursor.index)")
                             code.append("        self.{0} = {1}.read(source, cursor, context, self)".format(_safename(element.fName), _safename(element.fTypeName.rstrip(b"*"))))
+                            code.append("        print ('{0} = ', self.{0})".format(_safename(element.fName)))
                             fields.append(_safename(element.fName))
                     elif element.fType == uproot.const.kObjectP or element.fType == uproot.const.kAnyP:
                         if pyclassname in skip and _safename(element.fName) in skip[pyclassname]:
                             code.append("        _readobjany(source, cursor, context, parent, asclass=Undefined)")
                         else:
+                            code.append("        print ('cursor = ', cursor.index)")
                             code.append("        self.{0} = _readobjany(source, cursor, context, parent)".format(_safename(element.fName)))
+                            code.append("        print ('{0} = ', self.{0})".format(_safename(element.fName)))
                             fields.append(_safename(element.fName))
                     else:
                         code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
@@ -793,9 +811,13 @@ def _defineclasses(streamerinfos, classes):
 
                 elif isinstance(element, (TStreamerObject, TStreamerObjectAny, TStreamerString)):
                     if pyclassname in skip and _safename(element.fName) in skip[pyclassname]:
+                        code.append("        print ('cursor = ', cursor.index)")
                         code.append("        self.{0} = Undefined.read(source, cursor, context, self)".format(_safename(element.fName)))
+                        code.append("        print ('{0} = ', self.{0})".format(_safename(element.fName)))
                     else:
+                        code.append("        print ('cursor = ', cursor.index)")
                         code.append("        self.{0} = {1}.read(source, cursor, context, self)".format(_safename(element.fName), _safename(element.fTypeName)))
+                        code.append("        print ('{0} = ', self.{0})".format(_safename(element.fName)))
                         fields.append(_safename(element.fName))
 
                 else:
@@ -990,21 +1012,21 @@ class TStreamerElement(ROOTObject):
         print ("fSize = ", self.fSize)
         print ("fArrayLength = ", self.fArrayLength)
         print ("fArrayDim = ", self.fArrayDim)
-        print ("format = >iiii")
+        print ("packer = >iiii")
 
         if self._classversion == 1:
             print ("newpos = ", cursor.index)
             n = cursor.field(source, TStreamerElement._format2)
             print ("n = ", n)
-            print ("format = >i")
+            print ("packer = >i")
             self.fMaxIndex = cursor.array(source, n, ">i4")
-            print ("fMaxIndex Array = ", self.fMaxIndex)
-            print ("format = >i4")
+            print ("fMaxIndex = ", self.fMaxIndex)
+            print ("packer = >i4")
         else:
             print ("newpos = ", cursor.index)
             self.fMaxIndex = cursor.array(source, 5, ">i4")
-            print ("fMaxIndex Array = ", self.fMaxIndex)
-            print ("format = >i4")
+            print ("fMaxIndex = ", self.fMaxIndex)
+            print ("packer = >i4")
 
         print ("newpos = ", cursor.index)
         self.fTypeName = cursor.string(source)
