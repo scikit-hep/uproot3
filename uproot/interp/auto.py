@@ -44,6 +44,7 @@ from uproot.interp.objects import asobj
 from uproot.interp.objects import asstring
 from uproot.interp.objects import STLVector
 from uproot.interp.objects import STLString
+from uproot.interp.wrapped import aswrapped
 
 class _NotNumerical(Exception): pass
 
@@ -269,7 +270,17 @@ def interpret(branch, swapbytes=True):
                                 obj = branch._vecstreamer.fName.decode("utf-8")
                                 if obj in branch._context.classes:
                                     streamerClass = branch._context.classes.get(obj)
-                            return asobj(STLVector(streamerClass), branch._context, 6)
+                            try:
+                                recarray = streamerClass._recarray_dtype()
+                            except (AttributeError, ValueError):
+                                return asobj(STLVector(streamerClass), branch._context, 6)
+                            else:
+                                if streamerClass._methods is None:
+                                    return asjagged(asdtype(recarray), skipbytes=10)
+                                elif streamerClass._methods._arraymethods is None:
+                                    return asjagged(aswrapped(asdtype(recarray), streamerClass._methods), skipbytes=10)
+                                else:
+                                    return aswrapped(asjagged(aswrapped(asdtype(recarray), streamerclass._methods), skipbytes=10), streamerClass._methods._arraymethods)
 
                 if hasattr(branch._streamer, "fTypeName"):
                     m = re.match(b"bitset<([1-9][0-9]*)>", branch._streamer.fTypeName)
@@ -277,27 +288,27 @@ def interpret(branch, swapbytes=True):
                         return asstlbitset(int(m.group(1)))
 
                 if getattr(branch._streamer, "fTypeName", None) == b"vector<bool>":
-                    return asobj(STLVector(asdtype(numpy.bool_)), branch._context, 6)
+                    return asjagged(asdtype(numpy.bool_), skipbytes=10)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<char>":
-                    return asobj(STLVector(asdtype("i1")), branch._context, 6)
+                    return asjagged(asdtype("i1"), skipbytes=10)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<unsigned char>":
-                    return asobj(STLVector(asdtype("u1")), branch._context, 6)
+                    return asjagged(asdtype("u1"), skipbytes=10)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<short>":
-                    return asobj(STLVector(asdtype("i2")), branch._context, 6)
+                    return asjagged(asdtype("i2"), skipbytes=10)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<unsigned short>":
-                    return asobj(STLVector(asdtype("u2")), branch._context, 6)
+                    return asjagged(asdtype("u2"), skipbytes=10)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<int>":
-                    return asobj(STLVector(asdtype("i4")), branch._context, 6)
+                    return asjagged(asdtype("i4"), skipbytes=10)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<unsigned int>":
-                    return asobj(STLVector(asdtype("u4")), branch._context, 6)
+                    return asjagged(asdtype("u4"), skipbytes=10)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<long>":
-                    return asobj(STLVector(asdtype("i8")), branch._context, 6)
+                    return asjagged(asdtype("i8"), skipbytes=10)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<unsigned long>":
-                    return asobj(STLVector(asdtype("u8")), branch._context, 6)
+                    return asjagged(asdtype("u8"), skipbytes=10)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<float>":
-                    return asobj(STLVector(asdtype("f4")), branch._context, 6)
+                    return asjagged(asdtype("f4"), skipbytes=10)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<double>":
-                    return asobj(STLVector(asdtype("f8")), branch._context, 6)
+                    return asjagged(asdtype("f8"), skipbytes=10)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<string>":
                     return asobj(STLVector(STLString()), branch._context, 6)
 
@@ -323,6 +334,8 @@ def interpret(branch, swapbytes=True):
                     return asobj(STLVector(STLVector(asdtype(">f4"))), branch._context, 6)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<double> >":
                     return asobj(STLVector(STLVector(asdtype(">f8"))), branch._context, 6)
+                elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<string> >":
+                    return asobj(STLVector(STLVector(STLString())), branch._context, 6)
 
                 m = re.match(b"bitset<([1-9][0-9]*)>", branch.fClassName)
                 if m is not None:
@@ -332,27 +345,27 @@ def interpret(branch, swapbytes=True):
                     return asstring(skipbytes=1)
 
                 if branch.fClassName == b"vector<bool>":
-                    return asobj(STLVector(asdtype(numpy.bool_)), branch._context, 6)
+                    return asjagged(asdtype(numpy.bool_), skipbytes=10)
                 elif branch.fClassName == b"vector<char>":
-                    return asobj(STLVector(asdtype("i1")), branch._context, 6)
+                    return asjagged(asdtype("i1"), skipbytes=10)
                 elif branch.fClassName == b"vector<unsigned char>":
-                    return asobj(STLVector(asdtype("u1")), branch._context, 6)
+                    return asjagged(asdtype("u1"), skipbytes=10)
                 elif branch.fClassName == b"vector<short>":
-                    return asobj(STLVector(asdtype("i2")), branch._context, 6)
+                    return asjagged(asdtype("i2"), skipbytes=10)
                 elif branch.fClassName == b"vector<unsigned short>":
-                    return asobj(STLVector(asdtype("u2")), branch._context, 6)
+                    return asjagged(asdtype("u2"), skipbytes=10)
                 elif branch.fClassName == b"vector<int>":
-                    return asobj(STLVector(asdtype("i4")), branch._context, 6)
+                    return asjagged(asdtype("i4"), skipbytes=10)
                 elif branch.fClassName == b"vector<unsigned int>":
-                    return asobj(STLVector(asdtype("u4")), branch._context, 6)
+                    return asjagged(asdtype("u4"), skipbytes=10)
                 elif branch.fClassName == b"vector<long>":
-                    return asobj(STLVector(asdtype("i8")), branch._context, 6)
+                    return asjagged(asdtype("i8"), skipbytes=10)
                 elif branch.fClassName == b"vector<unsigned long>":
-                    return asobj(STLVector(asdtype("u8")), branch._context, 6)
+                    return asjagged(asdtype("u8"), skipbytes=10)
                 elif branch.fClassName == b"vector<float>":
-                    return asobj(STLVector(asdtype("f4")), branch._context, 6)
+                    return asjagged(asdtype("f4"), skipbytes=10)
                 elif branch.fClassName == b"vector<double>":
-                    return asobj(STLVector(asdtype("f8")), branch._context, 6)
+                    return asjagged(asdtype("f8"), skipbytes=10)
                 elif branch.fClassName == b"vector<string>":
                     return asobj(STLVector(STLString()), branch._context, 6)
 
@@ -378,6 +391,8 @@ def interpret(branch, swapbytes=True):
                     return asobj(STLVector(STLVector(asdtype(">f4"))), branch._context, 6)
                 elif branch.fClassName == b"vector<vector<double> >":
                     return asobj(STLVector(STLVector(asdtype(">f8"))), branch._context, 6)
+                elif branch.fClassName == b"vector<vector<string> >":
+                    return asobj(STLVector(STLVector(STLString())), branch._context, 6)
 
         return None
 

@@ -35,6 +35,7 @@ import awkward.util
 import awkward.array.jagged
 
 import uproot.interp.interp
+import uproot.interp.numerical
 
 class JaggedArray(awkward.array.jagged.JaggedArray):
     class _Prep(object):
@@ -114,12 +115,19 @@ class asjagged(uproot.interp.interp.Interpretation):
 
                 content = self.content.fromroot(data, None, 0, bytestops[-1])
 
+                itemsize = 1
+                sub = self.content
+                while hasattr(sub, "content"):
+                    sub = sub.content
+                if isinstance(sub, uproot.interp.numerical.asdtype):
+                    itemsize = sub.fromdtype.itemsize
+
                 counts = bytestops - bytestarts
-                shift = math.log(self.content.fromdtype.itemsize, 2)
+                shift = math.log(itemsize, 2)
                 if shift == round(shift):
                     awkward.util.numpy.right_shift(counts, int(shift), out=counts)
                 else:
-                    awkward.util.numpy.floor_divide(counts, self.content.fromdtype.itemsize, out=counts)
+                    awkward.util.numpy.floor_divide(counts, itemsize, out=counts)
 
                 offsets = awkward.util.numpy.empty(len(counts) + 1, awkward.util.INDEXTYPE)
                 offsets[0] = 0

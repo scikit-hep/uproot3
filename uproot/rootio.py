@@ -759,6 +759,7 @@ def _defineclasses(streamerinfos, classes):
             code.insert(0, "    _fields = [{0}]".format(", ".join(repr(str(x)) for x in fields)))
             code.insert(0, "    @classmethod\n    def _recarray(cls):\n        out = []\n        for base in cls._bases:\n            out.extend(base._recarray())\n        {0}\n        return out".format("\n        ".join(recarray)))
             code.insert(0, "    _bases = [{0}]".format(", ".join(bases)))
+            code.insert(0, "    _methods = {0}".format("uproot_methods.classes.{0}.Methods".format(pyclassname) if uproot_methods.classes.hasmethods(pyclassname) else "None"))
 
             if len(bases) == 0:
                 bases.append("ROOTStreamedObject")

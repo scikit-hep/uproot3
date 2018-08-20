@@ -46,6 +46,7 @@ from uproot.interp.objects import asobj
 from uproot.interp.objects import asstring
 from uproot.interp.objects import STLVector
 from uproot.interp.objects import STLString
+from uproot.interp.wrapped import aswrapped
 asdebug = asjagged(asdtype("u1"))
 
 # put help strings on everything (they're long, too disruptive to intersperse
