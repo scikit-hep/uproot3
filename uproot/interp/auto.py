@@ -259,7 +259,7 @@ def interpret(branch, swapbytes=True):
                             ascontent = asdtype(fromdtype, fromdtype.newbyteorder("="))
                         else:
                             ascontent = asdtype(fromdtype, fromdtype)
-                        return asobj(STLVector(ascontent), branch._context, 6)
+                        return asjagged(ascontent, skipbytes=10)
 
                     except _NotNumerical:
                         if branch._vecstreamer is not None:

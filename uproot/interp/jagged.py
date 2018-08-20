@@ -28,6 +28,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import math
+
 import awkward.type
 import awkward.util
 import awkward.array.jagged
@@ -99,11 +101,31 @@ class asjagged(uproot.interp.interp.Interpretation):
                 stops   = offsets[local_entrystart + 1 : local_entrystop + 1]
                 content = self.content.fromroot(data, None, starts[0], stops[-1])
                 return JaggedArray(starts, stops, content)
+
             else:
                 bytestarts = byteoffsets[local_entrystart     : local_entrystop    ] + self.skipbytes
                 bytestops  = byteoffsets[local_entrystart + 1 : local_entrystop + 1]
+
+                mask = awkward.util.numpy.zeros(len(data), dtype=awkward.util.numpy.int8)
+                mask[bytestarts[bytestarts < len(data)]] = 1
+                awkward.util.numpy.add.at(mask, bytestops[bytestops < len(data)], -1)
+                awkward.util.numpy.cumsum(mask, out=mask)
+                data = data[mask.view(awkward.util.numpy.bool_)]
+
                 content = self.content.fromroot(data, None, 0, bytestops[-1])
-                return JaggedArray.fromjagged(awkward.array.jagged.ByteJaggedArray(bytestarts, bytestops, content, self.content.fromdtype))
+
+                counts = bytestops - bytestarts
+                shift = math.log(self.content.fromdtype.itemsize, 2)
+                if shift == round(shift):
+                    awkward.util.numpy.right_shift(counts, int(shift), out=counts)
+                else:
+                    awkward.util.numpy.floor_divide(counts, self.content.fromdtype.itemsize, out=counts)
+
+                offsets = awkward.util.numpy.empty(len(counts) + 1, awkward.util.INDEXTYPE)
+                offsets[0] = 0
+                awkward.util.numpy.cumsum(counts, out=offsets[1:])
+
+                return JaggedArray(offsets[:-1], offsets[1:], content)
 
     def destination(self, numitems, numentries):
         content = self.content.destination(numitems, numentries)
