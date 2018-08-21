@@ -79,6 +79,55 @@ class STLString(object):
         numitems = cursor.field(source, self._format1)
         return cursor.array(source, numitems, awkward.util.CHARTYPE).tostring()
 
+class asobj(uproot.interp.interp.Interpretation):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (uproot.interp.interp.Interpretation.__metaclass__,), {})
+
+    def __init__(self, content, cls):
+        self.content = content
+        self.cls = cls
+
+    def __repr__(self):
+        return "asobj(<{0}.{1}>)".format(self.cls.__module__, self.cls.__name__)
+
+    @property
+    def identifier(self):
+        return "asobj({0},{1}.{2})".format(self.content.identifier, self.cls.__module__, self.cls.__name__)
+
+    @property
+    def type(self):
+        return self.cls
+
+    def empty(self):
+        return self.content.empty()
+
+    def compatible(self, other):
+        return self.content.compatible(other)
+
+    def numitems(self, numbytes, numentries):
+        return self.content.numitems(numbytes, numentries)
+
+    def source_numitems(self, source):
+        return self.content.source_numitems(source)
+
+    def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop):
+        return self.content.fromroot(data, byteoffsets, local_entrystart, local_entrystop)
+
+    def destination(self, numitems, numentries):
+        return self.content.destination(numitems, numentries)
+
+    def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
+        return self.content.fill(source, destination, itemstart, itemstop, entrystart, entrystop)
+
+    def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
+        return self.content.clip(destination, itemstart, itemstop, entrystart, entrystop)
+
+    def finalize(self, destination, branch):
+        out = ObjectArray(self.content.finalize(destination, branch), self.cls)
+        if self.cls._arraymethods is not None:
+            out.__class__ = type("ObjectArray", (ObjectArray, self.cls._arraymethods), {})
+        return out
+
 class _variable(uproot.interp.interp.Interpretation):
     def __init__(self, content, generator, *args, **kwargs):
         self.content = content
@@ -124,56 +173,7 @@ class _variable(uproot.interp.interp.Interpretation):
     def finalize(self, destination, branch):
         return ObjectArray(self.content.finalize(destination, branch), self.generator, *self.args, **self.kwargs)
 
-class asobj(uproot.interp.interp.Interpretation):
-    # makes __doc__ attribute mutable before Python 3.3
-    __metaclass__ = type.__new__(type, "type", (uproot.interp.interp.Interpretation.__metaclass__,), {})
-
-    def __init__(self, content, cls):
-        self.content = content
-        self.cls = cls
-
-    def __repr__(self):
-        return "asobj({0}, {1}.{2})".format(repr(self.content), self.cls.__module__, self.cls.__name__)
-
-    @property
-    def identifier(self):
-        return "asobj({0},{1}.{2})".format(self.content.identifier, self.cls.__module__, self.cls.__name__)
-
-    @property
-    def type(self):
-        return self.cls.__module__
-
-    def empty(self):
-        return self.content.empty()
-
-    def compatible(self, other):
-        return self.content.compatible(other)
-
-    def numitems(self, numbytes, numentries):
-        return self.content.numitems(numbytes, numentries)
-
-    def source_numitems(self, source):
-        return self.content.source_numitems(source)
-
-    def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop):
-        return self.content.fromroot(data, byteoffsets, local_entrystart, local_entrystop)
-
-    def destination(self, numitems, numentries):
-        return self.content.destination(numitems, numentries)
-
-    def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
-        return self.content.fill(source, destination, itemstart, itemstop, entrystart, entrystop)
-
-    def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
-        return self.content.clip(destination, itemstart, itemstop, entrystart, entrystop)
-
-    def finalize(self, destination, branch):
-        out = ObjectArray(self.content.finalize(destination, branch), self.cls._ttree)
-        if self.cls._arraymethods is not None:
-            out.__class__ = type("ObjectArray", (ObjectArray, self.cls._arraymethods), {})
-        return out
-
-class asvarobj(_variable):
+class asgenobj(_variable):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (_variable.__metaclass__,), {})
 
@@ -192,10 +192,10 @@ class asvarobj(_variable):
                 return repr(self.cls)
 
     def __init__(self, cls, context, skipbytes):
-        super(asvarobj, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(awkward.util.CHARTYPE), skipbytes=skipbytes), asvarobj._Wrapper(cls, context))
+        super(asgenobj, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(awkward.util.CHARTYPE), skipbytes=skipbytes), asgenobj._Wrapper(cls, context))
 
     def __repr__(self):
-        return "asvarobj({0})".format(self.generator)
+        return "asgenobj({0})".format(self.generator)
 
 class asstring(_variable):
     # makes __doc__ attribute mutable before Python 3.3

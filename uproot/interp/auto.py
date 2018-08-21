@@ -41,7 +41,7 @@ from uproot.interp.numerical import asdouble32
 from uproot.interp.numerical import asstlbitset
 from uproot.interp.jagged import asjagged
 from uproot.interp.objects import asobj
-from uproot.interp.objects import asvarobj
+from uproot.interp.objects import asgenobj
 from uproot.interp.objects import asstring
 from uproot.interp.objects import STLVector
 from uproot.interp.objects import STLString
@@ -129,7 +129,7 @@ def interpret(branch, swapbytes=True):
                 if obj.endswith("*"):
                     obj = obj[:-1]
                 if obj in branch._context.classes:
-                    return asvarobj(branch._context.classes.get(obj), branch._context, 0)
+                    return asgenobj(branch._context.classes.get(obj), branch._context, 0)
 
             if branch.fLeaves[0].__class__.__name__ == "TLeafElement" and branch.fLeaves[0].fType == uproot.const.kDouble32:
                 def transform(node, tofloat=True):
@@ -202,12 +202,12 @@ def interpret(branch, swapbytes=True):
             if isinstance(branch._streamer, uproot.rootio.TStreamerObject):
                 obj = branch._streamer.fTypeName.decode("utf-8")
                 if obj in branch._context.classes:
-                    return asvarobj(branch._context.classes.get(obj), branch._context, 0)
+                    return asgenobj(branch._context.classes.get(obj), branch._context, 0)
                 
             if isinstance(branch._streamer, uproot.rootio.TStreamerInfo):
                 obj = branch._streamer.fName.decode("utf-8")
                 if obj in branch._context.classes:
-                    return asvarobj(branch._context.classes.get(obj), branch._context, 0)
+                    return asgenobj(branch._context.classes.get(obj), branch._context, 0)
 
             if branch.fLeaves[0].__class__.__name__ == "TLeafC":
                 return asstring(skipbytes=1)
@@ -273,12 +273,12 @@ def interpret(branch, swapbytes=True):
                             try:
                                 recarray = streamerClass._recarray_dtype()
                             except (AttributeError, ValueError):
-                                return asvarobj(STLVector(streamerClass), branch._context, 6)
+                                return asgenobj(STLVector(streamerClass), branch._context, 6)
                             else:
-                                if not hasattr(streamerClass._methods, "_ttree"):
+                                if streamerClass._methods is None:
                                     return asjagged(asdtype(recarray), skipbytes=10)
                                 else:
-                                    return asjagged(asobj(asdtype(recarray), streamerClass), skipbytes=10, methods=streamerClass)
+                                    return asjagged(asobj(asdtype(recarray), streamerClass._methods), skipbytes=10, cls=streamerClass._methods)
 
                 if hasattr(branch._streamer, "fTypeName"):
                     m = re.match(b"bitset<([1-9][0-9]*)>", branch._streamer.fTypeName)
@@ -308,32 +308,32 @@ def interpret(branch, swapbytes=True):
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<double>":
                     return asjagged(asdtype("f8"), skipbytes=10)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<string>":
-                    return asvarobj(STLVector(STLString()), branch._context, 6)
+                    return asgenobj(STLVector(STLString()), branch._context, 6)
 
                 if getattr(branch._streamer, "fTypeName", None) == b"vector<vector<bool> >":
-                    return asvarobj(STLVector(STLVector(asdtype(numpy.bool_))), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(asdtype(numpy.bool_))), branch._context, 6)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<char> >":
-                    return asvarobj(STLVector(STLVector(asdtype("i1"))), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(asdtype("i1"))), branch._context, 6)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<unsigned char> >":
-                    return asvarobj(STLVector(STLVector(asdtype("u1"))), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(asdtype("u1"))), branch._context, 6)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<short> >":
-                    return asvarobj(STLVector(STLVector(asdtype(">i2"))), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(asdtype(">i2"))), branch._context, 6)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<unsigned short> >":
-                    return asvarobj(STLVector(STLVector(asdtype(">u2"))), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(asdtype(">u2"))), branch._context, 6)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<int> >":
-                    return asvarobj(STLVector(STLVector(asdtype(">i4"))), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(asdtype(">i4"))), branch._context, 6)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<unsigned int> >":
-                    return asvarobj(STLVector(STLVector(asdtype(">u4"))), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(asdtype(">u4"))), branch._context, 6)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<long> >":
-                    return asvarobj(STLVector(STLVector(asdtype(">i8"))), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(asdtype(">i8"))), branch._context, 6)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<unsigned long> >":
-                    return asvarobj(STLVector(STLVector(asdtype(">u8"))), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(asdtype(">u8"))), branch._context, 6)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<float> >":
-                    return asvarobj(STLVector(STLVector(asdtype(">f4"))), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(asdtype(">f4"))), branch._context, 6)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<double> >":
-                    return asvarobj(STLVector(STLVector(asdtype(">f8"))), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(asdtype(">f8"))), branch._context, 6)
                 elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<string> >":
-                    return asvarobj(STLVector(STLVector(STLString())), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(STLString())), branch._context, 6)
 
                 m = re.match(b"bitset<([1-9][0-9]*)>", branch.fClassName)
                 if m is not None:
@@ -365,32 +365,32 @@ def interpret(branch, swapbytes=True):
                 elif branch.fClassName == b"vector<double>":
                     return asjagged(asdtype("f8"), skipbytes=10)
                 elif branch.fClassName == b"vector<string>":
-                    return asvarobj(STLVector(STLString()), branch._context, 6)
+                    return asgenobj(STLVector(STLString()), branch._context, 6)
 
                 if branch.fClassName == b"vector<vector<bool> >":
-                    return asvarobj(STLVector(STLVector(asdtype(numpy.bool_))), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(asdtype(numpy.bool_))), branch._context, 6)
                 elif branch.fClassName == b"vector<vector<char> >":
-                    return asvarobj(STLVector(STLVector(asdtype("i1"))), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(asdtype("i1"))), branch._context, 6)
                 elif branch.fClassName == b"vector<vector<unsigned char> >":
-                    return asvarobj(STLVector(STLVector(asdtype("u1"))), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(asdtype("u1"))), branch._context, 6)
                 elif branch.fClassName == b"vector<vector<short> >":
-                    return asvarobj(STLVector(STLVector(asdtype(">i2"))), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(asdtype(">i2"))), branch._context, 6)
                 elif branch.fClassName == b"vector<vector<unsigned short> >":
-                    return asvarobj(STLVector(STLVector(asdtype(">u2"))), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(asdtype(">u2"))), branch._context, 6)
                 elif branch.fClassName == b"vector<vector<int> >":
-                    return asvarobj(STLVector(STLVector(asdtype(">i4"))), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(asdtype(">i4"))), branch._context, 6)
                 elif branch.fClassName == b"vector<vector<unsigned int> >":
-                    return asvarobj(STLVector(STLVector(asdtype(">u4"))), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(asdtype(">u4"))), branch._context, 6)
                 elif branch.fClassName == b"vector<vector<long> >":
-                    return asvarobj(STLVector(STLVector(asdtype(">i8"))), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(asdtype(">i8"))), branch._context, 6)
                 elif branch.fClassName == b"vector<vector<unsigned long> >":
-                    return asvarobj(STLVector(STLVector(asdtype(">u8"))), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(asdtype(">u8"))), branch._context, 6)
                 elif branch.fClassName == b"vector<vector<float> >":
-                    return asvarobj(STLVector(STLVector(asdtype(">f4"))), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(asdtype(">f4"))), branch._context, 6)
                 elif branch.fClassName == b"vector<vector<double> >":
-                    return asvarobj(STLVector(STLVector(asdtype(">f8"))), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(asdtype(">f8"))), branch._context, 6)
                 elif branch.fClassName == b"vector<vector<string> >":
-                    return asvarobj(STLVector(STLVector(STLString())), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(STLString())), branch._context, 6)
 
         return None
 

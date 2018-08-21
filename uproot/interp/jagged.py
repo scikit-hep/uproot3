@@ -60,13 +60,13 @@ class asjagged(uproot.interp.interp.Interpretation):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (uproot.interp.interp.Interpretation.__metaclass__,), {})
 
-    def __init__(self, content, skipbytes=0, methods=None):
+    def __init__(self, content, skipbytes=0, cls=None):
         self.content = content
         self.skipbytes = skipbytes
-        self.methods = methods
+        self.cls = cls
 
     def __repr__(self):
-        return "asjagged({0}{1}{2})".format(repr(self.content), "" if self.skipbytes == 0 else ", skipbytes={0}".format(self.skipbytes), "" if self.methods is None else ", methods={0}".format(self.methods))
+        return "asjagged({0})".format(repr(self.content))
 
     def to(self, todtype=None, todims=None, skipbytes=None):
         if skipbytes is None:
@@ -75,7 +75,7 @@ class asjagged(uproot.interp.interp.Interpretation):
 
     @property
     def identifier(self):
-        return "asjagged({0}{1}{2})".format(repr(self.content), "" if self.skipbytes == 0 else ",{0}".format(self.skipbytes), "" if self.methods == None else ",{0}".format(self.methods))
+        return "asjagged({0}{1}{2})".format(repr(self.content), "" if self.skipbytes == 0 else ",{0}".format(self.skipbytes), "" if self.cls == None else ",{0}.{1}".format(self.cls.__module__, self.cls.__name__))
 
     @property
     def type(self):
@@ -157,4 +157,6 @@ class asjagged(uproot.interp.interp.Interpretation):
             leafcount = branch.fLeaves[0].fLeafCount
         out = JaggedArray.fromcounts(destination.counts, content)
         out.leafcount = leafcount
+        if self.cls is not None and self.cls._arraymethods is not None:
+            out.__class__ = type("JaggedArray", (JaggedArray, self.cls._arraymethods), {})
         return out
