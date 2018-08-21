@@ -174,30 +174,30 @@ class TTreeMethods(object):
 
     def _attachstreamer(self, branch, streamer, streamerinfosmap):
         if streamer is None:
-            m = re.match(self._vector_regex, getattr(branch, "fClassName", b""))
+            m = re.match(self._vector_regex, getattr(branch, "_fClassName", b""))
             if m is None or m.group(1) not in streamerinfosmap:
                 return
             else:
                 substreamer = streamerinfosmap[m.group(1)]
                 if isinstance(substreamer, uproot.rootio.TStreamerInfo):
-                    streamer = uproot.rootio.TStreamerSTL.vector(None, substreamer.fName)
+                    streamer = uproot.rootio.TStreamerSTL.vector(None, substreamer._fName)
                 else:
-                    streamer = uproot.rootio.TStreamerSTL.vector(substreamer.fType, substreamer.fTypeName)
+                    streamer = uproot.rootio.TStreamerSTL.vector(substreamer._fType, substreamer._fTypeName)
 
         if isinstance(streamer, uproot.rootio.TStreamerInfo):
-            if len(streamer.fElements) == 1 and isinstance(streamer.fElements[0], uproot.rootio.TStreamerBase) and streamer.fElements[0].fName == b"TObjArray":
-                if streamer.fName == b"TClonesArray":
-                    return self._attachstreamer(branch, streamerinfosmap.get(branch.fClonesName, None), streamerinfosmap)
+            if len(streamer._fElements) == 1 and isinstance(streamer._fElements[0], uproot.rootio.TStreamerBase) and streamer._fElements[0]._fName == b"TObjArray":
+                if streamer._fName == b"TClonesArray":
+                    return self._attachstreamer(branch, streamerinfosmap.get(branch._fClonesName, None), streamerinfosmap)
                 else:
                     # FIXME: can only determine streamer by reading some values?
                     return
 
-            elif len(streamer.fElements) == 1 and isinstance(streamer.fElements[0], uproot.rootio.TStreamerSTL) and streamer.fElements[0].fName == b"This":
-                return self._attachstreamer(branch, streamer.fElements[0], streamerinfosmap)
+            elif len(streamer._fElements) == 1 and isinstance(streamer._fElements[0], uproot.rootio.TStreamerSTL) and streamer._fElements[0]._fName == b"This":
+                return self._attachstreamer(branch, streamer._fElements[0], streamerinfosmap)
 
         branch._streamer = streamer
-        if isinstance(streamer, uproot.rootio.TStreamerSTL) and streamer.fSTLtype == uproot.const.kSTLvector:
-            branch._vecstreamer = streamerinfosmap.get(re.match(self._vector_regex, streamer.fTypeName).group(1), None)
+        if isinstance(streamer, uproot.rootio.TStreamerSTL) and streamer._fSTLtype == uproot.const.kSTLvector:
+            branch._vecstreamer = streamerinfosmap.get(re.match(self._vector_regex, streamer._fTypeName).group(1), None)
         else:
             branch._vecstreamer = None
 
@@ -207,13 +207,13 @@ class TTreeMethods(object):
         if isinstance(streamer, uproot.rootio.TStreamerInfo):
             members = streamer.members
         elif isinstance(streamer, digDeeperTypes):
-            typename = streamer.fTypeName.rstrip(b"*")
+            typename = streamer._fTypeName.rstrip(b"*")
             if typename in streamerinfosmap:
                 members = streamerinfosmap[typename].members
         elif isinstance(streamer, uproot.rootio.TStreamerSTL):
             try:
                 # FIXME: string manipulation only works for one-parameter templates
-                typename = streamer.fTypeName[streamer.fTypeName.index(b"<") + 1 : streamer.fTypeName.rindex(b">")].rstrip(b"*")
+                typename = streamer._fTypeName[streamer._fTypeName.index(b"<") + 1 : streamer._fTypeName.rindex(b">")].rstrip(b"*")
             except ValueError:
                 pass
             else:
@@ -221,10 +221,10 @@ class TTreeMethods(object):
                     members = streamerinfosmap[typename].members
 
         if members is not None:
-            for subbranch in branch.fBranches:
-                name = subbranch.fName
-                if name.startswith(branch.fName + b"."):           # drop parent branch's name
-                    name = name[len(branch.fName) + 1:]
+            for subbranch in branch._fBranches:
+                name = subbranch._fName
+                if name.startswith(branch._fName + b"."):           # drop parent branch's name
+                    name = name[len(branch._fName) + 1:]
 
                 submembers = members
                 while True:                                        # drop nested struct names one at a time
@@ -235,7 +235,7 @@ class TTreeMethods(object):
                     else:
                         base, name = name[:index], name[index + 1:]
                         if base in submembers and isinstance(submembers[base], digDeeperTypes):
-                            submembers = streamerinfosmap[submembers[base].fTypeName.rstrip(b"*")].members
+                            submembers = streamerinfosmap[submembers[base]._fTypeName.rstrip(b"*")].members
 
                 try:
                     name = name[:name.index(b"[")]
@@ -248,36 +248,36 @@ class TTreeMethods(object):
         self._context = context
         self._context.treename = self.name
 
-        for branch in self.fBranches:
-            self._attachstreamer(branch, context.streamerinfosmap.get(getattr(branch, "fClassName", None), None), context.streamerinfosmap)
+        for branch in self._fBranches:
+            self._attachstreamer(branch, context.streamerinfosmap.get(getattr(branch, "_fClassName", None), None), context.streamerinfosmap)
 
         leaf2branch = {}
         for branch in self.itervalues(recursive=True):
-            if len(branch.fLeaves) == 1:
-                leaf2branch[id(branch.fLeaves[0])] = branch
+            if len(branch._fLeaves) == 1:
+                leaf2branch[id(branch._fLeaves[0])] = branch
 
         for branch in self.itervalues(recursive=True):
-            if len(branch.fLeaves) > 0:
-                branch._countleaf = branch.fLeaves[0].fLeafCount
+            if len(branch._fLeaves) > 0:
+                branch._countleaf = branch._fLeaves[0]._fLeafCount
                 if branch._countleaf is not None:
                     branch._countbranch = leaf2branch.get(id(branch._countleaf), None)
 
-        if self.fAliases is None:
+        if self._fAliases is None:
             self.aliases = {}
         else:
-            self.aliases = dict((alias.fName, alias.fTitle) for alias in self.fAliases)
+            self.aliases = dict((alias._fName, alias._fTitle) for alias in self._fAliases)
 
     @property
     def name(self):
-        return self.fName
+        return self._fName
 
     @property
     def title(self):
-        return self.fTitle
+        return self._fTitle
 
     @property
     def numentries(self):
-        return self.fEntries
+        return self._fEntries
 
     @property
     def numbranches(self):
@@ -295,7 +295,7 @@ class TTreeMethods(object):
             yield branch.name
 
     def itervalues(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
-        for branch in self.fBranches:
+        for branch in self._fBranches:
             if filtername(branch.name) and filtertitle(branch.title):
                 yield branch
             if recursive:
@@ -632,7 +632,7 @@ class TTreeMethods(object):
     def _format(self, indent=""):
         # TODO: add TTree data to the bottom of this
         out = []
-        for branch in self.fBranches:
+        for branch in self._fBranches:
             out.extend(branch._format(indent))
         return out
 
@@ -803,14 +803,14 @@ class TBranchMethods(object):
         self._streamer = None
 
         self._numgoodbaskets = 0
-        for i, x in enumerate(self.fBasketSeek):
-            if x == 0 or i == self.fWriteBasket:
+        for i, x in enumerate(self._fBasketSeek):
+            if x == 0 or i == self._fWriteBasket:
                 break
             self._numgoodbaskets += 1
 
-        if self.numentries == self.fBasketEntry[self._numgoodbaskets]:
+        if self.numentries == self._fBasketEntry[self._numgoodbaskets]:
             self._recoveredbaskets = []
-            self._entryoffsets = self.fBasketEntry[: self._numgoodbaskets + 1].tolist()
+            self._entryoffsets = self._fBasketEntry[: self._numgoodbaskets + 1].tolist()
             self._recoverylock = None
         else:
             self._recoveredbaskets = None
@@ -819,16 +819,16 @@ class TBranchMethods(object):
 
         self._countbranch = None
         self._tree_iofeatures = 0
-        if hasattr(parent, "fIOFeatures"):
-            self._tree_iofeatures = parent.fIOFeatures.fIOBits
+        if hasattr(parent, "_fIOFeatures"):
+            self._tree_iofeatures = parent._fIOFeatures._fIOBits
 
     @property
     def name(self):
-        return self.fName
+        return self._fName
 
     @property
     def title(self):
-        return self.fTitle
+        return self._fTitle
 
     @property
     def interpretation(self):
@@ -844,7 +844,7 @@ class TBranchMethods(object):
 
     @property
     def numentries(self):
-        return self.fEntries   # or self.fEntryNumber?
+        return self._fEntries   # or self._fEntryNumber?
 
     @property
     def numbranches(self):
@@ -858,7 +858,7 @@ class TBranchMethods(object):
             yield branch.name
 
     def itervalues(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
-        for branch in self.fBranches:
+        for branch in self._fBranches:
             if filtername(branch.name) and filtertitle(branch.title):
                 yield branch
             if recursive:
@@ -866,7 +866,7 @@ class TBranchMethods(object):
                     yield x
 
     def iteritems(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
-        for branch in self.fBranches:
+        for branch in self._fBranches:
             if filtername(branch.name) and filtertitle(branch.title):
                 yield branch.name, branch
             if recursive:
@@ -959,16 +959,16 @@ class TBranchMethods(object):
                 keysource.dismiss()
 
     def uncompressedbytes(self, keycache=None):
-        return sum(key.fObjlen for key in self._threadsafe_iterate_keys(keycache, False))
+        return sum(key._fObjlen for key in self._threadsafe_iterate_keys(keycache, False))
 
     def compressedbytes(self, keycache=None):
-        return sum(key.fNbytes - key.fKeylen for key in self._threadsafe_iterate_keys(keycache, False))
+        return sum(key._fNbytes - key._fKeylen for key in self._threadsafe_iterate_keys(keycache, False))
 
     def compressionratio(self, keycache=None):
         numer, denom = 0, 0
         for key in self._threadsafe_iterate_keys(keycache, False):
-            numer += key.fObjlen
-            denom += key.fNbytes - key.fKeylen
+            numer += key._fObjlen
+            denom += key._fNbytes - key._fKeylen
         return float(numer) / float(denom)
 
     def _normalize_dtype(self, interpretation):
@@ -1015,7 +1015,7 @@ class TBranchMethods(object):
     @property
     def compression(self):
         try:
-            return uproot.source.compressed.Compression(self.fCompress)
+            return uproot.source.compressed.Compression(self._fCompress)
         except ValueError:
             return self._context.compression
 
@@ -1046,13 +1046,13 @@ class TBranchMethods(object):
     def basket_uncompressedbytes(self, i, keycache=None):
         if self._recoveredbaskets is None:
             self._tryrecover()
-        return self._threadsafe_key(i, keycache, False).fObjlen
+        return self._threadsafe_key(i, keycache, False)._fObjlen
 
     def basket_compressedbytes(self, i):
         if self._recoveredbaskets is None:
             self._tryrecover()
         key = self._threadsafe_key(i, keycache, False)
-        return key.fNbytes - key.fKeylen
+        return key._fNbytes - key._fKeylen
 
     def basket_numitems(self, i, interpretation=None, keycache=None):
         if self._recoveredbaskets is None:
@@ -1089,7 +1089,7 @@ class TBranchMethods(object):
         if basketcache is not None:
             basketcache[basketcachekey] = basketdata
 
-        if key.fObjlen == key.border:
+        if key._fObjlen == key.border:
             data, byteoffsets = basketdata, None
 
             if self._countbranch is not None and numpy.uint8(self._tree_iofeatures) & numpy.uint8(uproot.const.kGenerateOffsetMap) != 0:
@@ -1105,10 +1105,10 @@ class TBranchMethods(object):
 
         else:
             data = basketdata[:key.border]
-            byteoffsets = numpy.empty((key.fObjlen - key.border - 4) // 4, dtype=numpy.int32)  # native endian
+            byteoffsets = numpy.empty((key._fObjlen - key.border - 4) // 4, dtype=numpy.int32)  # native endian
             byteoffsets[:-1] = basketdata[key.border + 4 : -4].view(">i4")                     # read as big-endian and convert
-            byteoffsets[-1] = key.fLast
-            numpy.subtract(byteoffsets, key.fKeylen, byteoffsets)
+            byteoffsets[-1] = key._fLast
+            numpy.subtract(byteoffsets, key._fKeylen, byteoffsets)
 
         return interpretation.fromroot(data, byteoffsets, local_entrystart, local_entrystop)
 
@@ -1433,28 +1433,28 @@ class TBranchMethods(object):
     class _BasketKey(object):
         def __init__(self, source, cursor, compression, complete):
             start = cursor.index
-            self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir = cursor.fields(source, TBranchMethods._BasketKey._format_small)
+            self._fNbytes, self._fVersion, self._fObjlen, self._fDatime, self._fKeylen, self._fCycle, self._fSeekKey, self._fSeekPdir = cursor.fields(source, TBranchMethods._BasketKey._format_small)
 
-            if self.fVersion > 1000:
+            if self._fVersion > 1000:
                 cursor.index = start
-                self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir = cursor.fields(source, TBranchMethods._BasketKey._format_big)
+                self._fNbytes, self._fVersion, self._fObjlen, self._fDatime, self._fKeylen, self._fCycle, self._fSeekKey, self._fSeekPdir = cursor.fields(source, TBranchMethods._BasketKey._format_big)
 
             if complete:
-                cursor.index = start + self.fKeylen - TBranchMethods._BasketKey._format_complete.size - 1
-                self.fVersion, self.fBufferSize, self.fNevBufSize, self.fNevBuf, self.fLast = cursor.fields(source, TBranchMethods._BasketKey._format_complete)
+                cursor.index = start + self._fKeylen - TBranchMethods._BasketKey._format_complete.size - 1
+                self._fVersion, self._fBufferSize, self._fNevBufSize, self._fNevBuf, self._fLast = cursor.fields(source, TBranchMethods._BasketKey._format_complete)
 
-                self.border = self.fLast - self.fKeylen
+                self.border = self._fLast - self._fKeylen
 
                 if source.size() is not None:
-                    if source.size() - self.fSeekKey < self.fNbytes:
-                        raise ValueError("TKey declares that object {0} has {1} bytes but only {2} remain in the file".format(repr(self.fName), self.fNbytes, source.size() - self.fSeekKey))
+                    if source.size() - self._fSeekKey < self._fNbytes:
+                        raise ValueError("TKey declares that object {0} has {1} bytes but only {2} remain in the file".format(repr(self._fName), self._fNbytes, source.size() - self._fSeekKey))
 
-                if self.fObjlen != self.fNbytes - self.fKeylen:
-                    self.source = uproot.source.compressed.CompressedSource(compression, source, Cursor(self.fSeekKey + self.fKeylen), self.fNbytes - self.fKeylen, self.fObjlen)
+                if self._fObjlen != self._fNbytes - self._fKeylen:
+                    self.source = uproot.source.compressed.CompressedSource(compression, source, Cursor(self._fSeekKey + self._fKeylen), self._fNbytes - self._fKeylen, self._fObjlen)
                     self.cursor = Cursor(0)
                 else:
                     self.source = source
-                    self.cursor = Cursor(self.fSeekKey + self.fKeylen)
+                    self.cursor = Cursor(self._fSeekKey + self._fKeylen)
 
         _format_small = struct.Struct(">ihiIhhii")
         _format_big = struct.Struct(">ihiIhhqq")
@@ -1475,7 +1475,7 @@ class TBranchMethods(object):
         def basketdata(self):
             datasource = self.source.threadlocal()
             try:
-                return self.cursor.copied().bytes(datasource, self.fObjlen)
+                return self.cursor.copied().bytes(datasource, self._fObjlen)
             finally:
                 datasource.dismiss()
             
@@ -1483,35 +1483,35 @@ class TBranchMethods(object):
         @classmethod
         def _readinto(cls, self, source, cursor, context, parent):
             start = cursor.index
-            self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle = cursor.fields(source, cls._format1)
+            self._fNbytes, self._fVersion, self._fObjlen, self._fDatime, self._fKeylen, self._fCycle = cursor.fields(source, cls._format1)
 
             # skip the class name, name, and title
-            cursor.index = start + self.fKeylen - cls._format2.size - 1
-            self.fVersion, self.fBufferSize, self.fNevBufSize, self.fNevBuf, self.fLast = cursor.fields(source, cls._format2)
+            cursor.index = start + self._fKeylen - cls._format2.size - 1
+            self._fVersion, self._fBufferSize, self._fNevBufSize, self._fNevBuf, self._fLast = cursor.fields(source, cls._format2)
 
             # one-byte terminator
             cursor.skip(1)
 
             # then if you have offsets data, read them in
-            if self.fNevBufSize > 8:
-                byteoffsets = cursor.bytes(source, self.fNevBuf * 4 + 8)
+            if self._fNevBufSize > 8:
+                byteoffsets = cursor.bytes(source, self._fNevBuf * 4 + 8)
                 cursor.skip(-4)
 
             # there's a second TKey here, but it doesn't contain any new information (in fact, less)
-            cursor.skip(self.fKeylen)
+            cursor.skip(self._fKeylen)
 
-            size = self.border = self.fLast - self.fKeylen
+            size = self.border = self._fLast - self._fKeylen
 
             # the data (not including offsets)
             self.contents = cursor.bytes(source, size)
 
             # put the offsets back in, in the way that we expect it
-            if self.fNevBufSize > 8:
+            if self._fNevBufSize > 8:
                 self.contents = numpy.concatenate((self.contents, byteoffsets))
                 size += byteoffsets.nbytes
 
-            self.fObjlen = size
-            self.fNbytes = self.fObjlen + self.fKeylen
+            self._fObjlen = size
+            self._fNbytes = self._fObjlen + self._fKeylen
 
             return self
 
@@ -1523,15 +1523,15 @@ class TBranchMethods(object):
 
         @property
         def numentries(self):
-            return self.fNevBuf
+            return self._fNevBuf
 
     def _recover(self):
-        recoveredbaskets = [x for x in uproot.rootio.TObjArray.read(self._source, self.fBaskets._cursor, self._context, self, asclass=TBranchMethods._RecoveredTBasket) if x is not None]
+        recoveredbaskets = [x for x in uproot.rootio.TObjArray.read(self._source, self._fBaskets._cursor, self._context, self, asclass=TBranchMethods._RecoveredTBasket) if x is not None]
 
         if self._numgoodbaskets == 0:
             entryoffsets = [0]
         else:
-            entryoffsets = self.fBasketEntry[:self._numgoodbaskets + 1].tolist()
+            entryoffsets = self._fBasketEntry[:self._numgoodbaskets + 1].tolist()
 
         for basket in recoveredbaskets:
             entryoffsets.append(entryoffsets[-1] + basket.numentries)
@@ -1549,7 +1549,7 @@ class TBranchMethods(object):
 
     def _basketkey(self, source, i, complete):
         if 0 <= i < self._numgoodbaskets:
-            return self._BasketKey(source.parent(), Cursor(self.fBasketSeek[i]), self.compression, complete)
+            return self._BasketKey(source.parent(), Cursor(self._fBasketSeek[i]), self.compression, complete)
 
         elif self._numgoodbaskets <= i < self.numbaskets:
             return self._recoveredbaskets[i - self._numgoodbaskets]
@@ -1558,7 +1558,7 @@ class TBranchMethods(object):
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
     def _format(self, foldnames, indent="", strip=""):
-        name = self.fName.decode("ascii")
+        name = self._fName.decode("ascii")
         if foldnames and name.startswith(strip + "."):
             name = name[len(strip) + 1:]
 
@@ -1567,9 +1567,9 @@ class TBranchMethods(object):
         else:
             out = [indent + "{0:26s} {1:26s} {2}".format(name, "(no streamer)" if self._streamer is None else self._streamer.__class__.__name__, interpret(self))]
 
-        for branch in self.fBranches:
-            out.extend(branch._format(foldnames, indent + "  " if foldnames else indent, self.fName))
-        if len(self.fBranches) > 0 and out[-1] != "":
+        for branch in self._fBranches:
+            out.extend(branch._format(foldnames, indent + "  " if foldnames else indent, self._fName))
+        if len(self._fBranches) > 0 and out[-1] != "":
             out.append("")
 
         return out
@@ -1610,7 +1610,7 @@ def _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, e
             tattline = uproot.rootio.Undefined.read(source, cursor, context, parent)
             tattfill = uproot.rootio.Undefined.read(source, cursor, context, parent)
             tattmarker = uproot.rootio.Undefined.read(source, cursor, context, parent)
-            self.fEntries, = cursor.fields(source, _TTreeForNumEntries._format1)
+            self._fEntries, = cursor.fields(source, _TTreeForNumEntries._format1)
             return self
         _format1 = struct.Struct('>q')
     
@@ -1625,7 +1625,7 @@ def _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, e
             try:
                 source = file._context.source
                 file._context.classes["TTree"] = _TTreeForNumEntries
-                out[i] = file[treepath].fEntries
+                out[i] = file[treepath]._fEntries
                 uuids[i] = file._context.uuid
             except:
                 return sys.exc_info()

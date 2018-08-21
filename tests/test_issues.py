@@ -89,7 +89,7 @@ class Test(unittest.TestCase):
 
     def test_issue54(self):
         h = uproot.open("tests/samples/hepdata-example.root")["hpx"]
-        self.assertTrue(h.fFunctions[0].fParent is h)
+        self.assertTrue(h._fFunctions[0]._fParent is h)
 
     def test_issue55(self):
         withoffsets = uproot.open("tests/samples/small-dy-withoffsets.root")["tree"]
@@ -114,8 +114,8 @@ class Test(unittest.TestCase):
 
     def test_issue57(self):
         tree = uproot.open("tests/samples/issue57.root")["outtree"]
-        self.assertTrue(all(isinstance(y, uproot_methods.classes.TLorentzVector.Methods) and isinstance(y.fP, uproot_methods.classes.TVector3.Methods) for x in tree["sel_lep"].array() for y in x))
-        self.assertTrue(all(isinstance(y, uproot_methods.classes.TLorentzVector.Methods) and isinstance(y.fP, uproot_methods.classes.TVector3.Methods) for x in tree["selJet"].array() for y in x))
+        self.assertTrue(all(isinstance(y, uproot_methods.classes.TLorentzVector.Methods) and isinstance(y._fP, uproot_methods.classes.TVector3.Methods) for x in tree["sel_lep"].array() for y in x))
+        self.assertTrue(all(isinstance(y, uproot_methods.classes.TLorentzVector.Methods) and isinstance(y._fP, uproot_methods.classes.TVector3.Methods) for x in tree["selJet"].array() for y in x))
 
     def test_issue60(self):
         t = uproot.open("tests/samples/issue60.root")["nllscan"]

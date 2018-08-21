@@ -153,8 +153,8 @@ class asjagged(uproot.interp.interp.Interpretation):
     def finalize(self, destination, branch):
         content = self.content.finalize(destination.content, branch)
         leafcount = None
-        if len(branch.fLeaves) == 1:
-            leafcount = branch.fLeaves[0].fLeafCount
+        if len(branch._fLeaves) == 1:
+            leafcount = branch._fLeaves[0]._fLeafCount
         out = JaggedArray.fromcounts(destination.counts, content)
         out.leafcount = leafcount
         if self.cls is not None and self.cls._arraymethods is not None:
