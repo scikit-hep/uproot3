@@ -28,7 +28,7 @@ class Writer(object):
         self.pos = 0
 
         self.streamers = []
-        self.expander = 4000
+        self.expander = 10000
         self.expandermultiple = 2
 
         self.nkeypos = 0
@@ -225,7 +225,7 @@ class Writer(object):
             self.streamerend = self.file.tell()
 
         #Update StreamerKey
-        self.streamerkey.fNbytes = self.streamerend - self.header.fSeekInfo
+        self.streamerkey.fNbytes = self.streamerend - self.header.fSeekInfo - 1
         self.streamerkey.fObjlen = self.streamerkey.fNbytes - self.streamerkey.fKeylen
         self.streamerkey.fSeekKey = self.header.fSeekInfo
         self.sink.set_key(self.header.fSeekInfo, self.streamerkey)
