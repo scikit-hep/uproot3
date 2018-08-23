@@ -28,7 +28,7 @@ class Writer(object):
         self.pos = 0
 
         self.streamers = []
-        self.expander = 10000
+        self.expander = 4000
         self.expandermultiple = 2
 
         self.nkeypos = 0
@@ -79,8 +79,8 @@ class Writer(object):
         #Allocate space for streamers
         streamerstart = self.pos
         self.file = resize(self.file, self.pos + self.expander)
-        streamers = AllStreamers(self.sink, self.pos, size = 1)
-        streamers.write()
+        self.allstreamers = AllStreamers(self.sink, self.pos, size = 1)
+        self.allstreamers.write()
         self.pos = self.file.tell()
         self.streamerend = self.pos
         self.streamerlimit = self.pos + self.expander
@@ -195,7 +195,6 @@ class Writer(object):
         key.fNbytes = key.fKeylen + key.fObjlen
         self.sink.set_key(pointcheck, key)
 
-
         # Updating Header Bytes
         if self.pos > self.header.fEND:
             self.header.fSeekFree = self.pos
@@ -229,6 +228,11 @@ class Writer(object):
         self.streamerkey.fObjlen = self.streamerkey.fNbytes - self.streamerkey.fKeylen
         self.streamerkey.fSeekKey = self.header.fSeekInfo
         self.sink.set_key(self.header.fSeekInfo, self.streamerkey)
+        
+        #Update TList Streamer
+        self.allstreamers.cnt = self.streamerkey.fObjlen
+        self.allstreamers.pos = self.header.fSeekInfo + self.streamerkey.fKeylen
+        self.allstreamers.write()
 
         #Update number of keys
         self.nkeypos = self.head_key_end - self.directory.fSeekKeys

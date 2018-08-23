@@ -1,13 +1,18 @@
+import numpy
+
 class AllStreamers(object):
 
     def __init__(self, sink, pos, size=0):
         self.sink = sink
         self.pos = pos
         self.size = size
+        self.cnt = 1073746611
 
     def write(self):
         # TList Streamer
-        cnt = 1073742190
+        cnt = self.cnt - 4
+        kByteCountMask = numpy.int64(0x40000000)
+        cnt = cnt | kByteCountMask
         vers = 5
         packer = ">IH"
         self.sink.set_numbers(self.pos, packer, cnt, vers)
