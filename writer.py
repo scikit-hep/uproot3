@@ -28,7 +28,7 @@ class Writer(object):
         self.pos = 0
 
         self.streamers = []
-        self.expander = 1000
+        self.expander = 4000
         self.expandermultiple = 2
 
         self.nkeypos = 0
@@ -66,14 +66,14 @@ class Writer(object):
 
         #StreamerKey
         pointcheck = self.pos
-        streamerkey = StreamerKey(self.pos, 0)
-        self.sink.set_key(self.pos, streamerkey)
+        self.streamerkey = StreamerKey(self.pos, 0)
+        self.sink.set_key(self.pos, self.streamerkey)
         self.pos = self.file.tell()
-        streamerkey.fKeylen = self.pos - pointcheck
-        streamerkey.fNbytes = streamerkey.fKeylen + streamerkey.fObjlen
-        self.sink.set_key(pointcheck, streamerkey)
+        self.streamerkey.fKeylen = self.pos - pointcheck
+        self.streamerkey.fNbytes = self.streamerkey.fKeylen + self.streamerkey.fObjlen
+        self.sink.set_key(pointcheck, self.streamerkey)
 
-        self.header.fNbytesInfo = streamerkey.fNbytes
+        self.header.fNbytesInfo = self.streamerkey.fNbytes
         self.sink.set_header(self.header)
 
         #Allocate space for streamers
@@ -86,7 +86,7 @@ class Writer(object):
         self.streamerlimit = self.pos + self.expander
 
         #Starting after space allocated for streamers
-        self.pos = streamerstart + self.expander
+        self.pos = self.streamerlimit
 
         #directory.fSeekKeys points to Header key
         self.directory.fSeekKeys = self.pos
@@ -173,7 +173,7 @@ class Writer(object):
         self.sink.set_header(self.header)
 
         #Check for Key Re-alocation
-        if self.keylimit - self.keyend < 200:
+        if self.keylimit - self.keyend < 30:
             self.file.seek(self.directory.fSeekKeys)
             temp = self.file.read(self.expander)
             self.expander = self.expander * self.expandermultiple
@@ -207,8 +207,8 @@ class Writer(object):
         for x in streamers_toadd:
             streamer = pickle.load(open("write/streamers.pickle", "rb"))
 
-            # Check for streamer reallocation - UNTESTED
-            if self.streamerlimit - self.streamerend < 500:
+            # Check for streamer reallocation
+            if self.streamerlimit - self.streamerend < 2000:
                 self.file.seek(self.header.fSeekInfo)
                 temp = self.file.read(self.expander)
                 self.expander = self.expander * self.expandermultiple
@@ -222,7 +222,13 @@ class Writer(object):
                 self.header.fSeekFree = self.streamerlimit
 
             self.sink.file.write(streamer[x])
-        self.streamerend = self.file.tell()
+            self.streamerend = self.file.tell()
+
+        #Update StreamerKey
+        self.streamerkey.fNbytes = self.streamerend - self.header.fSeekInfo
+        self.streamerkey.fObjlen = self.streamerkey.fNbytes - self.streamerkey.fKeylen
+        self.streamerkey.fSeekKey = self.header.fSeekInfo
+        self.sink.set_key(self.header.fSeekInfo, self.streamerkey)
 
         #Update number of keys
         self.nkeypos = self.head_key_end - self.directory.fSeekKeys
@@ -231,7 +237,7 @@ class Writer(object):
         self.sink.set_numbers(self.head_key_end, packer, self.nkeys)
 
         #Update DirectoryInfo
-        self.directory.fNbytesKeys = self.header.fEND - self.keyend
+        self.directory.fNbytesKeys = self.keyend - self.directory.fSeekKeys
         self.sink.set_directoryinfo(self.directory_pointcheck, self.directory)
 
         #Update Head Key
