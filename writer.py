@@ -79,7 +79,7 @@ class Writer(object):
         #Allocate space for streamers
         streamerstart = self.pos
         self.file = resize(self.file, self.pos + self.expander)
-        self.allstreamers = AllStreamers(self.sink, self.pos, size = 1)
+        self.allstreamers = AllStreamers(self.sink, self.pos, size = 0)
         self.allstreamers.write()
         self.pos = self.file.tell()
         self.streamerend = self.pos
@@ -130,6 +130,7 @@ class Writer(object):
             key = StringKey(keyname.encode("utf-8"), pointcheck)
 
             streamers = ["TObjString"]
+            self.allstreamers.size = len(streamers)
             streamers_toadd = []
             for x in streamers:
                 if x not in self.streamers:
@@ -141,6 +142,7 @@ class Writer(object):
             key = AxisKey(keyname.encode("utf-8"), pointcheck)
 
             streamers = ["TAxis", "TNamed", "TObject", "TAttAxis", "THashList", "TList", "TSeqCollection", "TCollection", "TString"]
+            self.allstreamers.size = len(streamers)
             streamers_toadd = []
             for x in streamers:
                 if x not in self.streamers:
