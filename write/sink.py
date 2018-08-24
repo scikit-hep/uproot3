@@ -99,9 +99,17 @@ class Sink(object):
     def set_taxis(self, pos, Object, keyname):
         Object.string = keyname
         self.file.seek(pos)
+        cnt, vers, packer = Object.valuestop1()
+        self.set_numbers(pos, packer, cnt, vers)
+        pos = self.file.tell()
+        self.file.seek(pos)
+        cnt, vers, packer = Object.valuestop2()
+        self.set_numbers(pos, packer, cnt, vers)
+        pos = self.file.tell()
+        self.file.seek(pos)
         self.file.write(Object.values1())
         pos = self.file.tell()
-        self.set_cname(pos, Object.values2().encode("utf-8"))
+        self.set_strings(pos, Object.values2().encode("utf-8"))
         pos = self.file.tell() + 1
         self.file.seek(pos)
         self.file.write(Object.values3())
