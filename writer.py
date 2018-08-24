@@ -203,11 +203,10 @@ class Writer(object):
             self.header.fEND = self.pos
 
         self.sink.set_header(self.header)
-
-        self.sink.file.seek(self.streamerend)
+        
+        streamer = pickle.load(open("write/streamers.pickle", "rb"))
         for x in streamers_toadd:
-            streamer = pickle.load(open("write/streamers.pickle", "rb"))
-
+            
             # Check for streamer reallocation
             if self.streamerlimit - self.streamerend < 2000:
                 self.file.seek(self.header.fSeekInfo)
@@ -221,7 +220,8 @@ class Writer(object):
                 self.streamerlimit = self.header.fEND + self.expander
                 self.header.fEND = self.streamerlimit
                 self.header.fSeekFree = self.streamerlimit
-
+                
+            self.sink.file.seek(self.streamerend)
             self.sink.file.write(streamer[x])
             self.streamerend = self.file.tell()
 
