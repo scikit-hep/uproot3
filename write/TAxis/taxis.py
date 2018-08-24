@@ -1,62 +1,32 @@
+import numpy
+
+
 class TAxis(object):
 
-    def __init__(self, sink, pos, string):
-        self.sink = sink
-        self.pos = pos
-        self.string = string
+    def __init__(self, fNbins, fXmin, fXmax):
+        self.string = ""
+        self.fNbins = fNbins
+        self.fXmin = fXmin
+        self.fXmax = fXmax
 
-    def write(self):
-        cnt = 1073741930 #Check for bugs
-        vers = 10
-        packer = ">IH"
-        self.sink.set_numbers(self.pos, packer, cnt, vers)
-        self.pos = self.sink.file.tell()
+    def values1(self):
+        bytestream = [ 64,   0,   0, 106,   0,  10,  64,   0,   0,  16,   0,   1,   0,
+          1,   0,   0,   0,   0,   2,   0,   0,   0,   2]
+        return numpy.frombuffer(bytes(bytestream), dtype=numpy.uint8)
 
-        #TNamed
-        cnt = 1073741840 #Check for bugs
-        vers = 1
-        packer = ">IH"
-        self.sink.set_numbers(self.pos, packer, cnt, vers)
-        self.pos = self.sink.file.tell()
+    def values2(self):
+        return self.string
 
-        version = 1
-        packer = ">h"
-        self.sink.set_numbers(self.pos, packer, version)
-        self.pos = self.sink.file.tell()
+    def values3(self):
+        bytestream = [64, 0, 0, 36, 0, 4, 0, 0, 0, 0, 0, 0, 0,
+                      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                      0, 0, 0, 0, 0, 0, 61, 76, 204, 205, 0, 1, 0,
+                      42, 0]
+        return numpy.frombuffer(bytes(bytestream), dtype=numpy.uint8)
 
-        fUniqueID = 0
-        fBits = 33554432
-        packer = ">II"
-        self.sink.set_numbers(self.pos, fUniqueID, fBits, packer)
-        self.pos = self.sink.file.tell()
+    def values4(self):
+        return self.fNbins, self.fXmin, self.fXmax
 
-        fName = self.string.encode("utf-8")
-        self.sink.set_strings(self.pos, fName)
-        self.pos = self.sink.file.tell()
-
-        fTitle = b""
-        self.sink.set_strings(self.pos, fTitle)
-        self.pos = self.sink.file.tell()
-
-        cnt = 1073741860
-        vers = 4
-        packer = ">IH"
-        self.sink.set_numbers(self.pos, packer, cnt, vers)
-        self.pos = self.sink.file.tell()
-
-        #TArray
-        length = 0
-        packer = ">i"
-        self.sink.set_numbers(self.pos, packer, length)
-        self.pos = self.sink.file.tell()
-
-        bcnt = 0
-        packer = ">I"
-        self.sink.set_numbers(self.pos, packer, bcnt)
-        self.pos = self.sink.file.tell()
-
-        bcnt = 0
-        packer = ">I"
-        self.sink.set_numbers(self.pos, packer, bcnt)
-        self.pos = self.sink.file.tell()
-
+    def values5(self):
+        bytestream = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # Check for bugs
+        return numpy.frombuffer(bytes(bytestream), dtype=numpy.uint8)

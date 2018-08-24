@@ -159,7 +159,7 @@ class Writer(object):
 
         if type(item.string) is str:
             item.string = item.string.encode("utf-8")
-
+        
         if type(item) is TObjString:
             self.sink.set_tobjstring(self.pos, item)
         if type(item) is TAxis:

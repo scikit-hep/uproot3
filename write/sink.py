@@ -3,17 +3,21 @@ import struct
 from write.utils import resize
 from write.utils import get_eof_position
 
+
 class Sink(object):
-    
+
     def __init__(self, file):
         self.file = file
 
-    def set_numbers(self, pos, packer, *args):
-        toadd = numpy.frombuffer(struct.pack(packer, *args), dtype = numpy.uint8)
+    def set_bytestream(self, pos, toadd):
         if (pos + len(toadd)) > get_eof_position(self.file):
             self.file = resize(self.file, pos + len(toadd) + 1)
         self.file.seek(pos)
         self.file.write(toadd)
+
+    def set_numbers(self, pos, packer, *args):
+        toadd = numpy.frombuffer(struct.pack(packer, *args), dtype=numpy.uint8)
+        self.set_bytestream(pos, toadd)
 
     def set_strings(self, pos, toput):
         self.file = resize(self.file, get_eof_position(self.file) + 1)
@@ -22,18 +26,18 @@ class Sink(object):
         except:
             self.file = resize(self.file, get_eof_position(self.file) + 1)
             self.file.seek(pos)
-        #toadd = bytes(str(len(toput)), "ascii")
-        toadd = numpy.frombuffer(struct.pack(">B", len(toput)), dtype = numpy.uint8)
+        # toadd = bytes(str(len(toput)), "ascii")
+        toadd = numpy.frombuffer(struct.pack(">B", len(toput)), dtype=numpy.uint8)
         self.file.write(toadd)
         pos = self.file.tell()
-        toadd = numpy.frombuffer(toput, dtype = numpy.uint8)
+        toadd = numpy.frombuffer(toput, dtype=numpy.uint8)
         if (pos + len(toadd)) > get_eof_position(self.file):
             self.file = resize(self.file, pos + len(toadd) + 1)
         self.file.seek(pos)
         self.file.write(toadd)
 
     def set_cname(self, pos, toput):
-        toadd = numpy.frombuffer(toput, dtype = numpy.uint8)
+        toadd = numpy.frombuffer(toput, dtype=numpy.uint8)
         if (pos + len(toadd)) > get_eof_position(self.file):
             self.file = resize(self.file, pos + len(toadd) + 1)
         self.file.seek(pos)
@@ -44,7 +48,7 @@ class Sink(object):
         packer = packer
         for x in array:
             buffer = buffer + struct.pack(packer, x)
-        toadd = numpy.frombuffer(buffer, dtype = numpy.uint8)
+        toadd = numpy.frombuffer(buffer, dtype=numpy.uint8)
         if (pos + len(toadd)) > get_eof_position(self.file):
             self.file = resize(self.file, pos + len(toadd) + 1)
         self.file.seek(pos)
@@ -52,7 +56,7 @@ class Sink(object):
 
     def set_empty_array(self, pos):
         data = bytearray()
-        toadd = numpy.frombuffer(data, dtype = numpy.uint8)
+        toadd = numpy.frombuffer(data, dtype=numpy.uint8)
         if (pos + len(toadd)) > get_eof_position(self.file):
             self.file = resize(self.file, pos + len(toadd) + 1)
         self.file.seek(pos)
@@ -64,7 +68,8 @@ class Sink(object):
         self.set_numbers(pos, packer, magic, fVersion)
         pos = self.file.tell()
         packer, fBEGIN, fEND, fSeekFree, fNbytesFree, nfree, fNbytesName, fUnits, fCompress, fSeekInfo, fNbytesInfo, fUUID = header.get_values2()
-        self.set_numbers(pos, packer, fBEGIN, fEND, fSeekFree, fNbytesFree, nfree, fNbytesName, fUnits, fCompress, fSeekInfo, fNbytesInfo, fUUID)
+        self.set_numbers(pos, packer, fBEGIN, fEND, fSeekFree, fNbytesFree, nfree, fNbytesName, fUnits, fCompress,
+                         fSeekInfo, fNbytesInfo, fUUID)
 
     def set_key(self, pos, key):
         packer, fNbytes, fVersion, fObjlen, fDatime, fKeylen, fCycle, fSeekKey, fSeekPdir, fClassName, fName, fTitle = key.get_values()
@@ -88,16 +93,24 @@ class Sink(object):
         packer, cnt, vers = Object.values1()
         self.set_numbers(pos, packer, cnt, vers)
         pos = self.file.tell()
-        version, packer = Object.values2()
-        self.set_numbers(pos, packer, version)
-        pos = self.file.tell()
-        fUniqueID, fBits, packer = Object.values3()
-        self.set_numbers(pos, packer, fUniqueID, fBits)
-        pos = self.file.tell()
-        self.set_strings(pos, Object.string)
+        toadd = Object.values2()
+        self.set_bytestream(pos, toadd)
 
     def set_taxis(self, pos, Object, keyname):
-        #Have to implement
-        pass
+        Object.string = keyname
+        self.file.seek(pos)
+        self.file.write(Object.values1())
+        pos = self.file.tell()
+        self.set_strings(pos, Object.values2().encode("utf-8"))
+        pos = self.file.tell()
+        self.file.seek(pos)
+        self.file.write(Object.values3())
+        pos = self.file.tell()
+        fNbins, fXmin, fXmax = Object.values4()
+        self.set_numbers(pos, ">i", fNbins)
+        pos = self.file.tell()
+        self.set_numbers(pos, ">dd", fXmin, fXmax)
+        pos = self.file.tell()
+        self.file.write(Object.values5())
 
 

@@ -14,9 +14,9 @@ class TObjString(object):
         return packer, cnt, vers
     
     def values2(self):
-        version = 1
-        packer = ">h"
-        return version, packer
+        bytestream =[0, 1, 0, 0, 0, 0, 2, 0, 0, 0, 11, 72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100]
+        toadd = numpy.frombuffer(bytes(bytestream), dtype=numpy.uint8)
+        return toadd
     
     def values3(self):
         fUniqueID = 0
