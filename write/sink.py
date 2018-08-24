@@ -101,11 +101,11 @@ class Sink(object):
         self.file.seek(pos)
         self.file.write(Object.values1())
         pos = self.file.tell()
-        self.set_strings(pos, Object.values2().encode("utf-8"))
-        pos = self.file.tell()
+        self.set_cname(pos, Object.values2().encode("utf-8"))
+        pos = self.file.tell() + 1
         self.file.seek(pos)
         self.file.write(Object.values3())
-        pos = self.file.tell()
+        pos = self.file.tell() - 1
         fNbins, fXmin, fXmax = Object.values4()
         self.set_numbers(pos, ">i", fNbins)
         pos = self.file.tell()
