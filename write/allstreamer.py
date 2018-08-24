@@ -6,7 +6,7 @@ class AllStreamers(object):
         self.sink = sink
         self.pos = pos
         self.size = size
-        self.cnt = 1073746611
+        self.cnt = 1073741845
 
     def write(self):
         # TList Streamer

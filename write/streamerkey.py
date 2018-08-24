@@ -4,7 +4,7 @@ class StreamerKey(Key):
     
     def __init__(self, pointer, fKeylen):
         self.fVersion = 4
-        self.fObjlen = 370
+        self.fObjlen = 21
         self.fDatime = 1573188772
         self.fKeylen = fKeylen
         self.fNbytes = self.fObjlen + self.fKeylen
