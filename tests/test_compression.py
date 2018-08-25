@@ -105,11 +105,12 @@ class Test(unittest.TestCase):
 
     def test_compression_content1(self):
         for name, array in uproot.open("tests/samples/Zmumu-uncompressed.root")["events"].arrays(["Type", "Event", "E1", "px1", "Q1", "M"]).items():
-            self.assertTrue(numpy.array_equal(uproot.open("tests/samples/Zmumu-zlib.root")["events"].array(name), array))
+            array = array.tolist()
+            self.assertEqual(uproot.open("tests/samples/Zmumu-zlib.root")["events"].array(name).tolist(), array)
             if lzma is not None:
-                self.assertTrue(numpy.array_equal(uproot.open("tests/samples/Zmumu-lzma.root")["events"].array(name), array))
+                self.assertTrue(uproot.open("tests/samples/Zmumu-lzma.root")["events"].array(name).tolist(), array)
             if lz4 is not None:
-                self.assertTrue(numpy.array_equal(uproot.open("tests/samples/Zmumu-lz4.root")["events"].array(name), array))
+                self.assertTrue(uproot.open("tests/samples/Zmumu-lz4.root")["events"].array(name).tolist(), array)
 
     def test_compression_content2(self):
         array = uproot.open("tests/samples/HZZ-uncompressed.root")["events"].array("Electron_Px").tolist()

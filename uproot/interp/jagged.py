@@ -30,14 +30,14 @@
 
 import math
 
+import awkward
 import awkward.type
 import awkward.util
-import awkward.array.jagged
 
 import uproot.interp.interp
 import uproot.interp.numerical
 
-class JaggedArray(awkward.array.jagged.JaggedArray):
+class JaggedArray(awkward.JaggedArray):
     class _Prep(object):
         def __init__(self, counts, content):
             self.counts = counts

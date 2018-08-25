@@ -40,6 +40,7 @@ from uproot.interp.numerical import asarray
 from uproot.interp.numerical import asdouble32
 from uproot.interp.numerical import asstlbitset
 from uproot.interp.jagged import asjagged
+from uproot.interp.objects import astable
 from uproot.interp.objects import asobj
 from uproot.interp.objects import asgenobj
 from uproot.interp.objects import asstring
@@ -190,7 +191,7 @@ def interpret(branch, swapbytes=True):
                 todtype = fromdtype
 
             if all(leaf._fLeafCount is None for leaf in branch._fLeaves):
-                return asdtype(numpy.dtype((fromdtype, dims)), numpy.dtype((todtype, dims)))
+                return astable(asdtype(numpy.dtype((fromdtype, dims)), numpy.dtype((todtype, dims))))
             else:
                 return None
 
@@ -276,9 +277,9 @@ def interpret(branch, swapbytes=True):
                                 return asgenobj(STLVector(streamerClass), branch._context, 6)
                             else:
                                 if streamerClass._methods is None:
-                                    return asjagged(asdtype(recarray), skipbytes=10)
+                                    return asjagged(astable(asdtype(recarray)), skipbytes=10)
                                 else:
-                                    return asjagged(asobj(asdtype(recarray), streamerClass._methods), skipbytes=10, cls=streamerClass._methods)
+                                    return asjagged(asobj(astable(asdtype(recarray)), streamerClass._methods), skipbytes=10, cls=streamerClass._methods)
 
                 if hasattr(branch._streamer, "_fTypeName"):
                     m = re.match(b"bitset<([1-9][0-9]*)>", branch._streamer._fTypeName)

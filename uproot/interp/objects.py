@@ -30,15 +30,15 @@
 
 import struct
 
+import awkward
 import awkward.type
 import awkward.util
-import awkward.array.virtual
 
 import uproot.interp.interp
 import uproot.interp.numerical
 import uproot.interp.jagged
 
-class ObjectArray(awkward.array.virtual.ObjectArray):
+class ObjectArray(awkward.ObjectArray):
     pass
 
 class STLVector(object):
@@ -78,6 +78,68 @@ class STLString(object):
     def read(self, source, cursor, context, parent):
         numitems = cursor.field(source, self._format1)
         return cursor.array(source, numitems, awkward.util.CHARTYPE).tostring()
+
+class astable(uproot.interp.interp.Interpretation):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (uproot.interp.interp.Interpretation.__metaclass__,), {})
+
+    def __init__(self, content):
+        if not isinstance(content, uproot.interp.numerical.asdtype) or content.todtype.names is None or len(content.todtype.names) == 0:
+            raise TypeError("astable must be given a recarray dtype")
+        self.content = content
+
+    def __repr__(self):
+        dtype, shape = uproot.interp.numerical._dtypeshape(self.content.todtype)
+        return "astable({0})".format(repr(self.content.to(awkward.util.numpy.dtype([(n, dtype[n]) for n in dtype.names if not n.startswith(" ")]), shape)))
+
+    def tonumpy(self):
+        return self.content
+
+    @property
+    def identifier(self):
+        dtype, shape = uproot.interp.numerical._dtypeshape(self.content.todtype)
+        return "astable({0})".format(self.content.to(awkward.util.numpy.dtype([(n, dtype[n]) for n in dtype.names if not n.startswith(" ")]), shape).identifier)
+
+    @property
+    def type(self):
+        dtype, shape = uproot.interp.numerical._dtypeshape(self.content.todtype)
+        fields = None
+        for n in dtype.names:
+            if fields is None:
+                fields = awkward.type.ArrayType(n, dtype[n])
+            else:
+                fields = fields & awkward.type.ArrayType(n, dtype[n])
+        if shape == ():
+            return fields
+        else:
+            return awkward.type.ArrayType(*(shape + (fields,)))
+
+    def empty(self):
+        return awkward.Table.fromrec(self.content.empty())
+
+    def compatible(self, other):
+        return isinstance(other, astable) and self.content.compatible(other.content)
+
+    def numitems(self, numbytes, numentries):
+        return self.content.numitems(numbytes, numentries)
+
+    def source_numitems(self, source):
+        return self.content.source_numitems(source)
+
+    def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop):
+        return self.content.fromroot(data, byteoffsets, local_entrystart, local_entrystop)
+
+    def destination(self, numitems, numentries):
+        return self.content.destination(numitems, numentries)
+
+    def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
+        return self.content.fill(source, destination, itemstart, itemstop, entrystart, entrystop)
+
+    def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
+        return self.content.clip(destination, itemstart, itemstop, entrystart, entrystop)
+
+    def finalize(self, destination, branch):
+        return awkward.Table.fromrec(self.content.finalize(destination, branch))
 
 class asobj(uproot.interp.interp.Interpretation):
     # makes __doc__ attribute mutable before Python 3.3
@@ -123,10 +185,10 @@ class asobj(uproot.interp.interp.Interpretation):
         return self.content.clip(destination, itemstart, itemstop, entrystart, entrystop)
 
     def finalize(self, destination, branch):
-        out = ObjectArray(self.content.finalize(destination, branch), self.cls)
-        if self.cls._arraymethods is not None:
-            out.__class__ = type("ObjectArray", (ObjectArray, self.cls._arraymethods), {})
-        return out
+        if self.cls._arraymethods is None:
+            return awkward.ObjectArray(self.content.finalize(destination, branch), self.cls._fromrow)
+        else:
+            return self.cls._arraymethods(self.content.finalize(destination, branch))
 
 class _variable(uproot.interp.interp.Interpretation):
     def __init__(self, content, generator, *args, **kwargs):

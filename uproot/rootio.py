@@ -1126,7 +1126,7 @@ class TObject(ROOTStreamedObject):
 
     @classmethod
     def _recarray(cls):
-        return [("_fBits", numpy.dtype(">u8")), ("_fUniqueID", numpy.dtype(">u8"))]
+        return [(" fBits", numpy.dtype(">u8")), (" fUniqueID", numpy.dtype(">u8"))]
 
     @classmethod
     def _members(cls):

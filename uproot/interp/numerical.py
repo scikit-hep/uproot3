@@ -69,7 +69,7 @@ class _asnumeric(uproot.interp.interp.Interpretation):
 
     @property
     def type(self):
-        dtype, shape = _dtypeshape()
+        dtype, shape = _dtypeshape(self.todtype)
         if shape == ():
             return dtype
         else:
