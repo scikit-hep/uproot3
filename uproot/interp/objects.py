@@ -264,7 +264,7 @@ class asstring(_variable):
     __metaclass__ = type.__new__(type, "type", (_variable.__metaclass__,), {})
 
     def __init__(self, skipbytes=1):
-        super(asstring, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(awkward.util.CHARTYPE), skipbytes=skipbytes), bytes)
+        super(asstring, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(awkward.util.CHARTYPE), skipbytes=skipbytes), lambda array: array.tostring())
 
     def __repr__(self):
         return "asstring({0})".format("" if self.content.skipbytes == 1 else repr(self.content.skipbytes))
