@@ -36,27 +36,29 @@ Install uproot like any other Python package:
 
 .. code-block:: bash
 
-    pip install uproot --user
+    pip install uproot
 
-or similar (use ``sudo``, ``virtualenv``, or ``conda`` if you wish).
+or similar (use ``sudo``, ``--user``, ``virtualenv``, or ``conda`` if you wish).
 
 Strict dependencies:
 ====================
 
-- `Python <http://docs.python-guide.org/en/latest/starting/installation/>`__ (2.6+, 3.4+)
-- `Numpy <https://scipy.org/install.html>`__
+- `Python <http://docs.python-guide.org/en/latest/starting/installation/>`__ (2.7+, 3.4+)
 
-Recommended dependencies:
-=========================
+The following are installed automatically when you install uproot with pip:
 
-- `lz4 <https://anaconda.org/anaconda/lz4>`__ compression used by some ROOT files
-- `lzma <https://anaconda.org/conda-forge/backports.lzma>`__ compression used by some ROOT files; this is part of the Python 3 standard library, so only install for Python 2
+- `Numpy <https://scipy.org/install.html>`__ (1.13.1+)
+- `awkward-array <https://pypi.org/project/awkward>`__ to manipulate data from non-flat TTrees, such as jagged arrays (`part of Scikit-HEP <https://github.com/scikit-hep/awkward-array>`__)
+- `uproot-methods <https://pypi.org/project/uproot-methods>`__ for histogram and physics object methods, such as TLorentzVector (`part of Scikit-HEP <https://github.com/scikit-hep/uproot-methods>`__)
+- `cachetools <https://pypi.org/project/cachetools>`__ for dict-like caches (replaces uproot 2's custom caches)
+- `lz4 <https://pypi.org/project/lz4>`__ to read lz4-compressed ROOT files (now ROOT's default compression method)
+- `lzma <https://anaconda.org/conda-forge/backports.lzma>`__ to read lzma-compressed ROOT files (part of Python 3's standard library)
 
 Optional dependencies:
 ======================
 
-- `XRootD <https://anaconda.org/nlesc/xrootd>`__ to access remote files
-- `futures <https://pypi.python.org/pypi/futures>`__ for parallel processing; this is part of the Python 3 standard library, so only install for Python 2
+- `XRootD <https://anaconda.org/nlesc/xrootd>`__ (4+ for pyxrootd) to access remote files
+- `futures <https://pypi.python.org/pypi/futures>`__ for parallel processing in Python 2 (part of Python 3's standard library)
 
 **Reminder: you do not need C++ ROOT to run uproot.**
 
@@ -920,11 +922,11 @@ The array methods will always check the cache first, and if it's empty, get the 
 
 Key names are long because they encode a unique identifier to the file, the path to the `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__, to the `TBranch <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods>`__, the `Interpretation <http://uproot.readthedocs.io/en/latest/interpretation.html>`__, and the entry range, so that we don't confuse one cached array for another.
 
-Python ``dict`` objects will keep the arrays as long as the process lives (or they're manually deleted, or the ``dict`` goes out of scope). Sometimes this is too long. Real caches typically have a Least Recently Used (LRU) eviction policy: they're capped at a given size and when adding a new array would exceed that size, they delete the ones that were least recently accessed. `MemoryCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-memorycache>`__ implements such a policy.
+Python ``dict`` objects will keep the arrays as long as the process lives (or they're manually deleted, or the ``dict`` goes out of scope). Sometimes this is too long. Real caches typically have a Least Recently Used (LRU) eviction policy: they're capped at a given size and when adding a new array would exceed that size, they delete the ones that were least recently accessed. `ArrayCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-arraycache>`__ implements such a policy.
 
 .. code-block:: python
 
-    >>> cache = uproot.cache.MemoryCache(8*1024**3)    # 8 GB (typical)
+    >>> cache = uproot.cache.ArrayCache(8*1024**3)    # 8 GB (typical)
     >>> import numpy
     >>> cache["one"] = numpy.zeros(1024**3, dtype=numpy.uint8)   # 1 GB
     >>> list(cache)
@@ -942,62 +944,7 @@ Python ``dict`` objects will keep the arrays as long as the process lives (or th
     >>> list(cache)
     ['three', 'four', 'five']
 
-Thus, you can pass a `MemoryCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-memorycache>`__ as the **cache** argument to get caching with an LRU policy. If you need it, there's also a `ThreadSafeMemoryCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-threadsafememorycache>`__ for parallel processing.
-
-Sometimes, you might need a cache that survives from one process to another. For instance, you have a long-running script that fails on the last step and you want to get to that last step more quickly by not re-reading/re-decompressing/re-formatting the ROOT data as arrays. Use a `DiskCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-diskcache>`__.
-
-.. code-block:: python
-
-    >>> import uproot
-    # the first process that uses the cache must create it
-    >>> cache = uproot.cache.DiskCache.create(8*1024**3, "/tmp/mycache")   # limit to 8 GB
-    >>> import numpy
-    >>> cache["my cache key"] = numpy.zeros(10000)
-    >>> exit()
-
-.. code-block:: python
-
-    >>> import uproot
-    # the second process that uses the cache must join it
-    >>> cache = uproot.cache.DiskCache.join("/tmp/mycache")                # already limited
-    >>> cache["my cache key"]
-    array([0., 0., 0., ..., 0., 0., 0.])
-
-The cache is a directory on disk (hint: use your SSD disk!) that has enough infrastructure to quickly lookup data (implements a hashmap), promote the most recently used object, keep track of the disk size, evict the least recently used, all while avoiding costly directory-listings and putting too many files in the same directory. Everything is contained in the directory— delete the directory when you no longer want it. Depending on your use, you may want to investigate its performance tuning settings (``lookupsize`` and ``maxperdir``).
-
-.. code-block:: bash
-
-    $ tree /tmp/mycache
-    /tmp/mycache
-    ├── collisions
-    ├── config.json
-    ├── lookup.npy
-    ├── order
-    │   └── 01-one
-    └── state.json
-
-You can use the `MemoryCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-memorycache>`__ and `DiskCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-diskcache>`__ as **cache** arguments to the uproot array methods, and you can even use them in your analysis for other purposes. They are ``dict``-like objects to which you can assign items explicitly or replace
-
-.. code-block:: python
-
-    >>> result = long_running_process()
-
-with
-
-.. code-block:: python
-
-    >>> result = cache.do("my cache key", long_running_process)
-
-where ``long_running_process`` is any function taking zero arguments. If ``"my cache key"`` is found, you quickly get the result from the cache; if not, it computes ``long_running_process``, sets the cache, and returns the result. This can considerably speed up oft-repeated analysis scripts without obscuring clarity.
-
-You can even create a `MemoryCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-memorycache>`__ that spills over to `DiskCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-diskcache>`__ when full. Just chain them:
-
-.. code-block:: python
-
-    # an 8 GB memory cache backed up by a 500 GB disk cache
-    >>> cache = uproot.cache.MemoryCache(8*1024**3, uproot.cache.DiskCache(500*1024**3))
-
-The ``spill_immediately`` parameter (``False`` by default) determines whether the `DiskCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-diskcache>`__ is a superset of the `MemoryCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-memorycache>`__ (by immediately copying new data to disk) or only contains data that have been evicted from the `MemoryCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-memorycache>`__ (often faster, but you don't have a backup if the process fails).
+Thus, you can pass a `ArrayCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-arraycache>`__ as the **cache** argument to get caching with an LRU (least recently used) policy. If you need it, there's also a `ThreadSafeArrayCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-threadsafearraycache>`__ for parallel processing, and the ``method="LFU"`` parameter to both lets you pick an LFU (least frequently used) policy.
 
 Finally, you may be wondering why the array methods have three cache parameters: **cache**, **basketcache**, and **keycache**. Here's what they mean.
 
@@ -1007,7 +954,7 @@ Finally, you may be wondering why the array methods have three cache parameters:
 
 Normally, you'd *either* set only **cache** *or* both **basketcache** and **keycache**. You can use the same ``dict``-like object for many applications (single pool) or different caches for different applications (to keep the priority queues distinct).
 
-As we have seen, uproot's XRootD handler has an even lower-level cache for bytes read over the network. This is implemented as a `MemoryCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-memorycache>`__. Local files are usually read as memory-mapped files, in which case the operating system does the low-level caching with the same mechanism as virtual memory. (For more control, you can `uproot.open <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-open>`__ a file with ``localsource=dict(chunkbytes=8*1024, limitbytes=1024**2)`` to use a regular file handle and custom paging/cache size.)
+As we have seen, uproot's XRootD handler has an even lower-level cache for bytes read over the network. This is implemented as a `ThreadSafeArrayCache <http://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-threadsafearraycache>`__. Local files are usually read as memory-mapped files, in which case the operating system does the low-level caching with the same mechanism as virtual memory. (For more control, you can `uproot.open <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-open>`__ a file with ``localsource=dict(chunkbytes=8*1024, limitbytes=1024**2)`` to use a regular file handle and custom paging/cache size.)
 
 Parallel processing
 -------------------

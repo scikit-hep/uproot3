@@ -34,11 +34,8 @@ import numpy
 try:
     import lzma
 except ImportError:
-    lzma = None
-try:
-    import lz4
-except ImportError:
-    lz4 = None
+    from backports import lzma
+import lz4
 
 import uproot
 
@@ -138,36 +135,20 @@ class Test(unittest.TestCase):
 
     def test_5_30_00(self):
         # 2011-06-28, TTree version 19
-        tests = ["uncompressed", "zlib"]
-        if lzma is not None:
-            tests.append("lzma")
-        for compression in tests:
+        for compression in "uncompressed", "zlib", "lzma":
             self.compare(uproot.open("tests/samples/sample-5.30.00-{0}.root".format(compression))["sample"].arrays())
 
     def test_6_08_04(self):
         # 2017-01-13, TTree version 19
-        tests = ["uncompressed", "zlib"]
-        if lzma is not None:
-            tests.append("lzma")
-        for compression in tests:
+        for compression in "uncompressed", "zlib", "lzma":
             self.compare(uproot.open("tests/samples/sample-6.08.04-{0}.root".format(compression))["sample"].arrays())
 
     def test_6_10_05(self):
         # 2017-07-28, TTree version 19
-        tests = ["uncompressed", "zlib"]
-        if lzma is not None:
-            tests.append("lzma")
-        if lz4 is not None:
-            tests.append("lz4")
-        for compression in tests:
+        for compression in "uncompressed", "zlib", "lzma", "lz4":
             self.compare(uproot.open("tests/samples/sample-6.10.05-{0}.root".format(compression))["sample"].arrays())
 
     def test_6_14_00(self):
         # 2018-06-20, TTree version 20
-        tests = ["uncompressed", "zlib"]
-        if lzma is not None:
-            tests.append("lzma")
-        if lz4 is not None:
-            tests.append("lz4")
-        for compression in tests:
+        for compression in "uncompressed", "zlib", "lzma", "lz4":
             self.compare(uproot.open("tests/samples/sample-6.14.00-{0}.root".format(compression))["sample"].arrays())
