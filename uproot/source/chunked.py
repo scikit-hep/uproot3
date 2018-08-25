@@ -30,7 +30,7 @@
 
 import numpy
 
-import uproot.cache.memorycache
+import uproot.cache
 import uproot.source.source
 
 class ChunkedSource(uproot.source.source.Source):
@@ -41,9 +41,9 @@ class ChunkedSource(uproot.source.source.Source):
         self.path = path
         self._chunkbytes = chunkbytes
         if limitbytes is None:
-            self.cache = uproot.cache.memorycache.ThreadSafeDict()
+            self.cache = {}
         else:
-            self.cache = uproot.cache.memorycache.ThreadSafeMemoryCache(limitbytes)
+            self.cache = uproot.cache.ThreadSafeArrayCache(limitbytes)
         self._source = None
 
     def parent(self):

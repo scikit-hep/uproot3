@@ -513,9 +513,9 @@ class TTreeMethods(object):
         branches = list(self._normalize_branches(branches))
 
         if basketcache is None:
-            basketcache = uproot.cache.memorycache.ThreadSafeMemoryCache(limitbytes)
+            basketcache = uproot.cache.ThreadSafeArrayCache(limitbytes)
         if keycache is None:
-            keycache = uproot.cache.memorycache.ThreadSafeDict()
+            keycache = {}
 
         lazyarrays = [(branch.name if namedecode is None else branch.name.decode(namedecode), branch.lazyarray(interpretation=interpretation, limitbytes=limitbytes, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor)) for branch, interpretation in branches]
 
@@ -559,10 +559,10 @@ class TTreeMethods(object):
         branches = list(self._normalize_branches(branches))
 
         if keycache is None:
-            keycache = uproot.cache.memorycache.ThreadSafeDict()
+            keycache = {}
 
         if basketcache is None:
-            basketcache = uproot.cache.memorycache.ThreadSafeDict()
+            basketcache = {}
             explicit_basketcache = False
         else:
             explicit_basketcache = True
@@ -1276,7 +1276,7 @@ class TBranchMethods(object):
                 return wait
 
         if keycache is None:
-            keycache = uproot.cache.memorycache.ThreadSafeDict()
+            keycache = {}
 
         basket_itemoffset = self._basket_itemoffset(interpretation, basketstart, basketstop, keycache)
         basket_entryoffset = self._basket_entryoffset(basketstart, basketstop)
@@ -1423,9 +1423,9 @@ class TBranchMethods(object):
             self._tryrecover()
 
         if basketcache is None:
-            basketcache = uproot.cache.memorycache.ThreadSafeMemoryCache(limitbytes)
+            basketcache = uproot.cache.ThreadSafeArrayCache(limitbytes)
         if keycache is None:
-            keycache = uproot.cache.memorycache.ThreadSafeDict()
+            keycache = {}
 
         interpretation = self._normalize_interpretation(interpretation)
         return LazyArray._frombranch(self, interpretation, cache, basketcache, keycache, executor)
@@ -1707,7 +1707,7 @@ def lazyarrays(path, treepath, branches=None, outputtype=dict, namedecode=None, 
     branches = list(tree._normalize_branches(branches))
 
     if cache is None:
-        cache = uproot.cache.memorycache.ThreadSafeMemoryCache(limitbytes)
+        cache = uproot.cache.ThreadSafeArrayCache(limitbytes)
     if basketcache is None:
         basketcache = cache
     if keycache is None:

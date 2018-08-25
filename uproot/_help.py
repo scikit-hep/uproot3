@@ -1637,284 +1637,52 @@ _method(uproot.interp.numerical.asarray.finalize).__doc__ = interp_fragments["se
 
 ################################################################ uproot.interp.jagged.asjagged
 
-# uproot.interp.jagged.asjagged.__doc__ = \
-# u"""Interpret branch as a jagged array (array of non-uniformly sized arrays).
+uproot.interp.jagged.asjagged.__doc__ = \
+u"""Interpret branch as a jagged array (array of non-uniformly sized arrays).
 
-#     This interpretation directs branch-reading to fill contiguous arrays and present them to the user in a :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>` interface. Such an object behaves as though it were an array of non-uniformly sized arrays, but it is more memory and cache-line efficient because the underlying data are contiguous.
+    This interpretation directs branch-reading to fill contiguous arrays and present them to the user in a :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>` interface. Such an object behaves as though it were an array of non-uniformly sized arrays, but it is more memory and cache-line efficient because the underlying data are contiguous.
 
-#     In this interpretation, "items" (for ``numitems``, ``itemstart``, ``itemstop``, etc.) are the items of the inner array (however that is defined), and "entries" are elements of the outer array. The outer array is always one-dimensional.
-
-#     Parameters
-#     ----------
-#     asdtype : :py:class:`asdtype <uproot.interp.numerical.asdtype>`
-#         interpretation for the inner arrays.
-
-#     Notes
-#     -----
-
-#     {see2}
-# """.format(**interp_fragments)
-
-# _method(uproot.interp.jagged.asjagged.to).__doc__ = \
-# u"""Create a new :py:class:`asjagged <uproot.interp.jagged.asjagged>` interpretation from this one.
-
-#     Parameters
-#     ----------
-#     todtype : ``None`` or ``numpy.dtype``
-#         if not ``None``, change the destination type of inner arrays.
-
-#     todims : ``None`` or tuple of ints
-#         if not ``None``, change the destination dimensions of inner arrays.
-
-#     Returns
-#     -------
-#     :py:class:`asjagged <uproot.interp.jagged.asjagged>`
-#         new interpretation.
-# """
-
-# _method(uproot.interp.jagged.asjagged.empty).__doc__ = interp_fragments["see1"]
-# _method(uproot.interp.jagged.asjagged.compatible).__doc__ = interp_fragments["see1"]
-# _method(uproot.interp.jagged.asjagged.numitems).__doc__ = interp_fragments["see1"]
-# _method(uproot.interp.jagged.asjagged.source_numitems).__doc__ = interp_fragments["see1"]
-# _method(uproot.interp.jagged.asjagged.fromroot).__doc__ = interp_fragments["see1"]
-# _method(uproot.interp.jagged.asjagged.destination).__doc__ = interp_fragments["see1"]
-# _method(uproot.interp.jagged.asjagged.fill).__doc__ = interp_fragments["see1"]
-# _method(uproot.interp.jagged.asjagged.clip).__doc__ = interp_fragments["see1"]
-# _method(uproot.interp.jagged.asjagged.finalize).__doc__ = interp_fragments["see1"]
-
-################################################################ uproot.cache.MemoryCache
-
-uproot.cache.memorycache.MemoryCache.__doc__ = \
-u"""A ``dict`` with a least-recently-used (LRU) eviction policy.
-
-    This class implements every ``dict`` method and is a subclass of ``dict``, so it may be used anywhere ``dict`` is used. Unlike ``dict``, the least recently used key-value pairs are removed to avoid exceeding a user-specified memory budget. The memory budget may be temporarily exceeded during the process of setting the item. Memory use of the key and value are computed with ``sys.getsizeof`` and the memory use of internal data structures (a ``list``, a ``dict``, and some counters) are included in the memory budget. (The memory used by Numpy arrays is fully accounted for with ``sys.getsizeof``.)
-
-    Like ``dict``, this class is not thread-safe.
-
-    Like ``dict``, keys may be any hashable type.
-    
-    **Attributes, properties, and methods:**
-
-    - **numbytes** (*int*) the number of bytes currently stored in this cache.
-    - **numevicted** (*int*) the number of key-value pairs that have been evicted.
-    - **promote(key)** declare a key to be the most recently used; raises ``KeyError`` if *key* is not in this cache (does not check spillover).
-    - **spill(key)** copies a key-value pair to the spillover, if any; raises ``KeyError`` if *key* is not in this cache (does not check spillover).
-    - **spill()** copies all key-value pairs to the spillover, if any.
-    - **do(key, function)** returns the value associated with *key*, if it exists; calls the zero-argument *function*, sets it to *key* and returns that if the *key* is not yet in the cache.
-    - all ``dict`` methods, following Python 3 conventions, in which **keys**, **values**, and **items** return iterators, rather than lists.
+    In this interpretation, "items" (for ``numitems``, ``itemstart``, ``itemstop``, etc.) are the items of the inner array (however that is defined), and "entries" are elements of the outer array. The outer array is always one-dimensional.
 
     Parameters
     ----------
-    limitbytes : int
-        the memory budget expressed in bytes. Note that this is a required parameter.
+    asdtype : :py:class:`asdtype <uproot.interp.numerical.asdtype>`
+        interpretation for the inner arrays.
 
-    spillover : ``None`` or another ``dict``-like object
-        another cache to use as a backup for this cache:
+    Notes
+    -----
 
-        - when key-value pairs are evicted from this cache (if ``spill_immediately=False``) or put into this cache (if ``spill_immediately=True``), they are also inserted into the spillover;
-        - when keys are not found in this cache, the spillover is checked and, if found, the key-value pair is reinstated in this cache;
-        - when the user explicitly deletes a key-value pair from this cache, it is deleted from the spillover as well.
+    {see2}
+""".format(**interp_fragments)
 
-        Usually, the spillover for a :py:class:`MemoryCache <uproot.cache.memorycache.MemoryCache>` is a :py:class:`DiskCache <uproot.cache.diskcache.DiskCache>` so that data that do not fit in memory migrate to disk, or so that the disk can be used as a persistency layer for data that are more quickly accessed in memory.
-
-        The same key-value pair might exist in both this cache and in the spillover cache because reinstating a key-value pair from the spillover does not delete it from the spillover. When ``spill_immediately=True``, *every* key-value pair in this cache is also in the spillover cache (assuming the spillover has a larger memory budget).
-
-    spill_immediately : bool
-        if ``False`` *(default)*, key-value pairs are only copied to the spillover cache when they are about to be evicted from this cache (the spillover is a backup); if ``True``, key-value pairs are copied to the spillover cache immediately after they are inserted into this cache (the spillover is a persistency layer).
-
-    items : iterable of key-value 2-tuples
-        ordered pairs to insert into this cache; same meaning as in ``dict`` constructor. Unlike ``dict``, the order of these pairs is relevant: the first item in the list is considered the least recently "used".
-
-    **kwds
-        key-value pairs to insert into this cache; same meaning as in ``dict`` constructor.
-"""
-
-################################################################ uproot.cache.ThreadSafeMemoryCache
-
-uproot.cache.memorycache.ThreadSafeMemoryCache.__doc__ = \
-u"""A ``dict`` with a least-recently-used (LRU) eviction policy and thread safety.
-
-    This class is a thread-safe version of :py:class:`MemoryCache <uproot.cache.memorycache.MemoryCache>`, provided by a global lock. Every method acquires the lock upon entry and releases it upon exit.
-
-    See :py:class:`MemoryCache <uproot.cache.memorycache.MemoryCache>` for details on the constructor and methods.
-"""
-
-################################################################ uproot.cache.ThreadSafeDict
-
-uproot.cache.memorycache.ThreadSafeDict.__doc__ = \
-u"""A ``dict`` with thread safety.
-
-    This class is a direct subclass of ``dict`` with a global lock. Every method acquires the lock upon entry and releases it upon exit.
-"""
-
-################################################################ uproot.cache.DiskCache
-
-uproot.cache.diskcache.DiskCache.__doc__ = \
-u"""A persistent, ``dict``-like object with a least-recently-used (LRU) eviction policy.
-
-    This class is not a subclass of ``dict``, but it implements the major features of the ``dict`` interface:
-
-    - square brackets get objects from the cache (``__getitem__``), put them in the cache (``__setitem__``), and delete them from the cache (``__delitem__``);
-    - ``in`` checks for key existence (``__contains__``);
-    - **keys**, **values**, and **items** return iterators over cache contents.
-
-    Unlike ``dict``, the least recently used key-value pairs are removed to avoid exceeding a user-specified memory budget. The memory budget may be temporarily exceeded during the process of setting the item.
-
-    Unlike ``dict``, all data is stored in a POSIX filesystem. The only data the in-memory object maintains is a read-only **config**, the **directory** name, and **read**, **write** functions for deserializing/serializing objects.
-
-    Unlike ``dict``, this cache is thread-safe and process-safe--- several processes can read and write to the same cache concurrently, and these threads/processes do not need to be aware of each other (so they can start and stop at will). The first thread/process calls :py:meth:`create <uproot.cache.diskcache.DiskCache.create>` to make a new cache directory and the rest :py:meth:`join <uproot.cache.diskcache.DiskCache.join>` an existing directory. Since the cache is on disk, it can be joined even if all processes are killed and restarted.
-
-    Do not use the :py:class:`DiskCache <uproot.cache.diskcache.DiskCache>` constructor: create instances using :py:meth:`create <uproot.cache.diskcache.DiskCache.create>` and :py:meth:`join <uproot.cache.diskcache.DiskCache.join>` *only*.
-
-    The cache is configured by a read-only ``config.json`` file and its changing state is tracked with a ``state.json`` file. Key lookup is performed through a shared, memory-mapped ``lookup.npy`` file. When the cache must be locked, it is locked by locking the ``lookup.npy`` file (``fcntl.LOCK_EX``). Read and write operations only lock while hard-linking or renaming files--- bulk reading and writing is performed outside the lock.
-
-    The names of the keys and their priority order is encoded in a subdirectory tree, which is updated in such a way that no directory exceeds a maximum number of subdirectories and the least and most recently used keys can be identified without traversing all of the keys.
-
-    The ``lookup.npy`` file is a binary-valued hashmap. If two keys hash to the same value, collisions are resolved via JSON files. Collisions are very expensive and should be avoided by providing enough slots in the ``lookup.npy`` file.
-
-    Unlike ``dict``, keys must be strings.
-
-    **Attributes, properties, and methods:**
-
-    - **numbytes** (*int*) the number of bytes currently stored in the cache.
-    - **config.limitbytes** (*int*) the memory budget expressed in bytes.
-    - **config.lookupsize** (*int*) the number of slots in the hashmap ``lookup.npy`` (increase this to reduce collisions).
-    - **config.maxperdir** (*int*) the maximum number of subdirectories per directory.
-    - **config.delimiter** (*str*) used to separate order prefix from keys.
-    - **config.numformat** (*str*) Numpy dtype of the ``lookup.npy`` file (as a string).
-    - **state.numbytes** (*int*) see **numbytes** above.
-    - **state.depth** (*int*) current depth of the subdirectory tree.
-    - **state.next** (*int*) next integer in the priority queue.
-    - **refresh_config()** re-reads **config** from ``config.json``.
-    - **promote(key)** declare a key to be the most recently used; raises ``KeyError`` if *key* is not in the cache.
-    - **keys()** locks the cache and returns an iterator over keys; cache is unlocked only when iteration finishes (so evaluate this quickly to avoid blocking the cache for all processes).
-    - **values()** locks the cache and returns an iterator over values; same locking warning.
-    - **items()** locks the cache and returns an iterator over key-value pairs; same locking warning.
-    - **destroy()** deletes the directory--- all subsequent actions are undefined.
-    - **do(key, function)** returns the value associated with *key*, if it exists; calls the zero-argument *function*, sets it to *key* and returns that if the *key* is not yet in the cache.
-"""
-
-cache_diskcache_fragments = {
-    # read
-    "read": u"""read : function (filename, cleanup) \u21d2 data
-        deserialization function, used by "get" to turn files into Python objects (such as arrays). This function must call ``cleanup()`` when reading is complete, regardless of whether an exception occurs.""",
-
-    # write
-    "write": u"""write : function (filename, data) \u21d2 ``None``
-        serialization function, used by "put" to turn Python objects (such as arrays) into files. The return value of this function is ignored.""",
-    }
-
-_method(uproot.cache.diskcache.DiskCache.create).__doc__ = \
-u"""Create a new disk cache.
+_method(uproot.interp.jagged.asjagged.to).__doc__ = \
+u"""Create a new :py:class:`asjagged <uproot.interp.jagged.asjagged>` interpretation from this one.
 
     Parameters
     ----------
-    limitbytes : int
-        the memory budget expressed in bytes.
+    todtype : ``None`` or ``numpy.dtype``
+        if not ``None``, change the destination type of inner arrays.
 
-    directory : str
-        local path to the directory to create as a disk cache. If a file or directory exists at that location, it will be overwritten.
-
-    {read}
-
-    {write}
-
-    lookupsize : int
-        the number of slots in the hashmap ``lookup.npy`` (increase this to reduce collisions).
-
-    maxperdir : int
-        the maximum number of subdirectories per directory.
-
-    delimiter : str
-        used to separate order prefix from keys.
-
-    numformat : ``numpy.dtype``
-        type of the ``lookup.npy`` file.
+    todims : ``None`` or tuple of ints
+        if not ``None``, change the destination dimensions of inner arrays.
 
     Returns
     -------
-    :py:class:`DiskCache <uproot.cache.diskcache.DiskCache>`
-        first view into the disk cache.
-""".format(**cache_diskcache_fragments)
-
-_method(uproot.cache.diskcache.DiskCache.join).__doc__ = \
-u"""Instantate a view into an existing disk cache.
-
-    Parameters
-    ----------
-    directory : str
-        local path to the directory to view as a disk cache.
-
-    {read}
-
-    {write}
-
-    check : bool
-        if ``True`` *(default)*, verify that the structure of the directory is a properly formatted disk cache, raising ``ValueError`` if it isn't.
-
-    Returns
-    -------
-    :py:class:`DiskCache <uproot.cache.diskcache.DiskCache>`
-        view into the disk cache.
-""".format(**cache_diskcache_fragments)
-
-################################################################ uproot.cache.diskcache.arrayread
-
-uproot.cache.diskcache.arrayread.__doc__ = \
-u"""Sample deserialization function; reads Numpy files (``*.npy``) into Numpy arrays.
-
-    To be used as an argument to :py:meth:`create <uproot.cache.diskcache.DiskCache.create>` or :py:meth:`join <uproot.cache.diskcache.DiskCache.join>`.
-
-    Parameters
-    ----------
-    filename : str
-        local path to read.
-
-    cleanup : function () \u21d2 ``None``
-        cleanup function to call after reading is complete.
-
-    Returns
-    -------
-    ``numpy.ndarray``
-        Numpy array.
+    :py:class:`asjagged <uproot.interp.jagged.asjagged>`
+        new interpretation.
 """
 
-################################################################ uproot.cache.diskcache.arraywrite
+_method(uproot.interp.jagged.asjagged.empty).__doc__ = interp_fragments["see1"]
+_method(uproot.interp.jagged.asjagged.compatible).__doc__ = interp_fragments["see1"]
+_method(uproot.interp.jagged.asjagged.numitems).__doc__ = interp_fragments["see1"]
+_method(uproot.interp.jagged.asjagged.source_numitems).__doc__ = interp_fragments["see1"]
+_method(uproot.interp.jagged.asjagged.fromroot).__doc__ = interp_fragments["see1"]
+_method(uproot.interp.jagged.asjagged.destination).__doc__ = interp_fragments["see1"]
+_method(uproot.interp.jagged.asjagged.fill).__doc__ = interp_fragments["see1"]
+_method(uproot.interp.jagged.asjagged.clip).__doc__ = interp_fragments["see1"]
+_method(uproot.interp.jagged.asjagged.finalize).__doc__ = interp_fragments["see1"]
 
-uproot.cache.diskcache.arraywrite.__doc__ = \
-u"""Sample serialization function; writes Numpy arrays into Numpy files (``*.npy``).
-
-    To be used as an argument to :py:meth:`create <uproot.cache.diskcache.DiskCache.create>` or :py:meth:`join <uproot.cache.diskcache.DiskCache.join>`.
-
-    Parameters
-    ----------
-    filename : str
-        local path to overwrite.
-
-    obj : ``numpy.ndarray``
-        array to write.
-"""
-
-################################################################ uproot.cache.diskcache.memmapread
-
-uproot.cache.diskcache.memmapread.__doc__ = \
-u"""Lazy deserialization function; reads Numpy files (``*.npy``) as a memory-map.
-
-    To be used as an argument to :py:meth:`create <uproot.cache.diskcache.DiskCache.create>` or :py:meth:`join <uproot.cache.diskcache.DiskCache.join>`.
-    
-    Parameters
-    ----------
-    filename : str
-        local path to read.
-
-    cleanup : function () \u21d2 ``None``
-        cleanup function to call after reading is complete.
-
-    Returns
-    -------
-    wrapped ``numpy.core.memmap``
-        cleanup function is called when this object is destroyed (``__del__``).
-"""
+# TODO: add asdtype asarray asdouble32 asstlbitset asjagged astable asobj asgenobj asstring STLVector STLString
 
 ################################################################ uproot.source.cursor.Cursor
 
@@ -1947,7 +1715,7 @@ u"""Maintain a position in a :py:class:`Source <uproot.source.source.Source>` th
        the **origin**, *(default is 0)*.
 
     refs : ``None`` or ``dict``-like
-       if ``None`` *(default)*, use a new :py:class:`ThreadSafeDict <uproot.cache.memorycache.ThreadSafeDict>` as the **ref**; otherwise, use the value provided.
+       if ``None`` *(default)*, use a new dict as the **ref**; otherwise, use the value provided.
 """
 
 format_source_cursor = {
@@ -2194,7 +1962,7 @@ u"""Provide sensible defaults for a :py:class:`FileSource <uproot.source.file.Fi
 uproot.source.file.FileSource.__doc__ = \
 u"""Emulate a memory-mapped interface with traditional file handles, opening many if necessary.
 
-    :py:class:`FileSource <uproot.source.file.FileSource>` objects avoid double-reading and many small reads by caching data in chunks. All thread-local copies of a :py:class:`FileSource <uproot.source.file.FileSource>` share a :py:class:`ThreadSafeMemoryCache <uproot.cache.memorycache.ThreadSafeMemoryCache>` to avoid double-reads across threads.
+    :py:class:`FileSource <uproot.source.file.FileSource>` objects avoid double-reading and many small reads by caching data in chunks. All thread-local copies of a :py:class:`FileSource <uproot.source.file.FileSource>` share a :py:class:`ThreadSafeArrayCache <uproot.cache.ThreadSafeArrayCache>` to avoid double-reads across threads.
 
     Parameters
     ----------
