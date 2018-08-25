@@ -32,8 +32,6 @@ import sys
 import numbers
 import math
 
-import numpy
-
 import awkward.type
 import awkward.util
 
@@ -235,11 +233,11 @@ class asdouble32(_asnumeric):
 
     @property
     def todtype(self):
-        return numpy.dtype((numpy.float64, self.todims))
+        return awkward.util.numpy.dtype((awkward.util.numpy.float64, self.todims))
 
     @property
     def todtypeflat(self):
-        return numpy.dtype(numpy.float64)
+        return awkward.util.numpy.dtype(awkward.util.numpy.float64)
 
     @property
     def todims(self):
@@ -279,8 +277,8 @@ class asdouble32(_asnumeric):
             array = array.reshape((quotient,) + self.fromdims)
 
         array = array[local_entrystart:local_entrystop].astype(self.todtype)
-        numpy.multiply(array, float(self.high - self.low) / (1 << self.numbits), out=array)
-        numpy.add(array, self.low, out=array)
+        awkward.util.numpy.multiply(array, float(self.high - self.low) / (1 << self.numbits), out=array)
+        awkward.util.numpy.add(array, self.low, out=array)
         return array
 
 class asstlbitset(uproot.interp.interp.Interpretation):

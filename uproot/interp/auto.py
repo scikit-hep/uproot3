@@ -32,7 +32,7 @@ import re
 import ast
 from functools import reduce
 
-import numpy
+import awkward.util
 
 import uproot.const
 from uproot.interp.numerical import asdtype
@@ -51,62 +51,62 @@ class _NotNumerical(Exception): pass
 
 def _ftype2dtype(fType):
     if fType == uproot.const.kBool:
-        return numpy.dtype(numpy.bool_)
+        return awkward.util.numpy.dtype(awkward.util.numpy.bool_)
     elif fType == uproot.const.kChar:
-        return numpy.dtype("i1")
+        return awkward.util.numpy.dtype("i1")
     elif fType == uproot.const.kUChar:
-        return numpy.dtype("u1")
+        return awkward.util.numpy.dtype("u1")
     elif fType == uproot.const.kShort:
-        return numpy.dtype(">i2")
+        return awkward.util.numpy.dtype(">i2")
     elif fType == uproot.const.kUShort:
-        return numpy.dtype(">u2")
+        return awkward.util.numpy.dtype(">u2")
     elif fType == uproot.const.kInt:
-        return numpy.dtype(">i4")
+        return awkward.util.numpy.dtype(">i4")
     elif fType in (uproot.const.kBits, uproot.const.kUInt, uproot.const.kCounter):
-        return numpy.dtype(">u4")
+        return awkward.util.numpy.dtype(">u4")
     elif fType == uproot.const.kLong:
-        return numpy.dtype(numpy.long).newbyteorder(">")
+        return awkward.util.numpy.dtype(awkward.util.numpy.long).newbyteorder(">")
     elif fType == uproot.const.kULong:
-        return numpy.dtype(">u" + repr(numpy.dtype(numpy.long).itemsize))
+        return awkward.util.numpy.dtype(">u" + repr(awkward.util.numpy.dtype(awkward.util.numpy.long).itemsize))
     elif fType == uproot.const.kLong64:
-        return numpy.dtype(">i8")
+        return awkward.util.numpy.dtype(">i8")
     elif fType == uproot.const.kULong64:
-        return numpy.dtype(">u8")
+        return awkward.util.numpy.dtype(">u8")
     elif fType == uproot.const.kFloat:
-        return numpy.dtype(">f4")
+        return awkward.util.numpy.dtype(">f4")
     elif fType == uproot.const.kDouble:
-        return numpy.dtype(">f8")
+        return awkward.util.numpy.dtype(">f8")
     else:
         raise _NotNumerical
 
 def _leaf2dtype(leaf):
     classname = leaf.__class__.__name__
     if classname == "TLeafO":
-        return numpy.dtype(numpy.bool_)
+        return awkward.util.numpy.dtype(awkward.util.numpy.bool_)
     elif classname == "TLeafB":
         if leaf._fIsUnsigned:
-            return numpy.dtype(numpy.uint8)
+            return awkward.util.numpy.dtype(awkward.util.numpy.uint8)
         else:
-            return numpy.dtype(numpy.int8)
+            return awkward.util.numpy.dtype(awkward.util.numpy.int8)
     elif classname == "TLeafS":
         if leaf._fIsUnsigned:
-            return numpy.dtype(numpy.uint16)
+            return awkward.util.numpy.dtype(awkward.util.numpy.uint16)
         else:
-            return numpy.dtype(numpy.int16)
+            return awkward.util.numpy.dtype(awkward.util.numpy.int16)
     elif classname == "TLeafI":
         if leaf._fIsUnsigned:
-            return numpy.dtype(numpy.uint32)
+            return awkward.util.numpy.dtype(awkward.util.numpy.uint32)
         else:
-            return numpy.dtype(numpy.int32)
+            return awkward.util.numpy.dtype(awkward.util.numpy.int32)
     elif classname == "TLeafL":
         if leaf._fIsUnsigned:
-            return numpy.dtype(numpy.uint64)
+            return awkward.util.numpy.dtype(awkward.util.numpy.uint64)
         else:
-            return numpy.dtype(numpy.int64)
+            return awkward.util.numpy.dtype(awkward.util.numpy.int64)
     elif classname == "TLeafF":
-        return numpy.dtype(numpy.float32)
+        return awkward.util.numpy.dtype(awkward.util.numpy.float32)
     elif classname == "TLeafD":
-        return numpy.dtype(numpy.float64)
+        return awkward.util.numpy.dtype(awkward.util.numpy.float64)
     elif classname == "TLeafElement":
         return _ftype2dtype(leaf._fType)
     else:
@@ -157,7 +157,7 @@ def interpret(branch, swapbytes=True):
                 try:
                     left, right = branch._streamer._fTitle.index(b"["), branch._streamer._fTitle.index(b"]")
                 except (ValueError, AttributeError):
-                    out = asdtype(numpy.dtype((">f4", dims)), numpy.dtype(("f8", dims)))
+                    out = asdtype(awkward.util.numpy.dtype((">f4", dims)), awkward.util.numpy.dtype(("f8", dims)))
                 else:
                     try:
                         spec = eval(compile(ast.Expression(transform(ast.parse(branch._streamer._fTitle[left : right + 1]).body[0].value)), repr(branch._streamer._fTitle), "eval"))
@@ -174,9 +174,9 @@ def interpret(branch, swapbytes=True):
                 fromdtype = _leaf2dtype(branch._fLeaves[0]).newbyteorder(">")
 
                 if swapbytes:
-                    out = asdtype(numpy.dtype((fromdtype, dims)), numpy.dtype((fromdtype.newbyteorder("="), dims)))
+                    out = asdtype(awkward.util.numpy.dtype((fromdtype, dims)), awkward.util.numpy.dtype((fromdtype.newbyteorder("="), dims)))
                 else:
-                    out = asdtype(numpy.dtype((fromdtype, dims)), numpy.dtype((fromdtype, dims)))
+                    out = asdtype(awkward.util.numpy.dtype((fromdtype, dims)), awkward.util.numpy.dtype((fromdtype, dims)))
 
             if branch._fLeaves[0]._fLeafCount is None:
                 return out
@@ -184,14 +184,14 @@ def interpret(branch, swapbytes=True):
                 return asjagged(out)
 
         elif len(branch._fLeaves) > 1:
-            fromdtype = numpy.dtype([(str(leaf._fName.decode("ascii")), _leaf2dtype(leaf).newbyteorder(">")) for leaf in branch._fLeaves])
+            fromdtype = awkward.util.numpy.dtype([(str(leaf._fName.decode("ascii")), _leaf2dtype(leaf).newbyteorder(">")) for leaf in branch._fLeaves])
             if swapbytes:
-                todtype = numpy.dtype([(str(leaf._fName.decode("ascii")), _leaf2dtype(leaf).newbyteorder("=")) for leaf in branch._fLeaves])
+                todtype = awkward.util.numpy.dtype([(str(leaf._fName.decode("ascii")), _leaf2dtype(leaf).newbyteorder("=")) for leaf in branch._fLeaves])
             else:
                 todtype = fromdtype
 
             if all(leaf._fLeafCount is None for leaf in branch._fLeaves):
-                return astable(asdtype(numpy.dtype((fromdtype, dims)), numpy.dtype((todtype, dims))))
+                return astable(asdtype(awkward.util.numpy.dtype((fromdtype, dims)), awkward.util.numpy.dtype((todtype, dims))))
             else:
                 return None
 
@@ -229,7 +229,7 @@ def interpret(branch, swapbytes=True):
                             todims = dims
                             if reduce(lambda x, y: x * y, todims, 1) != fromdims:
                                 todims = (fromdims,)
-                            return asdtype(numpy.dtype((fromdtype, (fromdims,))), numpy.dtype((todtype, todims)))
+                            return asdtype(awkward.util.numpy.dtype((fromdtype, (fromdims,))), awkward.util.numpy.dtype((todtype, todims)))
 
                 if isinstance(branch._streamer, uproot.rootio.TStreamerBasicPointer):
                     if uproot.const.kOffsetP < branch._streamer._fType < uproot.const.kOffsetP + 20:
@@ -287,7 +287,7 @@ def interpret(branch, swapbytes=True):
                         return asstlbitset(int(m.group(1)))
 
                 if getattr(branch._streamer, "_fTypeName", None) == b"vector<bool>":
-                    return asjagged(asdtype(numpy.bool_), skipbytes=10)
+                    return asjagged(asdtype(awkward.util.numpy.bool_), skipbytes=10)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<char>":
                     return asjagged(asdtype("i1"), skipbytes=10)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<unsigned char>":
@@ -312,7 +312,7 @@ def interpret(branch, swapbytes=True):
                     return asgenobj(STLVector(STLString()), branch._context, 6)
 
                 if getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<bool> >":
-                    return asgenobj(STLVector(STLVector(asdtype(numpy.bool_))), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(asdtype(awkward.util.numpy.bool_))), branch._context, 6)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<char> >":
                     return asgenobj(STLVector(STLVector(asdtype("i1"))), branch._context, 6)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<unsigned char> >":
@@ -344,7 +344,7 @@ def interpret(branch, swapbytes=True):
                     return asstring(skipbytes=1)
 
                 if branch._fClassName == b"vector<bool>":
-                    return asjagged(asdtype(numpy.bool_), skipbytes=10)
+                    return asjagged(asdtype(awkward.util.numpy.bool_), skipbytes=10)
                 elif branch._fClassName == b"vector<char>":
                     return asjagged(asdtype("i1"), skipbytes=10)
                 elif branch._fClassName == b"vector<unsigned char>":
@@ -369,7 +369,7 @@ def interpret(branch, swapbytes=True):
                     return asgenobj(STLVector(STLString()), branch._context, 6)
 
                 if branch._fClassName == b"vector<vector<bool> >":
-                    return asgenobj(STLVector(STLVector(asdtype(numpy.bool_))), branch._context, 6)
+                    return asgenobj(STLVector(STLVector(asdtype(awkward.util.numpy.bool_))), branch._context, 6)
                 elif branch._fClassName == b"vector<vector<char> >":
                     return asgenobj(STLVector(STLVector(asdtype("i1"))), branch._context, 6)
                 elif branch._fClassName == b"vector<vector<unsigned char> >":
