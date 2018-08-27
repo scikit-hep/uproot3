@@ -34,10 +34,8 @@ import unittest
 import numpy
 
 import uproot
-from uproot.interp.jagged import asstlvector
-from uproot.interp.numerical import asdtype
 
-class TestSTLVector(unittest.TestCase):
+class Test(unittest.TestCase):
     def runTest(self):
         pass
 

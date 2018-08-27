@@ -1,1 +1,6 @@
-numpy
+numpy>=1.13.1
+awkward
+uproot-methods
+cachetools
+lz4
+backports.lzma;python_version<"3.3"

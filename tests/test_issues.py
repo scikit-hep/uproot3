@@ -35,7 +35,10 @@ import numpy
 
 import uproot
 
-class TestIssues(unittest.TestCase):
+import uproot_methods.classes.TVector3
+import uproot_methods.classes.TLorentzVector
+
+class Test(unittest.TestCase):
     def runTest(self):
         pass
 
@@ -78,7 +81,7 @@ class TestIssues(unittest.TestCase):
 
     def test_issue46(self):
         t = uproot.open("tests/samples/issue46.root")["tree"]
-        t["evt"].array(uproot.interp.asdebug)
+        t["evt"].array(uproot.asdebug)
 
     def test_issue49(self):
         t = uproot.open("tests/samples/issue49.root")["nllscan"]
@@ -86,24 +89,33 @@ class TestIssues(unittest.TestCase):
 
     def test_issue54(self):
         h = uproot.open("tests/samples/hepdata-example.root")["hpx"]
-        self.assertTrue(h.fFunctions[0].fParent is h)
+        self.assertTrue(h._fFunctions[0]._fParent is h)
 
     def test_issue55(self):
         withoffsets = uproot.open("tests/samples/small-dy-withoffsets.root")["tree"]
         nooffsets = uproot.open("tests/samples/small-dy-nooffsets.root")["tree"]
         self.assertTrue(numpy.array_equal(withoffsets.array("nJet"), nooffsets.array("nJet")))
         self.assertTrue(numpy.array_equal(withoffsets.array("nMuon"), nooffsets.array("nMuon")))
-        self.assertTrue(numpy.array_equal(withoffsets.array("Jet_jetId"), nooffsets.array("Jet_jetId")))
-        self.assertTrue(numpy.array_equal(withoffsets.array("Jet_pt"), nooffsets.array("Jet_pt")))
-        self.assertTrue(numpy.array_equal(withoffsets.array("MET_pt"), nooffsets.array("MET_pt")))
-        self.assertTrue(numpy.array_equal(withoffsets.array("Muon_charge"), nooffsets.array("Muon_charge")))
-        self.assertTrue(numpy.array_equal(withoffsets.array("Muon_pt"), nooffsets.array("Muon_pt")))
-        self.assertTrue(numpy.array_equal(withoffsets.array("event"), nooffsets.array("event")))
+
+        def equal(left, right):
+            if len(left) != len(right):
+                return False
+            for x, y in zip(left, right):
+                if not numpy.array_equal(x, y):
+                    return False
+            return True
+
+        self.assertTrue(equal(withoffsets.array("Jet_jetId"), nooffsets.array("Jet_jetId")))
+        self.assertTrue(equal(withoffsets.array("Jet_pt"), nooffsets.array("Jet_pt")))
+        self.assertTrue(equal(withoffsets.array("MET_pt"), nooffsets.array("MET_pt")))
+        self.assertTrue(equal(withoffsets.array("Muon_charge"), nooffsets.array("Muon_charge")))
+        self.assertTrue(equal(withoffsets.array("Muon_pt"), nooffsets.array("Muon_pt")))
+        self.assertTrue(equal(withoffsets.array("event"), nooffsets.array("event")))
 
     def test_issue57(self):
         tree = uproot.open("tests/samples/issue57.root")["outtree"]
-        self.assertTrue(all(isinstance(y, uproot.physics.TLorentzVectorMethods) and isinstance(y.fP, uproot.physics.TVector3Methods) for x in tree["sel_lep"].array() for y in x))
-        self.assertTrue(all(isinstance(y, uproot.physics.TLorentzVectorMethods) and isinstance(y.fP, uproot.physics.TVector3Methods) for x in tree["selJet"].array() for y in x))
+        self.assertTrue(all(isinstance(y, uproot_methods.classes.TLorentzVector.Methods) and isinstance(y._fP, uproot_methods.classes.TVector3.Methods) for x in tree["sel_lep"].array() for y in x))
+        self.assertTrue(all(isinstance(y, uproot_methods.classes.TLorentzVector.Methods) and isinstance(y._fP, uproot_methods.classes.TVector3.Methods) for x in tree["selJet"].array() for y in x))
 
     def test_issue60(self):
         t = uproot.open("tests/samples/issue60.root")["nllscan"]
@@ -118,7 +130,6 @@ class TestIssues(unittest.TestCase):
 
     def test_issue63(self):
         t = uproot.open("tests/samples/issue63.root")["WtLoop_meta"]
-
         self.assertEqual(t["initialState"].array().tolist(), [b"Wt"])
         self.assertEqual(t["generator"].array().tolist(), [b"PowhegPythia6"])
         self.assertEqual(t["sampleType"].array().tolist(), [b"Nominal"])
@@ -139,8 +150,8 @@ class TestIssues(unittest.TestCase):
 
     def test_issue74(self):
         t = uproot.open("tests/samples/issue74.root")["Events"]
-        self.assertTrue(all(isinstance(x, uproot.physics.TVector3Methods) for x in t.array("bees.xyzPosition")))
-        self.assertEqual(list(t.array("bees.xyzPosition")[0]), [1.0, 2.0, -1.0])
+        self.assertTrue(all(isinstance(x, uproot_methods.classes.TVector3.Methods) for x in t.array("bees.xyzPosition")))
+        self.assertEqual(t.array("bees.xyzPosition")[0], uproot_methods.classes.TVector3.TVector3(1.0, 2.0, -1.0))
 
     def test_issue76(self):
         t = uproot.open("tests/samples/issue76.root")["Events"]
@@ -157,4 +168,4 @@ class TestIssues(unittest.TestCase):
     
     def test_issue96(self):
         t = uproot.open("tests/samples/issue96.root")["tree"]
-        self.assertTrue(all(isinstance(x, uproot.physics.TLorentzVectorMethods) for x in t.array("jet1P4")))
+        self.assertTrue(all(isinstance(x, uproot_methods.classes.TLorentzVector.Methods) for x in t.array("jet1P4")))

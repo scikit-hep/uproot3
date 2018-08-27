@@ -15,41 +15,12 @@ The array-reading functions (in :py:class:`TTreeMethods <uproot.tree.TTreeMethod
 
 Passing explicit caches to **basketcache** and **keycache** will ensure that the file is read only once, while passing explicit caches to **cache** and **keycache** will ensure that the file is read *and interpreted* only once.
 
-uproot.cache.MemoryCache
-------------------------
-
-.. autoclass:: uproot.cache.memorycache.MemoryCache
-
-uproot.cache.ThreadSafeMemoryCache
-----------------------------------
-
-.. autoclass:: uproot.cache.memorycache.ThreadSafeMemoryCache
-
-uproot.cache.ThreadSafeDict
----------------------------
-
-.. autoclass:: uproot.cache.memorycache.ThreadSafeDict
-
-uproot.cache.DiskCache
-----------------------
-
-.. autoclass:: uproot.cache.diskcache.DiskCache
-
-.. automethod:: uproot.cache.diskcache.DiskCache.create
-
-.. automethod:: uproot.cache.diskcache.DiskCache.join
-
-uproot.cache.arrayread
-----------------------
-
-.. autofunction:: uproot.cache.diskcache.arrayread
-
-uproot.cache.arraywrite
+uproot.cache.ArrayCache
 -----------------------
 
-.. autofunction:: uproot.cache.diskcache.arraywrite
+.. autoclass:: uproot.cache.ArrayCache
 
-uproot.cache.memmapread
------------------------
+uproot.cache.ThreadSafeArrayCache
+---------------------------------
 
-.. autofunction:: uproot.cache.diskcache.memmapread
+.. autoclass:: uproot.cache.ThreadSafeArrayCache

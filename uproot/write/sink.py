@@ -28,10 +28,22 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import re
+class Sink(object):
+    def __init__(self, file):
+        self.file = file
+        # self.pos = 0
 
-__version__ = "3.0.0b1"
-version = __version__
-version_info = tuple(re.split(r"[-\.]", __version__))
+    def write(self, data, pos):
+        self.file.seek(pos)
+        self.file.write(data)
 
-del re
+    # def write(self, data, pos):
+    #     if self.file.tell() != pos:
+    #         self.file.seek(pos)
+    #     self.file.write(data)
+
+    # def write(self, data, pos):
+    #     if self.pos != pos:
+    #         self.file.seek(pos)
+    #     self.file.write(data)
+    #     self.pos += len(data)    # needs self.pos

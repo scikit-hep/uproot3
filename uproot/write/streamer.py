@@ -28,10 +28,13 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import re
+import os
+import zipfile
 
-__version__ = "3.0.0b1"
-version = __version__
-version_info = tuple(re.split(r"[-\.]", __version__))
+class StreamerDatabase(object):
+    def __init__(self):
+        directory, _ = os.path.split(__file__)
+        self.zipfile = zipfile.ZipFile(open(os.path.join(directory, "streamerdatabase.zip"), "br"), "r")
 
-del re
+    def __getitem__(self, streamername):
+        return self.zipfile.open(streamername).read()

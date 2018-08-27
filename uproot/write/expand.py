@@ -28,10 +28,19 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import re
+class Block(object):
+    def __init__(self, cursor, allocatedbytes, growfactor=2):
+        self.cursor = cursor
+        self.actualbytes = 0
+        self.allocatedbytes = allocatedbytes
+        self.growfactor = growfactor
 
-__version__ = "3.0.0b1"
-version = __version__
-version_info = tuple(re.split(r"[-\.]", __version__))
+    def append(self, data, sink):
+        if self.actualbytes + len(data) > self.allocatedbytes:
+            self._move()  # somehow...
+        else:
+            self.actualbytes += len(data)
+            self.cursor.write(data, sink)
 
-del re
+    def _grow(self):
+        self.allocatedbytes *= self.growfactor

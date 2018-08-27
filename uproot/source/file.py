@@ -32,7 +32,6 @@ import os.path
 
 import numpy
 
-import uproot.cache.memorycache
 import uproot.source.chunked
 
 class FileSource(uproot.source.chunked.ChunkedSource):
@@ -56,10 +55,7 @@ class FileSource(uproot.source.chunked.ChunkedSource):
         out = FileSource.__new__(self.__class__)
         out.path = self.path
         out._chunkbytes = self._chunkbytes
-        if isinstance(self.cache, (uproot.cache.memorycache.ThreadSafeMemoryCache, uproot.cache.memorycache.ThreadSafeDict)):
-            out.cache = self.cache
-        else:
-            out.cache = {}
+        out.cache = self.cache
         out._source = None             # local file connections are *not shared* among threads (they're *not* thread-safe)
         return out
 

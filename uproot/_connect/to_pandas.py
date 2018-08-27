@@ -30,10 +30,6 @@
 
 import numpy
 
-from uproot.interp import asdtype
-from uproot.interp import asarray
-from uproot.interp import asjagged
-
 class TTreeMethods_pandas(object):
     def __init__(self, tree):
         self._tree = tree

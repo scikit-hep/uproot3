@@ -1,56 +1,49 @@
 environment:
   matrix:
-    - PYTHON: "C:\\Python26"
-      PYTHON_VERSION: "2.6.6"
-      PYTHON_ARCH: "32"
-
-    - PYTHON: "C:\\Python26-x64"
-      PYTHON_VERSION: "2.6.6"
-      PYTHON_ARCH: "64"
-
     - PYTHON: "C:\\Python27"
       PYTHON_VERSION: "2.7.10"
       PYTHON_ARCH: "32"
+      NUMPY: "numpy==1.13.1"
 
     - PYTHON: "C:\\Python27"
       PYTHON_VERSION: "2.7.10"
       PYTHON_ARCH: "64"
+      NUMPY: "numpy==1.13.1"
 
-    - PYTHON: "C:\\Python33"
-      PYTHON_VERSION: "3.3.x"
+    - PYTHON: "C:\\Python27"
+      PYTHON_VERSION: "2.7.10"
       PYTHON_ARCH: "32"
+      NUMPY: "numpy==1.15"
 
-    - PYTHON: "C:\\Python33-x64"
-      PYTHON_VERSION: "3.3.x"
+    - PYTHON: "C:\\Python27"
+      PYTHON_VERSION: "2.7.10"
       PYTHON_ARCH: "64"
-
-    - PYTHON: "C:\\Python34"
-      PYTHON_VERSION: "3.4.x"
-      PYTHON_ARCH: "32"
-
-    - PYTHON: "C:\\Python34-x64"
-      PYTHON_VERSION: "3.4.x"
-      PYTHON_ARCH: "64"
-
-    - PYTHON: "C:\\Python35"
-      PYTHON_VERSION: "3.5.x"
-      PYTHON_ARCH: "32"
-
-    - PYTHON: "C:\\Python35-x64"
-      PYTHON_VERSION: "3.5.x"
-      PYTHON_ARCH: "64"
+      NUMPY: "numpy==1.15"
 
     - PYTHON: "C:\\Python36"
       PYTHON_VERSION: "3.6.x"
       PYTHON_ARCH: "32"
+      NUMPY: "numpy==1.13.1"
 
     - PYTHON: "C:\\Python36-x64"
       PYTHON_VERSION: "3.6.x"
       PYTHON_ARCH: "64"
+      NUMPY: "numpy==1.13.1"
+
+    - PYTHON: "C:\\Python36"
+      PYTHON_VERSION: "3.6.x"
+      PYTHON_ARCH: "32"
+      NUMPY: "numpy==1.15"
+
+    - PYTHON: "C:\\Python36-x64"
+      PYTHON_VERSION: "3.6.x"
+      PYTHON_ARCH: "64"
+      NUMPY: "numpy==1.15"
 
 install:
   - "python --version"
 
 build_script:
-  - "pip install numpy --user"
+  - "pip install %NUMPY%"
+  - "pip install -i https://pypi.anaconda.org/carlkl/simple backports.lzma"
   - "python setup.py test"

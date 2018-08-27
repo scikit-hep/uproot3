@@ -59,7 +59,7 @@ class Source(object):
         # assert stop >= start
 
         if stop > len(self._source):
-            raise IndexError("indexes {0}:{1} are beyond the end of data source {2}".format(len(self._source), stop, repr(self.path)))
+            raise IndexError("indexes {0}:{1} are beyond the end of data source of length {2}".format(start, stop, len(self._source)))
 
         if dtype is None:
             return self._source[start:stop]

@@ -31,13 +31,24 @@
 # high-level entry points
 from uproot.rootio import open, xrootd
 from uproot.tree import iterate, numentries, lazyarray, lazyarrays, daskarray, daskarrays, daskframe
-from uproot.hist import hist
 
 from uproot.source.memmap import MemmapSource
 from uproot.source.file import FileSource
 from uproot.source.xrootd import XRootDSource
 
 from uproot.interp.auto import interpret
+from uproot.interp.numerical import asdtype
+from uproot.interp.numerical import asarray
+from uproot.interp.numerical import asdouble32
+from uproot.interp.numerical import asstlbitset
+from uproot.interp.jagged import asjagged
+from uproot.interp.objects import astable
+from uproot.interp.objects import asobj
+from uproot.interp.objects import asgenobj
+from uproot.interp.objects import asstring
+from uproot.interp.objects import STLVector
+from uproot.interp.objects import STLString
+asdebug = asjagged(asdtype("u1"))
 
 # put help strings on everything (they're long, too disruptive to intersperse
 # in the code, and are built programmatically to avoid duplication; Python's

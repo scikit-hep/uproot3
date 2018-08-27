@@ -32,107 +32,107 @@ import re
 import ast
 from functools import reduce
 
-import numpy
+import awkward.util
 
 import uproot.const
 from uproot.interp.numerical import asdtype
-from uproot.interp.numerical import asdouble32
 from uproot.interp.numerical import asarray
+from uproot.interp.numerical import asdouble32
 from uproot.interp.numerical import asstlbitset
 from uproot.interp.jagged import asjagged
-from uproot.interp.jagged import asstlvector
-from uproot.interp.jagged import asstlvectorvector
-from uproot.interp.jagged import asobjs
-from uproot.interp.jagged import asobj
-from uproot.interp.strings import asstrings
-from uproot.interp.strings import asstlvecstrings
+from uproot.interp.objects import astable
+from uproot.interp.objects import asobj
+from uproot.interp.objects import asgenobj
+from uproot.interp.objects import asstring
+from uproot.interp.objects import STLVector
+from uproot.interp.objects import STLString
 
 class _NotNumerical(Exception): pass
 
 def _ftype2dtype(fType):
     if fType == uproot.const.kBool:
-        return numpy.dtype(numpy.bool_)
+        return awkward.util.numpy.dtype(awkward.util.numpy.bool_)
     elif fType == uproot.const.kChar:
-        return numpy.dtype("i1")
+        return awkward.util.numpy.dtype("i1")
     elif fType == uproot.const.kUChar:
-        return numpy.dtype("u1")
+        return awkward.util.numpy.dtype("u1")
     elif fType == uproot.const.kShort:
-        return numpy.dtype(">i2")
+        return awkward.util.numpy.dtype(">i2")
     elif fType == uproot.const.kUShort:
-        return numpy.dtype(">u2")
+        return awkward.util.numpy.dtype(">u2")
     elif fType == uproot.const.kInt:
-        return numpy.dtype(">i4")
+        return awkward.util.numpy.dtype(">i4")
     elif fType in (uproot.const.kBits, uproot.const.kUInt, uproot.const.kCounter):
-        return numpy.dtype(">u4")
+        return awkward.util.numpy.dtype(">u4")
     elif fType == uproot.const.kLong:
-        return numpy.dtype(numpy.long).newbyteorder(">")
+        return awkward.util.numpy.dtype(awkward.util.numpy.long).newbyteorder(">")
     elif fType == uproot.const.kULong:
-        return numpy.dtype(">u" + repr(numpy.dtype(numpy.long).itemsize))
+        return awkward.util.numpy.dtype(">u" + repr(awkward.util.numpy.dtype(awkward.util.numpy.long).itemsize))
     elif fType == uproot.const.kLong64:
-        return numpy.dtype(">i8")
+        return awkward.util.numpy.dtype(">i8")
     elif fType == uproot.const.kULong64:
-        return numpy.dtype(">u8")
+        return awkward.util.numpy.dtype(">u8")
     elif fType == uproot.const.kFloat:
-        return numpy.dtype(">f4")
+        return awkward.util.numpy.dtype(">f4")
     elif fType == uproot.const.kDouble:
-        return numpy.dtype(">f8")
+        return awkward.util.numpy.dtype(">f8")
     else:
         raise _NotNumerical
 
 def _leaf2dtype(leaf):
     classname = leaf.__class__.__name__
     if classname == "TLeafO":
-        return numpy.dtype(numpy.bool_)
+        return awkward.util.numpy.dtype(awkward.util.numpy.bool_)
     elif classname == "TLeafB":
-        if leaf.fIsUnsigned:
-            return numpy.dtype(numpy.uint8)
+        if leaf._fIsUnsigned:
+            return awkward.util.numpy.dtype(awkward.util.numpy.uint8)
         else:
-            return numpy.dtype(numpy.int8)
+            return awkward.util.numpy.dtype(awkward.util.numpy.int8)
     elif classname == "TLeafS":
-        if leaf.fIsUnsigned:
-            return numpy.dtype(numpy.uint16)
+        if leaf._fIsUnsigned:
+            return awkward.util.numpy.dtype(awkward.util.numpy.uint16)
         else:
-            return numpy.dtype(numpy.int16)
+            return awkward.util.numpy.dtype(awkward.util.numpy.int16)
     elif classname == "TLeafI":
-        if leaf.fIsUnsigned:
-            return numpy.dtype(numpy.uint32)
+        if leaf._fIsUnsigned:
+            return awkward.util.numpy.dtype(awkward.util.numpy.uint32)
         else:
-            return numpy.dtype(numpy.int32)
+            return awkward.util.numpy.dtype(awkward.util.numpy.int32)
     elif classname == "TLeafL":
-        if leaf.fIsUnsigned:
-            return numpy.dtype(numpy.uint64)
+        if leaf._fIsUnsigned:
+            return awkward.util.numpy.dtype(awkward.util.numpy.uint64)
         else:
-            return numpy.dtype(numpy.int64)
+            return awkward.util.numpy.dtype(awkward.util.numpy.int64)
     elif classname == "TLeafF":
-        return numpy.dtype(numpy.float32)
+        return awkward.util.numpy.dtype(awkward.util.numpy.float32)
     elif classname == "TLeafD":
-        return numpy.dtype(numpy.float64)
+        return awkward.util.numpy.dtype(awkward.util.numpy.float64)
     elif classname == "TLeafElement":
-        return _ftype2dtype(leaf.fType)
+        return _ftype2dtype(leaf._fType)
     else:
         raise _NotNumerical
 
 def interpret(branch, swapbytes=True):
     dims = ()
-    if len(branch.fLeaves) == 1:
-        m = interpret._titlehasdims.match(branch.fLeaves[0].fTitle)
+    if len(branch._fLeaves) == 1:
+        m = interpret._titlehasdims.match(branch._fLeaves[0]._fTitle)
         if m is not None:
-            dims = tuple(int(x) for x in re.findall(interpret._itemdimpattern, branch.fLeaves[0].fTitle))
+            dims = tuple(int(x) for x in re.findall(interpret._itemdimpattern, branch._fLeaves[0]._fTitle))
     else:
-        for leaf in branch.fLeaves:
-            if interpret._titlehasdims.match(leaf.fTitle):
+        for leaf in branch._fLeaves:
+            if interpret._titlehasdims.match(leaf._fTitle):
                 return None
 
     try:
-        if len(branch.fLeaves) == 1:
+        if len(branch._fLeaves) == 1:
             if isinstance(branch._streamer, uproot.rootio.TStreamerObjectPointer):
-                obj = branch._streamer.fTypeName.decode("utf-8")
+                obj = branch._streamer._fTypeName.decode("utf-8")
                 if obj.endswith("*"):
                     obj = obj[:-1]
                 if obj in branch._context.classes:
-                    return asobj(branch._context.classes.get(obj), branch._context)
+                    return asgenobj(branch._context.classes.get(obj), branch._context, 0)
 
-            if branch.fLeaves[0].__class__.__name__ == "TLeafElement" and branch.fLeaves[0].fType == uproot.const.kDouble32:
+            if branch._fLeaves[0].__class__.__name__ == "TLeafElement" and branch._fLeaves[0]._fType == uproot.const.kDouble32:
                 def transform(node, tofloat=True):
                     if isinstance(node, ast.AST):
                         if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load) and node.id == "pi":
@@ -155,12 +155,12 @@ def interpret(branch, swapbytes=True):
                         raise Exception(ast.dump(node))
 
                 try:
-                    left, right = branch._streamer.fTitle.index(b"["), branch._streamer.fTitle.index(b"]")
+                    left, right = branch._streamer._fTitle.index(b"["), branch._streamer._fTitle.index(b"]")
                 except (ValueError, AttributeError):
-                    out = asdtype(">f4", "f8", dims, dims)
+                    out = asdtype(awkward.util.numpy.dtype((">f4", dims)), awkward.util.numpy.dtype(("f8", dims)))
                 else:
                     try:
-                        spec = eval(compile(ast.Expression(transform(ast.parse(branch._streamer.fTitle[left : right + 1]).body[0].value)), repr(branch._streamer.fTitle), "eval"))
+                        spec = eval(compile(ast.Expression(transform(ast.parse(branch._streamer._fTitle[left : right + 1]).body[0].value)), repr(branch._streamer._fTitle), "eval"))
                         if len(spec) == 2:
                             low, high = spec
                             numbits = 32
@@ -171,52 +171,52 @@ def interpret(branch, swapbytes=True):
                         return None
                     
             else:
-                fromdtype = _leaf2dtype(branch.fLeaves[0]).newbyteorder(">")
+                fromdtype = _leaf2dtype(branch._fLeaves[0]).newbyteorder(">")
 
                 if swapbytes:
-                    out = asdtype(fromdtype, fromdtype.newbyteorder("="), dims, dims)
+                    out = asdtype(awkward.util.numpy.dtype((fromdtype, dims)), awkward.util.numpy.dtype((fromdtype.newbyteorder("="), dims)))
                 else:
-                    out = asdtype(fromdtype, fromdtype, dims, dims)
+                    out = asdtype(awkward.util.numpy.dtype((fromdtype, dims)), awkward.util.numpy.dtype((fromdtype, dims)))
 
-            if branch.fLeaves[0].fLeafCount is None:
+            if branch._fLeaves[0]._fLeafCount is None:
                 return out
             else:
                 return asjagged(out)
 
-        elif len(branch.fLeaves) > 1:
-            fromdtype = numpy.dtype([(str(leaf.fName.decode("ascii")), _leaf2dtype(leaf).newbyteorder(">")) for leaf in branch.fLeaves])
+        elif len(branch._fLeaves) > 1:
+            fromdtype = awkward.util.numpy.dtype([(str(leaf._fName.decode("ascii")), _leaf2dtype(leaf).newbyteorder(">")) for leaf in branch._fLeaves])
             if swapbytes:
-                todtype = numpy.dtype([(str(leaf.fName.decode("ascii")), _leaf2dtype(leaf).newbyteorder("=")) for leaf in branch.fLeaves])
+                todtype = awkward.util.numpy.dtype([(str(leaf._fName.decode("ascii")), _leaf2dtype(leaf).newbyteorder("=")) for leaf in branch._fLeaves])
             else:
                 todtype = fromdtype
 
-            if all(leaf.fLeafCount is None for leaf in branch.fLeaves):
-                return asdtype(fromdtype, todtype, dims, dims)
+            if all(leaf._fLeafCount is None for leaf in branch._fLeaves):
+                return astable(asdtype(awkward.util.numpy.dtype((fromdtype, dims)), awkward.util.numpy.dtype((todtype, dims))))
             else:
                 return None
 
     except _NotNumerical:
-        if len(branch.fLeaves) == 1:
-            if len(branch.fBranches) > 0 and all(len(x.fLeaves) == 1 and x.fLeaves[0].fLeafCount is branch.fLeaves[0] for x in branch.fBranches):
+        if len(branch._fLeaves) == 1:
+            if len(branch._fBranches) > 0 and all(len(x._fLeaves) == 1 and x._fLeaves[0]._fLeafCount is branch._fLeaves[0] for x in branch._fBranches):
                 return asdtype(">i4")
 
             if isinstance(branch._streamer, uproot.rootio.TStreamerObject):
-                obj = branch._streamer.fTypeName.decode("utf-8")
+                obj = branch._streamer._fTypeName.decode("utf-8")
                 if obj in branch._context.classes:
-                    return asobj(branch._context.classes.get(obj), branch._context)
+                    return asgenobj(branch._context.classes.get(obj), branch._context, 0)
                 
             if isinstance(branch._streamer, uproot.rootio.TStreamerInfo):
-                obj = branch._streamer.fName.decode("utf-8")
+                obj = branch._streamer._fName.decode("utf-8")
                 if obj in branch._context.classes:
-                    return asobj(branch._context.classes.get(obj), branch._context)
+                    return asgenobj(branch._context.classes.get(obj), branch._context, 0)
 
-            if branch.fLeaves[0].__class__.__name__ == "TLeafC":
-                return asstrings(skip_bytes=1, skip4_if_255=True)
+            if branch._fLeaves[0].__class__.__name__ == "TLeafC":
+                return asstring(skipbytes=1)
 
-            elif branch.fLeaves[0].__class__.__name__ == "TLeafElement":
+            elif branch._fLeaves[0].__class__.__name__ == "TLeafElement":
                 if isinstance(branch._streamer, uproot.rootio.TStreamerBasicType):
                     try:
-                        fromdtype = _ftype2dtype(branch._streamer.fType)
+                        fromdtype = _ftype2dtype(branch._streamer._fType)
                     except _NotNumerical:
                         pass
                     else:
@@ -224,17 +224,17 @@ def interpret(branch, swapbytes=True):
                             todtype = fromdtype.newbyteorder("=")
                         else:
                             todtype = fromdtype
-                        fromdims, remainder = divmod(branch._streamer.fSize, fromdtype.itemsize)
+                        fromdims, remainder = divmod(branch._streamer._fSize, fromdtype.itemsize)
                         if remainder == 0:
                             todims = dims
                             if reduce(lambda x, y: x * y, todims, 1) != fromdims:
                                 todims = (fromdims,)
-                            return asdtype(fromdtype, todtype, (fromdims,), todims)
+                            return asdtype(awkward.util.numpy.dtype((fromdtype, (fromdims,))), awkward.util.numpy.dtype((todtype, todims)))
 
                 if isinstance(branch._streamer, uproot.rootio.TStreamerBasicPointer):
-                    if uproot.const.kOffsetP < branch._streamer.fType < uproot.const.kOffsetP + 20:
+                    if uproot.const.kOffsetP < branch._streamer._fType < uproot.const.kOffsetP + 20:
                         try:
-                            fromdtype = _ftype2dtype(branch._streamer.fType - uproot.const.kOffsetP)
+                            fromdtype = _ftype2dtype(branch._streamer._fType - uproot.const.kOffsetP)
                         except _NotNumerical:
                             pass
                         else:
@@ -242,144 +242,156 @@ def interpret(branch, swapbytes=True):
                                 todtype = fromdtype.newbyteorder("=")
                             else:
                                 todtype = fromdtype
-                            if len(branch.fLeaves) == 1 and branch.fLeaves[0].fLeafCount is not None:
-                                return asjagged(asdtype(fromdtype, todtype), skip_bytes=1)
+                            if len(branch._fLeaves) == 1 and branch._fLeaves[0]._fLeafCount is not None:
+                                return asjagged(asdtype(fromdtype, todtype), skipbytes=1)
                             
                 if isinstance(branch._streamer, uproot.rootio.TStreamerString):
-                    return asstrings(skip_bytes=1, skip4_if_255=True)
+                    return asstring(skipbytes=1)
 
                 if isinstance(branch._streamer, uproot.rootio.TStreamerSTLstring):
-                    return asstrings(skip_bytes=7, skip4_if_255=True)   # FIXME: not sure about skip4_if_255
+                    return asstring(skipbytes=7)
 
-                if getattr(branch._streamer, "fType", None) == uproot.const.kCharStar:
-                    return asstrings(skip_bytes=4, skip4_if_255=False)
+                if getattr(branch._streamer, "_fType", None) == uproot.const.kCharStar:
+                    return asstring(skipbytes=4)
 
-                if getattr(branch._streamer, "fSTLtype", None) == uproot.const.kSTLvector:
+                if getattr(branch._streamer, "_fSTLtype", None) == uproot.const.kSTLvector:
                     try:
-                        fromdtype = _ftype2dtype(branch._streamer.fCtype)
+                        fromdtype = _ftype2dtype(branch._streamer._fCtype)
                         if swapbytes:
                             ascontent = asdtype(fromdtype, fromdtype.newbyteorder("="))
                         else:
                             ascontent = asdtype(fromdtype, fromdtype)
-                        return asstlvector(ascontent)
+                        return asjagged(ascontent, skipbytes=10)
 
                     except _NotNumerical:
                         if branch._vecstreamer is not None:
                             try:
                                 streamerClass = branch._vecstreamer.pyclass
                             except AttributeError:
-                                obj = branch._vecstreamer.fName.decode("utf-8")
+                                obj = branch._vecstreamer._fName.decode("utf-8")
                                 if obj in branch._context.classes:
                                     streamerClass = branch._context.classes.get(obj)
-                            return asobjs(streamerClass, branch._context)
+                            try:
+                                recarray = streamerClass._recarray_dtype()
+                            except (AttributeError, ValueError):
+                                return asgenobj(STLVector(streamerClass), branch._context, 6)
+                            else:
+                                if streamerClass._methods is None:
+                                    return asjagged(astable(asdtype(recarray)), skipbytes=10)
+                                else:
+                                    return asjagged(asobj(astable(asdtype(recarray)), streamerClass._methods), skipbytes=10, cls=streamerClass._methods)
 
-                if hasattr(branch._streamer, "fTypeName"):
-                    m = re.match(b"bitset<([1-9][0-9]*)>", branch._streamer.fTypeName)
+                if hasattr(branch._streamer, "_fTypeName"):
+                    m = re.match(b"bitset<([1-9][0-9]*)>", branch._streamer._fTypeName)
                     if m is not None:
                         return asstlbitset(int(m.group(1)))
 
-                if getattr(branch._streamer, "fTypeName", None) == b"vector<bool>":
-                    return asstlvector(asdtype(numpy.bool_))
-                elif getattr(branch._streamer, "fTypeName", None) == b"vector<char>":
-                    return asstlvector(asdtype("i1"))
-                elif getattr(branch._streamer, "fTypeName", None) == b"vector<unsigned char>":
-                    return asstlvector(asdtype("u1"))
-                elif getattr(branch._streamer, "fTypeName", None) == b"vector<short>":
-                    return asstlvector(asdtype("i2"))
-                elif getattr(branch._streamer, "fTypeName", None) == b"vector<unsigned short>":
-                    return asstlvector(asdtype("u2"))
-                elif getattr(branch._streamer, "fTypeName", None) == b"vector<int>":
-                    return asstlvector(asdtype("i4"))
-                elif getattr(branch._streamer, "fTypeName", None) == b"vector<unsigned int>":
-                    return asstlvector(asdtype("u4"))
-                elif getattr(branch._streamer, "fTypeName", None) == b"vector<long>":
-                    return asstlvector(asdtype("i8"))
-                elif getattr(branch._streamer, "fTypeName", None) == b"vector<unsigned long>":
-                    return asstlvector(asdtype("u8"))
-                elif getattr(branch._streamer, "fTypeName", None) == b"vector<float>":
-                    return asstlvector(asdtype("f4"))
-                elif getattr(branch._streamer, "fTypeName", None) == b"vector<double>":
-                    return asstlvector(asdtype("f8"))
-                elif getattr(branch._streamer, "fTypeName", None) == b"vector<string>":
-                    return asstlvecstrings()
+                if getattr(branch._streamer, "_fTypeName", None) == b"vector<bool>":
+                    return asjagged(asdtype(awkward.util.numpy.bool_), skipbytes=10)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<char>":
+                    return asjagged(asdtype("i1"), skipbytes=10)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<unsigned char>":
+                    return asjagged(asdtype("u1"), skipbytes=10)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<short>":
+                    return asjagged(asdtype("i2"), skipbytes=10)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<unsigned short>":
+                    return asjagged(asdtype("u2"), skipbytes=10)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<int>":
+                    return asjagged(asdtype("i4"), skipbytes=10)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<unsigned int>":
+                    return asjagged(asdtype("u4"), skipbytes=10)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<long>":
+                    return asjagged(asdtype("i8"), skipbytes=10)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<unsigned long>":
+                    return asjagged(asdtype("u8"), skipbytes=10)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<float>":
+                    return asjagged(asdtype("f4"), skipbytes=10)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<double>":
+                    return asjagged(asdtype("f8"), skipbytes=10)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<string>":
+                    return asgenobj(STLVector(STLString()), branch._context, 6)
 
-                if getattr(branch._streamer, "fTypeName", None) == b"vector<vector<bool> >":
-                    return asstlvectorvector(numpy.bool_)
-                elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<char> >":
-                    return asstlvectorvector("i1")
-                elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<unsigned char> >":
-                    return asstlvectorvector("u1")
-                elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<short> >":
-                    return asstlvectorvector(">i2")
-                elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<unsigned short> >":
-                    return asstlvectorvector(">u2")
-                elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<int> >":
-                    return asstlvectorvector(">i4")
-                elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<unsigned int> >":
-                    return asstlvectorvector(">u4")
-                elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<long> >":
-                    return asstlvectorvector(">i8")
-                elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<unsigned long> >":
-                    return asstlvectorvector(">u8")
-                elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<float> >":
-                    return asstlvectorvector(">f4")
-                elif getattr(branch._streamer, "fTypeName", None) == b"vector<vector<double> >":
-                    return asstlvectorvector(">f8")
+                if getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<bool> >":
+                    return asgenobj(STLVector(STLVector(asdtype(awkward.util.numpy.bool_))), branch._context, 6)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<char> >":
+                    return asgenobj(STLVector(STLVector(asdtype("i1"))), branch._context, 6)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<unsigned char> >":
+                    return asgenobj(STLVector(STLVector(asdtype("u1"))), branch._context, 6)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<short> >":
+                    return asgenobj(STLVector(STLVector(asdtype(">i2"))), branch._context, 6)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<unsigned short> >":
+                    return asgenobj(STLVector(STLVector(asdtype(">u2"))), branch._context, 6)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<int> >":
+                    return asgenobj(STLVector(STLVector(asdtype(">i4"))), branch._context, 6)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<unsigned int> >":
+                    return asgenobj(STLVector(STLVector(asdtype(">u4"))), branch._context, 6)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<long> >":
+                    return asgenobj(STLVector(STLVector(asdtype(">i8"))), branch._context, 6)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<unsigned long> >":
+                    return asgenobj(STLVector(STLVector(asdtype(">u8"))), branch._context, 6)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<float> >":
+                    return asgenobj(STLVector(STLVector(asdtype(">f4"))), branch._context, 6)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<double> >":
+                    return asgenobj(STLVector(STLVector(asdtype(">f8"))), branch._context, 6)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<string> >":
+                    return asgenobj(STLVector(STLVector(STLString())), branch._context, 6)
 
-                m = re.match(b"bitset<([1-9][0-9]*)>", branch.fClassName)
+                m = re.match(b"bitset<([1-9][0-9]*)>", branch._fClassName)
                 if m is not None:
                     return asstlbitset(int(m.group(1)))
 
-                if branch.fClassName == b"string":
-                    return asstrings()
+                if branch._fClassName == b"string":
+                    return asstring(skipbytes=1)
 
-                if branch.fClassName == b"vector<bool>":
-                    return asstlvector(asdtype(numpy.bool_))
-                elif branch.fClassName == b"vector<char>":
-                    return asstlvector(asdtype("i1"))
-                elif branch.fClassName == b"vector<unsigned char>":
-                    return asstlvector(asdtype("u1"))
-                elif branch.fClassName == b"vector<short>":
-                    return asstlvector(asdtype("i2"))
-                elif branch.fClassName == b"vector<unsigned short>":
-                    return asstlvector(asdtype("u2"))
-                elif branch.fClassName == b"vector<int>":
-                    return asstlvector(asdtype("i4"))
-                elif branch.fClassName == b"vector<unsigned int>":
-                    return asstlvector(asdtype("u4"))
-                elif branch.fClassName == b"vector<long>":
-                    return asstlvector(asdtype("i8"))
-                elif branch.fClassName == b"vector<unsigned long>":
-                    return asstlvector(asdtype("u8"))
-                elif branch.fClassName == b"vector<float>":
-                    return asstlvector(asdtype("f4"))
-                elif branch.fClassName == b"vector<double>":
-                    return asstlvector(asdtype("f8"))
-                elif branch.fClassName == b"vector<string>":
-                    return asstlvecstrings()
+                if branch._fClassName == b"vector<bool>":
+                    return asjagged(asdtype(awkward.util.numpy.bool_), skipbytes=10)
+                elif branch._fClassName == b"vector<char>":
+                    return asjagged(asdtype("i1"), skipbytes=10)
+                elif branch._fClassName == b"vector<unsigned char>":
+                    return asjagged(asdtype("u1"), skipbytes=10)
+                elif branch._fClassName == b"vector<short>":
+                    return asjagged(asdtype("i2"), skipbytes=10)
+                elif branch._fClassName == b"vector<unsigned short>":
+                    return asjagged(asdtype("u2"), skipbytes=10)
+                elif branch._fClassName == b"vector<int>":
+                    return asjagged(asdtype("i4"), skipbytes=10)
+                elif branch._fClassName == b"vector<unsigned int>":
+                    return asjagged(asdtype("u4"), skipbytes=10)
+                elif branch._fClassName == b"vector<long>":
+                    return asjagged(asdtype("i8"), skipbytes=10)
+                elif branch._fClassName == b"vector<unsigned long>":
+                    return asjagged(asdtype("u8"), skipbytes=10)
+                elif branch._fClassName == b"vector<float>":
+                    return asjagged(asdtype("f4"), skipbytes=10)
+                elif branch._fClassName == b"vector<double>":
+                    return asjagged(asdtype("f8"), skipbytes=10)
+                elif branch._fClassName == b"vector<string>":
+                    return asgenobj(STLVector(STLString()), branch._context, 6)
 
-                if branch.fClassName == b"vector<vector<bool> >":
-                    return asstlvectorvector(numpy.bool_)
-                elif branch.fClassName == b"vector<vector<char> >":
-                    return asstlvectorvector("i1")
-                elif branch.fClassName == b"vector<vector<unsigned char> >":
-                    return asstlvectorvector("u1")
-                elif branch.fClassName == b"vector<vector<short> >":
-                    return asstlvectorvector(">i2")
-                elif branch.fClassName == b"vector<vector<unsigned short> >":
-                    return asstlvectorvector(">u2")
-                elif branch.fClassName == b"vector<vector<int> >":
-                    return asstlvectorvector(">i4")
-                elif branch.fClassName == b"vector<vector<unsigned int> >":
-                    return asstlvectorvector(">u4")
-                elif branch.fClassName == b"vector<vector<long> >":
-                    return asstlvectorvector(">i8")
-                elif branch.fClassName == b"vector<vector<unsigned long> >":
-                    return asstlvectorvector(">u8")
-                elif branch.fClassName == b"vector<vector<float> >":
-                    return asstlvectorvector(">f4")
-                elif branch.fClassName == b"vector<vector<double> >":
-                    return asstlvectorvector(">f8")
+                if branch._fClassName == b"vector<vector<bool> >":
+                    return asgenobj(STLVector(STLVector(asdtype(awkward.util.numpy.bool_))), branch._context, 6)
+                elif branch._fClassName == b"vector<vector<char> >":
+                    return asgenobj(STLVector(STLVector(asdtype("i1"))), branch._context, 6)
+                elif branch._fClassName == b"vector<vector<unsigned char> >":
+                    return asgenobj(STLVector(STLVector(asdtype("u1"))), branch._context, 6)
+                elif branch._fClassName == b"vector<vector<short> >":
+                    return asgenobj(STLVector(STLVector(asdtype(">i2"))), branch._context, 6)
+                elif branch._fClassName == b"vector<vector<unsigned short> >":
+                    return asgenobj(STLVector(STLVector(asdtype(">u2"))), branch._context, 6)
+                elif branch._fClassName == b"vector<vector<int> >":
+                    return asgenobj(STLVector(STLVector(asdtype(">i4"))), branch._context, 6)
+                elif branch._fClassName == b"vector<vector<unsigned int> >":
+                    return asgenobj(STLVector(STLVector(asdtype(">u4"))), branch._context, 6)
+                elif branch._fClassName == b"vector<vector<long> >":
+                    return asgenobj(STLVector(STLVector(asdtype(">i8"))), branch._context, 6)
+                elif branch._fClassName == b"vector<vector<unsigned long> >":
+                    return asgenobj(STLVector(STLVector(asdtype(">u8"))), branch._context, 6)
+                elif branch._fClassName == b"vector<vector<float> >":
+                    return asgenobj(STLVector(STLVector(asdtype(">f4"))), branch._context, 6)
+                elif branch._fClassName == b"vector<vector<double> >":
+                    return asgenobj(STLVector(STLVector(asdtype(">f8"))), branch._context, 6)
+                elif branch._fClassName == b"vector<vector<string> >":
+                    return asgenobj(STLVector(STLVector(STLString())), branch._context, 6)
 
         return None
 
