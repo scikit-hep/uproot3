@@ -44,6 +44,7 @@ from uproot.interp.objects import astable
 from uproot.interp.objects import asobj
 from uproot.interp.objects import asgenobj
 from uproot.interp.objects import asstring
+from uproot.interp.objects import SimpleArray
 from uproot.interp.objects import STLVector
 from uproot.interp.objects import STLString
 
@@ -112,12 +113,39 @@ def _leaf2dtype(leaf):
     else:
         raise _NotNumerical
 
+def _obj_or_genobj(streamerClass, branch, isjagged):
+    try:
+        recarray = streamerClass._recarray_dtype()
+
+    except (AttributeError, ValueError):
+        if isjagged:
+            return asgenobj(SimpleArray(streamerClass), branch._context, 0)
+        else:
+            return asgenobj(streamerClass, branch._context, 0)
+
+    else:
+        if streamerClass._methods is None:
+            return astable(asdtype(recarray))
+        else:
+            if isjagged:
+                if streamerClass._methods is None:
+                    return asjagged(astable(asdtype(recarray)))
+                else:
+                    return asjagged(asobj(astable(asdtype(recarray)), streamerClass._methods), cls=streamerClass._methods)
+            else:
+                if streamerClass._methods is None:
+                    return astable(asdtype(recarray))
+                else:
+                    return asobj(astable(asdtype(recarray)), streamerClass._methods)
+
 def interpret(branch, swapbytes=True):
-    dims = ()
+    dims, isjagged = (), False
     if len(branch._fLeaves) == 1:
         m = interpret._titlehasdims.match(branch._fLeaves[0]._fTitle)
         if m is not None:
             dims = tuple(int(x) for x in re.findall(interpret._itemdimpattern, branch._fLeaves[0]._fTitle))
+            if any(interpret._itemdimpattern.match(x) is None for x in re.findall(interpret._itemanypattern, branch._fLeaves[0]._fTitle)):
+                isjagged = True
     else:
         for leaf in branch._fLeaves:
             if interpret._titlehasdims.match(leaf._fTitle):
@@ -130,7 +158,7 @@ def interpret(branch, swapbytes=True):
                 if obj.endswith("*"):
                     obj = obj[:-1]
                 if obj in branch._context.classes:
-                    return asgenobj(branch._context.classes.get(obj), branch._context, 0)
+                    return _obj_or_genobj(branch._context.classes.get(obj), branch, isjagged)
 
             if branch._fLeaves[0].__class__.__name__ == "TLeafElement" and branch._fLeaves[0]._fType == uproot.const.kDouble32:
                 def transform(node, tofloat=True):
@@ -203,12 +231,12 @@ def interpret(branch, swapbytes=True):
             if isinstance(branch._streamer, uproot.rootio.TStreamerObject):
                 obj = branch._streamer._fTypeName.decode("utf-8")
                 if obj in branch._context.classes:
-                    return asgenobj(branch._context.classes.get(obj), branch._context, 0)
+                    return _obj_or_genobj(branch._context.classes.get(obj), branch, isjagged)
                 
             if isinstance(branch._streamer, uproot.rootio.TStreamerInfo):
                 obj = branch._streamer._fName.decode("utf-8")
                 if obj in branch._context.classes:
-                    return asgenobj(branch._context.classes.get(obj), branch._context, 0)
+                    return _obj_or_genobj(branch._context.classes.get(obj), branch, isjagged)
 
             if branch._fLeaves[0].__class__.__name__ == "TLeafC":
                 return asstring(skipbytes=1)
@@ -397,3 +425,4 @@ def interpret(branch, swapbytes=True):
 
 interpret._titlehasdims = re.compile(br"^([^\[\]]+)(\[[^\[\]]+\])+")
 interpret._itemdimpattern = re.compile(br"\[([1-9][0-9]*)\]")
+interpret._itemanypattern = re.compile(br"\[(.*)\]")

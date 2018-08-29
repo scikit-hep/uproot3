@@ -122,6 +122,10 @@ class asdtype(_asnumeric):
         else:
             self.todtype = awkward.util.numpy.dtype(todtype).newbyteorder("=")
 
+    @property
+    def itemsize(self):
+        return self.fromdtype.itemsize
+
     def to(self, todtype=None, todims=None):
         if todtype is None:
             dtype, shape = _dtypeshape(self.todtype)

@@ -41,6 +41,24 @@ import uproot.interp.jagged
 class ObjectArray(awkward.ObjectArray):
     pass
 
+class SimpleArray(object):
+    def __init__(self, cls):
+        self.cls = cls
+
+    def __repr__(self):
+        if isinstance(self.cls, type):
+            return "SimpleArray({0})".format(self.cls.__name__)
+        else:
+            return "SimpleArray({0})".format(repr(self.cls))
+
+    def read(self, source, cursor, context, parent):
+        out = []
+        while True:
+            try:
+                out.append(self.cls.read(source, cursor, context, parent))
+            except IndexError:
+                return out
+
 class STLVector(object):
     def __init__(self, cls):
         self.cls = cls
@@ -87,6 +105,10 @@ class astable(uproot.interp.interp.Interpretation):
         if not isinstance(content, uproot.interp.numerical.asdtype) or content.todtype.names is None or len(content.todtype.names) == 0:
             raise TypeError("astable must be given a recarray dtype")
         self.content = content
+
+    @property
+    def itemsize(self):
+        return self.content.itemsize
 
     def __repr__(self):
         dtype, shape = uproot.interp.numerical._dtypeshape(self.content.todtype)
@@ -148,6 +170,10 @@ class asobj(uproot.interp.interp.Interpretation):
     def __init__(self, content, cls):
         self.content = content
         self.cls = cls
+
+    @property
+    def itemsize(self):
+        return self.content.itemsize
 
     def __repr__(self):
         return "asobj(<{0}.{1}>)".format(self.cls.__module__, self.cls.__name__)

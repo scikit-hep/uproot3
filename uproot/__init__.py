@@ -46,6 +46,7 @@ from uproot.interp.objects import astable
 from uproot.interp.objects import asobj
 from uproot.interp.objects import asgenobj
 from uproot.interp.objects import asstring
+from uproot.interp.objects import SimpleArray
 from uproot.interp.objects import STLVector
 from uproot.interp.objects import STLString
 asdebug = asjagged(asdtype("u1"))

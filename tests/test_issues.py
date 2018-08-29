@@ -150,8 +150,8 @@ class Test(unittest.TestCase):
 
     def test_issue74(self):
         t = uproot.open("tests/samples/issue74.root")["Events"]
-        self.assertTrue(all(isinstance(x, uproot_methods.classes.TVector3.Methods) for x in t.array("bees.xyzPosition")))
-        self.assertEqual(t.array("bees.xyzPosition")[0], uproot_methods.classes.TVector3.TVector3(1.0, 2.0, -1.0))
+        self.assertTrue(all(isinstance(x[0], uproot_methods.classes.TVector3.Methods) for x in t.array("bees.xyzPosition")))
+        self.assertEqual(t.array("bees.xyzPosition")[0][0], uproot_methods.classes.TVector3.TVector3(1.0, 2.0, -1.0))
 
     def test_issue76(self):
         t = uproot.open("tests/samples/issue76.root")["Events"]

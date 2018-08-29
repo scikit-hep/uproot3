@@ -98,7 +98,7 @@ class asjagged(uproot.interp.interp.Interpretation):
             return JaggedArray.fromoffsets([0], self.content.fromroot(data, None, local_entrystart, local_entrystop))
         else:
             if self.skipbytes == 0:
-                offsets = _destructive_divide(byteoffsets, self.content.fromdtype.itemsize)
+                offsets = _destructive_divide(byteoffsets, self.content.itemsize)
                 starts  = offsets[local_entrystart     : local_entrystop    ]
                 stops   = offsets[local_entrystart + 1 : local_entrystop + 1]
                 content = self.content.fromroot(data, None, starts[0], stops[-1])
