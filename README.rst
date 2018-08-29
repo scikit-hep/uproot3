@@ -52,13 +52,13 @@ The following are installed automatically when you install uproot with pip:
 - `uproot-methods <https://pypi.org/project/uproot-methods>`__ for histogram and physics object methods, such as TLorentzVector (`part of Scikit-HEP <https://github.com/scikit-hep/uproot-methods>`__)
 - `cachetools <https://pypi.org/project/cachetools>`__ for dict-like caches (replaces uproot 2's custom caches)
 - `lz4 <https://pypi.org/project/lz4>`__ to read lz4-compressed ROOT files (now ROOT's default compression method)
-- `lzma <https://anaconda.org/conda-forge/backports.lzma>`__ to read lzma-compressed ROOT files (part of Python 3's standard library)
 
 Optional dependencies:
 ======================
 
-- `XRootD <https://anaconda.org/nlesc/xrootd>`__ (4+ for pyxrootd) to access remote files
-- `futures <https://pypi.python.org/pypi/futures>`__ for parallel processing in Python 2 (part of Python 3's standard library)
+- `lzma <https://anaconda.org/conda-forge/backports.lzma>`__ to read lzma-compressed ROOT files in Python 2 (not needed for Python 3 or if your ROOT files aren't lzma-compressed)
+- `futures <https://pypi.python.org/pypi/futures>`__ for parallel processing in Python 2 (not needed for Python 3 or if you don't plan to use parallel processing)
+- `XRootD <https://anaconda.org/nlesc/xrootd>`__ to access remote files; get version 4 or later for pyxrootd to be included in the package (unfortunately, you have to compile it manually with CMake)
 
 **Reminder: you do not need C++ ROOT to run uproot.**
 
