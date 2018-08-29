@@ -159,7 +159,7 @@ class asjagged(uproot.interp.interp.Interpretation):
         out.leafcount = leafcount
         if self.cls is not None and self.cls._arraymethods is not None:
             out.__class__ = type("JaggedArray", (JaggedArray, self.cls._arraymethods), {})
-            out.generator = self.cls
-            out.args = ()
-            out.kwargs = {}
+            out._generator = self.cls
+            out._args = ()
+            out._kwargs = {}
         return out
