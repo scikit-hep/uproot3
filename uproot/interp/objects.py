@@ -38,9 +38,6 @@ import uproot.interp.interp
 import uproot.interp.numerical
 import uproot.interp.jagged
 
-class ObjectArray(awkward.ObjectArray):
-    pass
-
 class SimpleArray(object):
     def __init__(self, cls):
         self.cls = cls
@@ -235,7 +232,7 @@ class _variable(uproot.interp.interp.Interpretation):
         return self.generator
 
     def empty(self):
-        return ObjectArray(self.content.empty(), self.generator, *self.args, **self.kwargs)
+        return awkward.ObjectArray(self.content.empty(), self.generator, *self.args, **self.kwargs)
 
     def compatible(self, other):
         return isinstance(other, _variable) and self.content.compatible(other) and self.generator == other.generator and self.args == other.args and self.kwargs == other.kwargs
@@ -259,7 +256,7 @@ class _variable(uproot.interp.interp.Interpretation):
         return self.content.clip(destination, itemstart, itemstop, entrystart, entrystop)
 
     def finalize(self, destination, branch):
-        return ObjectArray(self.content.finalize(destination, branch), self.generator, *self.args, **self.kwargs)
+        return awkward.ObjectArray(self.content.finalize(destination, branch), self.generator, *self.args, **self.kwargs)
 
 class asgenobj(_variable):
     # makes __doc__ attribute mutable before Python 3.3
