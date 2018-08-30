@@ -230,12 +230,16 @@ def interpret(branch, swapbytes=True):
 
             if isinstance(branch._streamer, uproot.rootio.TStreamerObject):
                 obj = branch._streamer._fTypeName.decode("utf-8")
-                if obj in branch._context.classes:
+                if obj == "string":
+                    return asgenobj(STLString(), branch._context, 0)
+                elif obj in branch._context.classes:
                     return _obj_or_genobj(branch._context.classes.get(obj), branch, isjagged)
                 
             if isinstance(branch._streamer, uproot.rootio.TStreamerInfo):
                 obj = branch._streamer._fName.decode("utf-8")
-                if obj in branch._context.classes:
+                if obj == "string":
+                    return asgenobj(STLString(), branch._context, 0)
+                elif obj in branch._context.classes:
                     return _obj_or_genobj(branch._context.classes.get(obj), branch, isjagged)
 
             if branch._fLeaves[0].__class__.__name__ == "TLeafC":
