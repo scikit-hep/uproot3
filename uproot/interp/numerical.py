@@ -135,6 +135,7 @@ class asdtype(_asnumeric):
             dtype, shape = _dtypeshape(todtype)
             if todims is not None:
                 shape = todims + shape
+
         return asdtype(self.fromdtype, awkward.util.numpy.dtype((dtype, shape)))
 
     def toarray(self, array):

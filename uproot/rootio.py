@@ -1107,6 +1107,7 @@ class ROOTStreamedObject(ROOTObject):
         dtypesin = cls._recarray()
         dtypesout = []
         used = set()
+        allhidden = True
         for name, dtype in dtypesin:
             if name in used:
                 i = 2
@@ -1118,6 +1119,11 @@ class ROOTStreamedObject(ROOTObject):
 
             dtypesout.append((name, dtype))
             used.add(name)
+            if not name.startswith(" "):
+                allhidden = False
+
+        if allhidden:
+            raise ValueError("not a recarray")
 
         return numpy.dtype(dtypesout)
 
