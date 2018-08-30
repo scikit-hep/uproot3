@@ -299,6 +299,10 @@ def interpret(branch, swapbytes=True):
                                 obj = branch._vecstreamer._fName.decode("utf-8")
                                 if obj in branch._context.classes:
                                     streamerClass = branch._context.classes.get(obj)
+
+                            if streamerClass.__name__ == "string":
+                                return asgenobj(STLVector(STLString()), branch._context, 6)
+
                             try:
                                 recarray = streamerClass._recarray_dtype()
                             except (AttributeError, ValueError):
