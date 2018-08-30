@@ -40,6 +40,14 @@ Install uproot like any other Python package:
 
 or similar (use ``sudo``, ``--user``, ``virtualenv``, or ``conda`` if you wish).
 
+**New!** uproot 3 beta versions are available, but you have to specially ask for them with pip. For instance, try
+
+.. code-block:: bash
+
+    pip install -U uproot>=3.0.0b2
+
+Be sure to set the ``-U`` option to keep dependencies up to date. Some of uproot 3's new functionality is in external libraries (`awkward-array <https://github.com/scikit-hep/awkward-array>`__ and `uproot-methods <https://github.com/scikit-hep/uproot-methods>`__).
+
 Strict dependencies:
 ====================
 
@@ -81,10 +89,12 @@ Tutorial
 * `Parallel processing <#parallel-processing>`__
 * `Connectors to other packages <#connectors-to-other-packages>`__
 
-Interactive Tutorial
-====================
+Interactive Tutorials
+=====================
 
 Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Ftutorial.ipynb>`__ on Binder.
+
+**New!** Try the `uproot 3 tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Fversion-3-features.ipynb>`__ to see the new jagged arrays and write support, also on Binder.
 
 Reference documentation
 =======================
