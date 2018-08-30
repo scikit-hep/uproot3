@@ -131,7 +131,7 @@ def _obj_or_genobj(streamerClass, branch, isjagged):
                 if streamerClass._methods is None:
                     return asjagged(astable(asdtype(recarray)))
                 else:
-                    return asjagged(asobj(astable(asdtype(recarray)), streamerClass._methods), cls=streamerClass._methods)
+                    return asjagged(asobj(astable(asdtype(recarray)), streamerClass._methods))
             else:
                 if streamerClass._methods is None:
                     return astable(asdtype(recarray))
@@ -315,7 +315,7 @@ def interpret(branch, swapbytes=True):
                                 if streamerClass._methods is None:
                                     return asjagged(astable(asdtype(recarray)), skipbytes=10)
                                 else:
-                                    return asjagged(asobj(astable(asdtype(recarray)), streamerClass._methods), skipbytes=10, cls=streamerClass._methods)
+                                    return asjagged(asobj(astable(asdtype(recarray)), streamerClass._methods), skipbytes=10)
 
                 if hasattr(branch._streamer, "_fTypeName"):
                     m = re.match(b"bitset<([1-9][0-9]*)>", branch._streamer._fTypeName)

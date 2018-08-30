@@ -59,10 +59,9 @@ class asjagged(uproot.interp.interp.Interpretation):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (uproot.interp.interp.Interpretation.__metaclass__,), {})
 
-    def __init__(self, content, skipbytes=0, cls=None):
+    def __init__(self, content, skipbytes=0):
         self.content = content
         self.skipbytes = skipbytes
-        self.cls = cls
 
     def __repr__(self):
         return "asjagged({0})".format(repr(self.content))
@@ -74,7 +73,7 @@ class asjagged(uproot.interp.interp.Interpretation):
 
     @property
     def identifier(self):
-        return "asjagged({0}{1}{2})".format(repr(self.content), "" if self.skipbytes == 0 else ",{0}".format(self.skipbytes), "" if self.cls == None else ",{0}.{1}".format(self.cls.__module__, self.cls.__name__))
+        return "asjagged({0}{1})".format(repr(self.content), "" if self.skipbytes == 0 else ",{0}".format(self.skipbytes))
 
     @property
     def type(self):
@@ -155,10 +154,6 @@ class asjagged(uproot.interp.interp.Interpretation):
         if len(branch._fLeaves) == 1:
             leafcount = branch._fLeaves[0]._fLeafCount
 
-        if self.cls is None or self.cls._arraymethods is None:
-            out = awkward.JaggedArray.fromcounts(destination.counts, content)
-        else:
-            out = awkward.Methods.mixin(self.cls._arraymethods, awkward.JaggedArray).fromcounts(destination.counts, content)
-
+        out = awkward.Methods.maybemixin(type(content), awkward.JaggedArray).fromcounts(destination.counts, content)
         out.leafcount = leafcount
         return out
