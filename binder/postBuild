@@ -3,4 +3,5 @@ wget http://scikit-hep.org/uproot/examples/HZZ.root -O binder/HZZ.root
 wget http://scikit-hep.org/uproot/examples/nesteddirs.root -O binder/nesteddirs.root
 wget http://scikit-hep.org/uproot/examples/foriter.root -O binder/foriter.root
 wget http://scikit-hep.org/uproot/examples/histograms.root -O binder/histograms.root
+wget http://scikit-hep.org/uproot/examples/HZZ-objects.root -O binder/HZZ-objects.root
 pip install pandas

@@ -279,14 +279,14 @@ as well as the raw data that was read from the file (C++ private members that st
 
 .. code-block:: python
 
-    >>> [x for x in dir(tree) if x.startswith("f")]
-    ['fAliases', 'fAutoFlush', 'fAutoSave', 'fBranchRef', 'fBranches', 'fClusterRangeEnd',
-     'fClusterSize', 'fDefaultEntryOffsetLen', 'fEntries', 'fEstimate', 'fFillColor',
-     'fFillStyle', 'fFlushedBytes', 'fFriends', 'fIndex', 'fIndexValues', 'fLeaves',
-     'fLineColor', 'fLineStyle', 'fLineWidth', 'fMarkerColor', 'fMarkerSize',
-     'fMarkerStyle', 'fMaxEntries', 'fMaxEntryLoop', 'fMaxVirtualSize', 'fNClusterRange',
-     'fName', 'fSavedBytes', 'fScanField', 'fTimerInterval', 'fTitle', 'fTotBytes',
-     'fTreeIndex', 'fUpdate', 'fUserInfo', 'fWeight', 'fZipBytes', 'filter']
+    >>> [x for x in dir(tree) if x.startswith("_f")]
+    ['_fAliases', '_fAutoFlush', '_fAutoSave', '_fBranchRef', '_fBranches', '_fClusterRangeEnd',
+     '_fClusterSize', '_fDefaultEntryOffsetLen', '_fEntries', '_fEstimate', '_fFillColor',
+     '_fFillStyle', '_fFlushedBytes', '_fFriends', '_fIndex', '_fIndexValues', '_fLeaves',
+     '_fLineColor', '_fLineStyle', '_fLineWidth', '_fMarkerColor', '_fMarkerSize',
+     '_fMarkerStyle', '_fMaxEntries', '_fMaxEntryLoop', '_fMaxVirtualSize', '_fNClusterRange',
+     '_fName', '_fSavedBytes', '_fScanField', '_fTimerInterval', '_fTitle', '_fTotBytes',
+     '_fTreeIndex', '_fUpdate', '_fUserInfo', '_fWeight', '_fZipBytes', '_filter']
 
 To get an overview of what arrays are available in the `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__ and whether uproot can read it, call ``show()``.
 
@@ -378,7 +378,7 @@ An `Interpretation <http://uproot.readthedocs.io/en/latest/interpretation.html>`
                          91., 92., 93., 94., 95., 96., 97., 98., 99.])}
 
     # but we could try reading them as little-endian, 4-byte integers (non-sensically)
-    >>> tree.arrays({"Float32": uproot.interp.asdtype("<i4")})
+    >>> tree.arrays({"Float32": uproot.asdtype("<i4")})
     {b'Float32': array([    0, 32831,    64, 16448, 32832, 41024, 49216, 57408,    65,
                          4161,  8257, 12353, 16449, 20545, 24641, 28737, 32833, 34881,
                         36929, 38977, 41025, 43073, 45121, 47169, 49217, 51265, 53313,
@@ -396,7 +396,8 @@ Some reinterpretations are useful, though:
 
 .. code-block:: python
 
-    >>> tree.arrays({"Float64": uproot.interp.asdtype(">f8", todims=(5, 5))})
+    >>> import numpy
+    >>> tree.arrays({"Float64": uproot.asdtype(numpy.dtype((">f8", (5, 5))))})
     {b'Float64': array([[[ 0.,  1.,  2.,  3.,  4.],
                          [ 5.,  6.,  7.,  8.,  9.],
                          [10., 11., 12., 13., 14.],
@@ -425,7 +426,7 @@ In particular, replacing ``asdtype`` with ``asarray`` lets you instruct uproot t
     >>> import numpy
     >>> myarray = numpy.zeros(200)   # allocate 200 zeros
 
-    >>> tree.arrays({"Float64": uproot.interp.asarray(">f8", myarray)})
+    >>> tree.arrays({"Float64": uproot.asarray(">f8", myarray)})
     {b'Float64': array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11., 12.,
                         13., 14., 15., 16., 17., 18., 19., 20., 21., 22., 23., 24., 25.,
                         26., 27., 28., 29., 30., 31., 32., 33., 34., 35., 36., 37., 38.,
@@ -762,9 +763,7 @@ But you can also take advantage of the fact that `JaggedArray <http://uproot.rea
 
 .. code-block:: python
 
-    >>> import numpy
-    >>> pcontent = numpy.sqrt(px.content**2 + py.content**2 + pz.content**2)
-    >>> p = uproot.interp.jagged.JaggedArray(pcontent, px.starts, px.stops)
+    >>> p = numpy.sqrt(px**2 + py**2 + pz**2)
     >>> p[:10]
     jaggedarray([[54.7794   39.401554],
                  [31.69027],
@@ -797,16 +796,16 @@ The `Strings <http://uproot.readthedocs.io/en/latest/interpretation.html#uproot-
 .. code-block:: python
 
     >>> strings = tree.array("Type")
-    >>> strings.jaggedarray.content
-    array([71, 84, 84, ..., 84, 71, 71], dtype=uint8)
-    >>> strings.jaggedarray.starts
+    >>> strings.content
+    <JaggedArray [[71 84] [84 84] [71 84] ... [84 84] [71 84] [71 71]] at 7f4020f2f358>
+    >>> strings.content.starts
     array([   0,    2,    4, ..., 4602, 4604, 4606])
-    >>> strings.jaggedarray.stops
+    >>> strings.content.stops
     array([   2,    4,    6, ..., 4604, 4606, 4608])
 
 The "numeric" content is actually the ASCII representation of all the string data:
 
-    >>> strings.jaggedarray.content.tostring()
+    >>> strings.content.content.tostring()
     b'GTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTG
       GGTTTGTTTTTGTGTGGGTTTGTGGGTTTGTTTTTGTGTTTTTTTGTGTTTTTTTTTGTGTTTTTTTTTTTGTGTGGGTTTGTGGGT
       TTGTTTTTGTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGGTTTGTGGG
@@ -839,14 +838,14 @@ To read a `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#upr
 
 .. code-block:: python
 
-    >>> [x for x in dir(tree) if x.startswith("f")]
-    ['fAliases', 'fAutoFlush', 'fAutoSave', 'fBranchRef', 'fBranches', 'fClusterRangeEnd',
-     'fClusterSize', 'fDefaultEntryOffsetLen', 'fEntries', 'fEstimate', 'fFillColor',
-     'fFillStyle', 'fFlushedBytes', 'fFriends', 'fIndex', 'fIndexValues', 'fLeaves',
-     'fLineColor', 'fLineStyle', 'fLineWidth', 'fMarkerColor', 'fMarkerSize',
-     'fMarkerStyle', 'fMaxEntries', 'fMaxEntryLoop', 'fMaxVirtualSize', 'fNClusterRange',
-     'fName', 'fSavedBytes', 'fScanField', 'fTimerInterval', 'fTitle', 'fTotBytes',
-     'fTreeIndex', 'fUpdate', 'fUserInfo', 'fWeight', 'fZipBytes', 'filter']
+    >>> [x for x in dir(tree) if x.startswith("_f")]
+    ['_fAliases', '_fAutoFlush', '_fAutoSave', '_fBranchRef', '_fBranches', '_fClusterRangeEnd',
+     '_fClusterSize', '_fDefaultEntryOffsetLen', '_fEntries', '_fEstimate', '_fFillColor',
+     '_fFillStyle', '_fFlushedBytes', '_fFriends', '_fIndex', '_fIndexValues', '_fLeaves',
+     '_fLineColor', '_fLineStyle', '_fLineWidth', '_fMarkerColor', '_fMarkerSize',
+     '_fMarkerStyle', '_fMaxEntries', '_fMaxEntryLoop', '_fMaxVirtualSize', '_fNClusterRange',
+     '_fName', '_fSavedBytes', '_fScanField', '_fTimerInterval', '_fTitle', '_fTotBytes',
+     '_fTreeIndex', '_fUpdate', '_fUserInfo', '_fWeight', '_fZipBytes', '_filter']
 
 This means that literally any kind of object may be read from a `ROOTDirectory <http://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootdirectory>`__. Even if the uproot authors have never heard of it, the new data type will have a streamer in the file, and uproot will follow that prescription to make an object with the appropriate private fields. What you do with that object is another story: the member functions, written in C++, are *not* serialized into the ROOT file, and thus the Python object will have data but no functionality.
 
@@ -928,19 +927,19 @@ Python ``dict`` objects will keep the arrays as long as the process lives (or th
 
     >>> cache = uproot.cache.ArrayCache(8*1024**3)    # 8 GB (typical)
     >>> import numpy
-    >>> cache["one"] = numpy.zeros(1024**3, dtype=numpy.uint8)   # 1 GB
+    >>> cache["one"] = numpy.zeros(2*1024**3, dtype=numpy.uint8)   # 2 GB
     >>> list(cache)
     ['one']
-    >>> cache["two"] = numpy.zeros(1024**3, dtype=numpy.uint8)   # 1 GB
+    >>> cache["two"] = numpy.zeros(2*1024**3, dtype=numpy.uint8)   # 2 GB
     >>> list(cache)
     ['one', 'two']
-    >>> cache["three"] = numpy.zeros(1024**3, dtype=numpy.uint8) # 1 GB
+    >>> cache["three"] = numpy.zeros(2*1024**3, dtype=numpy.uint8) # 2 GB
     >>> list(cache)
     ['one', 'two', 'three']
-    >>> cache["four"] = numpy.zeros(1024**3, dtype=numpy.uint8)  # 1 GB causes eviction
+    >>> cache["four"] = numpy.zeros(2*1024**3, dtype=numpy.uint8)  # 2 GB
     >>> list(cache)
     ['two', 'three', 'four']
-    >>> cache["five"] = numpy.zeros(1024**3, dtype=numpy.uint8)  # 1 GB causes eviction
+    >>> cache["five"] = numpy.zeros(2*1024**3, dtype=numpy.uint8)  # 2 GB causes eviction
     >>> list(cache)
     ['three', 'four', 'five']
 
