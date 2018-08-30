@@ -211,8 +211,11 @@ class asobj(uproot.interp.interp.Interpretation):
         if self.cls._arraymethods is None:
             return awkward.ObjectArray(self.content.finalize(destination, branch), self.cls._fromrow)
         else:
-            return self.cls._arraymethods(self.content.finalize(destination, branch))
-
+            cls = awkward.Methods.mixin(self.cls._arraymethods, awkward.ObjectArray)
+            out = cls.__new__(cls)
+            out._initObjectArray(self.content.finalize(destination, branch))
+            return out
+            
 class _variable(uproot.interp.interp.Interpretation):
     def __init__(self, content, generator, *args, **kwargs):
         self.content = content
