@@ -44,7 +44,7 @@ or similar (use ``sudo``, ``--user``, ``virtualenv``, or ``conda`` if you wish).
 
 .. code-block:: bash
 
-    pip install -U uproot>=3.0.0b2
+    pip install -U "uproot>=3.0.0b2"
 
 Be sure to set the ``-U`` option to keep dependencies up to date. Some of uproot 3's new functionality is in external libraries (`awkward-array <https://github.com/scikit-hep/awkward-array>`__ and `uproot-methods <https://github.com/scikit-hep/uproot-methods>`__).
 
