@@ -29,4 +29,36 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class Cursor(object):
-    pass
+    
+    def __init__(self, index):
+        self.index = index
+    
+    def skip(self, numbytes):
+        self.index += numbytes
+        
+    def get_numbers(self, packer, *args):
+        toadd = numpy.frombuffer(struct.pack(packer, *args), dtype=numpy.uint8)
+        return toadd
+    
+    def get_strings(self, toput):
+        toadd1 = numpy.frombuffer(struct.pack(">B", len(toput)), dtype=numpy.uint8)
+        toadd2 = numpy.frombuffer(toput, dtype=numpy.uint8)
+        return numpy.concatenate([toadd1, toadd2])
+    
+    def get_cname(self, toput):
+        toadd = numpy.frombuffer(toput, dtype=numpy.uint8)
+        return toadd
+    
+    def get_array(self, packer, array):
+        buffer = bytearray()
+        packer = packer
+        for x in array:
+            buffer = buffer + struct.pack(packer, x)
+        toadd = numpy.frombuffer(buffer, dtype=numpy.uint8)
+        return toadd
+    
+    def get_empty_array(self):
+        data = bytearray()
+        toadd = numpy.frombuffer(data, dtype=numpy.uint8)
+        return toadd
+        
