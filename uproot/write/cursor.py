@@ -38,15 +38,19 @@ class Cursor(object):
         
     def get_numbers(self, packer, *args):
         toadd = numpy.frombuffer(struct.pack(packer, *args), dtype=numpy.uint8)
+        self.index += len(toadd)
         return toadd
     
     def get_strings(self, toput):
         toadd1 = numpy.frombuffer(struct.pack(">B", len(toput)), dtype=numpy.uint8)
         toadd2 = numpy.frombuffer(toput, dtype=numpy.uint8)
-        return numpy.concatenate([toadd1, toadd2])
+        toadd = numpy.concatenate([toadd1, toadd2])
+        self.index += len(toadd)
+        return toadd
     
     def get_cname(self, toput):
         toadd = numpy.frombuffer(toput, dtype=numpy.uint8)
+        self.index += len(toadd)
         return toadd
     
     def get_array(self, packer, array):
@@ -55,10 +59,12 @@ class Cursor(object):
         for x in array:
             buffer = buffer + struct.pack(packer, x)
         toadd = numpy.frombuffer(buffer, dtype=numpy.uint8)
+        self.index += len(toadd)
         return toadd
     
     def get_empty_array(self):
         data = bytearray()
         toadd = numpy.frombuffer(data, dtype=numpy.uint8)
+        self.index += len(toadd)
         return toadd
         
