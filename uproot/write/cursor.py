@@ -36,35 +36,35 @@ class Cursor(object):
     def skip(self, numbytes):
         self.index += numbytes
         
-    def get_numbers(self, packer, *args):
+    def write_fields(self, sink, packer, *args):
         toadd = numpy.frombuffer(struct.pack(packer, *args), dtype=numpy.uint8)
+        sink.write(toadd, self.index)
         self.index += len(toadd)
-        return toadd
-    
-    def get_strings(self, toput):
+        
+    def write_strings(self, sink, toput):
         toadd1 = numpy.frombuffer(struct.pack(">B", len(toput)), dtype=numpy.uint8)
         toadd2 = numpy.frombuffer(toput, dtype=numpy.uint8)
         toadd = numpy.concatenate([toadd1, toadd2])
+        sink.write(toadd, self.index)
         self.index += len(toadd)
-        return toadd
     
-    def get_cname(self, toput):
+    def write_cstring(self, sink, toput):
         toadd = numpy.frombuffer(toput, dtype=numpy.uint8)
+        sink.write(toadd, self.index)
         self.index += len(toadd)
-        return toadd
     
-    def get_array(self, packer, array):
+    def write_array(self, sink, packer, array):
         buffer = bytearray()
         packer = packer
         for x in array:
             buffer = buffer + struct.pack(packer, x)
         toadd = numpy.frombuffer(buffer, dtype=numpy.uint8)
+        sink.write(toadd, self.index)
         self.index += len(toadd)
-        return toadd
     
-    def get_empty_array(self):
+    def write_empty_array(self, sink):
         data = bytearray()
         toadd = numpy.frombuffer(data, dtype=numpy.uint8)
+        sink.write(toadd, self.index)
         self.index += len(toadd)
-        return toadd
         
