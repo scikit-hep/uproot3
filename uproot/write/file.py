@@ -34,6 +34,11 @@ import struct
 import uproot.write.sink
 import uproot.write.cursor
 
+from begin_key import Begin_Key
+from directoryinfo import DirectoryInfo
+from streamerkey import StreamerKey
+from streamer import StreamerDatabase
+
 class Append(object):
     def __init__(self, path):
         self._openfile(path)
@@ -53,13 +58,58 @@ class Append(object):
         pass
     
 class Create(Append):
+    
+    _format1 = struct.Struct(">4siqqiiiBiqi18s")
+    _format2 = struct.Struct(">ihiIhhii")
+    
+    def _write_header(self, cursor, sink, magic = b"root", fVersion = 61404, fBEGIN = 100, fEND = 1, fSeekFree = 1, fNbytesFree = 1, nfree = 1, fNbtyesName = (36+(2*len(self.filename))), fUnits = 4, fCompress = 0, fSeekInfo = 0, fNbytesInfo = 0):
+        cursor.update_fields(sink, _format1, magic, fVersion, fBEGIN, fEND, fSeekFree, fNbytesFree, nfree, fNbytesName, fUnits, fCompress, fSeekInfo, fNbytesInfo)
+    
     def __init__(self, filename):
         self._openfile(path)
 
-        cursor = uproot.write.cursor.Cursor(0)
         self.streamers = []
-
-        # header bytes
-        cursor.fields(self.sink, [b"root", ...])
-
-    _format1 = struct.Struct(">4siqqiiiBiqi18s")
+        
+        #Hack - All streamers
+        self.streamers.append(".all")
+        
+        #Setting the header bytes
+        head_cursor = uproot.write.cursor.Cursor(0)
+        _write_header(head_cursor, self.sink)
+        
+        #Writing the first key
+        cursor = uproot.write.cursor.Cursor(fBEGIN)
+        beginkey_cursor = uproot.write.cursor.Cursor(fBEGIN)
+        beginkey = Begin_Key(self.filename)
+        beginkey.write_key(cursor, self.sink)
+        beginkey.fKeylen = cursor.index - beginkey_cursor.index
+        beginkey.fObjlen = beginkey.fNbytes - beginkey.fKeylen
+        beginkey.update_key(beginkey_cursor, self.sink)
+        
+        #Why?
+        self.sink.write(cursor.get_strings(fName), cursor.index)
+        
+        #Setting the directory info
+        directorycursor = uproot.write.cursor.Cursor(cursor.index)
+        self.directory = DirectoryInfo(self.filename)
+        self.directory.write_values(cursor, sink)
+        
+        #header.fSeekInfo points to begin of StreamerKey
+        _write_header(fSeekInfo = cursor.index)
+        
+        #Write streamerkey
+        self.streamer_cursor = uproot.write.cursor.Cursor(cursor.index)
+        self.streamerkey = StreamerKey(cursor.index)
+        self.streamerkey.write_key(cursor, self.sink)
+        self.streamerkey.fKeylen = cursor.index - self.streamer_cursor.index
+        self.streamerkey.fNbytes = self.streamerkey.fKeylen + self.streamerkey.fObjlen
+        self.streamerkey.update_key(cursor, self.sink)
+        
+        _write_header(fNbytesInfo = self.streamerkey.fNbytes)
+        
+        #Punt - Put all streamers
+        streamerdatabase = StreamerDatabase()
+        self.sink.write(streamerdatabase[".all"], cursor.index)
+        cursor.index = self.sink.tell()
+        
+        
