@@ -112,7 +112,7 @@ class Create(Append):
         beginkey.update_key(beginkey_cursor, self.sink)
         
         #Why?
-        self.sink.write(cursor.get_strings(self.filename), cursor.index)
+        cursor.write_strings(self.sink, self.filename)
         
         #Setting the directory info
         self.directorycursor = uproot.write.cursor.Cursor(cursor.index)
@@ -120,7 +120,8 @@ class Create(Append):
         self.directory.write_values(cursor, self.sink)
         
         #header.fSeekInfo points to begin of StreamerKey
-        self._write_header(uproot.write.cursor.Cursor(0), self.sink, fSeekInfo = cursor.index)
+        self.fSeekInfo = cursor.index
+        self._write_header(uproot.write.cursor.Cursor(0), self.sink, fSeekInfo = self.fSeekInfo)
         
         #Write streamerkey
         self.streamer_cursor = uproot.write.cursor.Cursor(cursor.index)
@@ -130,7 +131,7 @@ class Create(Append):
         self.streamerkey.fNbytes = self.streamerkey.fKeylen + self.streamerkey.fObjlen
         self.streamerkey.update_key(cursor, self.sink)
         
-        self._write_header(uproot.write.cursor.Cursor(0), self.sink, fNbytesInfo = self.streamerkey.fNbytes)
+        self._write_header(uproot.write.cursor.Cursor(0), self.sink, fNbytesInfo = self.streamerkey.fNbytes, fSeekInfo = self.fSeekInfo)
         
         #Pointer to streamers
         self.streamer_pointer = uproot.write.cursor.Cursor(cursor.index)
@@ -169,7 +170,7 @@ class Create(Append):
         
         fSeekFree = cursor.index
         self.fEND = fSeekFree + self.expander
-        self._write_header(uproot.write.cursor.Cursor(0), self.sink, fSeekFree = fSeekFree, fEND = self.fEND)
+        self._write_header(uproot.write.cursor.Cursor(0), self.sink, fSeekFree = fSeekFree, fEND = self.fEND, fSeekInfo = self.fSeekInfo)
 
     def __getitem__(self, where):
         uproot.open(self.path)
@@ -196,7 +197,7 @@ class Create(Append):
         junkkey.write_key(cursor, self.sink)
         junkkey.fKeylen = cursor.index - junkkeycursor.index
         junkkey.fNbytes = junkkey.fKeylen + junkkey.fObjlen
-        junkkey.set_key(junkkeycursor, self.sink)
+        junkkey.update_key(junkkeycursor, self.sink)
 
         if type(item.string) is str:
             item.string = item.string.encode("utf-8")
@@ -209,11 +210,9 @@ class Create(Append):
 
         #Check for Key Re-alocation
         if self.keylimit - self.keyend < 30:
-            self.file.seek(self.directory.fSeekKeys)
-            temp = self.sink.read(self.expander)
+            temp = self.sink.read(self.directory.fSeekKeys, self.expander)
             self.expander = self.expander * self.expandermultiple
-            self.file.seek(self.fEND)
-            self.file.write(temp)
+            self.sink.write(temp, self.fEND)
             self.keyend = self.fEND + self.keyend - self.directory.fSeekKeys
             self.directory.fSeekKeys = self.fEND
             self.keylimit = self.fEND + self.expander
@@ -223,9 +222,8 @@ class Create(Append):
             self.head_key_end = self.directory.fSeekKeys + self.nkeypos
 
         pointcheck = uproot.write.cursor.Cursor(self.keyend)
-        key.write_key(uproot.write.cursor.Cursor(self.keyend), self.sink)
-        self.keyend = self.file.tell()
-        key.fKeylen = self.keyend - pointcheck
+        key.write_key(self.keyend, self.sink)
+        key.fKeylen = self.keyend.index - pointcheck
         key.fNbytes = key.fKeylen + key.fObjlen
         key.update_key(pointcheck, key)
 
@@ -236,15 +234,10 @@ class Create(Append):
         self._write_header(uproot.write.cursor.Cursor(0), self.sink, fSeekFree = fSeekFree, fEND = self.fEND)
         
         #Update StreamerKey
-        self.streamerkey.fNbytes = self.streamerend - self.header.fSeekInfo - 1
+        self.streamerkey.fNbytes = self.streamer_pointer.index - self.fSeekInfo - 1
         self.streamerkey.fObjlen = self.streamerkey.fNbytes - self.streamerkey.fKeylen
-        self.streamerkey.fSeekKey = self.header.fSeekInfo
-        self.sink.set_key(self.header.fSeekInfo, self.streamerkey)
-        
-        #Update TList Streamer
-        self.allstreamers.cnt = self.streamerkey.fObjlen
-        self.allstreamers.pos = self.header.fSeekInfo + self.streamerkey.fKeylen
-        self.allstreamers.write()
+        self.streamerkey.fSeekKey = self.fSeekInfo
+        self.streamerkey.write_key(uproot.write.cursor.Cursor(self.fSeekInfo), self.sink)
 
         #Update number of keys
         self.nkeypos = self.head_key_end - self.directory.fSeekKeys
@@ -258,9 +251,9 @@ class Create(Append):
 
         #Update Head Key
         self.head_key.fNbytes = self.directory.fNbytesKeys
-        self.head_key.fKeylen = self.head_key_end - self.head_key_cursor
+        self.head_key.fKeylen = self.head_key_end - self.headkeycursor
         self.head_key.fObjlen = self.head_key.fNbytes - self.head_key.fKeylen
-        self.head_key.update_key(self.head_key_cursor, self.sink)
+        self.head_key.update_key(self.headkeycursor, self.sink)
 
         #Updating Header Bytes
         if cursor.index > self.fEND:
