@@ -47,3 +47,13 @@ class Sink(object):
     #         self.file.seek(pos)
     #     self.file.write(data)
     #     self.pos += len(data)    # needs self.pos
+
+    def read(self, start, range):
+        self.file.seek(start)
+        return self.file.read(range)
+
+    def close(self):
+        self.file.close()
+
+    def flush(self):
+        self.file.flush()
