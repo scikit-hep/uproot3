@@ -2,21 +2,21 @@
 
 # Copyright (c) 2017, DIANA-HEP
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
-# 
+#
 # * Redistributions of source code must retain the above copyright notice, this
 #   list of conditions and the following disclaimer.
-# 
+#
 # * Redistributions in binary form must reproduce the above copyright notice,
 #   this list of conditions and the following disclaimer in the documentation
 #   and/or other materials provided with the distribution.
-# 
+#
 # * Neither the name of the copyright holder nor the names of its
 #   contributors may be used to endorse or promote products derived from
 #   this software without specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -77,9 +77,6 @@ class Create(Append):
         self.filename = os.path.split(self.path)[1].encode("utf-8")
         self.sink = uproot.write.sink.Sink(open(path, "wb+"))
     
-    def _write_header(self, cursor, sink, magic = b"root", fVersion = 61404, fBEGIN = 100, fEND = 1, fSeekFree = 1, fNbytesFree = 1, nfree = 1, fUnits = 4, fCompress = 0, fSeekInfo = 0, fNbytesInfo = 0):
-        cursor.update_fields(sink, self._format1, magic, fVersion, fBEGIN, fEND, fSeekFree, fNbytesFree, nfree, (36+(2*len(self.filename))), fUnits, fCompress, fSeekInfo, fNbytesInfo)
-    
     def __init__(self, path):
         
         self._openfile(path)
@@ -102,6 +99,33 @@ class Create(Append):
         head_cursor = uproot.write.cursor.Cursor(0)
         self._write_header(head_cursor, self.sink)
         
+        magic = b"root"
+        fVersion = 61404
+        fBEGIN = 100
+        head_cursor.write_fields(self.sink, packer, magic, fVersion, fBEGIN) #Ask Jim about packer
+        
+        self.fEND_cursor = uproot.write.cursor.Cursor(head_cursor.index)
+        self.fEND = 1
+        self.fSeekFree = 1
+        self.fEND_packer = pass
+        head_cursor.write_fields(self.sink, self.fEND_packer, fEND, fSeekFree)
+        
+        fNbytesFree = 1
+        nfree = 1
+        fUnits = 4
+        fCompress = 0
+        head_cursor.write_fields(self.sink, packer, fNbytesFree, nfree, fUnits, fCompress)
+        
+        self.fSeekInfo_cursor = uproot.write.cursor.Cursor(head_cursor.index)
+        self.fSeekInfo = 0
+        self.fSeekInfo_packer = pass
+        head_cursor.write_fields(self.sink, self.fSeekInfo_packer, fSeekInfo)
+        
+        self.fNbytesInfo_cursor = uproot.write.cursor.Cursor(head_cursor.index)
+        self.fNbytesInfo = 0
+        self.fNbytesInfo_packer = pass
+        head_cursor.write_fields(self.sink, self.fNbytesInfo_packer, fNbytesInfo)
+        
         #Writing the first key
         cursor = uproot.write.cursor.Cursor(100)
         beginkey_cursor = uproot.write.cursor.Cursor(100)
@@ -121,7 +145,7 @@ class Create(Append):
         
         #header.fSeekInfo points to begin of StreamerKey
         self.fSeekInfo = cursor.index
-        self._write_header(uproot.write.cursor.Cursor(0), self.sink, fSeekInfo = self.fSeekInfo)
+        self.fSeekInfo_cursor.update_fields(self.sink, fSeekInfo_packer, self.fSeekInfo)
         
         #Write streamerkey
         self.streamer_cursor = uproot.write.cursor.Cursor(cursor.index)
@@ -131,7 +155,7 @@ class Create(Append):
         self.streamerkey.fNbytes = self.streamerkey.fKeylen + self.streamerkey.fObjlen
         self.streamerkey.update_key(cursor, self.sink)
         
-        self._write_header(uproot.write.cursor.Cursor(0), self.sink, fNbytesInfo = self.streamerkey.fNbytes, fSeekInfo = self.fSeekInfo)
+        self.fNbytesInfo_cursor.update_fields(self.sink, self.fNbytesInfo_packer, self.streamerkey.fNbytes)
         
         #Pointer to streamers
         self.streamer_pointer = uproot.write.cursor.Cursor(cursor.index)
@@ -168,9 +192,10 @@ class Create(Append):
 
         self.keyend = uproot.write.cursor.Cursor(cursor.index)
         
-        fSeekFree = cursor.index
+        self.fSeekFree = cursor.index
         self.fEND = fSeekFree + self.expander
-        self._write_header(uproot.write.cursor.Cursor(0), self.sink, fSeekFree = fSeekFree, fEND = self.fEND, fSeekInfo = self.fSeekInfo)
+        
+        self.fEND_cursor.update_fields(self.sink, self.fEND_packer, self.fEND, self.fSeekFree)
 
     def __getitem__(self, where):
         uproot.open(self.path)
@@ -207,6 +232,7 @@ class Create(Append):
         # Updating Header Bytes
         if cursor.index > self.fEND:
             self._write_header(uproot.write.cursor.Cursor(0), self.sink, fSeekFree = cursor.index, fEND = cursor.index)
+            self.fEND_cursor.update_fields(self.sink, self.fEND_packer, self.fEND, fSeekFree)
 
         #Check for Key Re-alocation
         if self.keylimit - self.keyend < 30:
@@ -217,7 +243,7 @@ class Create(Append):
             self.directory.fSeekKeys = self.fEND
             self.keylimit = self.fEND + self.expander
             self.fEND = self.keylimit
-            fSeekFree = self.keylimit
+            self.fSeekFree = self.keylimit
             self.directory.update_values(self.directorycursor, self.sink)
             self.head_key_end = self.directory.fSeekKeys + self.nkeypos
 
@@ -231,7 +257,7 @@ class Create(Append):
         if cursor.index > self.fEND:
             fSeekFree = cursor.index
             self.fEND = cursor.index
-        self._write_header(uproot.write.cursor.Cursor(0), self.sink, fSeekFree = fSeekFree, fEND = self.fEND)
+        self.fEND_cursor.update_fields(self.sink, self.fEND_packer, self.fEND, self.fSeekFree)
         
         #Update StreamerKey
         self.streamerkey.fNbytes = self.streamer_pointer.index - self.fSeekInfo - 1
@@ -257,10 +283,10 @@ class Create(Append):
 
         #Updating Header Bytes
         if cursor.index > self.fEND:
-            fSeekFree = cursor.index
+            self.fSeekFree = cursor.index
             self.fEND = cursor.index
-
-        self._write_header(uproot.write.cursor.Cursor(0), self.sink, fSeekFree = fSeekFree, fEND = self.fEND)
+        
+        self.fEND_cursor.update_fields(self.sink, self.fEND_packer, self.fEND, self.fSeekFree)
 
         self.sink.flush()
         
