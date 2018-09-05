@@ -50,10 +50,6 @@ from uproot.write.objects.TObjString.tobjstring import TObjString
 
 class Append(object):
 
-    def __init__(self, path):
-        self._openfile(path)
-        raise NotImplementedError
-
     def _openfile(self, path):
         self.path = path
         self.filename = os.path.split(self.path)[1].encode("utf-8")
@@ -68,11 +64,9 @@ class Append(object):
         pass
     
 class Create(Append):
-    
-    _format1 = struct.Struct(">4siqqiiiBiqi18s")
-    _format2 = struct.Struct(">ihiIhhii")
 
     def _openfile(self, path):
+        print ("creating file")
         self.path = path
         self.filename = os.path.split(self.path)[1].encode("utf-8")
         self.sink = uproot.write.sink.Sink(open(path, "wb+"))
@@ -97,34 +91,37 @@ class Create(Append):
         
         #Setting the header bytes
         head_cursor = uproot.write.cursor.Cursor(0)
-        self._write_header(head_cursor, self.sink)
         
         magic = b"root"
         fVersion = 61404
         fBEGIN = 100
-        head_cursor.write_fields(self.sink, packer, magic, fVersion, fBEGIN) #Ask Jim about packer
+        head_cursor.write_fields(self.sink, ">4sii", magic, fVersion, fBEGIN)
         
         self.fEND_cursor = uproot.write.cursor.Cursor(head_cursor.index)
         self.fEND = 1
         self.fSeekFree = 1
-        self.fEND_packer = pass
-        head_cursor.write_fields(self.sink, self.fEND_packer, fEND, fSeekFree)
+        self.fEND_packer = ">qq"
+        head_cursor.write_fields(self.sink, self.fEND_packer, self.fEND, self.fSeekFree)
         
         fNbytesFree = 1
         nfree = 1
+        self.fNbytesName = 36 + (2 * (len(self.filename)))
         fUnits = 4
         fCompress = 0
-        head_cursor.write_fields(self.sink, packer, fNbytesFree, nfree, fUnits, fCompress)
+        head_cursor.write_fields(self.sink, ">iiiBi", fNbytesFree, nfree, self.fNbytesName, fUnits, fCompress)
         
         self.fSeekInfo_cursor = uproot.write.cursor.Cursor(head_cursor.index)
         self.fSeekInfo = 0
-        self.fSeekInfo_packer = pass
-        head_cursor.write_fields(self.sink, self.fSeekInfo_packer, fSeekInfo)
+        self.fSeekInfo_packer = ">q"
+        head_cursor.write_fields(self.sink, self.fSeekInfo_packer, self.fSeekInfo)
         
         self.fNbytesInfo_cursor = uproot.write.cursor.Cursor(head_cursor.index)
         self.fNbytesInfo = 0
-        self.fNbytesInfo_packer = pass
-        head_cursor.write_fields(self.sink, self.fNbytesInfo_packer, fNbytesInfo)
+        self.fNbytesInfo_packer = ">i"
+        head_cursor.write_fields(self.sink, self.fNbytesInfo_packer, self.fNbytesInfo)
+
+        fUUID = b"\x00\x010\xd5\xf5\xea~\x0b\x11\xe8\xa2D~S\x1f\xac\xbe\xef"
+        head_cursor.write_fields(self.sink, ">18s", fUUID)
         
         #Writing the first key
         cursor = uproot.write.cursor.Cursor(100)
@@ -140,12 +137,12 @@ class Create(Append):
         
         #Setting the directory info
         self.directorycursor = uproot.write.cursor.Cursor(cursor.index)
-        self.directory = DirectoryInfo(self.filename)
+        self.directory = DirectoryInfo(self.fNbytesName)
         self.directory.write_values(cursor, self.sink)
         
         #header.fSeekInfo points to begin of StreamerKey
         self.fSeekInfo = cursor.index
-        self.fSeekInfo_cursor.update_fields(self.sink, fSeekInfo_packer, self.fSeekInfo)
+        self.fSeekInfo_cursor.update_fields(self.sink, self.fSeekInfo_packer, self.fSeekInfo)
         
         #Write streamerkey
         self.streamer_cursor = uproot.write.cursor.Cursor(cursor.index)
@@ -193,7 +190,7 @@ class Create(Append):
         self.keyend = uproot.write.cursor.Cursor(cursor.index)
         
         self.fSeekFree = cursor.index
-        self.fEND = fSeekFree + self.expander
+        self.fEND = self.fSeekFree + self.expander
         
         self.fEND_cursor.update_fields(self.sink, self.fEND_packer, self.fEND, self.fSeekFree)
 
@@ -231,8 +228,7 @@ class Create(Append):
 
         # Updating Header Bytes
         if cursor.index > self.fEND:
-            self._write_header(uproot.write.cursor.Cursor(0), self.sink, fSeekFree = cursor.index, fEND = cursor.index)
-            self.fEND_cursor.update_fields(self.sink, self.fEND_packer, self.fEND, fSeekFree)
+            self.fEND_cursor.update_fields(self.sink, self.fEND_packer, self.fEND, self.fSeekFree)
 
         #Check for Key Re-alocation
         if self.keylimit - self.keyend < 30:
@@ -255,7 +251,7 @@ class Create(Append):
 
         # Updating Header Bytes
         if cursor.index > self.fEND:
-            fSeekFree = cursor.index
+            self.fSeekFree = cursor.index
             self.fEND = cursor.index
         self.fEND_cursor.update_fields(self.sink, self.fEND_packer, self.fEND, self.fSeekFree)
         
