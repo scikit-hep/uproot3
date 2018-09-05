@@ -12,9 +12,9 @@ class DirectoryInfo(object):
         self.packer = ">hIIiiiii"
         
     def write_values(self, cursor, sink):
-        cursor.write_fields(sink, packer, self.fVersion, self.fDatimeC, self.fDatimeM, self.fNbytesKeys, self.fNbytesName, self.fSeekDir, self.fSeekParent, self.fSeekKeys)
+        cursor.write_fields(sink, self.packer, self.fVersion, self.fDatimeC, self.fDatimeM, self.fNbytesKeys, self.fNbytesName, self.fSeekDir, self.fSeekParent, self.fSeekKeys)
         
     def update_values(self, cursor, sink):
-        cursor.update_fields(sink, packer, self.fVersion, self.fDatimeC, self.fDatimeM, self.fNbytesKeys, self.fNbytesName, self.fSeekDir, self.fSeekParent, self.fSeekKeys)
+        cursor.update_fields(sink, self.packer, self.fVersion, self.fDatimeC, self.fDatimeM, self.fNbytesKeys, self.fNbytesName, self.fSeekDir, self.fSeekParent, self.fSeekKeys)
         
         

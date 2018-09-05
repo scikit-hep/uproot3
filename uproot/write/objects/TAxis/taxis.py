@@ -1,6 +1,5 @@
 import numpy
 
-
 class TAxis(object):
 
     def __init__(self, fNbins, fXmin, fXmax):
@@ -36,5 +35,5 @@ class TAxis(object):
         cursor.write_fields(sink, ">idd", self.fNbins, self.fXmin, self.fXmax)
         
         bytestream = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        sink.write(numpy.frombuffer(bytes(bytestream), dtype = numpy.uint8), cursor.index
+        sink.write(numpy.frombuffer(bytes(bytestream), dtype = numpy.uint8), cursor.index)
         cursor.index += len(bytestream)

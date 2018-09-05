@@ -1,4 +1,4 @@
-from write.key import Key
+from uproot.write.key import Key
 
 class StreamerKey(Key):
     

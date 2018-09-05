@@ -20,7 +20,7 @@ class Key(object):
         cursor.write_strings(sink, self.fName)
         cursor.write_strings(sink, self.fTitle)
         
-    def update_key(self, cursor, sink)
+    def update_key(self, cursor, sink):
         cursor.update_fields(sink, self.packer, self.fVersion, self.fNbytes, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
         cursor.update_strings(sink, self.fClassName)
         cursor.update_strings(sink, self.fName)

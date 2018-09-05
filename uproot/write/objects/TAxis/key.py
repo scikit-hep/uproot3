@@ -1,4 +1,4 @@
-from write.key import Key as SuperKey
+from uproot.write.key import Key as SuperKey
 
 class Key(SuperKey):
 
