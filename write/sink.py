@@ -120,5 +120,20 @@ class Sink(object):
         self.set_numbers(pos, ">dd", fXmin, fXmax)
         pos = self.file.tell()
         self.file.write(Object.values5())
+        
+    def set_th1f(self, pos, Object):
+        self.file.seek(pos)
+        self.file.write(Object.values1())
+        pos = self.file.tell() - 1
+        self.file.seek(pos)
+        nbinsx, xlow, xup = Object.values2()
+        self.set_numbers(pos, ">idd", nbinsx, xlow, xup)
+        pos = self.file.tell()
+        self.file.seek(pos)
+        self.file.write(Object.values3())
+        for x in range(0, 15504):
+            pos = self.file.tell()
+            self.file.seek(pos)
+            self.file.write(numpy.frombuffer(bytes([0]), dtype=numpy.uint8))
 
 

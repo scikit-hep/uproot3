@@ -15,6 +15,10 @@ from write.TAxis.taxis import TAxis
 from write.TAxis.key import Key as AxisKey
 from write.TAxis.junkkey import JunkKey as TAxisJunkKey
 
+from write.TH1F.th1f import TH1F
+from write.TH1F.key import Key as TH1FKey
+from write.TH1F.junkkey import JunkKey as TH1FJunkKey
+
 import pickle
 
 class Writer(object):
@@ -28,7 +32,7 @@ class Writer(object):
         self.pos = 0
 
         self.streamers = []
-        self.expander = 4000
+        self.expander = 10000
         self.expandermultiple = 2
 
         self.nkeypos = 0
@@ -148,6 +152,18 @@ class Writer(object):
                 if x not in self.streamers:
                     self.streamers.append(x)
                     streamers_toadd.append(x)
+                    
+        if type(item) is TH1F:
+            junkkey = TH1FJunkKey(keyname.encode("utf-8"))
+            key = TH1FKey(keyname.encode("utf-8"), pointcheck)
+            
+            streamers = ["TH1F"]
+            self.allstreamers.size = 14
+            streamers_toadd = []
+            for x in streamers:
+                if x not in self.streamers:
+                    self.streamers.append(x)
+                    streamers_toadd.append(x)
 
 
         self.sink.set_key(self.pos, junkkey)
@@ -164,6 +180,8 @@ class Writer(object):
             self.sink.set_tobjstring(self.pos, item)
         if type(item) is TAxis:
             self.sink.set_taxis(self.pos, item, keyname)
+        if type(item) is TH1F:
+            self.sink.set_th1f(self.pos, item)
 
         self.pos = self.file.tell()
 
