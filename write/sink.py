@@ -131,9 +131,3 @@ class Sink(object):
         pos = self.file.tell()
         self.file.seek(pos)
         self.file.write(Object.values3())
-        for x in range(0, 15504):
-            pos = self.file.tell()
-            self.file.seek(pos)
-            self.file.write(numpy.frombuffer(bytes([0]), dtype=numpy.uint8))
-
-
