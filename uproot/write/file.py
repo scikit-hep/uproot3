@@ -66,7 +66,6 @@ class Append(object):
 class Create(Append):
 
     def _openfile(self, path):
-        print ("creating file")
         self.path = path
         self.filename = os.path.split(self.path)[1].encode("utf-8")
         self.sink = uproot.write.sink.Sink(open(path, "wb+"))
