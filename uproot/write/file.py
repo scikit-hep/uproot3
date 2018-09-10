@@ -60,6 +60,6 @@ class Create(Append):
         self.streamers = []
 
         # header bytes
-        cursor.fields(self.sink, [b"root", ...])
+        # cursor.fields(self.sink, [b"root", ...])
 
     _format1 = struct.Struct(">4siqqiiiBiqi18s")
