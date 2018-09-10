@@ -175,14 +175,22 @@ class TTreeMethods(object):
     def _attachstreamer(self, branch, streamer, streamerinfosmap):
         if streamer is None:
             m = re.match(self._vector_regex, getattr(branch, "_fClassName", b""))
-            if m is None or m.group(1) not in streamerinfosmap:
-                return
-            else:
-                substreamer = streamerinfosmap[m.group(1)]
-                if isinstance(substreamer, uproot.rootio.TStreamerInfo):
-                    streamer = uproot.rootio.TStreamerSTL.vector(None, substreamer._fName)
+
+            if m is None:
+                if branch.name in streamerinfosmap:
+                    streamer = streamerinfosmap[branch.name]
                 else:
-                    streamer = uproot.rootio.TStreamerSTL.vector(substreamer._fType, substreamer._fTypeName)
+                    return
+                
+            else:
+                if m.group(1) in streamerinfosmap:
+                    substreamer = streamerinfosmap[m.group(1)]
+                    if isinstance(substreamer, uproot.rootio.TStreamerInfo):
+                        streamer = uproot.rootio.TStreamerSTL.vector(None, substreamer._fName)
+                    else:
+                        streamer = uproot.rootio.TStreamerSTL.vector(substreamer._fType, substreamer._fTypeName)
+                else:
+                    return
 
         if isinstance(streamer, uproot.rootio.TStreamerInfo):
             if len(streamer._fElements) == 1 and isinstance(streamer._fElements[0], uproot.rootio.TStreamerBase) and streamer._fElements[0]._fName == b"TObjArray":
