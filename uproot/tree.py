@@ -35,7 +35,7 @@ import inspect
 import itertools
 import math
 import numbers
-import os.path
+import os
 import re
 import struct
 import sys
@@ -98,12 +98,14 @@ def _delayedraise(excinfo):
             raise err.with_traceback(trc)
 
 def _filename_explode(x):
-    if hasattr(x, "__fspath__"):
+    if isinstance(x, getattr(os, "PathLike", ())):
+        x = os.fspath(x)
+    elif hasattr(x, "__fspath__"):
         x = x.__fspath__()
-    if x.__class__.__module__ == "pathlib":
+    elif x.__class__.__module__ == "pathlib":
         import pathlib
         if isinstance(x, pathlib.Path):
-            x = str(x)
+             x = str(x)
     parsed = urlparse(x)
     if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0:
         pattern = os.path.expanduser(parsed.netloc + parsed.path)

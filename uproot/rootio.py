@@ -30,6 +30,7 @@
 
 import keyword
 import numbers
+import os
 import re
 import struct
 import sys
@@ -52,12 +53,14 @@ import uproot_methods.classes
 ################################################################ high-level interface
 
 def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
-    if hasattr(path, "__fspath__"):
+    if isinstance(path, getattr(os, "PathLike", ())):
+        path = os.fspath(path)
+    elif hasattr(path, "__fspath__"):
         path = path.__fspath__()
-    if path.__class__.__module__ == "pathlib":
+    elif path.__class__.__module__ == "pathlib":
         import pathlib
         if isinstance(path, pathlib.Path):
-            path = str(path)
+             path = str(path)
 
     parsed = urlparse(path)
     if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0:
