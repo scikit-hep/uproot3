@@ -671,7 +671,7 @@ def _defineclasses(streamerinfos, classes):
                         if fielddtype == "None":
                             recarray.append("raise ValueError('not a recarray')")
                         else:
-                            recarray.append("out.append(({0}, {1}))".format(repr(element._fName.decode("ascii")), fielddtype))
+                            recarray.append("out.append(({0}, {1}))".format(repr(str(element._fName.decode("ascii"))), fielddtype))
                         basicletters += _ftype2struct(element._fType)
 
                         if elementi + 1 == len(streamerinfo._fElements) or not isinstance(streamerinfo._fElements[elementi + 1], TStreamerBasicType) or streamerinfo._fElements[elementi + 1]._fArrayLength != 0:
@@ -694,7 +694,7 @@ def _defineclasses(streamerinfos, classes):
                         if fielddtype == "None":
                             recarray.append("raise ValueError('not a recarray')")
                         else:
-                            recarray.append("out.append(({0}, {1}, {2}))".format(repr(element._fName.decode("ascii")), fielddtype, element._fArrayLength))
+                            recarray.append("out.append(({0}, {1}, {2}))".format(repr(str(element._fName.decode("ascii"))), fielddtype, element._fArrayLength))
                     
                 elif isinstance(element, TStreamerLoop):
                     code.extend(["        cursor.skip(6)",
