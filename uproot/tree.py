@@ -455,7 +455,7 @@ class TTreeMethods(object):
                     for name, interpretation, future in futures:
                         array = future()
 
-                        if isinstance(array, uproot.interp.jagged.JaggedArray):
+                        if isinstance(interpretation, asjagged):
                             entries = numpy.empty(len(array.content), dtype=numpy.int64)
                             subentries = numpy.empty(len(array.content), dtype=numpy.int64)
                             starts, stops = array.starts, array.stops

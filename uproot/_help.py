@@ -1640,7 +1640,7 @@ _method(uproot.interp.numerical.asarray.finalize).__doc__ = interp_fragments["se
 uproot.interp.jagged.asjagged.__doc__ = \
 u"""Interpret branch as a jagged array (array of non-uniformly sized arrays).
 
-    This interpretation directs branch-reading to fill contiguous arrays and present them to the user in a :py:class:`JaggedArray <uproot.interp.jagged.JaggedArray>` interface. Such an object behaves as though it were an array of non-uniformly sized arrays, but it is more memory and cache-line efficient because the underlying data are contiguous.
+    This interpretation directs branch-reading to fill contiguous arrays and present them to the user in a ``JaggedArray`` interface. Such an object behaves as though it were an array of non-uniformly sized arrays, but it is more memory and cache-line efficient because the underlying data are contiguous.
 
     In this interpretation, "items" (for ``numitems``, ``itemstart``, ``itemstop``, etc.) are the items of the inner array (however that is defined), and "entries" are elements of the outer array. The outer array is always one-dimensional.
 
