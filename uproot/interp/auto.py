@@ -35,6 +35,7 @@ from functools import reduce
 import awkward.util
 
 import uproot.const
+import uproot.rootio
 from uproot.interp.numerical import asdtype
 from uproot.interp.numerical import asarray
 from uproot.interp.numerical import asdouble32
@@ -114,6 +115,9 @@ def _leaf2dtype(leaf):
         raise _NotNumerical
 
 def _obj_or_genobj(streamerClass, branch, isjagged):
+    if len(branch._fBranches) != 0:
+        return None
+
     try:
         recarray = streamerClass._recarray_dtype()
 
@@ -154,9 +158,10 @@ def interpret(branch, swapbytes=True):
     try:
         if len(branch._fLeaves) == 1:
             if isinstance(branch._streamer, uproot.rootio.TStreamerObjectPointer):
-                obj = branch._streamer._fTypeName.decode("utf-8")
-                if obj.endswith("*"):
+                obj = branch._streamer._fTypeName
+                if obj.endswith(b"*"):
                     obj = obj[:-1]
+                obj = uproot.rootio._safename(obj)
                 if obj in branch._context.classes:
                     return _obj_or_genobj(branch._context.classes.get(obj), branch, isjagged)
 
@@ -229,14 +234,14 @@ def interpret(branch, swapbytes=True):
                 return asdtype(">i4")
 
             if isinstance(branch._streamer, uproot.rootio.TStreamerObject):
-                obj = branch._streamer._fTypeName.decode("utf-8")
+                obj = uproot.rootio._safename(branch._streamer._fTypeName)
                 if obj == "string":
                     return asgenobj(STLString(), branch._context, 0)
                 elif obj in branch._context.classes:
                     return _obj_or_genobj(branch._context.classes.get(obj), branch, isjagged)
-                
+
             if isinstance(branch._streamer, uproot.rootio.TStreamerInfo):
-                obj = branch._streamer._fName.decode("utf-8")
+                obj = uproot.rootio._safename(branch._streamer._fName)
                 if obj == "string":
                     return asgenobj(STLString(), branch._context, 0)
                 elif obj in branch._context.classes:
@@ -300,12 +305,15 @@ def interpret(branch, swapbytes=True):
                             try:
                                 streamerClass = branch._vecstreamer.pyclass
                             except AttributeError:
-                                obj = branch._vecstreamer._fName.decode("utf-8")
+                                obj = uproot.rootio._safename(branch._vecstreamer._fName)
                                 if obj in branch._context.classes:
                                     streamerClass = branch._context.classes.get(obj)
 
                             if streamerClass.__name__ == "string":
                                 return asgenobj(STLVector(STLString()), branch._context, 6)
+
+                            if len(branch._fBranches) != 0:
+                                return None
 
                             try:
                                 recarray = streamerClass._recarray_dtype()

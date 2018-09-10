@@ -1098,6 +1098,17 @@ class TStreamerString(TStreamerElement):
 ################################################################ streamed classes (with some overrides)
 
 class ROOTStreamedObject(ROOTObject):
+    _fields = []
+
+    @classmethod
+    def _members(cls):
+        out = []
+        for t in cls.__bases__:
+            if issubclass(t, ROOTStreamedObject):
+                out.extend(t._members())
+        out.extend(cls._fields)
+        return out
+
     @classmethod
     def _recarray(cls):
         raise ValueError("not a recarray")
@@ -1128,20 +1139,9 @@ class ROOTStreamedObject(ROOTObject):
         return numpy.dtype(dtypesout)
 
 class TObject(ROOTStreamedObject):
-    _fields = []
-
     @classmethod
     def _recarray(cls):
         return [(" fBits", numpy.dtype(">u8")), (" fUniqueID", numpy.dtype(">u8"))]
-
-    @classmethod
-    def _members(cls):
-        out = []
-        for t in cls.__bases__:
-            if issubclass(t, ROOTStreamedObject):
-                out.extend(t._members())
-        out.extend(cls._fields)
-        return out
 
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
@@ -1298,7 +1298,7 @@ class Undefined(ROOTStreamedObject):
 
     def __repr__(self):
         if self._classname is not None:
-            return "<{0} (no class named {1}, version {2}) at 0x{3:012x}>".format(self.__class__.__name__, repr(self._classname), self._classversion, id(self))
+            return "<{0} (failed to read {1} version {2}) at 0x{3:012x}>".format(self.__class__.__name__, repr(self._classname), self._classversion, id(self))
         else:
             return "<{0} at 0x{1:012x}>".format(self.__class__.__name__, id(self))
 
