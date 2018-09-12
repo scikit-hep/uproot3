@@ -95,6 +95,9 @@ class Sink(object):
         pos = self.file.tell()
         toadd = Object.values2()
         self.set_bytestream(pos, toadd)
+        toadd = Object.values3()
+        pos = self.file.tell() - 1
+        self.set_strings(pos, toadd)
 
     def set_taxis(self, pos, Object, keyname):
         Object.string = keyname
