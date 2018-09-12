@@ -131,7 +131,7 @@ class Writer(object):
 
         if type(item) is TObjString:
             junkkey = TObjStringJunkKey(keyname.encode("utf-8"))
-            key = StringKey(keyname.encode("utf-8"), pointcheck)
+            key = StringKey(keystring = keyname.encode("utf-8"), string = item.string.encode("utf-8"), stringloc = pointcheck)
 
             streamers = ["TObjString"]
             self.allstreamers.size = len(streamers)
