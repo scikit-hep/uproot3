@@ -129,7 +129,8 @@ class Writer(object):
         self.pos = self.header.fEND
         pointcheck = self.pos
 
-        if type(item) is TObjString:
+        if type(item) is str:
+            item = TObjString(item)
             junkkey = TObjStringJunkKey(keyname.encode("utf-8"))
             key = StringKey(keystring = keyname.encode("utf-8"), string = item.string.encode("utf-8"), stringloc = pointcheck)
 
