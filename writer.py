@@ -155,7 +155,7 @@ class Writer(object):
                     streamers_toadd.append(x)
                     
         if type(item) is TH1F:
-            junkkey = TH1FJunkKey(keyname.encode("utf-8"), item.nbinsx)
+            junkkey = TH1FJunkKey(keyname.encode("utf-8"), item.nbinsx, item.fName, item.fTitle)
             key = TH1FKey(keyname.encode("utf-8"), pointcheck, item.nbinsx, item.fName, item.fTitle)
             
             streamers = ["TH1F"]

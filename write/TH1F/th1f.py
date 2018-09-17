@@ -25,17 +25,24 @@ class TH1F(object):
 
 #Unable to figure it out yet
     def values2(self):
-        cnt =  533 #?
-        cnt = cnt - 4
+        cnt =  self.fObjlen - 4 - 58
         kByteCountMask = numpy.int64(0x40000000)
         cnt = cnt | kByteCountMask
         vers = 8
         packer = ">IH"
         return cnt, vers, packer
+    
+    def tnamecount(self):
+        cnt = 18
+        cnt = cnt + len(self.fName) + len(self.fTitle) - 4
+        kByteCountMask = numpy.int64(0x40000000)
+        cnt = cnt | kByteCountMask
+        vers = 1
+        packer = ">IH"
+        return cnt, vers, packer
 
     def values3(self):
-        bytestream = [64,  0,  0, 33,  0,  1,  0,  1,  0,  0,  0,  0,  3,  0,  0,  8,
-         9]
+        bytestream = [0,  1,  0,  0,  0,  0,  3,  0,  0,  8,  9]
         return numpy.frombuffer(bytes(bytestream), dtype=numpy.uint8)
 
     def streamervalue1(self):

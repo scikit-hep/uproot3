@@ -134,6 +134,10 @@ class Sink(object):
         self.set_numbers(pos, packer, cnt, vers)
         pos = self.file.tell()
         self.file.seek(pos)
+        cnt, vers, packer = Object.tnamecount()
+        self.set_numbers(pos, packer, cnt, vers)
+        pos = self.file.tell()
+        self.file.seek(pos)
         self.file.write(Object.values3())
         pos = self.file.tell()-1
         self.file.seek(pos)
