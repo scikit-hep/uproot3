@@ -28,29 +28,35 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# class Key(object):
-#     def __init__(self, packer, fNbytes, fVersion, fObjlen, fDatime, fKeylen, fCycle, fSeekKey, fSeekPdir, fClassName, fName, fTitle):
-#         self.packer = packer
-#         self.fVersion = fVersion
-#         self.fNbytes = fNbytes
-#         self.fObjlen = fObjlen
-#         self.fDatime = fDatime
-#         self.fKeylen = fKeylen
-#         self.fCycle = fCycle
-#         self.fSeekKey = fSeekKey
-#         self.fSeekPdir = fSeekPdir
-#         self.fClassName = fClassName
-#         self.fName = fName
-#         self.fTitle = fTitle
-        
-#     def write_key(self, cursor, sink):
-#         cursor.write_fields(sink, self.packer, self.fVersion, self.fNbytes, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
-#         cursor.write_strings(sink, self.fClassName)
-#         cursor.write_strings(sink, self.fName)
-#         cursor.write_strings(sink, self.fTitle)
-        
-#     def update_key(self, cursor, sink):
-#         cursor.update_fields(sink, self.packer, self.fVersion, self.fNbytes, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
-#         cursor.update_strings(sink, self.fClassName)
-#         cursor.update_strings(sink, self.fName)
-#         cursor.update_strings(sink, self.fTitle)
+import struct
+
+import uproot.write.sink.cursor
+
+class TKey(object):
+    def __init__(self, cursor, sink, fClassName, fName, fTitle=b"", fObjlen=0, fCycle=1, fSeekKey=100, fSeekPdir=0):
+        self.fObjlen = fObjlen
+        self.fCycle = fCycle
+        self.fSeekKey = fSeekKey
+        self.fSeekPdir = fSeekPdir
+
+        self.fKeylen = self._format1.size + cursor.length_string(fClassName) + cursor.length_string(fName) + cursor.length_string(fTitle)
+
+        self.cursor = uproot.write.sink.cursor.Cursor(cursor.index)
+        self.sink = sink
+        self.update()
+
+        cursor.skipbytes(self._format1.size)
+        cursor.write_string(sink, fClassName)
+        cursor.write_string(sink, fName)
+        cursor.write_string(sink, fTitle)
+
+    @property
+    def fNbytes(self):
+        return self.fObjlen + self.fKeylen    # FIXME! (compression)
+
+    def update(self):
+        fVersion = 1004
+        fDatime = 1573188772                     # FIXME!
+        self.cursor.update_fields(self.sink, self._format1, fVersion, self.fNbytes, self.fObjlen, fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
+
+    _format1 = struct.Struct(">ihiIhhqq")

@@ -28,32 +28,37 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# class Sink(object):
-#     def __init__(self, file):
-#         self.file = file
-#         # self.pos = 0
+class Sink(object):
+    pass
 
-#     def write(self, data, pos):
-#         self.file.seek(pos)
-#         self.file.write(data)
+class FileSink(Sink):
+    def __init__(self, path):
+        self._path = path
+        self._source = open(path, "wb+")
+        # self._pos = 0
 
-#     # def write(self, data, pos):
-#     #     if self.file.tell() != pos:
-#     #         self.file.seek(pos)
-#     #     self.file.write(data)
+    def write(self, data, pos):
+        self._source.seek(pos)
+        self._source.write(data)
 
-#     # def write(self, data, pos):
-#     #     if self.pos != pos:
-#     #         self.file.seek(pos)
-#     #     self.file.write(data)
-#     #     self.pos += len(data)    # needs self.pos
+    # def write(self, data, pos):
+    #     if self._source.tell() != pos:
+    #         self._source.seek(pos)
+    #     self._source.write(data)
 
-#     def read(self, start, range):
-#         self.file.seek(start)
-#         return self.file.read(range)
+    # def write(self, data, pos):
+    #     if self._pos != pos:
+    #         self._source.seek(pos)
+    #     self._source.write(data)
+    #     self._pos += len(data)    # needs self._pos
 
-#     def close(self):
-#         self.file.close()
+    def read(self, start, stop):
+        raise AssertionError("why???")
+        self._source.seek(start)
+        return self._source.read(stop - start)
 
-#     def flush(self):
-#         self.file.flush()
+    def close(self):
+        self._source.close()
+
+    def flush(self):
+        self._source.flush()

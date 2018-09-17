@@ -28,11 +28,14 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# import os
-# import struct
+import os
+import struct
 
-# import uproot.write.sink
-# import uproot.write.cursor
+import uproot.write.sink.file
+import uproot.write.sink.cursor
+import uproot.write.objects.TKey
+import uproot.write.objects.TDirectory
+import uproot.write.streamer
 
 # from uproot.write.begin_key import Begin_Key
 # from uproot.write.headkey import HeadKey
@@ -48,30 +51,87 @@
 # from uproot.write.objects.TObjString.key import Key as TObjStringKey
 # from uproot.write.objects.TObjString.tobjstring import TObjString
 
-# class Append(object):
+class Append(object):
+    def __init__(self, path):
+        self._openfile(path)
+        raise NotImplementedError
 
-#     def _openfile(self, path):
-#         self.path = path
-#         self.filename = os.path.split(self.path)[1].encode("utf-8")
-#         self.sink = uproot.write.sink.Sink(open(path, "wb+"))
+    def _openfile(self, path):
+        self._sink = uproot.write.sink.file.FileSink(path)
+        self._path = path
+        self._filename = os.path.split(path)[1].encode("utf-8")
 
-#     def __getitem__(self, where):
-#         uproot.open(self.path)
-#         raise NotImplementedError
+    def __getitem__(self, where):
+        uproot.open(self.path)
+        raise NotImplementedError
 
-#     def __setitem__(self, where, what):
-#         where.split("/")
-#         pass
-    
+    def __setitem__(self, where, what):
+        raise NotImplementedError
+
+class Create(Append):
+    def __init__(self, path):
+        self._openfile(path)
+        self._writeheader()
+        self._writerootdir()
+        self._writestreamers()
+
+    _format1           = struct.Struct(">4sii")
+    _format_end        = struct.Struct(">qq")
+    _format2           = struct.Struct(">iiiBi")
+    _format_seekinfo   = struct.Struct(">q")
+    _format_nbytesinfo = struct.Struct(">i")
+    def _writeheader(self):
+        cursor = uproot.write.sink.cursor.Cursor(0)
+        self._fVersion = 1061404
+        self._fBEGIN = 100
+        cursor.write_fields(self._sink, self._format1, b"root", self._fVersion, self._fBEGIN)
+
+        self._fEND = 1
+        self._fSeekFree = 1
+        self._endcursor = uproot.write.sink.cursor.Cursor(cursor.index)
+        cursor.write_fields(self._sink, self._format_end, self._fEND, self._fSeekFree)
+
+        self._fNbytesName = 2*len(self._filename) + 36
+        cursor.write_fields(self._sink, self._format2, 1, 1, self._fNbytesName, 4, 0)  # fNbytesFree, nfree, fNbytesName, fUnits, fCompress (FIXME!)
+
+        self._fSeekInfo = 0
+        self._seekcursor = uproot.write.sink.cursor.Cursor(cursor.index)
+        cursor.write_fields(self._sink, self._format_seekinfo, self._fSeekInfo)
+
+        self._fNbytesInfo = 0
+        self._nbytescursor = uproot.write.sink.cursor.Cursor(cursor.index)
+        cursor.write_fields(self._sink, self._format_nbytesinfo, self._fNbytesInfo)
+
+        cursor.write_data(self._sink, b"\x00\x010\xd5\xf5\xea~\x0b\x11\xe8\xa2D~S\x1f\xac\xbe\xef")  # fUUID (FIXME!)
+
+    def _writerootdir(self):
+        cursor = uproot.write.sink.cursor.Cursor(self._fBEGIN)
+        uproot.write.objects.TKey(cursor, self._sink, b"TFile", self._filename)
+        self._rootdir = uproot.write.objects.TDirectory(cursor, self._sink, self._filename, 0, self._fNbytesName)
+
+        # this is where we can put the streamers; after the root TDirectory
+        self._fSeekInfo = cursor.index
+        self._seekcursor.update_fields(self._sink, self._format_seekinfo, self._fSeekInfo)
+
+    def _writestreamers(self):
+        streamerdatabase = uproot.write.streamer.StreamerDatabase()
+        streamerdata = streamerdatabase[".all"]
+
+        cursor = uproot.write.sink.cursor.Cursor(self._fSeekInfo)
+        streamerkey = uproot.write.objects.TKey(cursor, self._sink, b"TList", b"StreamerInfo",
+                                                fTitle    = b"Doubly linked list",
+                                                fObjlen   = len(streamerdata),
+                                                fSeekKey  = self._fSeekInfo,
+                                                fSeekPdir = self._fBEGIN)
+        cursor.write_data(self._sink, streamerdata)
+
+        self._fNbytesInfo = streamerkey.fNbytes
+        self._nbytescursor.update_fields(self._sink, self._format_nbytesinfo, self._fNbytesInfo)
+
+
+
 # class Create(Append):
-
-#     def _openfile(self, path):
-#         self.path = path
-#         self.filename = os.path.split(self.path)[1].encode("utf-8")
-#         self.sink = uproot.write.sink.Sink(open(path, "wb+"))
-    
 #     def __init__(self, path):
-        
 #         self._openfile(path)
 
 #         self.streamers = []
@@ -138,7 +198,7 @@
 #         self.directorycursor = uproot.write.cursor.Cursor(cursor.index)
 #         self.directory = DirectoryInfo(self.fNbytesName)
 #         self.directory.write_values(cursor, self.sink)
-        
+
 #         #header.fSeekInfo points to begin of StreamerKey
 #         self.fSeekInfo = cursor.index
 #         self.fSeekInfo_cursor.update_fields(self.sink, self.fSeekInfo_packer, self.fSeekInfo)

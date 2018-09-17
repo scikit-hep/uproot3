@@ -28,20 +28,30 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# class DirectoryInfo(object):
-#     def __init__(self, fNbytesName):
-#         self.fVersion = 5
-#         self.fDatimeC = 1573188772
-#         self.fDatimeM = 1573188772
-#         self.fNbytesKeys = 0
-#         self.fNbytesName = fNbytesName
-#         self.fSeekDir =  100
-#         self.fSeekParent =  0
-#         self.fSeekKeys = 0
-#         self.packer = ">hIIiiiii"
-        
-#     def write_values(self, cursor, sink):
-#         cursor.write_fields(sink, self.packer, self.fVersion, self.fDatimeC, self.fDatimeM, self.fNbytesKeys, self.fNbytesName, self.fSeekDir, self.fSeekParent, self.fSeekKeys)
-        
-#     def update_values(self, cursor, sink):
-#         cursor.update_fields(sink, self.packer, self.fVersion, self.fDatimeC, self.fDatimeM, self.fNbytesKeys, self.fNbytesName, self.fSeekDir, self.fSeekParent, self.fSeekKeys)
+import struct
+
+import uproot.write.sink.cursor
+
+class TDirectory(object):
+    def __init__(self, cursor, sink, fName, fNbytesKeys, fNbytesName, fSeekDir=100, fSeekParent=0, fSeekKeys=0):
+        cursor.write_string(self._sink, fName)
+
+        self.fNbytesKeys = fNbytesKeys
+        self.fNbytesName = fNbytesName
+        self.fSeekDir = fSeekDir
+        self.fSeekParent = fSeekParent
+        self.fSeekKeys = fSeekKeys
+
+        self.cursor = uproot.write.sink.cursor.Cursor(cursor.index)
+        self.sink = sink
+        self.update()
+
+        cursor.skipbytes(self._format1.size)
+
+    def update(self):
+        fVersion = 1005
+        fDatimeC = 1573188772   # FIXME!
+        fDatimeM = 1573188772   # FIXME!
+        self.cursor.update_fields(self.sink, self._format1, fVersion, fDatimeC, fDatimeM, self.fNbytesKeys, self.fNbytesName, self.fSeekDir, self.fSeekParent, self.fSeekKeys)
+
+    _format1 = struct.Struct(">hIIiiqqq")
