@@ -5,7 +5,7 @@ class JunkKey(SuperKey):
     def __init__(self, string):
         self.string = string
         self.fVersion = 4
-        self.fObjlen = 16950 + len(self.string)
+        self.fObjlen = 582 + len(self.string)
         self.fDatime = 1581978882
         self.fKeylen = 0
         self.fNbytes = self.fObjlen + self.fKeylen

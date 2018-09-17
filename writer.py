@@ -166,13 +166,13 @@ class Writer(object):
                     self.streamers.append(x)
                     streamers_toadd.append(x)
 
-
         self.sink.set_key(self.pos, junkkey)
         self.pos = self.file.tell()
         junkkey.fKeylen = self.pos - pointcheck
         junkkey.fNbytes = junkkey.fKeylen + junkkey.fObjlen
         self.sink.set_key(pointcheck, junkkey)
         self.pos = self.file.tell()
+        item.fObjlen = junkkey.fObjlen
 
         if type(item.string) is str:
             item.string = item.string.encode("utf-8")
