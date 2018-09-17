@@ -34,31 +34,31 @@ class Sink(object):
 class FileSink(Sink):
     def __init__(self, path):
         self._path = path
-        self._source = open(path, "wb+")
+        self._sink = open(path, "wb+")
         # self._pos = 0
 
     def write(self, data, pos):
-        self._source.seek(pos)
-        self._source.write(data)
+        self._sink.seek(pos)
+        self._sink.write(data)
 
     # def write(self, data, pos):
-    #     if self._source.tell() != pos:
-    #         self._source.seek(pos)
-    #     self._source.write(data)
+    #     if self._sink.tell() != pos:
+    #         self._sink.seek(pos)
+    #     self._sink.write(data)
 
     # def write(self, data, pos):
     #     if self._pos != pos:
-    #         self._source.seek(pos)
-    #     self._source.write(data)
+    #         self._sink.seek(pos)
+    #     self._sink.write(data)
     #     self._pos += len(data)    # needs self._pos
 
     def read(self, start, stop):
         raise AssertionError("why???")
-        self._source.seek(start)
-        return self._source.read(stop - start)
+        self._sink.seek(start)
+        return self._sink.read(stop - start)
 
     def close(self):
-        self._source.close()
+        self._sink.close()
 
     def flush(self):
-        self._source.flush()
+        self._sink.flush()

@@ -99,13 +99,17 @@ class TFileCreate(TFileAppend):
 
     def _writerootdir(self):
         cursor = uproot.write.sink.cursor.Cursor(self._fBEGIN)
+
+        print("should be at BEGIN", self._fBEGIN)
+
         uproot.write.objects.TKey.TKey(cursor, self._sink, b"TFile", self._filename)
         self._rootdir = uproot.write.objects.TDirectory.TDirectory(cursor, self._sink, self._filename, 0, self._fNbytesName)
         self._expandfile(cursor)
 
     def _writestreamers(self):
         streamerdatabase = uproot.write.streamer.StreamerDatabase()
-        streamerdata = streamerdatabase[".all"]
+        # streamerdata = streamerdatabase[".all"]
+        streamerdata = streamerdatabase[".empty"]
 
         self._fSeekInfo = self._fSeekFree
         self._seekcursor.update_fields(self._sink, self._format_seekinfo, self._fSeekInfo)
