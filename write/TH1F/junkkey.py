@@ -2,10 +2,10 @@ from write.key import Key as SuperKey
 
 class JunkKey(SuperKey):
 
-    def __init__(self, string):
+    def __init__(self, string, nbinsx):
         self.string = string
         self.fVersion = 4
-        self.fObjlen = 582 + len(self.string)
+        self.fObjlen = 542 + len(self.string) + (4*nbinsx)
         self.fDatime = 1581978882
         self.fKeylen = 0
         self.fNbytes = self.fObjlen + self.fKeylen

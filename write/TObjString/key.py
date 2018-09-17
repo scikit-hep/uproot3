@@ -2,9 +2,9 @@ from write.key import Key as SuperKey
 
 class Key(SuperKey):
 
-    def __init__(self, keystring, string, stringloc):
+    def __init__(self, keystring, string, stringloc, nbins):
         self.fVersion = 4
-        self.fObjlen = 17 + len(string)
+        self.fObjlen = 17 + len(string) + (4*nbins)
         self.fDatime = 1573188772
         self.fKeylen = 0
         self.fNbytes = self.fObjlen + self.fKeylen

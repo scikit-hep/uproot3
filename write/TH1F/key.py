@@ -2,10 +2,10 @@ from write.key import Key as SuperKey
 
 class Key(SuperKey):
 
-    def __init__(self, string, stringloc):
+    def __init__(self, string, stringloc, nbinsx, fName, fTitle):
         self.string = string
         self.fVersion = 4
-        self.fObjlen = 582 + len(self.string)
+        self.fObjlen = 532 + len(fName) + (4*nbinsx) + len(fTitle)
         self.fDatime = 1581978882
         self.fKeylen = 0
         self.fNbytes = self.fObjlen + self.fKeylen
