@@ -63,7 +63,7 @@ class ArrayCache(collections.MutableMapping):
             yield x
 
     def __len__(self):
-        return len(x)
+        return len(self._cache)
 
 class ThreadSafeArrayCache(ArrayCache):
     def __init__(self, limitbytes, method="LRU"):
@@ -93,4 +93,4 @@ class ThreadSafeArrayCache(ArrayCache):
 
     def __len__(self):
         with self._lock:
-            return len(x)
+            return len(self._cache)
