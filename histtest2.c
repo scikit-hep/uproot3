@@ -1,9 +1,9 @@
 
-void histtest(){
-    TFile *tfile = new TFile("histtest.root", "RECREATE");
+void histtest2(){
+    TFile *tfile = new TFile("histtest2.root", "RECREATE");
     tfile->SetCompressionLevel(0);
     
-    TH1F* hist = new TH1F("th1f name", "th1f title", 10, 2.1, 3.1);
+    TH1F* hist = new TH1F("habla", "th1f title", 10, 2.1, 3.1);
     hist->AddBinContent(1, 6);
     hist->AddBinContent(2, 3);
     hist->AddBinContent(3, 5);
