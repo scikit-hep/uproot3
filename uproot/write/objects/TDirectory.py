@@ -34,7 +34,7 @@ import uproot.write.sink.cursor
 
 class TDirectory(object):
     def __init__(self, cursor, sink, fName, fNbytesKeys, fNbytesName, fSeekDir=100, fSeekParent=0, fSeekKeys=0):
-        cursor.write_string(self._sink, fName)
+        cursor.write_string(sink, fName)
 
         self.fNbytesKeys = fNbytesKeys
         self.fNbytesName = fNbytesName
@@ -46,7 +46,7 @@ class TDirectory(object):
         self.sink = sink
         self.update()
 
-        cursor.skipbytes(self._format1.size)
+        cursor.skip(self._format1.size)
 
     def update(self):
         fVersion = 1005

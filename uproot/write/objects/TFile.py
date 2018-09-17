@@ -37,21 +37,7 @@ import uproot.write.objects.TKey
 import uproot.write.objects.TDirectory
 import uproot.write.streamer
 
-# from uproot.write.begin_key import Begin_Key
-# from uproot.write.headkey import HeadKey
-# from uproot.write.directoryinfo import DirectoryInfo
-# from uproot.write.streamerkey import StreamerKey
-# from uproot.write.streamer import StreamerDatabase
-
-# from uproot.write.objects.TAxis.junkkey import JunkKey as TAxisJunkKey
-# from uproot.write.objects.TAxis.key import Key as TAxisKey
-# from uproot.write.objects.TAxis.taxis import TAxis
-
-# from uproot.write.objects.TObjString.junkkey import JunkKey as TObjStringJunkKey
-# from uproot.write.objects.TObjString.key import Key as TObjStringKey
-# from uproot.write.objects.TObjString.tobjstring import TObjString
-
-class Append(object):
+class TFileAppend(object):
     def __init__(self, path):
         self._openfile(path)
         raise NotImplementedError
@@ -68,7 +54,7 @@ class Append(object):
     def __setitem__(self, where, what):
         raise NotImplementedError
 
-class Create(Append):
+class TFileCreate(TFileAppend):
     def __init__(self, path):
         self._openfile(path)
         self._writeheader()
@@ -81,14 +67,16 @@ class Create(Append):
     _format2           = struct.Struct(">iiiBi")
     _format_seekinfo   = struct.Struct(">q")
     _format_nbytesinfo = struct.Struct(">i")
+    _format_nkeys      = struct.Struct(">i")
+
     def _writeheader(self):
         cursor = uproot.write.sink.cursor.Cursor(0)
         self._fVersion = 1061404
         self._fBEGIN = 100
         cursor.write_fields(self._sink, self._format1, b"root", self._fVersion, self._fBEGIN)
 
-        self._fEND = 1
-        self._fSeekFree = 1
+        self._fEND = 0
+        self._fSeekFree = 0
         self._endcursor = uproot.write.sink.cursor.Cursor(cursor.index)
         cursor.write_fields(self._sink, self._format_end, self._fEND, self._fSeekFree)
 
@@ -105,44 +93,55 @@ class Create(Append):
 
         cursor.write_data(self._sink, b"\x00\x010\xd5\xf5\xea~\x0b\x11\xe8\xa2D~S\x1f\xac\xbe\xef")  # fUUID (FIXME!)
 
+    def _expandfile(self, cursor):
+        self._fSeekFree = self._fEND = cursor.index
+        self._endcursor.update_fields(self._sink, self._format_end, self._fEND, self._fSeekFree)
+
     def _writerootdir(self):
         cursor = uproot.write.sink.cursor.Cursor(self._fBEGIN)
-        uproot.write.objects.TKey(cursor, self._sink, b"TFile", self._filename)
-        self._rootdir = uproot.write.objects.TDirectory(cursor, self._sink, self._filename, 0, self._fNbytesName)
-
-        self._fNbytesInfo = streamerkey.fNbytes
-        self._nbytescursor.update_fields(self._sink, self._format_nbytesinfo, self._fNbytesInfo)
+        uproot.write.objects.TKey.TKey(cursor, self._sink, b"TFile", self._filename)
+        self._rootdir = uproot.write.objects.TDirectory.TDirectory(cursor, self._sink, self._filename, 0, self._fNbytesName)
+        self._expandfile(cursor)
 
     def _writestreamers(self):
         streamerdatabase = uproot.write.streamer.StreamerDatabase()
         streamerdata = streamerdatabase[".all"]
 
-        self._fSeekInfo = self._fNbytesInfo
+        self._fSeekInfo = self._fSeekFree
         self._seekcursor.update_fields(self._sink, self._format_seekinfo, self._fSeekInfo)
 
         cursor = uproot.write.sink.cursor.Cursor(self._fSeekInfo)
-        streamerkey = uproot.write.objects.TKey(cursor, self._sink, b"TList", b"StreamerInfo",
-                                                fTitle    = b"Doubly linked list",
-                                                fObjlen   = len(streamerdata),
-                                                fSeekKey  = self._fSeekInfo,
-                                                fSeekPdir = self._fBEGIN)
+        streamerkey = uproot.write.objects.TKey.TKey(cursor, self._sink, b"TList", b"StreamerInfo",
+                                                     fTitle    = b"Doubly linked list",
+                                                     fObjlen   = len(streamerdata),
+                                                     fSeekKey  = self._fSeekInfo,
+                                                     fSeekPdir = self._fBEGIN)
         cursor.write_data(self._sink, streamerdata)
 
         self._fNbytesInfo = streamerkey.fNbytes
         self._nbytescursor.update_fields(self._sink, self._format_nbytesinfo, self._fNbytesInfo)
 
+        self._expandfile(cursor)
+
     def _writerootkeys(self):
         cursor = uproot.write.sink.cursor.Cursor(self._fNbytesInfo)
 
-        self._rootdir.fSeekKeys = self._fNbytesInfo
+        self._rootdir.fSeekKeys = self._fSeekFree
+        self._rootdir.fNbytesKeys = 0     # FIXME!
         self._rootdir.update()
 
-        uproot.write.objects.TKey(cursor, self._sink, b"TFile", self._filename,
-                                  fNbytes  = self._rootdir.fNbytesKeys,
-                                  fSeekKey = self._rootdir.fSeekKeys)
-        
+        uproot.write.objects.TKey.TKey(cursor, self._sink, b"TFile", self._filename,
+                                       fSeekKey = self._rootdir.fSeekKeys,
+                                       fNbytes  = self._rootdir.fNbytesKeys)
 
+        self._nkeys = 0
+        cursor.write_fields(self._sink, self._format_nkeys, self._nkeys)
 
+        self._expandfile(cursor)
+        self._sink.flush()
+
+    def close(self):
+        self._sink.close()
 
         
 # class Create(Append):

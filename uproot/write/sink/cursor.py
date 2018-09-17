@@ -73,14 +73,14 @@ class Cursor(object):
         self.index += len(data) + 1
 
     def update_data(self, sink, data):
-        sink.write(data)
+        sink.write(data, self.index)
 
     def write_data(self, sink, data):
         self.update_data(sink, data)
         self.index += len(data)
 
     def update_array(self, sink, data):
-        sink.write(data.tostring())
+        sink.write(data.tostring(), self.index)
 
     def write_array(self, sink, data):
         self.update_array(sink, data)
