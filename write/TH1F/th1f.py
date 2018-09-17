@@ -2,7 +2,9 @@ import numpy
 
 class TH1F(object):
 
-    def __init__(self, nbinsx, xlow, xup):
+    def __init__(self, fName, fTitle, nbinsx, xlow, xup):
+        self.fName = fName
+        self.fTitle = fTitle
         self.string = ""
         self.nbinsx = nbinsx
         self.xlow = xlow
@@ -32,19 +34,24 @@ class TH1F(object):
         return cnt, vers, packer
 
     def values3(self):
-        bytestream = [ 64,   0,   0,  33,   0,   1,   0,   1,   0,   0,   0,   0,   3,
-          0,   0,   8,   9, 116, 104,  49, 102,  32, 110,  97, 109, 101,
-         10, 116, 104,  49, 102,  32, 116, 105, 116, 108, 101,  64,   0,
-          0,   8,   0,   2,   2,  90,   0,   1,   0,   1,  64,   0,   0,
-          6,   0,   2,   0,   0,   3, 233,  64,   0,   0,  10,   0,   2,
-          0,   1,   0,   1,  63, 128,   0,   0,   0,   0,   0,  12,  64,
-          0,   0, 109,   0,  10,  64,   0,   0,  19,   0,   1,   0,   1,
-          0,   0,   0,   0,   3,   0,   0,   0,   5, 120,  97, 120, 105,
-        115,   0,  64,   0,   0,  36,   0,   4,   0,   0,   1, 254,   0,
-          1,   0,   1,   0,  42,  59, 163, 215,  10,  61,  15,  92,  41,
-         60, 245, 194, 143,  63, 128,   0,   0,  61,  15,  92,  41,   0,
-          1,   0,  42]
+        bytestream = [64,  0,  0, 33,  0,  1,  0,  1,  0,  0,  0,  0,  3,  0,  0,  8,
+         9]
         return numpy.frombuffer(bytes(bytestream), dtype=numpy.uint8)
+
+    def streamervalue1(self):
+        return self.fName, self.fTitle
+
+    def streamervalue2(self):
+        bytestream = [ 64,   0,   0,   8,   0,   2,   2,  90,   0,   1,   0,   1,  64,
+          0,   0,   6,   0,   2,   0,   0,   3, 233,  64,   0,   0,  10,
+          0,   2,   0,   1,   0,   1,  63, 128,   0,   0,   0,   0,   0,
+         12,  64,   0,   0, 109,   0,  10,  64,   0,   0,  19,   0,   1,
+          0,   1,   0,   0,   0,   0,   3,   0,   0,   0,   5, 120,  97,
+        120, 105, 115,   0,  64,   0,   0,  36,   0,   4,   0,   0,   1,
+        254,   0,   1,   0,   1,   0,  42,  59, 163, 215,  10,  61,  15,
+         92,  41,  60, 245, 194, 143,  63, 128,   0,   0,  61,  15,  92,
+         41,   0,   1,   0,  42]
+        return numpy.frombuffer(bytes(bytestream), dtype = numpy.uint8)
 
     def values4(self):
         return self.nbinsx, self.xlow, self.xup
@@ -82,9 +89,6 @@ class TH1F(object):
         return numpy.frombuffer(bytes(bytestream), dtype=numpy.uint8)
 
     def values6(self):
-        bytestream = [ 64, 192,   0,   0,  64,  64,   0,   0,  64, 160,   0,   0,  64,
-        224,   0,   0,  64, 128,   0,   0,  64,   0,   0,   0,  65,  32,
-          0,   0,  64, 160,   0,   0,  64, 160,   0,   0,  63, 128,   0,
-          0,   0,   0,   0,   0]
-        return numpy.frombuffer(bytes(bytestream), dtype=numpy.uint8)
+        bytesobj = numpy.array(self.bins, dtype = ">f4").view(dtype = numpy.uint8)
+        return bytesobj
 
