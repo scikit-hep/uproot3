@@ -1,20 +1,48 @@
-from uproot.write.key import Key
+#!/usr/bin/env python
 
-class StreamerKey(Key):
-    
-    def __init__(self, pointer):
-        self.fVersion = 4
-        self.fObjlen = 21
-        self.fDatime = 1573188772
-        self.fKeylen = 0
-        self.fNbytes = self.fObjlen + self.fKeylen
-        self.fCycle = 1
-        self.fSeekKey = pointer
-        self.fSeekPdir = 100
-        self.packer = ">ihiIhhii"
-        self.fClassName = b'TList'
-        self.fName = b'StreamerInfo'
-        self.fTitle = b'Doubly linked list'
-        Key.__init__(self, self.packer, self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle,
-                     self.fSeekKey, self.fSeekPdir, self.fClassName, self.fName, self.fTitle)
-    
+# Copyright (c) 2017, DIANA-HEP
+# All rights reserved.
+# 
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 
+# * Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
+# 
+# * Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
+# 
+# * Neither the name of the copyright holder nor the names of its
+#   contributors may be used to endorse or promote products derived from
+#   this software without specific prior written permission.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# from uproot.write.key import Key
+
+# class StreamerKey(Key):
+#     def __init__(self, pointer):
+#         self.fVersion = 4
+#         self.fObjlen = 21
+#         self.fDatime = 1573188772
+#         self.fKeylen = 0
+#         self.fNbytes = self.fObjlen + self.fKeylen
+#         self.fCycle = 1
+#         self.fSeekKey = pointer
+#         self.fSeekPdir = 100
+#         self.packer = ">ihiIhhii"
+#         self.fClassName = b'TList'
+#         self.fName = b'StreamerInfo'
+#         self.fTitle = b'Doubly linked list'
+#         Key.__init__(self, self.packer, self.fNbytes, self.fVersion, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle,
+#                      self.fSeekKey, self.fSeekPdir, self.fClassName, self.fName, self.fTitle)

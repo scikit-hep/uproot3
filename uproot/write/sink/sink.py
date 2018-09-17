@@ -28,32 +28,32 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-class Sink(object):
-    def __init__(self, file):
-        self.file = file
-        # self.pos = 0
+# class Sink(object):
+#     def __init__(self, file):
+#         self.file = file
+#         # self.pos = 0
 
-    def write(self, data, pos):
-        self.file.seek(pos)
-        self.file.write(data)
+#     def write(self, data, pos):
+#         self.file.seek(pos)
+#         self.file.write(data)
 
-    # def write(self, data, pos):
-    #     if self.file.tell() != pos:
-    #         self.file.seek(pos)
-    #     self.file.write(data)
+#     # def write(self, data, pos):
+#     #     if self.file.tell() != pos:
+#     #         self.file.seek(pos)
+#     #     self.file.write(data)
 
-    # def write(self, data, pos):
-    #     if self.pos != pos:
-    #         self.file.seek(pos)
-    #     self.file.write(data)
-    #     self.pos += len(data)    # needs self.pos
+#     # def write(self, data, pos):
+#     #     if self.pos != pos:
+#     #         self.file.seek(pos)
+#     #     self.file.write(data)
+#     #     self.pos += len(data)    # needs self.pos
 
-    def read(self, start, range):
-        self.file.seek(start)
-        return self.file.read(range)
+#     def read(self, start, range):
+#         self.file.seek(start)
+#         return self.file.read(range)
 
-    def close(self):
-        self.file.close()
+#     def close(self):
+#         self.file.close()
 
-    def flush(self):
-        self.file.flush()
+#     def flush(self):
+#         self.file.flush()

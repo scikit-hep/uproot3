@@ -28,19 +28,19 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-class Block(object):
-    def __init__(self, cursor, allocatedbytes, growfactor=2):
-        self.cursor = cursor
-        self.actualbytes = 0
-        self.allocatedbytes = allocatedbytes
-        self.growfactor = growfactor
+# class ExpandingBlock(object):
+#     def __init__(self, cursor, allocatedbytes, growfactor=2):
+#         self.cursor = cursor
+#         self.actualbytes = 0
+#         self.allocatedbytes = allocatedbytes
+#         self.growfactor = growfactor
 
-    def append(self, data, sink):
-        if self.actualbytes + len(data) > self.allocatedbytes:
-            self._move()  # somehow...
-        else:
-            self.actualbytes += len(data)
-            self.cursor.write(data, sink)
+#     def append(self, data, sink):
+#         if self.actualbytes + len(data) > self.allocatedbytes:
+#             self._move()  # somehow...
+#         else:
+#             self.actualbytes += len(data)
+#             self.cursor.write(data, sink)
 
-    def _grow(self):
-        self.allocatedbytes *= self.growfactor
+#     def _grow(self):
+#         self.allocatedbytes *= self.growfactor
