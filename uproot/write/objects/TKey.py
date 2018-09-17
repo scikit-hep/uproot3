@@ -33,7 +33,10 @@ import struct
 import uproot.write.sink.cursor
 
 class TKey(object):
-    def __init__(self, cursor, sink, fClassName, fName, fTitle=b"", fObjlen=0, fCycle=1, fSeekKey=100, fSeekPdir=0):
+    def __init__(self, cursor, sink, fClassName, fName, fTitle=b"", fObjlen=0, fCycle=1, fSeekKey=100, fSeekPdir=0, fNbytes=None):
+        if fNbytes is not None:
+            fObjlen = fNbytes - (self._format1.size + cursor.length_string(fClassName) + cursor.length_string(fName) + cursor.length_string(fTitle))
+
         self.fObjlen = fObjlen
         self.fCycle = fCycle
         self.fSeekKey = fSeekKey
@@ -56,7 +59,7 @@ class TKey(object):
 
     def update(self):
         fVersion = 1004
-        fDatime = 1573188772                     # FIXME!
+        fDatime = 1573188772                  # FIXME!
         self.cursor.update_fields(self.sink, self._format1, fVersion, self.fNbytes, self.fObjlen, fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
 
     _format1 = struct.Struct(">ihiIhhqq")

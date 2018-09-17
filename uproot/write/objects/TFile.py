@@ -74,6 +74,7 @@ class Create(Append):
         self._writeheader()
         self._writerootdir()
         self._writestreamers()
+        self._writerootkeys()
 
     _format1           = struct.Struct(">4sii")
     _format_end        = struct.Struct(">qq")
@@ -109,13 +110,15 @@ class Create(Append):
         uproot.write.objects.TKey(cursor, self._sink, b"TFile", self._filename)
         self._rootdir = uproot.write.objects.TDirectory(cursor, self._sink, self._filename, 0, self._fNbytesName)
 
-        # this is where we can put the streamers; after the root TDirectory
-        self._fSeekInfo = cursor.index
-        self._seekcursor.update_fields(self._sink, self._format_seekinfo, self._fSeekInfo)
+        self._fNbytesInfo = streamerkey.fNbytes
+        self._nbytescursor.update_fields(self._sink, self._format_nbytesinfo, self._fNbytesInfo)
 
     def _writestreamers(self):
         streamerdatabase = uproot.write.streamer.StreamerDatabase()
         streamerdata = streamerdatabase[".all"]
+
+        self._fSeekInfo = self._fNbytesInfo
+        self._seekcursor.update_fields(self._sink, self._format_seekinfo, self._fSeekInfo)
 
         cursor = uproot.write.sink.cursor.Cursor(self._fSeekInfo)
         streamerkey = uproot.write.objects.TKey(cursor, self._sink, b"TList", b"StreamerInfo",
@@ -128,8 +131,20 @@ class Create(Append):
         self._fNbytesInfo = streamerkey.fNbytes
         self._nbytescursor.update_fields(self._sink, self._format_nbytesinfo, self._fNbytesInfo)
 
+    def _writerootkeys(self):
+        cursor = uproot.write.sink.cursor.Cursor(self._fNbytesInfo)
+
+        self._rootdir.fSeekKeys = self._fNbytesInfo
+        self._rootdir.update()
+
+        uproot.write.objects.TKey(cursor, self._sink, b"TFile", self._filename,
+                                  fNbytes  = self._rootdir.fNbytesKeys,
+                                  fSeekKey = self._rootdir.fSeekKeys)
+        
 
 
+
+        
 # class Create(Append):
 #     def __init__(self, path):
 #         self._openfile(path)
