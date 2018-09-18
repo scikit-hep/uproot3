@@ -33,8 +33,8 @@ import struct
 
 import uproot.write.sink.file
 import uproot.write.sink.cursor
-import uproot.write.objects.TKey
-import uproot.write.objects.TDirectory
+import uproot.write.TKey
+import uproot.write.TDirectory
 import uproot.write.streamers
 
 class TFileAppend(object):
@@ -99,8 +99,8 @@ class TFileCreate(TFileAppend):
 
     def _writerootdir(self):
         cursor = uproot.write.sink.cursor.Cursor(self._fBEGIN)
-        uproot.write.objects.TKey.TKey(cursor, self._sink, b"TFile", self._filename)
-        self._rootdir = uproot.write.objects.TDirectory.TDirectory(cursor, self._sink, self._filename, 0, self._fNbytesName)
+        uproot.write.TKey.TKey(cursor, self._sink, b"TFile", self._filename)
+        self._rootdir = uproot.write.TDirectory.TDirectory(cursor, self._sink, self._filename, 0, self._fNbytesName)
         self._expandfile(cursor)
 
     def _writestreamers(self):
@@ -108,7 +108,7 @@ class TFileCreate(TFileAppend):
         self._seekcursor.update_fields(self._sink, self._format_seekinfo, self._fSeekInfo)
 
         cursor = uproot.write.sink.cursor.Cursor(self._fSeekInfo)
-        streamerkey = uproot.write.objects.TKey.TKey32(cursor, self._sink, b"TList", b"StreamerInfo",
+        streamerkey = uproot.write.TKey.TKey32(cursor, self._sink, b"TList", b"StreamerInfo",
                                                        fTitle    = b"Doubly linked list",
                                                        fObjlen   = len(uproot.write.streamers.streamers),
                                                        fSeekKey  = self._fSeekInfo,
