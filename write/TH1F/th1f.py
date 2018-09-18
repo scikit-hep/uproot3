@@ -2,13 +2,13 @@ import numpy
 
 class TH1F(object):
 
-    def __init__(self, fName, fTitle, nbinsx, xlow, xup):
+    def __init__(self, fName, fTitle, fNbins, fXmin, fXmax):
         self.fName = fName
         self.fTitle = fTitle
         self.string = ""
-        self.nbinsx = nbinsx
-        self.xlow = xlow
-        self.xup = xup
+        self.fNbins = fNbins
+        self.fXmin = fXmin
+        self.fXmax = fXmax
         self.fObjlen = 0
         self.bins = []
 
@@ -25,7 +25,7 @@ class TH1F(object):
 
 #Unable to figure it out yet
     def values2(self):
-        cnt =  self.fObjlen - 4 - 58
+        cnt = 510 + len(self.fName) + len(self.fTitle)
         kByteCountMask = numpy.int64(0x40000000)
         cnt = cnt | kByteCountMask
         vers = 8
@@ -61,7 +61,7 @@ class TH1F(object):
         return numpy.frombuffer(bytes(bytestream), dtype = numpy.uint8)
 
     def values4(self):
-        return self.nbinsx, self.xlow, self.xup
+        return self.fNbins, self.fXmin, self.fXmax
 
     def values5(self):
         bytestream = [  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
@@ -91,11 +91,18 @@ class TH1F(object):
           0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
           0,   0,  64,   0,   0,  17,   0,   5,   0,   1,   0,   0,   0,
           0,   3,   1,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
-          0,   0,   0,   0,   0,   0,   0,   0,   0,   2,   0,   0,   0,
-         12,   0,   0,   0,   0,  64, 192,   0,   0]
+          0,   0,   0,   0,   0,   0,   0,   0,   0,   2,   0,   0,   0]
         return numpy.frombuffer(bytes(bytestream), dtype=numpy.uint8)
 
     def values6(self):
+        bytestream = [self.fNbins + 2]
+        return numpy.frombuffer(bytes(bytestream), dtype=numpy.uint8)
+
+    def values7(self):
+        bytestream = [0,   0,   0,   0,  64, 192,   0,   0]
+        return numpy.frombuffer(bytes(bytestream), dtype=numpy.uint8)
+
+    def values8(self):
         bytesobj = numpy.array(self.bins, dtype = ">f4").view(dtype = numpy.uint8)
         return bytesobj
 
