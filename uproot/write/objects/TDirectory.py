@@ -35,6 +35,7 @@ import uproot.write.sink.cursor
 class TDirectory(object):
     def __init__(self, cursor, sink, fName, fNbytesKeys, fNbytesName, fSeekDir=100, fSeekParent=0, fSeekKeys=0):
         cursor.write_string(sink, fName)
+        cursor.write_data(sink, b"\x00")
 
         self.fNbytesKeys = fNbytesKeys
         self.fNbytesName = fNbytesName

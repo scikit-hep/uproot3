@@ -80,8 +80,8 @@ class TFileCreate(TFileAppend):
         self._endcursor = uproot.write.sink.cursor.Cursor(cursor.index)
         cursor.write_fields(self._sink, self._format_end, self._fEND, self._fSeekFree)
 
-        self._fNbytesName = 2*len(self._filename) + 36
-        cursor.write_fields(self._sink, self._format2, 1, 1, self._fNbytesName, 4, 0)  # fNbytesFree, nfree, fNbytesName, fUnits, fCompress (FIXME!)
+        self._fNbytesName = 2*len(self._filename) + 36 + 8  # two fields in TKey are 'q' rather than 'i'
+        cursor.write_fields(self._sink, self._format2, 0, 0, self._fNbytesName, 8, 0)  # fNbytesFree, nfree, fNbytesName, fUnits, fCompress (FIXME!)
 
         self._fSeekInfo = 0
         self._seekcursor = uproot.write.sink.cursor.Cursor(cursor.index)
@@ -105,8 +105,11 @@ class TFileCreate(TFileAppend):
 
     def _writestreamers(self):
         streamerdatabase = uproot.write.streamer.StreamerDatabase()
-        # streamerdata = streamerdatabase[".all"]
-        streamerdata = streamerdatabase[".empty"]
+        streamerdata = streamerdatabase[".all"]
+        # streamerdata = streamerdatabase[".empty"]
+
+        # import numpy
+        # streamerdata = numpy.array([64, 0, 0, 17, 0, 5, 0, 1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0], "u1").tostring()
 
         self._fSeekInfo = self._fSeekFree
         self._seekcursor.update_fields(self._sink, self._format_seekinfo, self._fSeekInfo)
@@ -127,16 +130,18 @@ class TFileCreate(TFileAppend):
     def _writerootkeys(self):
         cursor = uproot.write.sink.cursor.Cursor(self._fSeekFree)
 
-        self._rootdir.fSeekKeys = self._fSeekFree
-        self._rootdir.fNbytesKeys = 0     # FIXME!
-        self._rootdir.update()
-
         uproot.write.objects.TKey.TKey(cursor, self._sink, b"TFile", self._filename,
                                        fSeekKey = self._rootdir.fSeekKeys,
                                        fNbytes  = self._rootdir.fNbytesKeys)
 
         self._nkeys = 0
         cursor.write_fields(self._sink, self._format_nkeys, self._nkeys)
+
+        # keys go HERE
+
+        self._rootdir.fSeekKeys = self._fSeekFree
+        self._rootdir.fNbytesKeys = cursor.index - self._fSeekFree
+        self._rootdir.update()
 
         self._expandfile(cursor)
         self._sink.flush()
