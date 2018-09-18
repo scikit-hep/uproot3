@@ -35,7 +35,7 @@ import uproot.write.sink.file
 import uproot.write.sink.cursor
 import uproot.write.objects.TKey
 import uproot.write.objects.TDirectory
-import uproot.write.streamer
+import uproot.write.streamers
 
 class TFileAppend(object):
     def __init__(self, path):
@@ -104,19 +104,16 @@ class TFileCreate(TFileAppend):
         self._expandfile(cursor)
 
     def _writestreamers(self):
-        streamerdatabase = uproot.write.streamer.StreamerDatabase()
-        streamerdata = streamerdatabase[".all"]
-
         self._fSeekInfo = self._fSeekFree
         self._seekcursor.update_fields(self._sink, self._format_seekinfo, self._fSeekInfo)
 
         cursor = uproot.write.sink.cursor.Cursor(self._fSeekInfo)
         streamerkey = uproot.write.objects.TKey.TKey32(cursor, self._sink, b"TList", b"StreamerInfo",
                                                        fTitle    = b"Doubly linked list",
-                                                       fObjlen   = len(streamerdata),
+                                                       fObjlen   = len(uproot.write.streamers.streamers),
                                                        fSeekKey  = self._fSeekInfo,
                                                        fSeekPdir = self._fBEGIN)
-        cursor.write_data(self._sink, streamerdata)
+        cursor.write_data(self._sink, uproot.write.streamers.streamers)
 
         self._fNbytesInfo = streamerkey.fNbytes
         self._nbytescursor.update_fields(self._sink, self._format_nbytesinfo, self._fNbytesInfo)
