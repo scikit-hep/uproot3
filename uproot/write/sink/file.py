@@ -53,7 +53,6 @@ class FileSink(Sink):
     #     self._pos += len(data)    # needs self._pos
 
     def read(self, start, stop):
-        raise AssertionError("why???")
         self._sink.seek(start)
         return self._sink.read(stop - start)
 

@@ -40,7 +40,7 @@ class TKey(object):
         self.fSeekPdir = fSeekPdir
         self._fNbytes = fNbytes
 
-        self.fKeylen = self._format1.size + cursor.length_string(fClassName) + cursor.length_string(fName) + cursor.length_string(fTitle)
+        self.fKeylen = self._keylen(fClassName, fName, fTitle)
 
         self.cursor = uproot.write.sink.cursor.Cursor(cursor.index)
         self.sink = sink
@@ -51,12 +51,21 @@ class TKey(object):
         cursor.write_string(sink, fName)
         cursor.write_string(sink, fTitle)
 
+    @classmethod
+    def _keylen(cls, fClassName, fName, fTitle):
+        return cls._format1.size + uproot.write.sink.cursor.Cursor.length_strings([fClassName, fName, fTitle])
+
     @property
     def fNbytes(self):
         if self._fNbytes is None:
             return self.fObjlen + self.fKeylen
         else:
             return self._fNbytes
+
+    @fNbytes.setter
+    def fNbytes(self, value):
+        assert self._fNbytes is not None
+        self._fNbytes = value
 
     def update(self):
         fDatime = 1573188772                  # FIXME!

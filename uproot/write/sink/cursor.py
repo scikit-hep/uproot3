@@ -44,11 +44,16 @@ class Cursor(object):
         self.update_fields(sink, format, *args)
         self.index += format.size
 
-    def length_string(self, data):
-        if len(data) < 255:
-            return len(data) + 1
+    @staticmethod
+    def length_string(string):
+        if len(string) < 255:
+            return len(string) + 1
         else:
-            return len(data) + 5
+            return len(string) + 5
+
+    @staticmethod
+    def length_strings(strings):
+        return sum(Cursor.length_string(x) for x in strings)
 
     _format_byte = struct.Struct("B")
     _format_byteint = struct.Struct(">Bi")

@@ -61,13 +61,13 @@ class TFileCreate(TFileAppend):
         self._writerootdir()
         self._writestreamers()
         self._writerootkeys()
+        self._sink.flush()
 
     _format1           = struct.Struct(">4sii")
     _format_end        = struct.Struct(">qq")
     _format2           = struct.Struct(">iiiBi")
     _format_seekinfo   = struct.Struct(">q")
     _format_nbytesinfo = struct.Struct(">i")
-    _format_nkeys      = struct.Struct(">i")
 
     def _writeheader(self):
         cursor = uproot.write.sink.cursor.Cursor(0)
@@ -81,7 +81,7 @@ class TFileCreate(TFileAppend):
         cursor.write_fields(self._sink, self._format_end, self._fEND, self._fSeekFree)
 
         self._fNbytesName = 2*len(self._filename) + 36 + 8  # two fields in TKey are 'q' rather than 'i'
-        cursor.write_fields(self._sink, self._format2, 0, 0, self._fNbytesName, 8, 0)  # fNbytesFree, nfree, fNbytesName, fUnits, fCompress (FIXME!)
+        cursor.write_fields(self._sink, self._format2, 1, 1, self._fNbytesName, 8, 0)  # fNbytesFree, nfree, fNbytesName, fUnits, fCompress (FIXME!)
 
         self._fSeekInfo = 0
         self._seekcursor = uproot.write.sink.cursor.Cursor(cursor.index)
@@ -121,154 +121,10 @@ class TFileCreate(TFileAppend):
         self._expandfile(cursor)
 
     def _writerootkeys(self):
-        cursor = uproot.write.sink.cursor.Cursor(self._fSeekFree)
-
-        uproot.write.objects.TKey.TKey(cursor, self._sink, b"TFile", self._filename,
-                                       fSeekKey = self._rootdir.fSeekKeys,
-                                       fNbytes  = self._rootdir.fNbytesKeys)
-
-        self._nkeys = 0
-        cursor.write_fields(self._sink, self._format_nkeys, self._nkeys)
-
-        # keys go HERE
-
-        self._rootdir.fSeekKeys = self._fSeekFree
-        self._rootdir.fNbytesKeys = cursor.index - self._fSeekFree
-        self._rootdir.update()
-
-        self._expandfile(cursor)
-        self._sink.flush()
+        self._rootdir.startkeys(self)
 
     def close(self):
         self._sink.close()
-
-        
-# class Create(Append):
-#     def __init__(self, path):
-#         self._openfile(path)
-
-#         self.streamers = []
-        
-#         #Hack - Have to refactor into expand.py
-#         self.expander = 4000
-#         self.expandermultiple = 2
-        
-#         #Hack - All streamers
-#         self.streamers.append(".all")
-        
-#         #Hack - Put all streamers in only once
-#         self.count = 0
-        
-#         self.nkeypos = 0
-        
-#         #Setting the header bytes
-#         head_cursor = uproot.write.cursor.Cursor(0)
-        
-#         magic = b"root"
-#         fVersion = 61404
-#         fBEGIN = 100
-#         head_cursor.write_fields(self.sink, ">4sii", magic, fVersion, fBEGIN)
-        
-#         self.fEND_cursor = uproot.write.cursor.Cursor(head_cursor.index)
-#         self.fEND = 1
-#         self.fSeekFree = 1
-#         self.fEND_packer = ">qq"
-#         head_cursor.write_fields(self.sink, self.fEND_packer, self.fEND, self.fSeekFree)
-        
-#         fNbytesFree = 1
-#         nfree = 1
-#         self.fNbytesName = 36 + (2 * (len(self.filename)))
-#         fUnits = 4
-#         fCompress = 0
-#         head_cursor.write_fields(self.sink, ">iiiBi", fNbytesFree, nfree, self.fNbytesName, fUnits, fCompress)
-        
-#         self.fSeekInfo_cursor = uproot.write.cursor.Cursor(head_cursor.index)
-#         self.fSeekInfo = 0
-#         self.fSeekInfo_packer = ">q"
-#         head_cursor.write_fields(self.sink, self.fSeekInfo_packer, self.fSeekInfo)
-        
-#         self.fNbytesInfo_cursor = uproot.write.cursor.Cursor(head_cursor.index)
-#         self.fNbytesInfo = 0
-#         self.fNbytesInfo_packer = ">i"
-#         head_cursor.write_fields(self.sink, self.fNbytesInfo_packer, self.fNbytesInfo)
-
-#         fUUID = b"\x00\x010\xd5\xf5\xea~\x0b\x11\xe8\xa2D~S\x1f\xac\xbe\xef"
-#         head_cursor.write_fields(self.sink, ">18s", fUUID)
-        
-#         #Writing the first key
-#         cursor = uproot.write.cursor.Cursor(100)
-#         beginkey_cursor = uproot.write.cursor.Cursor(100)
-#         beginkey = Begin_Key(self.filename)
-#         beginkey.write_key(cursor, self.sink)
-#         beginkey.fKeylen = cursor.index - beginkey_cursor.index
-#         beginkey.fObjlen = beginkey.fNbytes - beginkey.fKeylen
-#         beginkey.update_key(beginkey_cursor, self.sink)
-        
-#         #Why?
-#         cursor.write_strings(self.sink, self.filename)
-        
-#         #Setting the directory info
-#         self.directorycursor = uproot.write.cursor.Cursor(cursor.index)
-#         self.directory = DirectoryInfo(self.fNbytesName)
-#         self.directory.write_values(cursor, self.sink)
-
-#         #header.fSeekInfo points to begin of StreamerKey
-#         self.fSeekInfo = cursor.index
-#         self.fSeekInfo_cursor.update_fields(self.sink, self.fSeekInfo_packer, self.fSeekInfo)
-        
-#         #Write streamerkey
-#         self.streamer_cursor = uproot.write.cursor.Cursor(cursor.index)
-#         self.streamerkey = StreamerKey(cursor.index)
-#         self.streamerkey.write_key(cursor, self.sink)
-#         self.streamerkey.fKeylen = cursor.index - self.streamer_cursor.index
-#         self.streamerkey.fNbytes = self.streamerkey.fKeylen + self.streamerkey.fObjlen
-#         self.streamerkey.update_key(cursor, self.sink)
-        
-#         self.fNbytesInfo_cursor.update_fields(self.sink, self.fNbytesInfo_packer, self.streamerkey.fNbytes)
-        
-#         #Pointer to streamers
-#         self.streamer_pointer = uproot.write.cursor.Cursor(cursor.index)
-        
-#         #Punt - Put empty streamers
-#         streamerdatabase = StreamerDatabase()
-#         self.sink.write(streamerdatabase[".empty"], cursor.index)
-        
-#         #Leave space for all streamers if empty needs to be replaced
-#         cursor.index += 38048
-        
-#         #directory.fSeekKeys points to header key
-#         self.directory.fSeekKeys = cursor.index
-#         self.directory.update_values(self.directorycursor, self.sink)
-        
-#         #Allocate space for keys
-#         self.keystart = cursor.index
-#         self.keyend = cursor.index
-#         self.keylimit = self.keystart + self.expander
-        
-#         #Head Key
-#         self.headkeycursor = uproot.write.cursor.Cursor(cursor.index)
-#         fNbytes = self.directory.fNbytesKeys
-#         fSeekKey = self.directory.fSeekKeys
-#         fName = self.filename
-#         self.head_key = HeadKey(fNbytes, fSeekKey, fName)
-#         self.head_key.write_key(cursor, self.sink)
-#         self.head_key_end = uproot.write.cursor.Cursor(cursor.index)
-
-#         #Number of Keys
-#         self.nkeys = 0
-#         packer = ">i"
-#         cursor.write_fields(self.sink, packer, self.nkeys)
-
-#         self.keyend = uproot.write.cursor.Cursor(cursor.index)
-        
-#         self.fSeekFree = cursor.index
-#         self.fEND = self.fSeekFree + self.expander
-        
-#         self.fEND_cursor.update_fields(self.sink, self.fEND_packer, self.fEND, self.fSeekFree)
-
-#     def __getitem__(self, where):
-#         uproot.open(self.path)
-#         raise NotImplementedError
 
 #     def __setitem__(self, keyname, item):
 #         if self.count == 0:
