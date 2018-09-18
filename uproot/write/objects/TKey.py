@@ -59,8 +59,12 @@ class TKey(object):
             return self._fNbytes
 
     def update(self):
-        fVersion = 1004
         fDatime = 1573188772                  # FIXME!
-        self.cursor.update_fields(self.sink, self._format1, self.fNbytes, fVersion, self.fObjlen, fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
+        self.cursor.update_fields(self.sink, self._format1, self.fNbytes, self._version, self.fObjlen, fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
 
+    _version = 1004
     _format1 = struct.Struct(">ihiIhhqq")
+
+class TKey32(TKey):
+    _version = 4
+    _format1 = struct.Struct(">ihiIhhii")

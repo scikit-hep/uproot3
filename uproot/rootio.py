@@ -433,7 +433,7 @@ def _readobjany(source, cursor, context, parent, asclass=None):
     elif tag == uproot.const.kNewClassTag:
         # new class and object
         cname = cursor.cstring(source).decode("ascii")
-            
+
         fct = context.classes.get(cname, Undefined)
 
         if vers > 0:
