@@ -42,6 +42,8 @@ class TObjString(object):
         else:
             self.value = string.encode("utf-8")
 
+    fClassName = b"TObjString"
+
     _format = struct.Struct(">IHHII")
 
     def length(self):

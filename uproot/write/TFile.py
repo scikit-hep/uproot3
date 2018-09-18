@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
+import sys
 import struct
 
 import uproot.write.sink.file
@@ -36,6 +37,7 @@ import uproot.write.sink.cursor
 import uproot.write.TKey
 import uproot.write.TDirectory
 import uproot.write.streamers
+import uproot.write.registry
 
 class TFileAppend(object):
     def __init__(self, path):
@@ -52,7 +54,14 @@ class TFileAppend(object):
         raise NotImplementedError
 
     def __setitem__(self, where, what):
-        raise NotImplementedError
+        if (sys.version_info[0] <= 2 and isinstance(where, unicode)) or isinstance(where, str):
+            where = where.encode("utf-8")
+        if not isinstance(where, bytes):
+            raise TypeError("ROOT file key must be a string")
+        
+        what = uproot.write.registry.writeable(what)
+        
+        self._rootdir.addkey(what.fClassName, where, fTitle=b"", fObjlen=0, fCycle=1, fSeekKey=100, fSeekPdir=0, fNbytes=None)
 
 class TFileCreate(TFileAppend):
     def __init__(self, path):
