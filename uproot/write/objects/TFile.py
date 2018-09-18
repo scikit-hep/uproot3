@@ -99,9 +99,6 @@ class TFileCreate(TFileAppend):
 
     def _writerootdir(self):
         cursor = uproot.write.sink.cursor.Cursor(self._fBEGIN)
-
-        print("should be at BEGIN", self._fBEGIN)
-
         uproot.write.objects.TKey.TKey(cursor, self._sink, b"TFile", self._filename)
         self._rootdir = uproot.write.objects.TDirectory.TDirectory(cursor, self._sink, self._filename, 0, self._fNbytesName)
         self._expandfile(cursor)
@@ -128,7 +125,7 @@ class TFileCreate(TFileAppend):
         self._expandfile(cursor)
 
     def _writerootkeys(self):
-        cursor = uproot.write.sink.cursor.Cursor(self._fNbytesInfo)
+        cursor = uproot.write.sink.cursor.Cursor(self._fSeekFree)
 
         self._rootdir.fSeekKeys = self._fSeekFree
         self._rootdir.fNbytesKeys = 0     # FIXME!

@@ -160,8 +160,6 @@ class ROOTDirectory(object):
                 else:
                     streamerinfos, streamerinfosmap, streamerrules = [], {}, []
 
-                print("streamerinfosmap", streamerinfosmap)
-
                 classes = dict(globals())
                 classes.update(builtin_classes)
                 classes = _defineclasses(streamerinfos, classes)
@@ -844,25 +842,17 @@ class TKey(ROOTObject):
         self._fName = cursor.string(source)
         self._fTitle = cursor.string(source)
 
-        print("read TKey", self._fNbytes, self._fVersion, self._fObjlen, self._fDatime, self._fKeylen, self._fCycle, self._fSeekKey, self._fSeekPdir, self._fClassName, self._fName, self._fTitle)
-
         if source.size() is not None:
-            print("read TKey {} - {} <? {}".format(source.size(), self._fSeekKey, self._fNbytes))
-
             if source.size() - self._fSeekKey < self._fNbytes:
                 raise ValueError("TKey declares that object {0} has {1} bytes but only {2} remain in the file".format(repr(self._fName), self._fNbytes, source.size() - self._fSeekKey))
 
         # object size != compressed size means it's compressed
         if self._fObjlen != self._fNbytes - self._fKeylen:
-            print("read TKey is compressed")
-
             self._source = uproot.source.compressed.CompressedSource(context.compression, source, Cursor(self._fSeekKey + self._fKeylen), self._fNbytes - self._fKeylen, self._fObjlen)
             self._cursor = Cursor(0, origin=-self._fKeylen)
 
         # otherwise, it's uncompressed
         else:
-            print("read TKey is NOT compressed")
-
             self._source = source
             self._cursor = Cursor(self._fSeekKey + self._fKeylen, origin=self._fSeekKey)
 
@@ -1220,27 +1210,14 @@ class TObjString(bytes, ROOTStreamedObject):
 class TList(list, ROOTStreamedObject):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
-        print("TList")
-
         start, cnt, self._classversion = _startcheck(source, cursor)
         _skiptobj(source, cursor)
         name = cursor.string(source)
-
-        print("TList name", name)
-
         size = cursor.field(source, struct.Struct(">i"))
-
-        print("TList size", size)
-
         for i in range(size):
-            print("TList elem", i)
-
             self.append(_readobjany(source, cursor, context, parent))
             n = cursor.field(source, TList._format_n)  # ignore option
-            cursor.bytes(source, n)                    # 
-
-        print("TList done", cursor.index - start, cnt)
-
+            cursor.bytes(source, n)
         _endcheck(start, cursor, cnt)
         return self
     _format_n = struct.Struct(">B")

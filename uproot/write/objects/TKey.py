@@ -42,8 +42,6 @@ class TKey(object):
 
         self.fKeylen = self._format1.size + cursor.length_string(fClassName) + cursor.length_string(fName) + cursor.length_string(fTitle)
 
-        print("at", sink._sink.tell())
-
         self.cursor = uproot.write.sink.cursor.Cursor(cursor.index)
         self.sink = sink
         self.update()
@@ -52,8 +50,6 @@ class TKey(object):
         cursor.write_string(sink, fClassName)
         cursor.write_string(sink, fName)
         cursor.write_string(sink, fTitle)
-
-        print("          ", fClassName, fName, fTitle)
 
     @property
     def fNbytes(self):
@@ -65,9 +61,6 @@ class TKey(object):
     def update(self):
         fVersion = 1004
         fDatime = 1573188772                  # FIXME!
-
-        print("write TKey", self.fNbytes, fVersion, self.fObjlen, fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
-
         self.cursor.update_fields(self.sink, self._format1, self.fNbytes, fVersion, self.fObjlen, fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
 
     _format1 = struct.Struct(">ihiIhhqq")
