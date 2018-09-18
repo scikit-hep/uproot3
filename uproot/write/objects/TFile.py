@@ -104,12 +104,12 @@ class TFileCreate(TFileAppend):
         self._expandfile(cursor)
 
     def _writestreamers(self):
-        streamerdatabase = uproot.write.streamer.StreamerDatabase()
-        streamerdata = streamerdatabase[".all"]
+        # streamerdatabase = uproot.write.streamer.StreamerDatabase()
+        # streamerdata = streamerdatabase[".all"]
         # streamerdata = streamerdatabase[".empty"]
 
-        # import numpy
-        # streamerdata = numpy.array([64, 0, 0, 17, 0, 5, 0, 1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0], "u1").tostring()
+        import numpy
+        streamerdata = numpy.array([64, 0, 0, 17, 0, 5, 0, 1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0], "u1").tostring()
 
         self._fSeekInfo = self._fSeekFree
         self._seekcursor.update_fields(self._sink, self._format_seekinfo, self._fSeekInfo)
