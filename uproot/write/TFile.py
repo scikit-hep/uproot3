@@ -81,7 +81,7 @@ class TFileUpdate(object):
         newkey = uproot.write.TKey.TKey(fClassName = what.fClassName,
                                         fName      = where,
                                         fTitle     = what.fTitle,
-                                        fObjlen    = what.length(),
+                                        fObjlen    = what.length(where),
                                         fSeekKey   = location,
                                         fSeekPdir  = self._fBEGIN)
 

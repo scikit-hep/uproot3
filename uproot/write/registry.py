@@ -37,10 +37,15 @@ registry = {
     }
 
 def writeable(obj):
-    try:
-        mod, tpe = registry[(obj.__class__.__module__, obj.__class__.__name__)]
-    except KeyError:
-        raise TypeError("type {0} from module {1} is not writeable by uproot".format(obj.__class__.__name__, obj.__class__.__module__))
+    def recurse(cls):
+        key = (cls.__module__, cls.__name__)
+        if key in registry:
+            return registry[key]
+        else:
+            for base in cls.__bases__:
+                return recurse(base)
+            raise TypeError("type {0} from module {1} is not writeable by uproot".format(obj.__class__.__name__, obj.__class__.__module__))
 
+    mod, tpe = recurse(obj.__class__)
     cls = getattr(importlib.import_module(mod), tpe)
     return cls(obj)
