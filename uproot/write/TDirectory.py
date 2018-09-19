@@ -103,7 +103,7 @@ class TDirectory(object):
         self.fNbytesKeys = self._nbyteskeys()
         while self.fNbytesKeys > self.allocationbytes:
             self.allocationbytes *= self.growfactor
-            newcursor = uproot.write.sink.cursor.Cursor(self.tfile.fSeekFree)
+            newcursor = uproot.write.sink.cursor.Cursor(self.tfile._fSeekFree)
 
         if newcursor is not None:
             self.writekeys(newcursor)
