@@ -70,7 +70,8 @@ class TFileAppend(object):
                                         fName      = where,
                                         fTitle     = what.fTitle,
                                         fObjlen    = what.length(),
-                                        fSeekKey   = location)
+                                        fSeekKey   = location,
+                                        fSeekPdir  = self._fBEGIN)
 
         self._fSeekFree += newkey.fKeylen + what.length()
         
