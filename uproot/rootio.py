@@ -1198,8 +1198,6 @@ class TObjArray(list, ROOTStreamedObject):
 class TObjString(bytes, ROOTStreamedObject):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
-        print("TObjString", source._source[cursor.index : cursor.index + 30])
-
         start, cnt, self._classversion = _startcheck(source, cursor)
         _skiptobj(source, cursor)
         string = cursor.string(source)

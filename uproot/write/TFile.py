@@ -89,7 +89,7 @@ class TFileCreate(TFileAppend):
         self._endcursor = uproot.write.sink.cursor.Cursor(cursor.index)
         cursor.write_fields(self._sink, self._format_end, self._fEND, self._fSeekFree)
 
-        self._fNbytesName = 2*len(self._filename) + 36 + 8  # two fields in TKey are 'q' rather than 'i'
+        self._fNbytesName = 2*len(self._filename) + 36 + 8                             # two fields in TKey are 'q' rather than 'i', so +8
         cursor.write_fields(self._sink, self._format2, 1, 1, self._fNbytesName, 8, 0)  # fNbytesFree, nfree, fNbytesName, fUnits, fCompress (FIXME!)
 
         self._fSeekInfo = 0
@@ -103,13 +103,19 @@ class TFileCreate(TFileAppend):
         cursor.write_data(self._sink, b"\x00\x010\xd5\xf5\xea~\x0b\x11\xe8\xa2D~S\x1f\xac\xbe\xef")  # fUUID (FIXME!)
 
     def _expandfile(self, cursor):
+        if cursor.index > self._fEND:
+            fillcursor = uproot.write.sink.cursor.Cursor(cursor.index - 1)
+            fillcursor.update_data(self._sink, b"\x00")
+        
         self._fSeekFree = self._fEND = cursor.index
         self._endcursor.update_fields(self._sink, self._format_end, self._fEND, self._fSeekFree)
 
     def _writerootdir(self):
         cursor = uproot.write.sink.cursor.Cursor(self._fBEGIN)
-        uproot.write.TKey.TKey(cursor, self._sink, b"TFile", self._filename)
-        self._rootdir = uproot.write.TDirectory.TDirectory(cursor, self._sink, self._filename, 0, self._fNbytesName)
+        key = uproot.write.TKey.TKey(b"TFile", self._filename)
+        key.write(cursor, self._sink)
+        self._rootdir = uproot.write.TDirectory.TDirectory(self, self._filename, self._fNbytesName)
+        self._rootdir.write(cursor, self._sink)
         self._expandfile(cursor)
 
     def _writestreamers(self):
@@ -117,11 +123,13 @@ class TFileCreate(TFileAppend):
         self._seekcursor.update_fields(self._sink, self._format_seekinfo, self._fSeekInfo)
 
         cursor = uproot.write.sink.cursor.Cursor(self._fSeekInfo)
-        streamerkey = uproot.write.TKey.TKey32(cursor, self._sink, b"TList", b"StreamerInfo",
-                                                       fTitle    = b"Doubly linked list",
-                                                       fObjlen   = len(uproot.write.streamers.streamers),
-                                                       fSeekKey  = self._fSeekInfo,
-                                                       fSeekPdir = self._fBEGIN)
+        streamerkey = uproot.write.TKey.TKey32(fClassName = b"TList",
+                                               fName      = b"StreamerInfo",
+                                               fTitle     = b"Doubly linked list",
+                                               fObjlen    = len(uproot.write.streamers.streamers),
+                                               fSeekKey   = self._fSeekInfo,
+                                               fSeekPdir  = self._fBEGIN)
+        streamerkey.write(cursor, self._sink)
         cursor.write_data(self._sink, uproot.write.streamers.streamers)
 
         self._fNbytesInfo = streamerkey.fNbytes
@@ -130,7 +138,7 @@ class TFileCreate(TFileAppend):
         self._expandfile(cursor)
 
     def _writerootkeys(self):
-        self._rootdir.startkeys(self)
+        self._rootdir.writekeys(uproot.write.sink.cursor.Cursor(self._fSeekFree))
 
     def close(self):
         self._sink.close()

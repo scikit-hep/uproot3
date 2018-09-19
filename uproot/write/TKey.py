@@ -33,27 +33,18 @@ import struct
 import uproot.write.sink.cursor
 
 class TKey(object):
-    def __init__(self, cursor, sink, fClassName, fName, fTitle=b"", fObjlen=0, fCycle=1, fSeekKey=100, fSeekPdir=0, fNbytes=None):
+    def __init__(self, fClassName, fName, fTitle=b"", fObjlen=0, fCycle=1, fSeekKey=100, fSeekPdir=0, fNbytes=None):
+        self.fClassName = fClassName
+        self.fName = fName
+        self.fTitle = fTitle
+
         self.fObjlen = fObjlen
         self.fCycle = fCycle
         self.fSeekKey = fSeekKey
         self.fSeekPdir = fSeekPdir
         self._fNbytes = fNbytes
 
-        self.fKeylen = self._keylen(fClassName, fName, fTitle)
-
-        self.cursor = uproot.write.sink.cursor.Cursor(cursor.index)
-        self.sink = sink
-        self.update()
-
-        cursor.skip(self._format1.size)
-        cursor.write_string(sink, fClassName)
-        cursor.write_string(sink, fName)
-        cursor.write_string(sink, fTitle)
-
-    @classmethod
-    def _keylen(cls, fClassName, fName, fTitle):
-        return cls._format1.size + uproot.write.sink.cursor.Cursor.length_strings([fClassName, fName, fTitle])
+        self.fKeylen = self._format1.size + uproot.write.sink.cursor.Cursor.length_strings([self.fClassName, self.fName, self.fTitle])
 
     @property
     def fNbytes(self):
@@ -68,8 +59,19 @@ class TKey(object):
         self._fNbytes = value
 
     def update(self):
-        fDatime = 1573188772                  # FIXME!
+        fDatime = 1573188772   # FIXME!
         self.cursor.update_fields(self.sink, self._format1, self.fNbytes, self._version, self.fObjlen, fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
+
+    def write(self, cursor, sink):
+        self.cursor = uproot.write.sink.cursor.Cursor(cursor.index)
+        self.sink = sink
+
+        self.update()
+
+        cursor.skip(self._format1.size)
+        cursor.write_string(sink, self.fClassName)
+        cursor.write_string(sink, self.fName)
+        cursor.write_string(sink, self.fTitle)
 
     _version = 1004
     _format1 = struct.Struct(">ihiIhhqq")

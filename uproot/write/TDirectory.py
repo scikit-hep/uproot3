@@ -28,27 +28,32 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import collections
 import struct
 
 import uproot.write.sink.cursor
 import uproot.write.TKey
 
 class TDirectory(object):
-    def __init__(self, cursor, sink, fName, fNbytesKeys, fNbytesName, fSeekDir=100, fSeekParent=0, fSeekKeys=0):
-        cursor.write_string(sink, fName)
-        cursor.write_data(sink, b"\x00")
-
-        self.fNbytesKeys = fNbytesKeys
+    def __init__(self, tfile, fName, fNbytesName, fNbytesKeys=0, fSeekDir=100, fSeekParent=0, fSeekKeys=0, allocationbytes=1024, growfactor=10):
+        self.tfile = tfile
+        self.fName = fName
         self.fNbytesName = fNbytesName
+        self.fNbytesKeys = fNbytesKeys
         self.fSeekDir = fSeekDir
         self.fSeekParent = fSeekParent
         self.fSeekKeys = fSeekKeys
 
-        self.cursor = uproot.write.sink.cursor.Cursor(cursor.index)
-        self.sink = sink
-        self.update()
+        self.allocationbytes = allocationbytes
+        self.growfactor = growfactor
 
-        cursor.skip(self._format1.size)
+        self.headkey = uproot.write.TKey.TKey(fClassName = b"TFile",
+                                              fName      = self.fName,
+                                              fObjlen    = self._format2.size,
+                                              fSeekKey   = self.fSeekKeys,
+                                              fNbytes    = self.fNbytesKeys)
+        self.nkeys = 0
+        self.keys = collections.OrderedDict()
 
     def update(self):
         fVersion = 1005
@@ -56,58 +61,52 @@ class TDirectory(object):
         fDatimeM = 1573188772   # FIXME!
         self.cursor.update_fields(self.sink, self._format1, fVersion, fDatimeC, fDatimeM, self.fNbytesKeys, self.fNbytesName, self.fSeekDir, self.fSeekParent, self.fSeekKeys)
 
+    def write(self, cursor, sink):
+        cursor.write_string(sink, self.fName)
+        cursor.write_data(sink, b"\x00")
+
+        self.cursor = uproot.write.sink.cursor.Cursor(cursor.index)
+        self.sink = sink
+        self.update()
+
+        cursor.skip(self._format1.size)
+
     _format1 = struct.Struct(">hIIiiqqq")
     _format2 = struct.Struct(">i")
 
-    def startkeys(self, tfile, allocationbytes=1024, growfactor=10):
-        self.tfile = tfile
-        self.allocationbytes = allocationbytes
-        self.growfactor = growfactor
+    def writekeys(self, cursor):
+        self.tfile._expandfile(uproot.write.sink.cursor.Cursor(cursor.index + self.allocationbytes))
 
-        self.fSeekKeys = self.tfile._fSeekFree
-        self.fNbytesKeys = uproot.write.TKey.TKey._keylen(b"TFile", self.tfile._filename, b"") + self._format2.size
+        self.fSeekKeys = cursor.index
+        self.fNbytesKeys = self.headkey.fObjlen + self._format2.size + sum(x.fObjlen for x in self.keys)
 
-        fillcursor = uproot.write.sink.cursor.Cursor(self.fSeekKeys + self.allocationbytes)
-        fillcursor.update_data(self.sink, b"\x00")
-        self.tfile._expandfile(fillcursor)
-
-        self.keycursor = uproot.write.sink.cursor.Cursor(self.fSeekKeys)
-        self.headkey = uproot.write.TKey.TKey(self.keycursor, self.sink, b"TFile", self.tfile._filename,
-                                                      fObjlen  = 4,
-                                                      fSeekKey = self.fSeekKeys,
-                                                      fNbytes  = self.fNbytesKeys)
-
-        self.nkeys = 0
+        self.keycursor = uproot.write.sink.cursor.Cursor(cursor.index)
+        self.headkey.write(self.keycursor, self.sink)
         self.nkeycursor = uproot.write.sink.cursor.Cursor(self.keycursor.index)
         self.keycursor.write_fields(self.sink, self._format2, self.nkeys)
 
         self.update()
 
-    def addkey(self, fClassName, fName, fTitle=b"", fObjlen=0, fCycle=1, fSeekKey=100, fSeekPdir=0, fNbytes=None):
-        if self.keycursor.index + uproot.write.TKey.TKey._keylen(fClassName, fName, fTitle) > self.fSeekKeys + self.allocationbytes:
-            self.allocationbytes *= self.growfactor
+    def setkey(self, newkey):
+        newcursor = None
 
-            olddata = self.sink.read(self.nkeycursor.index, self.keycursor.index)
-            self.fSeekKeys = self.tfile._fSeekFree
+        if newkey.fName in self.keys:
+            newcursor = uproot.write.sink.cursor.Cursor(self.keycursor)
 
-            fillcursor = uproot.write.sink.cursor.Cursor(self.fSeekKeys + self.allocationbytes)
-            fillcursor.update_data(self.sink, b"\x00")
-            self.tfile._expandfile(fillcursor)
-
-            self.keycursor = uproot.write.sink.cursor.Cursor(self.fSeekKeys)
-            self.headkey = uproot.write.TKey.TKey(self.keycursor, self.sink, b"TFile", self.tfile._filename,
-                                                          fObjlen  = 4,
-                                                          fSeekKey = self.fSeekKeys,
-                                                          fNbytes  = self.fNbytesKeys)
-            self.keycursor.write_data(self.sink, olddata)
-            
+        self.headkey.fObjlen += newkey.fKeylen
+        self.headkey.fNbytes += newkey.fKeylen
         self.nkeys += 1
-        self.nkeycursor.update_fields(self.sink, self._format2, self.nkeys)
-        key = uproot.write.TKey.TKey(self.keycursor, self.sink, fClassName, fName, fTitle=fTitle, fObjlen=fObjlen, fCycle=fCycle, fSeekKey=fSeekKey, fSeekPdir=fSeekPdir, fNbytes=fNbytes)
+        self.keys[newkey.fName] = newkey
 
-        self.headkey.fObjlen += key.fKeylen
-        self.headkey.fNbytes += key.fKeylen
-        self.headkey.update()
+        self.fNbytesKeys = self.headkey.fObjlen + self._format2.size + sum(x.fObjlen for x in self.keys)
+        while self.fNbytesKeys > self.allocationbytes:
+            self.allocationbytes *= self.growfactor
+            newcursor = uproot.write.sink.cursor.Cursor(self.tfile.fSeekFree)
 
-        self.fNbytesKeys += key.fKeylen
-        self.update()
+        if newcursor is not None:
+            self.writekeys(newcursor)
+        else:
+            newkey.write(self.keycursor, self.sink)
+            self.headkey.update()
+            self.nkeycursor.update_fields(self.sink, self._format2, self.nkeys)
+            self.update()
