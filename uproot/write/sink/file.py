@@ -29,21 +29,37 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class Sink(object):
-    def __init__(self, file):
-        self.file = file
-        # self.pos = 0
+    pass
+
+class FileSink(Sink):
+    def __init__(self, path):
+        self._path = path
+        self._sink = open(path, "wb+")
+        # self._pos = 0
 
     def write(self, data, pos):
-        self.file.seek(pos)
-        self.file.write(data)
+        self._sink.seek(pos)
+        self._sink.write(data)
 
     # def write(self, data, pos):
-    #     if self.file.tell() != pos:
-    #         self.file.seek(pos)
-    #     self.file.write(data)
+    #     if self._sink.tell() != pos:
+    #         self._sink.seek(pos)
+    #     self._sink.write(data)
 
     # def write(self, data, pos):
-    #     if self.pos != pos:
-    #         self.file.seek(pos)
-    #     self.file.write(data)
-    #     self.pos += len(data)    # needs self.pos
+    #     if self._pos != pos:
+    #         self._sink.seek(pos)
+    #     self._sink.write(data)
+    #     self._pos += len(data)    # needs self._pos
+
+    @property
+    def closed(self):
+        return self._sink.closed
+
+    def close(self):
+        if not self._sink.closed:
+            self._sink.close()
+
+    def flush(self):
+        if not self._sink.closed:
+            self._sink.flush()

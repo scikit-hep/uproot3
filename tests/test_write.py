@@ -28,38 +28,16 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import os
-import struct
+import unittest
 
-import uproot.write.sink
-import uproot.write.cursor
+import uproot
 
-class Append(object):
-    def __init__(self, path):
-        self._openfile(path)
-        raise NotImplementedError
-
-    def _openfile(self, path):
-        self.path = path
-        self.filename = os.path.split(self.path)[1].encode("utf-8")
-        self.sink = uproot.write.sink.Sink(open(path, "wb+"))
-
-    def __getitem__(self, where):
-        uproot.open(self.path)
-        raise NotImplementedError
-
-    def __setitem__(self, where, what):
-        where.split("/")
+class Test(unittest.TestCase):
+    def runTest(self):
         pass
-    
-class Create(Append):
-    def __init__(self, filename):
-        self._openfile(path)
 
-        cursor = uproot.write.cursor.Cursor(0)
-        self.streamers = []
+    def test_strings(self):
+        pass
 
-        # header bytes
-        cursor.fields(self.sink, [b"root", ...])
-
-    _format1 = struct.Struct(">4siqqiiiBiqi18s")
+    def test_th1(self):
+        pass

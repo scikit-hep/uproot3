@@ -28,10 +28,24 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import re
+import importlib
 
-__version__ = "3.0.0"
-version = __version__
-version_info = tuple(re.split(r"[-\.]", __version__))
+registry = {
+    ("builtins", "bytes"):                     ("uproot.write.objects.TObjString", "TObjString"),
+    ("builtins", "str"):                       ("uproot.write.objects.TObjString", "TObjString"),
+    ("uproot_methods.classes.TH1", "Methods"): ("uproot.write.objects.TH1", "TH1"),
+    }
 
-del re
+def writeable(obj):
+    def recurse(cls):
+        key = (cls.__module__, cls.__name__)
+        if key in registry:
+            return registry[key]
+        else:
+            for base in cls.__bases__:
+                return recurse(base)
+            raise TypeError("type {0} from module {1} is not writeable by uproot".format(obj.__class__.__name__, obj.__class__.__module__))
+
+    mod, tpe = recurse(obj.__class__)
+    cls = getattr(importlib.import_module(mod), tpe)
+    return cls(obj)

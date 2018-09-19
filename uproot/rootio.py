@@ -30,6 +30,7 @@
 
 import keyword
 import numbers
+import os
 import re
 import struct
 import sys
@@ -52,12 +53,14 @@ import uproot_methods.classes
 ################################################################ high-level interface
 
 def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
-    if hasattr(path, "__fspath__"):
+    if isinstance(path, getattr(os, "PathLike", ())):
+        path = os.fspath(path)
+    elif hasattr(path, "__fspath__"):
         path = path.__fspath__()
-    if path.__class__.__module__ == "pathlib":
+    elif path.__class__.__module__ == "pathlib":
         import pathlib
         if isinstance(path, pathlib.Path):
-            path = str(path)
+             path = str(path)
 
     parsed = urlparse(path)
     if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0:
@@ -197,7 +200,6 @@ class ROOTDirectory(object):
                     keys = [TKey.read(source, subcursor, context, None) for i in range(nkeys)]
 
                     out = ROOTDirectory(mykey._fName, context, keys)
-                    out._headerkey = headerkey
 
                 out._fVersion, out._fDatimeC, out._fDatimeM, out._fNbytesKeys, out._fNbytesName, out._fSeekDir, out._fSeekParent, out._fSeekKeys = fVersion, fDatimeC, fDatimeM, fNbytesKeys, fNbytesName, fSeekDir, fSeekParent, fSeekKeys
                 out.source = source
@@ -430,7 +432,7 @@ def _readobjany(source, cursor, context, parent, asclass=None):
     elif tag == uproot.const.kNewClassTag:
         # new class and object
         cname = cursor.cstring(source).decode("ascii")
-            
+
         fct = context.classes.get(cname, Undefined)
 
         if vers > 0:
@@ -628,6 +630,9 @@ def _defineclasses(streamerinfos, classes):
         if isinstance(streamerinfo, TStreamerInfo) and pyclassname not in builtin_classes and (pyclassname not in classes or hasattr(classes[pyclassname], "_versions")):
             code = ["    @classmethod",
                     "    def _readinto(cls, self, source, cursor, context, parent):",
+
+#                    "        print(cursor.hexdump(source, size=1000))" if pyclassname == "TH1D" else "",
+
                     "        start, cnt, classversion = _startcheck(source, cursor)",
                     "        if cls._classversion != classversion:",
                     "            cursor.index = start",
@@ -841,7 +846,7 @@ class TKey(ROOTObject):
 
         if source.size() is not None:
             if source.size() - self._fSeekKey < self._fNbytes:
-                raise ValueError("TKey declares that object {0} has {1} bytes but only {2} remain in the file".format(repr(self._fName), self._fNbytes, source.size() - self._fSeekKey))
+                raise ValueError("TKey declares that object {0} has {1} bytes but only {2} remain in the file".format(repr(self._fName), self._fObjlen, source.size() - self._fSeekKey))
 
         # object size != compressed size means it's compressed
         if self._fObjlen != self._fNbytes - self._fKeylen:
@@ -1214,7 +1219,7 @@ class TList(list, ROOTStreamedObject):
         for i in range(size):
             self.append(_readobjany(source, cursor, context, parent))
             n = cursor.field(source, TList._format_n)  # ignore option
-            cursor.bytes(source, n)                    # 
+            cursor.bytes(source, n)
         _endcheck(start, cursor, cnt)
         return self
     _format_n = struct.Struct(">B")
