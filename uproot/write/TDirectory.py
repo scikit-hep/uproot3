@@ -85,6 +85,8 @@ class TDirectory(object):
         self.headkey.write(self.keycursor, self.sink)
         self.nkeycursor = uproot.write.sink.cursor.Cursor(self.keycursor.index)
         self.keycursor.write_fields(self.sink, self._format2, len(self.keys))
+        for key in self.keys.values():
+            key.write(self.keycursor, self.sink)
 
         self.update()
 
@@ -113,7 +115,7 @@ class TDirectory(object):
 
     def delkey(self, name):
         oldkey = self.keys[name]
-        self.headkey.fObjlen -= oldkey
+        self.headkey.fObjlen -= oldkey.fKeylen
         del self.keys[name]
 
         self.fNbytesKeys = self._nbyteskeys()

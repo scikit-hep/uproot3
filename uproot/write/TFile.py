@@ -50,10 +50,10 @@ class TFileAppend(object):
         self._filename = os.path.split(path)[1].encode("utf-8")
 
     def __getitem__(self, where):
-        uproot.open(self.path)
-        raise NotImplementedError
+        return uproot.open(self.path)[where]
 
-    def __setitem__(self, where, what):
+    @staticmethod
+    def _normalizewhere(where):
         if (sys.version_info[0] <= 2 and isinstance(where, unicode)) or (sys.version_info[0] > 2 and isinstance(where, str)):
             where = where.encode("utf-8")
         if not isinstance(where, bytes):
@@ -61,7 +61,11 @@ class TFileAppend(object):
 
         if b"/" in where:
             raise NotImplementedError("subdirectories not supported yet")
-        
+
+        return where
+
+    def __setitem__(self, where, what):
+        where = self._normalizewhere(where)
         what = uproot.write.registry.writeable(what)
 
         location = self._fSeekFree
@@ -80,6 +84,13 @@ class TFileAppend(object):
 
         self._rootdir.setkey(newkey)
         self._sink.flush()
+
+    def __delitem__(self, where):
+        where = self._normalizewhere(where)
+        try:
+            self._rootdir.delkey(where)
+        except KeyError:
+            raise KeyError("ROOT directory does not contain key {0}".format(where))
 
 class TFileCreate(TFileAppend):
     def __init__(self, path):
