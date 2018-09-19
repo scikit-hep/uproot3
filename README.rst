@@ -40,14 +40,6 @@ Install uproot like any other Python package:
 
 or similar (use ``sudo``, ``--user``, ``virtualenv``, or ``conda`` if you wish).
 
-**New!** uproot 3 beta versions are available, but you have to specially ask for them with pip. For instance, try
-
-.. code-block:: bash
-
-    pip install -U "uproot>=3.0.0b2"
-
-Be sure to set the ``-U`` option to keep dependencies up to date. Some of uproot 3's new functionality is in external libraries (`awkward-array <https://github.com/scikit-hep/awkward-array>`__ and `uproot-methods <https://github.com/scikit-hep/uproot-methods>`__).
-
 Strict dependencies:
 ====================
 

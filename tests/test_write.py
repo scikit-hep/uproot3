@@ -38,3 +38,6 @@ class Test(unittest.TestCase):
 
     def test_strings(self):
         pass
+
+    def test_th1(self):
+        pass
