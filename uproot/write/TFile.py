@@ -85,10 +85,10 @@ class TFileUpdate(object):
                                         fSeekKey   = location,
                                         fSeekPdir  = self._fBEGIN)
 
-        self._fSeekFree += newkey.fKeylen + what.length()
+        self._fSeekFree += newkey.fKeylen + what.length(where)
         
         newkey.write(cursor, self._sink)
-        what.write(cursor, self._sink)
+        what.write(cursor, self._sink, where)
 
         self._rootdir.setkey(newkey)
         self._sink.flush()

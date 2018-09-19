@@ -31,8 +31,9 @@
 import importlib
 
 registry = {
-    ("builtins", "bytes"): ("uproot.write.objects.TObjString", "TObjString"),
-    ("builtins", "str"):   ("uproot.write.objects.TObjString", "TObjString"),
+    ("builtins", "bytes"):                     ("uproot.write.objects.TObjString", "TObjString"),
+    ("builtins", "str"):                       ("uproot.write.objects.TObjString", "TObjString"),
+    ("uproot_methods.classes.TH1", "Methods"): ("uproot.write.objects.TH1", "TH1"),
     }
 
 def writeable(obj):

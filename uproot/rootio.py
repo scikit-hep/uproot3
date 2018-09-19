@@ -646,6 +646,9 @@ def _defineclasses(streamerinfos, classes):
             basicnames = []
             basicletters = ""
             for elementi, element in enumerate(streamerinfo._fElements):
+                if element._fName == b"fBuffer":
+                    code.append("        print('BEFORE', cursor.index, source._uncompressed[cursor.index:cursor.index + 21])")
+
                 if isinstance(element, TStreamerArtificial):
                     code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
 
@@ -737,6 +740,9 @@ def _defineclasses(streamerinfos, classes):
 
                 else:
                     raise AssertionError(element)
+
+                if element._fName == b"fBuffer":
+                    code.append("        print('AFTER', cursor.index, source._uncompressed[cursor.index:cursor.index + 10])")
 
             code.extend(["        if self.__class__.__name__ == cls.__name__:",
                          "            self.__class__ = cls._versions[classversion]",
