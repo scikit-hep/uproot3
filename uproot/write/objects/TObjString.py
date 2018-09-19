@@ -47,11 +47,11 @@ class TObjString(object):
 
     _format = struct.Struct(">IHHII")
 
-    def length(self, name):
-        return self._format.size + uproot.write.sink.cursor.Cursor.length_string(self.value)
-
     def write(self, cursor, sink, name):
         cnt = numpy.int64(self.length(name) - 4) | uproot.const.kByteCountMask
         vers = 1
         cursor.write_fields(sink, self._format, cnt, vers, 1, 0, uproot.const.kNotDeleted)
         cursor.write_string(sink, self.value)
+
+    def length(self, name):
+        return self._format.size + uproot.write.sink.cursor.Cursor.length_string(self.value)

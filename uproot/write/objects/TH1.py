@@ -49,14 +49,17 @@ class TH1(object):
 
         self.fXaxis = self.emptyaxis("xaxis", 1.0)
         self.fXaxis.update(histogram._fXaxis.__dict__)
+        self.fXaxis["_fXbins"] = numpy.array(self.fXaxis["_fXbins"], dtype=">f8", copy=False)
 
         self.fYaxis = self.emptyaxis("yaxis", 0.0)
         if hasattr(histogram, "_fYaxis"):
             self.fYaxis.update(histogram._fYaxis.__dict__)
+        self.fYaxis["_fXbins"] = numpy.array(self.fYaxis["_fXbins"], dtype=">f8", copy=False)
 
         self.fZaxis = self.emptyaxis("zaxis", 1.0)
         if hasattr(histogram, "_fZaxis"):
             self.fYaxis.update(histogram._fZaxis.__dict__)
+        self.fZaxis["_fXbins"] = numpy.array(self.fZaxis["_fXbins"], dtype=">f8", copy=False)
 
         self.fields = {
             "_fLineColor": 602,
@@ -91,7 +94,59 @@ class TH1(object):
             if hasattr(histogram, n):
                 self.fields[n] = getattr(histogram, n)
 
+        self.fields["_fContour"] = numpy.array(self.fields["_fContour"], dtype=">f8", copy=False)
+        self.fields["_fSumw2"] = numpy.array(self.fields["_fSumw2"], dtype=">f8", copy=False)
+
         self.values = histogram.allvalues()
+
+        if name == b"TH1C":
+            self.valuesarray = numpy.array(self.values, dtype=">i1")
+        elif name == b"TH1S":
+            self.valuesarray = numpy.array(self.values, dtype=">i2")
+        elif name == b"TH1I":
+            self.valuesarray = numpy.array(self.values, dtype=">i4")
+        elif name == b"TH1F":
+            self.valuesarray = numpy.array(self.values, dtype=">f4")
+        elif name == b"TH1D":
+            self.valuesarray = numpy.array(self.values, dtype=">f8")
+        elif name == b"TProfile":
+            raise NotImplementedError(name)
+        elif name == b"TH2C":
+            self.valuesarray = numpy.array(self.values, dtype=">i1")
+            raise NotImplementedError(name)
+        elif name == b"TH2S":
+            self.valuesarray = numpy.array(self.values, dtype=">i2")
+            raise NotImplementedError(name)
+        elif name == b"TH2I":
+            self.valuesarray = numpy.array(self.values, dtype=">i4")
+            raise NotImplementedError(name)
+        elif name == b"TH2F":
+            self.valuesarray = numpy.array(self.values, dtype=">f4")
+            raise NotImplementedError(name)
+        elif name == b"TH2D":
+            self.valuesarray = numpy.array(self.values, dtype=">f8")
+            raise NotImplementedError(name)
+        elif name == b"TProfile2D":
+            raise NotImplementedError(name)
+        elif name == b"TH3C":
+            self.valuesarray = numpy.array(self.values, dtype=">i1")
+            raise NotImplementedError(name)
+        elif name == b"TH3S":
+            self.valuesarray = numpy.array(self.values, dtype=">i2")
+            raise NotImplementedError(name)
+        elif name == b"TH3I":
+            self.valuesarray = numpy.array(self.values, dtype=">i4")
+            raise NotImplementedError(name)
+        elif name == b"TH3F":
+            self.valuesarray = numpy.array(self.values, dtype=">f4")
+            raise NotImplementedError(name)
+        elif name == b"TH3D":
+            self.valuesarray = numpy.array(self.values, dtype=">f8")
+            raise NotImplementedError(name)
+        elif name == b"TProfile3D":
+            raise NotImplementedError(name)
+        else:
+            raise ValueError("unrecognized histogram class name {0}".format(name))
 
     @staticmethod
     def emptyaxis(name, titleoffset):
@@ -124,29 +179,42 @@ class TH1(object):
 
     _format_tobject1 = struct.Struct(">HII")
     def write_tobject(self, cursor, sink):
+        cnt = numpy.int64(self.length_tobject() - 4) | uproot.const.kByteCountMask
+        vers = 1
+        cursor.write_fields(sink, self._format_cntvers, cnt, vers)
         cursor.write_fields(sink, self._format_tobject1, 1, 0, uproot.const.kNotDeleted)
+    def length_tobject(self):
+        return self._format_tobject1.size
 
     def write_tnamed(self, cursor, sink, name):
-        cnt = numpy.int64(uproot.write.sink.cursor.Cursor.length_strings([name, self.fTitle]) - 4) | uproot.const.kByteCountMask
+        cnt = numpy.int64(self.length_tnamed(name, self.fTitle) - 4) | uproot.const.kByteCountMask
         vers = 1
+        cursor.write_fields(sink, self._format_cntvers, cnt, vers)
         self.write_tobject(cursor, sink)
         cursor.write_string(sink, name)
         cursor.write_string(sink, self.fTitle)
+    def length_tnamed(self, name, title):
+        return self.length_tobject() + uproot.write.sink.cursor.Cursor.length_strings([name, title])
 
     _format_tarray = struct.Struct(">i")
     def write_tarray(self, cursor, sink, values):
         cursor.write_fields(sink, self._format_tarray, len(values))
         cursor.write_array(values)
+    def length_tarray(self, values):
+        return self._format_tarray.size + values.nbytes
 
     _format_tlist = struct.Struct(">i")
     def write_tlist(self, cursor, sink, values):
         cnt = numpy.int64(self.length_tlist(values) - 4) | uproot.const.kByteCountMask
         vers = 5
+        cursor.write_fields(sink, self._format_cntvers, cnt, vers)
         self.write_tobject(cursor, sink)
         cursor.write_string(sink, b"")
         cursor.write_fields(sink, self._format_tlist, len(values))
         for value in values:
             raise NotImplementedError
+    def length_tlist(self, values):
+        return self.length_tobject() + uproot.write.sink.cursor.Cursor.length_string(b"") + self._format_tlist.size + sum(0 for x in values)
 
     _format_tattline = struct.Struct(">hhh")
     def write_tattline(self, cursor, sink):
@@ -157,6 +225,8 @@ class TH1(object):
                             self.fields["_fLineColor"],
                             self.fields["_fLineStyle"],
                             self.fields["_fLineWidth"])
+    def lenght_tattline(self):
+        return _format_tattline.size
 
     _format_tattfill = struct.Struct(">hh")
     def write_tattfill(self, cursor, sink):
@@ -166,6 +236,8 @@ class TH1(object):
         cursor.write_fields(sink, self._format_tattfill,
                             self.fields["_fFillColor"],
                             self.fields["_fFillStyle"])
+    def length_tattfill(self):
+        return self._format_tattfill.size
 
     _format_tattmarker = struct.Struct(">hhf")
     def write_tattmarker(self, cursor, sink):
@@ -176,10 +248,12 @@ class TH1(object):
                             self.fields["_fMarkerColor"],
                             self.fields["_fMarkerStyle"],
                             self.fields["_fMarkerSize"])
+    def length_tattmarker(self):
+        return self._format_tattmarker.size
 
     _format_tattaxis = struct.Struct(">ihhhfffffhh")
     def write_tattaxis(self, cursor, sink, axis):
-        cnt = numpy.int64(self.length_tattmarker() - 4) | uproot.const.kByteCountMask
+        cnt = numpy.int64(self.length_tattaxis() - 4) | uproot.const.kByteCountMask
         vers = 4
         cursor.write_fields(sink, self._format_cntvers, cnt, vers)
         cursor.write_fields(sink, self._format_tattaxis,
@@ -194,6 +268,8 @@ class TH1(object):
                             axis["_fTitleSize"],
                             axis["_fTitleColor"],
                             axis["_fTitleFont"])
+    def length_tattaxis(self):
+        return self._format_tattaxis.size
                             
     _format_taxis_1 = struct.Struct(">idd")
     _format_taxis_2 = struct.Struct(">iiH?")
@@ -207,7 +283,7 @@ class TH1(object):
                             axis["_fNbins"],
                             axis["_fXmin"],
                             axis["_fXmax"])
-        self.write_tarray(cursor, sink, numpy.array(axis["_fXbins"], dtype=">f8"))
+        self.write_tarray(cursor, sink, axis["_fXbins"])
         cursor.write_fields(sink, self._format_taxis_2,
                             axis["_fFirst"],
                             axis["_fLast"],
@@ -216,6 +292,15 @@ class TH1(object):
         cursor.write_string(sink, axis["_fTimeFormat"])
         self.write_tlist(cursor, sink, axis["_fLabels"])
         self.write_tlist(cursor, sink, axis["_fModLabs"])
+    def length_taxis(self, axis):
+        return (self.length_tnamed(axis["_fName"]) +
+                self.length_tattaxis() +
+                self._format_taxis_1.size +
+                self.length_tarray(axis["_fXbins"]) +
+                self._format_taxis_2.size +
+                uproot.write.sink.cursor.Cursor.length_string(axis["_fTimeFormat"]) +
+                self.length_list(axis["_fLabels"]) +
+                self.length_list(axis["_fModLabs"]))
 
     _format_th1_1 = struct.Struct(">i")
     _format_th1_2 = struct.Struct(">hhdddddddd")
@@ -243,38 +328,39 @@ class TH1(object):
                             self.fields["_fMaximum"],
                             self.fields["_fMinimum"],
                             self.fields["_fNormFactor"])
-        self.write_tarray(cursor, sink, numpy.array(self.fields["_fContour"], dtype=">f8"))
-        self.write_tarray(cursor, sink, numpy.array(self.fields["_fSumw2"], dtype=">f8"))
+        self.write_tarray(cursor, sink, self.fields["_fContour"])
+        self.write_tarray(cursor, sink, self.fields["_fSumw2"])
         cursor.write_string(sink, self.fields["_fOption"])
         self.write_tlist(cursor, sink, self.fields["_fFunctions"])
+        if len(self.fields["_fBuffer"]) != 0:
+            raise NotImplementedError
         cursor.write_fields(sink, self._format_th1_3,
                             self.fields["_fBufferSize"],
                             0,     # FIXME: empty fBuffer
                             self.fields["fBinStatErrOpt"],
                             self.fields["fStatOverflows"])
-        
-    def write_th1d(self, cursor, sink, name):
-        cnt = numpy.int64(self.length_th1d(name) - 4) | uproot.const.kByteCountMask
+    def length_th1(self, name):
+        return (self.length_tnamed(name) +
+                self.length_tattline() +
+                self.length_tattfill() +
+                self.length_tattmarker() +
+                self._format_th1_1.size +
+                self.length_taxis(self.fXaxis) +
+                self.length_taxis(self.fYaxis) +
+                self.length_taxis(self.fZaxis) +
+                self._format_th1_2.size +
+                self.length_tarray(self.fields["_fContour"]) +
+                self.length_tarray(self.fields["_fSumw2"]) +
+                uproot.write.sink.cursor.Cursor.length_string(self.fields["_fOption"]) +
+                self.length_tlist(self.fields["_fFunctions"]) +
+                self._format_th1_3.size)
+
+    def write(self, cursor, sink, name):
+        cnt = numpy.int64(self.length(name) - 4) | uproot.const.kByteCountMask
         vers = 2
         cursor.write_fields(sink, self._format_cntvers, cnt, vers)
         self.write_th1(cursor, sink, name)
-        self.write_tarray(cursor, sink, numpy.array(self.values, dtype=">f8"))
+        self.write_tarray(cursor, sink, self.valuesarray)
 
-    def write_th1f(self, cursor, sink, name):
-        cnt = numpy.int64(self.length_th1f(name) - 4) | uproot.const.kByteCountMask
-        vers = 2
-        cursor.write_fields(sink, self._format_cntvers, cnt, vers)
-        self.write_th1(cursor, sink, name)
-        self.write_tarray(cursor, sink, numpy.array(self.values, dtype=">f4"))
-        
-    # def length_axis(self):
-    #     pass
-
-    # def write_axis(self, cursor, sink):
-    #     cursor.write_string(sink, )
-
-    # def length(self, name):
-    #     pass
-
-    # def write(self, cursor, sink, name):
-    #     pass
+    def length(self, name):
+        return self.length_th1(name) + self.length_tarray(self.valuesarray)
