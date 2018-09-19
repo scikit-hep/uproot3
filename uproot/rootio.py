@@ -200,7 +200,6 @@ class ROOTDirectory(object):
                     keys = [TKey.read(source, subcursor, context, None) for i in range(nkeys)]
 
                     out = ROOTDirectory(mykey._fName, context, keys)
-                    out._headerkey = headerkey
 
                 out._fVersion, out._fDatimeC, out._fDatimeM, out._fNbytesKeys, out._fNbytesName, out._fSeekDir, out._fSeekParent, out._fSeekKeys = fVersion, fDatimeC, fDatimeM, fNbytesKeys, fNbytesName, fSeekDir, fSeekParent, fSeekKeys
                 out.source = source

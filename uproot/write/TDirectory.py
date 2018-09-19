@@ -35,11 +35,11 @@ import uproot.write.sink.cursor
 import uproot.write.TKey
 
 class TDirectory(object):
-    def __init__(self, tfile, fName, fNbytesName, fNbytesKeys=0, fSeekDir=100, fSeekParent=0, fSeekKeys=0, allocationbytes=1024, growfactor=10):
+    def __init__(self, tfile, fName, fNbytesName, fSeekDir=100, fSeekParent=0, fSeekKeys=0, allocationbytes=1024, growfactor=10):
         self.tfile = tfile
         self.fName = fName
         self.fNbytesName = fNbytesName
-        self.fNbytesKeys = fNbytesKeys
+        self.fNbytesKeys = self._format2.size
         self.fSeekDir = fSeekDir
         self.fSeekParent = fSeekParent
         self.fSeekKeys = fSeekKeys
@@ -50,9 +50,7 @@ class TDirectory(object):
         self.headkey = uproot.write.TKey.TKey(fClassName = b"TFile",
                                               fName      = self.fName,
                                               fObjlen    = self._format2.size,
-                                              fSeekKey   = self.fSeekKeys,
-                                              fNbytes    = self.fNbytesKeys)
-        self.nkeys = 0
+                                              fSeekKey   = self.fSeekKeys)
         self.keys = collections.OrderedDict()
 
     def update(self):
@@ -74,16 +72,19 @@ class TDirectory(object):
     _format1 = struct.Struct(">hIIiiqqq")
     _format2 = struct.Struct(">i")
 
+    def _nbyteskeys(self):
+        return self.headkey.fKeylen + self._format2.size + sum(x.fKeylen for x in self.keys.values())
+
     def writekeys(self, cursor):
         self.fSeekKeys = cursor.index
-        self.fNbytesKeys = self.headkey.fObjlen + self._format2.size + sum(x.fObjlen for x in self.keys.values())
+        self.fNbytesKeys = self._nbyteskeys()
 
         self.tfile._expandfile(uproot.write.sink.cursor.Cursor(self.fSeekKeys + self.allocationbytes))
 
         self.keycursor = uproot.write.sink.cursor.Cursor(self.fSeekKeys)
         self.headkey.write(self.keycursor, self.sink)
         self.nkeycursor = uproot.write.sink.cursor.Cursor(self.keycursor.index)
-        self.keycursor.write_fields(self.sink, self._format2, self.nkeys)
+        self.keycursor.write_fields(self.sink, self._format2, len(self.keys))
 
         self.update()
 
@@ -91,14 +92,13 @@ class TDirectory(object):
         newcursor = None
 
         if newkey.fName in self.keys:
+            self.headkey.fObjlen -= self.keys[newkey.fName].fKeylen
             newcursor = uproot.write.sink.cursor.Cursor(self.fSeekKeys)
 
         self.headkey.fObjlen += newkey.fKeylen
-        self.headkey.fNbytes += newkey.fKeylen
-        self.nkeys += 1
         self.keys[newkey.fName] = newkey
 
-        self.fNbytesKeys = self.headkey.fObjlen + self._format2.size + sum(x.fObjlen for x in self.keys.values())
+        self.fNbytesKeys = self._nbyteskeys()
         while self.fNbytesKeys > self.allocationbytes:
             self.allocationbytes *= self.growfactor
             newcursor = uproot.write.sink.cursor.Cursor(self.tfile.fSeekFree)
@@ -108,15 +108,13 @@ class TDirectory(object):
         else:
             newkey.write(self.keycursor, self.sink)
             self.headkey.update()
-            self.nkeycursor.update_fields(self.sink, self._format2, self.nkeys)
+            self.nkeycursor.update_fields(self.sink, self._format2, len(self.keys))
             self.update()
 
     def delkey(self, name):
         oldkey = self.keys[name]
         self.headkey.fObjlen -= oldkey
-        self.headkey.fNbytes -= oldkey
-        self.nkeys -= 1
         del self.keys[name]
 
-        self.fNbytesKeys = self.headkey.fObjlen + self._format2.size + sum(x.fObjlen for x in self.keys.values())
+        self.fNbytesKeys = self._nbyteskeys()
         self.writekeys(uproot.write.sink.cursor.Cursor(self.fSeekKeys))
