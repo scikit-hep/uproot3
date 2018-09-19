@@ -28,42 +28,13 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-class Sink(object):
-    pass
+import unittest
 
-class FileSink(Sink):
-    def __init__(self, path):
-        self._path = path
-        self._sink = open(path, "wb+")
-        # self._pos = 0
+import uproot
 
-    def write(self, data, pos):
-        self._sink.seek(pos)
-        self._sink.write(data)
+class Test(unittest.TestCase):
+    def runTest(self):
+        pass
 
-    # def write(self, data, pos):
-    #     if self._sink.tell() != pos:
-    #         self._sink.seek(pos)
-    #     self._sink.write(data)
-
-    # def write(self, data, pos):
-    #     if self._pos != pos:
-    #         self._sink.seek(pos)
-    #     self._sink.write(data)
-    #     self._pos += len(data)    # needs self._pos
-
-    def read(self, start, stop):
-        self._sink.seek(start)
-        return self._sink.read(stop - start)
-
-    @property
-    def closed(self):
-        return self._sink.closed
-
-    def close(self):
-        if not self._sink.closed:
-            self._sink.close()
-
-    def flush(self):
-        if not self._sink.closed:
-            self._sink.flush()
+    def test_strings(self):
+        pass

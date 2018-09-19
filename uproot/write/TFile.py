@@ -32,25 +32,33 @@ import os
 import sys
 import struct
 
+import uproot.source.file
 import uproot.write.sink.file
 import uproot.write.sink.cursor
 import uproot.write.TKey
 import uproot.write.TDirectory
 import uproot.write.streamers
 import uproot.write.registry
+from uproot.rootio import nofilter
 
-class TFileAppend(object):
+class TFileUpdate(object):
     def __init__(self, path):
         self._openfile(path)
         raise NotImplementedError
 
     def _openfile(self, path):
+        if isinstance(path, getattr(os, "PathLike", ())):
+            path = os.fspath(path)
+        elif hasattr(path, "__fspath__"):
+            path = path.__fspath__()
+        elif path.__class__.__module__ == "pathlib":
+            import pathlib
+            if isinstance(path, pathlib.Path):
+                 path = str(path)
+
         self._sink = uproot.write.sink.file.FileSink(path)
         self._path = path
         self._filename = os.path.split(path)[1].encode("utf-8")
-
-    def __getitem__(self, where):
-        return uproot.open(self.path)[where]
 
     @staticmethod
     def _normalizewhere(where):
@@ -92,7 +100,87 @@ class TFileAppend(object):
         except KeyError:
             raise KeyError("ROOT directory does not contain key {0}".format(where))
 
-class TFileCreate(TFileAppend):
+    def _reopen(self):
+        return uproot.open(self._path, localsource=uproot.source.file.FileSource.defaults)
+
+    @property
+    def compression(self):
+        return self._reopen().compression
+
+    def __repr__(self):
+        return "<{0} {1} at 0x{2:012x}>".format(self.__class__.__name__, repr(self._filename), id(self))
+
+    def __getitem__(self, name):
+        return self._reopen().get(name)
+
+    def __len__(self):
+        return len(self._reopen()._keys)
+
+    def __iter__(self):
+        return self._reopen().iterkeys()
+
+    def showstreamers(self, filtername=nofilter, stream=sys.stdout):
+        return self._reopen().showstreamers(filtername=filtername, stream=stream)
+
+    def iterkeys(self, recursive=False, filtername=nofilter, filterclass=nofilter):
+        return self._reopen().iterkeys(recursive=recursive, filtername=filtername, filterclass=filterclass)
+
+    def itervalues(self, recursive=False, filtername=nofilter, filterclass=nofilter):
+        return self._reopen().itervalues(recursive=recursive, filtername=filtername, filterclass=filterclass)
+
+    def iteritems(self, recursive=False, filtername=nofilter, filterclass=nofilter):
+        return self._reopen().iteritems(recursive=recursive, filtername=filtername, filterclass=filterclass)
+
+    def iterclasses(self, recursive=False, filtername=nofilter, filterclass=nofilter):
+        return self._reopen().iterclasses(recursive=recursive, filtername=filtername, filterclass=filterclass)
+
+    def keys(self, recursive=False, filtername=nofilter, filterclass=nofilter):
+        return self._reopen().keys(recursive=recursive, filtername=filtername, filterclass=filterclass)
+
+    def values(self, recursive=False, filtername=nofilter, filterclass=nofilter):
+        return self._reopen().values(recursive=recursive, filtername=filtername, filterclass=filterclass)
+
+    def items(self, recursive=False, filtername=nofilter, filterclass=nofilter):
+        return self._reopen().items(recursive=recursive, filtername=filtername, filterclass=filterclass)
+
+    def classes(self, recursive=False, filtername=nofilter, filterclass=nofilter):
+        return self._reopen().classes(recursive=recursive, filtername=filtername, filterclass=filterclass)
+
+    def allkeys(self, filtername=nofilter, filterclass=nofilter):
+        return self._reopen().allkeys(filtername=filtername, filterclass=filterclass)
+
+    def allvalues(self, filtername=nofilter, filterclass=nofilter):
+        return self._reopen().allvalues(filtername=filtername, filterclass=filterclass)
+
+    def allitems(self, filtername=nofilter, filterclass=nofilter):
+        return self._reopen().allitems(filtername=filtername, filterclass=filterclass)
+
+    def allclasses(self, filtername=nofilter, filterclass=nofilter):
+        return self._reopen().allclasses(filtername=filtername, filterclass=filterclass)
+
+    def get(self, name, cycle=None):
+        return self._reopen().get(name, cycle=cycle)
+
+    def __contains__(self, name):
+        return name in self._reopen()
+
+    def __getitem__(self, where):
+        return self._reopen()[where]
+
+    @property
+    def closed(self):
+        return self._sink.closed
+
+    def close(self):
+        self._sink.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
+
+class TFileRecreate(TFileUpdate):
     def __init__(self, path):
         self._openfile(path)
         self._writeheader()
@@ -169,97 +257,8 @@ class TFileCreate(TFileAppend):
     def _writerootkeys(self):
         self._rootdir.writekeys(uproot.write.sink.cursor.Cursor(self._fSeekFree))
 
-    def close(self):
-        self._sink.close()
-
-#     def __setitem__(self, keyname, item):
-#         if self.count == 0:
-#             streamerdatabase = StreamerDatabase()
-#             self.sink.write(streamerdatabase[".all"], self.streamer_pointer.index)
-#             self.count += 1
-        
-#         cursor = uproot.write.cursor.Cursor(self.fEND)
-#         pointcheck = cursor.index
-        
-#         if type(item) is TObjString:
-#             junkkey = TObjStringJunkKey(keyname.encode("utf-8"))
-#             key = TObjStringKey(keyname.encode("utf-8"), pointcheck)
-
-#         if type(item) is TAxis:
-#             junkkey = TAxisJunkKey(keyname.encode("utf-8"))
-#             key = TAxisKey(keyname.encode("utf-8"), pointcheck)
-        
-#         junkkeycursor = uproot.write.cursor.Cursor(self.fEND)
-#         junkkey.write_key(cursor, self.sink)
-#         junkkey.fKeylen = cursor.index - junkkeycursor.index
-#         junkkey.fNbytes = junkkey.fKeylen + junkkey.fObjlen
-#         junkkey.update_key(junkkeycursor, self.sink)
-
-#         if type(item.string) is str:
-#             item.string = item.string.encode("utf-8")
-        
-#         item.write_bytes(cursor, self.sink)
-
-#         # Updating Header Bytes
-#         if cursor.index > self.fEND:
-#             self.fEND_cursor.update_fields(self.sink, self.fEND_packer, self.fEND, self.fSeekFree)
-
-#         #Check for Key Re-alocation
-#         if self.keylimit - self.keyend < 30:
-#             temp = self.sink.read(self.directory.fSeekKeys, self.expander)
-#             self.expander = self.expander * self.expandermultiple
-#             self.sink.write(temp, self.fEND)
-#             self.keyend = self.fEND + self.keyend - self.directory.fSeekKeys
-#             self.directory.fSeekKeys = self.fEND
-#             self.keylimit = self.fEND + self.expander
-#             self.fEND = self.keylimit
-#             self.fSeekFree = self.keylimit
-#             self.directory.update_values(self.directorycursor, self.sink)
-#             self.head_key_end = self.directory.fSeekKeys + self.nkeypos
-
-#         pointcheck = uproot.write.cursor.Cursor(self.keyend)
-#         key.write_key(self.keyend, self.sink)
-#         key.fKeylen = self.keyend.index - pointcheck
-#         key.fNbytes = key.fKeylen + key.fObjlen
-#         key.update_key(pointcheck, key)
-
-#         # Updating Header Bytes
-#         if cursor.index > self.fEND:
-#             self.fSeekFree = cursor.index
-#             self.fEND = cursor.index
-#         self.fEND_cursor.update_fields(self.sink, self.fEND_packer, self.fEND, self.fSeekFree)
-        
-#         #Update StreamerKey
-#         self.streamerkey.fNbytes = self.streamer_pointer.index - self.fSeekInfo - 1
-#         self.streamerkey.fObjlen = self.streamerkey.fNbytes - self.streamerkey.fKeylen
-#         self.streamerkey.fSeekKey = self.fSeekInfo
-#         self.streamerkey.write_key(uproot.write.cursor.Cursor(self.fSeekInfo), self.sink)
-
-#         #Update number of keys
-#         self.nkeypos = self.head_key_end - self.directory.fSeekKeys
-#         self.nkeys += 1
-#         packer = ">i"
-#         uproot.write.cursor.Cursor(self.head_key_end).update_fields(self.sink, packer, self.nkeys)
-
-#         #Update DirectoryInfo
-#         self.directory.fNbytesKeys = self.keyend - self.directory.fSeekKeys
-#         self.directory.update_values(self.directorycursor, self.sink)
-
-#         #Update Head Key
-#         self.head_key.fNbytes = self.directory.fNbytesKeys
-#         self.head_key.fKeylen = self.head_key_end - self.headkeycursor
-#         self.head_key.fObjlen = self.head_key.fNbytes - self.head_key.fKeylen
-#         self.head_key.update_key(self.headkeycursor, self.sink)
-
-#         #Updating Header Bytes
-#         if cursor.index > self.fEND:
-#             self.fSeekFree = cursor.index
-#             self.fEND = cursor.index
-        
-#         self.fEND_cursor.update_fields(self.sink, self.fEND_packer, self.fEND, self.fSeekFree)
-
-#         self.sink.flush()
-        
-#     def close(self):
-#         self.sink.close()
-    
+class TFileCreate(TFileRecreate):
+    def __init__(self, path):
+        if os.path.exists(path):
+            raise OSError("file {} already exists".format(path))
+        super(TFileCreate, self).__init__(path)

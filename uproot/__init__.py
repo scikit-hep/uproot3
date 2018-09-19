@@ -31,8 +31,9 @@
 # high-level entry points
 from uproot.rootio import open, xrootd
 from uproot.tree import iterate, numentries, lazyarray, lazyarrays, daskarray, daskarrays, daskframe
-from uproot.write.TFile import TFileAppend as append
 from uproot.write.TFile import TFileCreate as create
+from uproot.write.TFile import TFileRecreate as recreate
+from uproot.write.TFile import TFileUpdate as update
 
 from uproot.source.memmap import MemmapSource
 from uproot.source.file import FileSource
