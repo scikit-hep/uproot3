@@ -37,17 +37,9 @@ class FileSink(Sink):
         self._sink = open(path, "wb+")
         # self._pos = 0
 
-        self.tmp = False
-
     def write(self, data, pos):
         self._sink.seek(pos)
         self._sink.write(data)
-
-        if self.tmp:
-            import numpy
-            print(" ".join("{:02x}".format(x) for x in numpy.frombuffer(data, dtype="u1")))
-            print(data)
-            print("")
 
     # def write(self, data, pos):
     #     if self._sink.tell() != pos:

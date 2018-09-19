@@ -190,15 +190,11 @@ class TH1(object):
 
     _format_tobject1 = struct.Struct(">HII")
     def write_tobject(self, cursor, sink):
-        print("write TObject")
-
         cursor.write_fields(sink, self._format_tobject1, 1, 0, uproot.const.kNotDeleted)
     def length_tobject(self):
         return self._format_tobject1.size
 
     def write_tnamed(self, cursor, sink, name, title):
-        print("write TNamed")
-
         cnt = numpy.int64(self.length_tnamed(name, title) - 4) | uproot.const.kByteCountMask
         vers = 1
         cursor.write_fields(sink, self._format_cntvers, cnt, vers)
@@ -210,8 +206,6 @@ class TH1(object):
 
     _format_tarray = struct.Struct(">i")
     def write_tarray(self, cursor, sink, values):
-        print("write TArray")
-
         cursor.write_fields(sink, self._format_tarray, len(values))
         cursor.write_array(sink, values)
     def length_tarray(self, values):
@@ -219,8 +213,6 @@ class TH1(object):
 
     _format_tlist = struct.Struct(">i")
     def write_tlist(self, cursor, sink, values):
-        print("write TList")
-
         cnt = numpy.int64(self.length_tlist(values) - 4) | uproot.const.kByteCountMask
         vers = 5
         cursor.write_fields(sink, self._format_cntvers, cnt, vers)
@@ -234,8 +226,6 @@ class TH1(object):
 
     _format_tattline = struct.Struct(">hhh")
     def write_tattline(self, cursor, sink):
-        print("write TAttLine")
-
         cnt = numpy.int64(self.length_tattline() - 4) | uproot.const.kByteCountMask
         vers = 2
         cursor.write_fields(sink, self._format_cntvers, cnt, vers)
@@ -248,8 +238,6 @@ class TH1(object):
 
     _format_tattfill = struct.Struct(">hh")
     def write_tattfill(self, cursor, sink):
-        print("write TAttFill")
-
         cnt = numpy.int64(self.length_tattfill() - 4) | uproot.const.kByteCountMask
         vers = 2
         cursor.write_fields(sink, self._format_cntvers, cnt, vers)
@@ -261,8 +249,6 @@ class TH1(object):
 
     _format_tattmarker = struct.Struct(">hhf")
     def write_tattmarker(self, cursor, sink):
-        print("write TAttMarker")
-
         cnt = numpy.int64(self.length_tattmarker() - 4) | uproot.const.kByteCountMask
         vers = 2
         cursor.write_fields(sink, self._format_cntvers, cnt, vers)
@@ -275,8 +261,6 @@ class TH1(object):
 
     _format_tattaxis = struct.Struct(">ihhhfffffhh")
     def write_tattaxis(self, cursor, sink, axis):
-        print("write TAttAxis")
-
         cnt = numpy.int64(self.length_tattaxis() - 4) | uproot.const.kByteCountMask
         vers = 4
         cursor.write_fields(sink, self._format_cntvers, cnt, vers)
@@ -298,8 +282,6 @@ class TH1(object):
     _format_taxis_1 = struct.Struct(">idd")
     _format_taxis_2 = struct.Struct(">iiH?")
     def write_taxis(self, cursor, sink, axis):
-        print("write TAxis")
-
         cnt = numpy.int64(self.length_taxis(axis) - 4) | uproot.const.kByteCountMask
         vers = 10
         cursor.write_fields(sink, self._format_cntvers, cnt, vers)
@@ -336,8 +318,6 @@ class TH1(object):
     _format_th1_2 = struct.Struct(">hhdddddddd")
     _format_th1_3 = struct.Struct(">iBii")
     def write_th1(self, cursor, sink, name):
-        print("write TH1")
-
         cnt = numpy.int64(self.length_th1(name) - 4) | uproot.const.kByteCountMask
         vers = 8
         cursor.write_fields(sink, self._format_cntvers, cnt, vers)
@@ -389,16 +369,11 @@ class TH1(object):
                 6)
 
     def write(self, cursor, sink, name):
-        print("write")
-        sink.tmp = True
-
         cnt = numpy.int64(self.length(name) - 4) | uproot.const.kByteCountMask
         vers = 2
         cursor.write_fields(sink, self._format_cntvers, cnt, vers)
         self.write_th1(cursor, sink, name)
         self.write_tarray(cursor, sink, self.valuesarray)
-
-        sink.tmp = False
 
     def length(self, name):
         return self.length_th1(name) + self.length_tarray(self.valuesarray) + 6
