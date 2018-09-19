@@ -43,6 +43,7 @@ class TObjString(object):
             self.value = string.encode("utf-8")
 
     fClassName = b"TObjString"
+    fTitle = b"Collectable string class"
 
     _format = struct.Struct(">IHHII")
 

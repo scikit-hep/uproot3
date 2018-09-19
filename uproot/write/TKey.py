@@ -33,15 +33,15 @@ import struct
 import uproot.write.sink.cursor
 
 class TKey(object):
-    def __init__(self, fClassName, fName, fTitle=b"", fObjlen=0, fCycle=1, fSeekKey=100, fSeekPdir=0, fNbytes=None):
+    def __init__(self, fClassName, fName, fTitle=b"", fObjlen=0, fSeekKey=100, fSeekPdir=0, fCycle=1, fNbytes=None):
         self.fClassName = fClassName
         self.fName = fName
         self.fTitle = fTitle
 
         self.fObjlen = fObjlen
-        self.fCycle = fCycle
         self.fSeekKey = fSeekKey
         self.fSeekPdir = fSeekPdir
+        self.fCycle = fCycle
         self._fNbytes = fNbytes
 
         self.fKeylen = self._format1.size + uproot.write.sink.cursor.Cursor.length_strings([self.fClassName, self.fName, self.fTitle])

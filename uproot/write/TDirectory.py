@@ -76,7 +76,7 @@ class TDirectory(object):
 
     def writekeys(self, cursor):
         self.fSeekKeys = cursor.index
-        self.fNbytesKeys = self.headkey.fObjlen + self._format2.size + sum(x.fObjlen for x in self.keys)
+        self.fNbytesKeys = self.headkey.fObjlen + self._format2.size + sum(x.fObjlen for x in self.keys.values())
 
         self.tfile._expandfile(uproot.write.sink.cursor.Cursor(self.fSeekKeys + self.allocationbytes))
 
@@ -98,7 +98,7 @@ class TDirectory(object):
         self.nkeys += 1
         self.keys[newkey.fName] = newkey
 
-        self.fNbytesKeys = self.headkey.fObjlen + self._format2.size + sum(x.fObjlen for x in self.keys)
+        self.fNbytesKeys = self.headkey.fObjlen + self._format2.size + sum(x.fObjlen for x in self.keys.values())
         while self.fNbytesKeys > self.allocationbytes:
             self.allocationbytes *= self.growfactor
             newcursor = uproot.write.sink.cursor.Cursor(self.tfile.fSeekFree)
@@ -118,5 +118,5 @@ class TDirectory(object):
         self.nkeys -= 1
         del self.keys[name]
 
-        self.fNbytesKeys = self.headkey.fObjlen + self._format2.size + sum(x.fObjlen for x in self.keys)
+        self.fNbytesKeys = self.headkey.fObjlen + self._format2.size + sum(x.fObjlen for x in self.keys.values())
         self.writekeys(uproot.write.sink.cursor.Cursor(self.fSeekKeys))
