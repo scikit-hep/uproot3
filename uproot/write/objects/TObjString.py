@@ -28,13 +28,30 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import os
-import zipfile
+import struct
 
-class StreamerDatabase(object):
-    def __init__(self):
-        directory, _ = os.path.split(__file__)
-        self.zipfile = zipfile.ZipFile(open(os.path.join(directory, "streamerdatabase.zip"), "br"), "r")
+import numpy
 
-    def __getitem__(self, streamername):
-        return self.zipfile.open(streamername).read()
+import uproot.const
+import uproot.write.sink.cursor
+
+class TObjString(object):
+    def __init__(self, string):
+        if isinstance(string, bytes):
+            self.value = string
+        else:
+            self.value = string.encode("utf-8")
+
+    fClassName = b"TObjString"
+    fTitle = b"Collectable string class"
+
+    _format = struct.Struct(">IHHII")
+
+    def write(self, cursor, sink, name):
+        cnt = numpy.int64(self.length(name) - 4) | uproot.const.kByteCountMask
+        vers = 1
+        cursor.write_fields(sink, self._format, cnt, vers, 1, 0, uproot.const.kNotDeleted)
+        cursor.write_string(sink, self.value)
+
+    def length(self, name):
+        return self._format.size + uproot.write.sink.cursor.Cursor.length_string(self.value)

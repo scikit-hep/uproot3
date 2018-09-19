@@ -45,10 +45,10 @@ kMapOffset            = 2
 
 # not used?
 kNullTag              = 0
-kNotDeleted           = 0x02000000
-kZombie               = 0x04000000
-kBitMask              = 0x00ffffff
-kDisplacementMask     = 0xFF000000
+kNotDeleted           = numpy.uint32(0x02000000)
+kZombie               = numpy.uint32(0x04000000)
+kBitMask              = numpy.uint32(0x00FFFFFF)
+kDisplacementMask     = numpy.uint32(0xFF000000)
 
 ################################################################ core/zip/inc/Compression.h
 
