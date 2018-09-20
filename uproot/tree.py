@@ -910,6 +910,8 @@ class TBranchMethods(object):
 
     @property
     def numbaskets(self):
+        if self.interpretation is None:
+            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
         return self._numgoodbaskets + len(self._recoveredbaskets)
@@ -1017,9 +1019,11 @@ class TBranchMethods(object):
         return interpretation
 
     def numitems(self, interpretation=None, keycache=None):
+        interpretation = self._normalize_interpretation(interpretation)
+        if interpretation is None:
+            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
-        interpretation = self._normalize_interpretation(interpretation)
         return sum(interpretation.numitems(key.border, self.basket_numentries(i)) for i, key in enumerate(self._threadsafe_iterate_keys(keycache, True)))
 
     @property
@@ -1030,6 +1034,8 @@ class TBranchMethods(object):
             return self._context.compression
 
     def basket_entrystart(self, i):
+        if self.interpretation is None:
+            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
         if 0 <= i < self.numbaskets:
@@ -1038,6 +1044,8 @@ class TBranchMethods(object):
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
     def basket_entrystop(self, i):
+        if self.interpretation is None:
+            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
         if 0 <= i < self.numbaskets:
@@ -1046,6 +1054,8 @@ class TBranchMethods(object):
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
     def basket_numentries(self, i):
+        if self.interpretation is None:
+            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
         if 0 <= i < self.numbaskets:
@@ -1054,17 +1064,23 @@ class TBranchMethods(object):
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
     def basket_uncompressedbytes(self, i, keycache=None):
+        if self.interpretation is None:
+            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
         return self._threadsafe_key(i, keycache, False)._fObjlen
 
     def basket_compressedbytes(self, i):
+        if self.interpretation is None:
+            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
         key = self._threadsafe_key(i, keycache, False)
         return key._fNbytes - key._fKeylen
 
     def basket_numitems(self, i, interpretation=None, keycache=None):
+        if self.interpretation is None:
+            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
         interpretation = self._normalize_interpretation(interpretation)
@@ -1123,13 +1139,15 @@ class TBranchMethods(object):
         return interpretation.fromroot(data, byteoffsets, local_entrystart, local_entrystop)
 
     def basket(self, i, interpretation=None, entrystart=None, entrystop=None, flatten=False, cache=None, basketcache=None, keycache=None):
+        interpretation = self._normalize_interpretation(interpretation)
+        if interpretation is None:
+            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
 
         if not 0 <= i < self.numbaskets:
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
-        interpretation = self._normalize_interpretation(interpretation)
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
         local_entrystart, local_entrystop = self._localentries(i, entrystart, entrystop)
         entrystart = self.basket_entrystart(i) + local_entrystart
@@ -1176,10 +1194,12 @@ class TBranchMethods(object):
         return basketstart, basketstop
 
     def baskets(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, cache=None, basketcache=None, keycache=None, reportentries=False, executor=None, blocking=True):
+        interpretation = self._normalize_interpretation(interpretation)
+        if interpretation is None:
+            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
 
-        interpretation = self._normalize_interpretation(interpretation)
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
         basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
 
@@ -1226,10 +1246,12 @@ class TBranchMethods(object):
             return wait
 
     def iterate_baskets(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, cache=None, basketcache=None, keycache=None, reportentries=False):
+        interpretation = self._normalize_interpretation(interpretation)
+        if interpretation is None:
+            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
 
-        interpretation = self._normalize_interpretation(interpretation)
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
 
         for i in range(self.numbaskets):
@@ -1259,10 +1281,12 @@ class TBranchMethods(object):
         return basket_entryoffset
 
     def array(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+        interpretation = self._normalize_interpretation(interpretation)
+        if interpretation is None:
+            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
 
-        interpretation = self._normalize_interpretation(interpretation)
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
         basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
 
@@ -1358,6 +1382,8 @@ class TBranchMethods(object):
             return wait
 
     def _step_array(self, interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, basketcache, keycache, executor, explicit_basketcache):
+        if interpretation is None:
+            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
 
@@ -1429,6 +1455,9 @@ class TBranchMethods(object):
         return wait
 
     def lazyarray(self, interpretation=None, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, executor=None):
+        interpretation = self._normalize_interpretation(interpretation)
+        if interpretation is None:
+            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
 
@@ -1437,7 +1466,6 @@ class TBranchMethods(object):
         if keycache is None:
             keycache = {}
 
-        interpretation = self._normalize_interpretation(interpretation)
         return LazyArray._frombranch(self, interpretation, cache, basketcache, keycache, executor)
 
     class _BasketKey(object):
