@@ -630,9 +630,6 @@ def _defineclasses(streamerinfos, classes):
         if isinstance(streamerinfo, TStreamerInfo) and pyclassname not in builtin_classes and (pyclassname not in classes or hasattr(classes[pyclassname], "_versions")):
             code = ["    @classmethod",
                     "    def _readinto(cls, self, source, cursor, context, parent):",
-
-#                    "        print(cursor.hexdump(source, size=1000))" if pyclassname == "TH1D" else "",
-
                     "        start, cnt, classversion = _startcheck(source, cursor)",
                     "        if cls._classversion != classversion:",
                     "            cursor.index = start",
@@ -676,7 +673,7 @@ def _defineclasses(streamerinfos, classes):
                         if fielddtype == "None":
                             recarray.append("raise ValueError('not a recarray')")
                         else:
-                            recarray.append("out.append((cls._fields[{0}], {1}))".format(len(recarray), fielddtype))
+                            recarray.append("out.append(({0}, {1}))".format(repr(str(element._fName.decode("ascii"))), fielddtype))
                         basicletters += _ftype2struct(element._fType)
 
                         if elementi + 1 == len(streamerinfo._fElements) or not isinstance(streamerinfo._fElements[elementi + 1], TStreamerBasicType) or streamerinfo._fElements[elementi + 1]._fArrayLength != 0:
@@ -699,7 +696,7 @@ def _defineclasses(streamerinfos, classes):
                         if fielddtype == "None":
                             recarray.append("raise ValueError('not a recarray')")
                         else:
-                            recarray.append("out.append((cls._fields[{0}], {1}, {2}))".format(len(recarray), fielddtype, element._fArrayLength))
+                            recarray.append("out.append(({0}, {1}, {2}))".format(repr(str(element._fName.decode("ascii"))), fielddtype, element._fArrayLength))
                     
                 elif isinstance(element, TStreamerLoop):
                     code.extend(["        cursor.skip(6)",
@@ -762,7 +759,7 @@ def _defineclasses(streamerinfos, classes):
             else:
                 code.insert(0, "    _classname = b{0}".format(repr(streamerinfo._fName)))
             code.insert(0, "    _fields = [{0}]".format(", ".join(repr(str(x)) for x in fields)))
-            code.insert(0, "    @classmethod\n    def _recarray(cls):\n        out = []\n        for base in cls._bases:\n            out.extend(base._recarray())\n        {0}\n        return out".format("\n        ".join(recarray)))
+            code.insert(0, "    @classmethod\n    def _recarray(cls):\n        out = []\n        out.append((' cnt', 'u4'))\n        out.append((' vers', 'u2'))\n        for base in cls._bases:\n            out.extend(base._recarray())\n        {0}\n        return out".format("\n        ".join(recarray)))
             code.insert(0, "    _bases = [{0}]".format(", ".join(bases)))
             code.insert(0, "    _methods = {0}".format("uproot_methods.classes.{0}.Methods".format(pyclassname) if uproot_methods.classes.hasmethods(pyclassname) else "None"))
 
@@ -1103,12 +1100,23 @@ class TStreamerString(TStreamerElement):
 ################################################################ streamed classes (with some overrides)
 
 class ROOTStreamedObject(ROOTObject):
+    _fields = []
+
+    @classmethod
+    def _members(cls):
+        out = []
+        for t in cls.__bases__:
+            if issubclass(t, ROOTStreamedObject):
+                out.extend(t._members())
+        out.extend(cls._fields)
+        return out
+
     @classmethod
     def _recarray(cls):
         raise ValueError("not a recarray")
 
     @classmethod
-    def _recarray_dtype(cls):
+    def _recarray_dtype(cls, cntvers=False, tobject=True):
         dtypesin = cls._recarray()
         dtypesout = []
         used = set()
@@ -1122,10 +1130,11 @@ class ROOTStreamedObject(ROOTObject):
                     trial = name + str(i)
                 name = trial
 
-            dtypesout.append((name, dtype))
-            used.add(name)
-            if not name.startswith(" "):
-                allhidden = False
+            if (cntvers or not (name == " cnt" or name == " vers")) and (tobject or not (name == " fUniqueID" or name == " fBits")):
+                dtypesout.append((name, dtype))
+                used.add(name)
+                if not name.startswith(" "):
+                    allhidden = False
 
         if allhidden:
             raise ValueError("not a recarray")
@@ -1133,20 +1142,9 @@ class ROOTStreamedObject(ROOTObject):
         return numpy.dtype(dtypesout)
 
 class TObject(ROOTStreamedObject):
-    _fields = []
-
     @classmethod
     def _recarray(cls):
         return [(" fBits", numpy.dtype(">u8")), (" fUniqueID", numpy.dtype(">u8"))]
-
-    @classmethod
-    def _members(cls):
-        out = []
-        for t in cls.__bases__:
-            if issubclass(t, ROOTStreamedObject):
-                out.extend(t._members())
-        out.extend(cls._fields)
-        return out
 
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
@@ -1303,7 +1301,7 @@ class Undefined(ROOTStreamedObject):
 
     def __repr__(self):
         if self._classname is not None:
-            return "<{0} (no class named {1}, version {2}) at 0x{3:012x}>".format(self.__class__.__name__, repr(self._classname), self._classversion, id(self))
+            return "<{0} (failed to read {1} version {2}) at 0x{3:012x}>".format(self.__class__.__name__, repr(self._classname), self._classversion, id(self))
         else:
             return "<{0} at 0x{1:012x}>".format(self.__class__.__name__, id(self))
 
