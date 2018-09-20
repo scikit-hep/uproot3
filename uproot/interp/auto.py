@@ -114,12 +114,12 @@ def _leaf2dtype(leaf):
     else:
         raise _NotNumerical
 
-def _obj_or_genobj(streamerClass, branch, isjagged):
+def _obj_or_genobj(streamerClass, branch, isjagged, cntvers=False, tobject=True):
     if len(branch._fBranches) != 0:
         return None
 
     try:
-        recarray = streamerClass._recarray_dtype()
+        recarray = streamerClass._recarray_dtype(cntvers=cntvers, tobject=tobject)
 
     except (AttributeError, ValueError):
         if isjagged:
@@ -142,7 +142,7 @@ def _obj_or_genobj(streamerClass, branch, isjagged):
                 else:
                     return asobj(astable(asdtype(recarray)), streamerClass._methods)
 
-def interpret(branch, swapbytes=True):
+def interpret(branch, swapbytes=True, cntvers=False, tobject=True):
     dims, isjagged = (), False
     if len(branch._fLeaves) == 1:
         m = interpret._titlehasdims.match(branch._fLeaves[0]._fTitle)
@@ -163,7 +163,7 @@ def interpret(branch, swapbytes=True):
                     obj = obj[:-1]
                 obj = uproot.rootio._safename(obj)
                 if obj in branch._context.classes:
-                    return _obj_or_genobj(branch._context.classes.get(obj), branch, isjagged)
+                    return _obj_or_genobj(branch._context.classes.get(obj), branch, isjagged, cntvers=cntvers, tobject=tobject)
 
             if branch._fLeaves[0].__class__.__name__ == "TLeafElement" and branch._fLeaves[0]._fType == uproot.const.kDouble32:
                 def transform(node, tofloat=True):
@@ -238,14 +238,14 @@ def interpret(branch, swapbytes=True):
                 if obj == "string":
                     return asgenobj(STLString(), branch._context, 0)
                 elif obj in branch._context.classes:
-                    return _obj_or_genobj(branch._context.classes.get(obj), branch, isjagged)
+                    return _obj_or_genobj(branch._context.classes.get(obj), branch, isjagged, cntvers=cntvers, tobject=tobject)
 
             if isinstance(branch._streamer, uproot.rootio.TStreamerInfo):
                 obj = uproot.rootio._safename(branch._streamer._fName)
                 if obj == "string":
                     return asgenobj(STLString(), branch._context, 0)
                 elif obj in branch._context.classes:
-                    return _obj_or_genobj(branch._context.classes.get(obj), branch, isjagged)
+                    return _obj_or_genobj(branch._context.classes.get(obj), branch, isjagged, cntvers=cntvers, tobject=tobject)
 
             if branch._fLeaves[0].__class__.__name__ == "TLeafC":
                 return asstring(skipbytes=1)
@@ -316,7 +316,7 @@ def interpret(branch, swapbytes=True):
                                 return None
 
                             try:
-                                recarray = streamerClass._recarray_dtype()
+                                recarray = streamerClass._recarray_dtype(cntvers=cntvers, tobject=tobject)
                             except (AttributeError, ValueError):
                                 return asgenobj(STLVector(streamerClass), branch._context, 6)
                             else:
