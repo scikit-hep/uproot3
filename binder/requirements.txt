@@ -1,6 +1,6 @@
 numpy>=1.13.1
 awkward
-uproot-methods==0.0.9
+uproot-methods>=0.1.0
 cachetools
 lz4
 backports.lzma;python_version<"3.3"
