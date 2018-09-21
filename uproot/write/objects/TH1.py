@@ -56,6 +56,11 @@ class TH1(object):
             self.fixaxis(self.fYaxis)
             self.fixaxis(self.fZaxis)
 
+            centers = (edges[:-1] + edges[1:]) / 2.0
+            self.fields["_fEntries"] = self.fields["_fTsumw"] = self.fields["_fTsumw2"] = content.sum()
+            self.fields["_fTsumwx"] = (content * centers).sum()
+            self.fields["_fTsumwx2"] = (content * centers**2).sum()
+
             if len(histogram) >= 3:
                 self.fTitle = self.fixstring(histogram[2])
             else:
