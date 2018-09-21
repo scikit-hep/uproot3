@@ -36,111 +36,152 @@ import uproot.const
 import uproot.write.sink.cursor
 
 class TH1(object):
-    def __init__(self, histogram):       # histogram is an uproot_methods.classes.TH1.Methods
-        self.fTitle = self.fixstring(histogram._fTitle)
-        self.fClassName = self.fixstring(histogram._classname)
+    def __init__(self, histogram):
+        import uproot_methods.classes.TH1
 
-        self.fXaxis = self.emptyaxis("xaxis", 1.0)
-        self.fXaxis.update(histogram._fXaxis.__dict__)
-        self.fixaxis(self.fXaxis)
+        self.fields = self.emptyfields()
 
-        self.fYaxis = self.emptyaxis("yaxis", 0.0)
-        if hasattr(histogram, "_fYaxis"):
-            self.fYaxis.update(histogram._fYaxis.__dict__)
-        self.fixaxis(self.fYaxis)
+        if isinstance(histogram, tuple) and len(histogram) >= 2:
+            content, edges = histogram[:2]
 
-        self.fZaxis = self.emptyaxis("zaxis", 1.0)
-        if hasattr(histogram, "_fZaxis"):
-            self.fYaxis.update(histogram._fZaxis.__dict__)
-        self.fixaxis(self.fZaxis)
+            self.fXaxis = self.emptyaxis("xaxis", 1.0)
+            self.fYaxis = self.emptyaxis("yaxis", 0.0)
+            self.fZaxis = self.emptyaxis("zaxis", 1.0)
+            self.fXaxis["_fNbins"] = len(edges) - 1
+            self.fXaxis["_fXmin"] = edges[0]
+            self.fXaxis["_fXmax"] = edges[-1]
+            if not numpy.array_equal(edges, numpy.linspace(edges[0], edges[-1], len(edges), dtype=edges.dtype)):
+                self.fXaxis["_fXbins"] = edges.astype(">f8")
+            self.fixaxis(self.fXaxis)
+            self.fixaxis(self.fYaxis)
+            self.fixaxis(self.fZaxis)
 
-        self.fields = {
-            "_fLineColor": 602,
-            "_fLineStyle": 1,
-            "_fLineWidth": 1,
-            "_fFillColor": 0,
-            "_fFillStyle": 1001,
-            "_fMarkerColor": 1,
-            "_fMarkerStyle": 1,
-            "_fMarkerSize": 1.0,
-            "_fNcells": 12,
-            "_fBarOffset": 0,
-            "_fBarWidth": 1000,
-            "_fEntries": 0.0,
-            "_fTsumw": 0.0,
-            "_fTsumw2": 0.0,
-            "_fTsumwx": 0.0,
-            "_fTsumwx2": 0.0,
-            "_fMaximum": -1111.0,
-            "_fMinimum": -1111.0,
-            "_fNormFactor": 0.0,
-            "_fContour": [],
-            "_fSumw2": [],
-            "_fOption": b"",
-            "_fFunctions": [],
-            "_fBufferSize": 0,
-            "_fBuffer": [],
-            "_fBinStatErrOpt": 0,
-            "_fStatOverflows": 2}
+            if len(histogram) >= 3:
+                self.fTitle = self.fixstring(histogram[2])
+            else:
+                self.fTitle = b""
 
-        self.values = histogram.allvalues
+            if issubclass(content.dtype.type, (numpy.bool_, numpy.bool)):
+                self.fClassName = b"TH1C"
+                content = content.astype(">i1")
+            elif issubclass(content.dtype.type, numpy.int8):
+                self.fClassName = b"TH1C"
+                content = content.astype(">i1")
+            elif issubclass(content.dtype.type, numpy.uint8) and content.max() <= numpy.iinfo(numpy.int8).max:
+                self.fClassName = b"TH1C"
+                content = content.astype(">i1")
+            elif issubclass(content.dtype.type, numpy.uint8):
+                self.fClassName = b"TH1S"
+                content = content.astype(">i2")
+            elif issubclass(content.dtype.type, numpy.int16):
+                self.fClassName = b"TH1S"
+                content = content.astype(">i2")
+            elif issubclass(content.dtype.type, numpy.uint16) and content.max() <= numpy.iinfo(numpy.int16).max:
+                self.fClassName = b"TH1S"
+                content = content.astype(">i2")
+            elif issubclass(content.dtype.type, numpy.uint16):
+                self.fClassName = b"TH1I"
+                content = content.astype(">i4")
+            elif issubclass(content.dtype.type, numpy.int32):
+                self.fClassName = b"TH1I"
+                content = content.astype(">i4")
+            elif issubclass(content.dtype.type, numpy.uint32) and content.max() <= numpy.iinfo(numpy.int32).max:
+                self.fClassName = b"TH1I"
+                content = content.astype(">i4")
+            elif issubclass(content.dtype.type, numpy.integer) and numpy.iinfo(numpy.int32).min <= content.min() and content.max() <= numpy.iinfo(numpy.int32).max:
+                self.fClassName = b"TH1I"
+                content = content.astype(">i4")
+            elif issubclass(content.dtype.type, numpy.float32):
+                self.fClassName = b"TH1F"
+                content = content.astype(">f4")
+            else:
+                self.fClassName = b"TH1D"
+                content = content.astype(">f8")
 
-        for n in list(self.fields):
-            if hasattr(histogram, n):
-                self.fields[n] = getattr(histogram, n)
+            self.valuesarray = numpy.empty(len(content) + 2, dtype=content.dtype)
+            self.valuesarray[1:-1] = content
+            self.valuesarray[0] = 0
+            self.valuesarray[-1] = 0
 
-        self.fields["_fNcells"] = len(self.values)
+        elif isinstance(histogram, uproot_methods.classes.TH1.Methods):
+            self.fTitle = self.fixstring(histogram._fTitle)
+            self.fClassName = self.fixstring(histogram._classname)
+
+            self.fXaxis = self.emptyaxis("xaxis", 1.0)
+            self.fXaxis.update(histogram._fXaxis.__dict__)
+            self.fixaxis(self.fXaxis)
+
+            self.fYaxis = self.emptyaxis("yaxis", 0.0)
+            if hasattr(histogram, "_fYaxis"):
+                self.fYaxis.update(histogram._fYaxis.__dict__)
+            self.fixaxis(self.fYaxis)
+
+            self.fZaxis = self.emptyaxis("zaxis", 1.0)
+            if hasattr(histogram, "_fZaxis"):
+                self.fYaxis.update(histogram._fZaxis.__dict__)
+            self.fixaxis(self.fZaxis)
+
+            self.values = histogram.allvalues
+
+            for n in list(self.fields):
+                if hasattr(histogram, n):
+                    self.fields[n] = getattr(histogram, n)
+
+            if self.fClassName == b"TH1C":
+                self.valuesarray = numpy.array(self.values, dtype=">i1")
+            elif self.fClassName == b"TH1S":
+                self.valuesarray = numpy.array(self.values, dtype=">i2")
+            elif self.fClassName == b"TH1I":
+                self.valuesarray = numpy.array(self.values, dtype=">i4")
+            elif self.fClassName == b"TH1F":
+                self.valuesarray = numpy.array(self.values, dtype=">f4")
+            elif self.fClassName == b"TH1D":
+                self.valuesarray = numpy.array(self.values, dtype=">f8")
+            elif self.fClassName == b"TProfile":
+                raise NotImplementedError(self.fClassName)
+            elif self.fClassName == b"TH2C":
+                self.valuesarray = numpy.array(self.values, dtype=">i1")
+                raise NotImplementedError(self.fClassName)
+            elif self.fClassName == b"TH2S":
+                self.valuesarray = numpy.array(self.values, dtype=">i2")
+                raise NotImplementedError(self.fClassName)
+            elif self.fClassName == b"TH2I":
+                self.valuesarray = numpy.array(self.values, dtype=">i4")
+                raise NotImplementedError(self.fClassName)
+            elif self.fClassName == b"TH2F":
+                self.valuesarray = numpy.array(self.values, dtype=">f4")
+                raise NotImplementedError(self.fClassName)
+            elif self.fClassName == b"TH2D":
+                self.valuesarray = numpy.array(self.values, dtype=">f8")
+                raise NotImplementedError(self.fClassName)
+            elif self.fClassName == b"TProfile2D":
+                raise NotImplementedError(self.fClassName)
+            elif self.fClassName == b"TH3C":
+                self.valuesarray = numpy.array(self.values, dtype=">i1")
+                raise NotImplementedError(self.fClassName)
+            elif self.fClassName == b"TH3S":
+                self.valuesarray = numpy.array(self.values, dtype=">i2")
+                raise NotImplementedError(self.fClassName)
+            elif self.fClassName == b"TH3I":
+                self.valuesarray = numpy.array(self.values, dtype=">i4")
+                raise NotImplementedError(self.fClassName)
+            elif self.fClassName == b"TH3F":
+                self.valuesarray = numpy.array(self.values, dtype=">f4")
+                raise NotImplementedError(self.fClassName)
+            elif self.fClassName == b"TH3D":
+                self.valuesarray = numpy.array(self.values, dtype=">f8")
+                raise NotImplementedError(self.fClassName)
+            elif self.fClassName == b"TProfile3D":
+                raise NotImplementedError(self.fClassName)
+            else:
+                raise ValueError("unrecognized histogram class name {0}".format(self.fClassName))
+            
+        else:
+            raise TypeError("type {0} from module {1} is not recognizable as a TH1".format(histogram.__class__.__name__, histogram.__class__.__module__))
+
+        self.fields["_fNcells"] = len(self.valuesarray)
         self.fields["_fContour"] = numpy.array(self.fields["_fContour"], dtype=">f8", copy=False)
         self.fields["_fSumw2"] = numpy.array(self.fields["_fSumw2"], dtype=">f8", copy=False)
-
-        if self.fClassName == b"TH1C":
-            self.valuesarray = numpy.array(self.values, dtype=">i1")
-        elif self.fClassName == b"TH1S":
-            self.valuesarray = numpy.array(self.values, dtype=">i2")
-        elif self.fClassName == b"TH1I":
-            self.valuesarray = numpy.array(self.values, dtype=">i4")
-        elif self.fClassName == b"TH1F":
-            self.valuesarray = numpy.array(self.values, dtype=">f4")
-        elif self.fClassName == b"TH1D":
-            self.valuesarray = numpy.array(self.values, dtype=">f8")
-        elif self.fClassName == b"TProfile":
-            raise NotImplementedError(self.fClassName)
-        elif self.fClassName == b"TH2C":
-            self.valuesarray = numpy.array(self.values, dtype=">i1")
-            raise NotImplementedError(self.fClassName)
-        elif self.fClassName == b"TH2S":
-            self.valuesarray = numpy.array(self.values, dtype=">i2")
-            raise NotImplementedError(self.fClassName)
-        elif self.fClassName == b"TH2I":
-            self.valuesarray = numpy.array(self.values, dtype=">i4")
-            raise NotImplementedError(self.fClassName)
-        elif self.fClassName == b"TH2F":
-            self.valuesarray = numpy.array(self.values, dtype=">f4")
-            raise NotImplementedError(self.fClassName)
-        elif self.fClassName == b"TH2D":
-            self.valuesarray = numpy.array(self.values, dtype=">f8")
-            raise NotImplementedError(self.fClassName)
-        elif self.fClassName == b"TProfile2D":
-            raise NotImplementedError(self.fClassName)
-        elif self.fClassName == b"TH3C":
-            self.valuesarray = numpy.array(self.values, dtype=">i1")
-            raise NotImplementedError(self.fClassName)
-        elif self.fClassName == b"TH3S":
-            self.valuesarray = numpy.array(self.values, dtype=">i2")
-            raise NotImplementedError(self.fClassName)
-        elif self.fClassName == b"TH3I":
-            self.valuesarray = numpy.array(self.values, dtype=">i4")
-            raise NotImplementedError(self.fClassName)
-        elif self.fClassName == b"TH3F":
-            self.valuesarray = numpy.array(self.values, dtype=">f4")
-            raise NotImplementedError(self.fClassName)
-        elif self.fClassName == b"TH3D":
-            self.valuesarray = numpy.array(self.values, dtype=">f8")
-            raise NotImplementedError(self.fClassName)
-        elif self.fClassName == b"TProfile3D":
-            raise NotImplementedError(self.fClassName)
-        else:
-            raise ValueError("unrecognized histogram class name {0}".format(self.fClassName))
 
     @staticmethod
     def fixstring(string):
@@ -148,6 +189,46 @@ class TH1(object):
             return string
         else:
             return string.encode("utf-8")
+
+    @staticmethod
+    def fixaxis(axis):
+        axis["_fName"] = TH1.fixstring(axis["_fName"])
+        axis["_fTitle"] = TH1.fixstring(axis["_fTitle"])
+        axis["_fXbins"] = numpy.array(axis["_fXbins"], dtype=">f8", copy=False)
+        if axis["_fLabels"] is None:
+            axis["_fLabels"] = []
+        if axis["_fModLabs"] is None:
+            axis["_fModLabs"] = []
+
+    @staticmethod
+    def emptyfields():
+        return {"_fLineColor": 602,
+                "_fLineStyle": 1,
+                "_fLineWidth": 1,
+                "_fFillColor": 0,
+                "_fFillStyle": 1001,
+                "_fMarkerColor": 1,
+                "_fMarkerStyle": 1,
+                "_fMarkerSize": 1.0,
+                "_fNcells": 12,
+                "_fBarOffset": 0,
+                "_fBarWidth": 1000,
+                "_fEntries": 0.0,
+                "_fTsumw": 0.0,
+                "_fTsumw2": 0.0,
+                "_fTsumwx": 0.0,
+                "_fTsumwx2": 0.0,
+                "_fMaximum": -1111.0,
+                "_fMinimum": -1111.0,
+                "_fNormFactor": 0.0,
+                "_fContour": [],
+                "_fSumw2": [],
+                "_fOption": b"",
+                "_fFunctions": [],
+                "_fBufferSize": 0,
+                "_fBuffer": [],
+                "_fBinStatErrOpt": 0,
+                "_fStatOverflows": 2}
 
     @staticmethod
     def emptyaxis(name, titleoffset):
@@ -175,16 +256,6 @@ class TH1(object):
                 "_fTimeFormat": b"",
                 "_fLabels": None,
                 "_fModLabs": None}
-
-    @staticmethod
-    def fixaxis(axis):
-        axis["_fName"] = TH1.fixstring(axis["_fName"])
-        axis["_fTitle"] = TH1.fixstring(axis["_fTitle"])
-        axis["_fXbins"] = numpy.array(axis["_fXbins"], dtype=">f8", copy=False)
-        if axis["_fLabels"] is None:
-            axis["_fLabels"] = []
-        if axis["_fModLabs"] is None:
-            axis["_fModLabs"] = []
 
     _format_cntvers = struct.Struct(">IH")
 

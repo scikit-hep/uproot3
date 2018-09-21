@@ -30,22 +30,31 @@
 
 import importlib
 
-registry = {
-    ("builtins", "bytes"):                     ("uproot.write.objects.TObjString", "TObjString"),
-    ("builtins", "str"):                       ("uproot.write.objects.TObjString", "TObjString"),
-    ("uproot_methods.classes.TH1", "Methods"): ("uproot.write.objects.TH1", "TH1"),
-    }
-
+import numpy
+        
 def writeable(obj):
-    def recurse(cls):
-        key = (cls.__module__, cls.__name__)
-        if key in registry:
-            return registry[key]
+    def resolve(obj):
+        def types(cls, obj):
+            if cls is numpy.ndarray:
+                yield ("numpy", "ndarray", len(obj.shape), str(obj.dtype))
+            else:
+                yield (cls.__module__, cls.__name__)
+            for x in cls.__bases__:
+                for y in types(x, obj):
+                    yield y
+
+        if any(x == ("builtins", "bytes") or x == ("builtins", "str") for x in types(obj.__class__, obj)):
+            return ("uproot.write.objects.TObjString", "TObjString")
+
+        elif isinstance(obj, tuple) and any(x[:2] == ("numpy", "ndarray") for x in types(obj[0].__class__, obj[0])) and any(x[:2] == ("numpy", "ndarray") for x in types(obj[1].__class__, obj[1])) and len(obj[0]) + 1 == len(obj[1]):
+            return ("uproot.write.objects.TH1", "TH1")
+
+        elif any(x == ("uproot_methods.classes.TH1", "Methods") for x in types(obj.__class__, obj)):
+            return ("uproot.write.objects.TH1", "TH1")
+
         else:
-            for base in cls.__bases__:
-                return recurse(base)
             raise TypeError("type {0} from module {1} is not writeable by uproot".format(obj.__class__.__name__, obj.__class__.__module__))
 
-    mod, tpe = recurse(obj.__class__)
+    mod, tpe = resolve(obj)
     cls = getattr(importlib.import_module(mod), tpe)
     return cls(obj)

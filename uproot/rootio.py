@@ -841,9 +841,9 @@ class TKey(ROOTObject):
         self._fName = cursor.string(source)
         self._fTitle = cursor.string(source)
 
-        if source.size() is not None:
-            if source.size() - self._fSeekKey < self._fNbytes:
-                raise ValueError("TKey declares that object {0} has {1} bytes but only {2} remain in the file".format(repr(self._fName), self._fObjlen, source.size() - self._fSeekKey))
+        # if source.size() is not None:
+        #     if source.size() - self._fSeekKey < self._fNbytes:
+        #         raise ValueError("TKey declares that object {0} has {1} bytes but only {2} remain in the file (after the key)".format(repr(self._fName), self._fNbytes, source.size() - self._fSeekKey))
 
         # object size != compressed size means it's compressed
         if self._fObjlen != self._fNbytes - self._fKeylen:

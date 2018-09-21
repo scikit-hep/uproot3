@@ -89,4 +89,4 @@ class Cursor(object):
 
     def write_array(self, sink, data):
         self.update_array(sink, data)
-        self.index += len(data)
+        self.index += data.nbytes
