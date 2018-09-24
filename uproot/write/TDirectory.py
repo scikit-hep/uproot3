@@ -43,7 +43,7 @@ class TDirectory(object):
         self.fSeekDir = fSeekDir
         self.fSeekParent = fSeekParent
         self.fSeekKeys = fSeekKeys
-        self.fUUID = b"\x00\x010\xd5\xf5\xea~\x0b\x11\xe8\xa2D~S\x1f\xac\xbe\xef"  # fUUID (FIXME!)
+        self.fUUID = b"\x00\x014z\xe4\x02\xc0)\x11\xe8\xb8]\xef8\xe1\x83\xbe\xef"  # fUUID (FIXME!)
 
         self.allocationbytes = allocationbytes
         self.growfactor = growfactor
@@ -74,7 +74,7 @@ class TDirectory(object):
 
         cursor.skip(self._format1.size)
         cursor.write_data(self.sink, self.fUUID)
-        cursor.skip(12)   # FIXME!
+        cursor.write_data(sink, b"\x00" * 12)   # FIXME! what is this?
 
     _format1 = struct.Struct(">hIIiiiii")   # struct.Struct(">hIIiiqqq")
     _format2 = struct.Struct(">i")
@@ -86,6 +86,7 @@ class TDirectory(object):
         self.fSeekKeys = cursor.index
         self.fNbytesKeys = self._nbyteskeys()
 
+        print("TDirectory.writekeys")
         self.tfile._expandfile(uproot.write.sink.cursor.Cursor(self.fSeekKeys + self.allocationbytes))
 
         self.keycursor = uproot.write.sink.cursor.Cursor(self.fSeekKeys)

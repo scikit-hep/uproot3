@@ -85,20 +85,19 @@ class TFileUpdate(object):
         where, cycle = self._normalizewhere(where)
         what = uproot.write.registry.writeable(what)
 
-        location = self._fSeekFree
-        cursor = uproot.write.sink.cursor.Cursor(location)
+        cursor = uproot.write.sink.cursor.Cursor(self._fSeekFree)
         newkey = uproot.write.TKey.TKey(fClassName = what.fClassName,
                                         fName      = where,
                                         fTitle     = what.fTitle,
                                         fObjlen    = what.length(where),
-                                        fSeekKey   = location,
+                                        fSeekKey   = self._fSeekFree,
                                         fSeekPdir  = self._fBEGIN,
                                         fCycle     = cycle if cycle is not None else self._rootdir.newcycle(where))
 
-        self._fSeekFree += newkey.fKeylen + what.length(where)
-        
         newkey.write(cursor, self._sink)
         what.write(cursor, self._sink, where)
+        print("__setitem__")
+        self._expandfile(cursor)
 
         self._rootdir.setkey(newkey)
         self._sink.flush()
@@ -234,7 +233,11 @@ class TFileRecreate(TFileUpdate):
         cursor.write_data(self._sink, b"\x00\x010\xd5\xf5\xea~\x0b\x11\xe8\xa2D~S\x1f\xac\xbe\xef")  # fUUID (FIXME!)
 
     def _expandfile(self, cursor):
+        print("_expandfile", cursor.index, self._fSeekFree)
+
         if cursor.index > self._fSeekFree:
+            print("yes")
+
             freecursor = uproot.write.sink.cursor.Cursor(cursor.index)
             freekey = uproot.write.TKey.TKey(b"TFile", self._filename, fObjlen=uproot.write.TFree.TFree.size(), fSeekKey=cursor.index, fSeekPdir=self._fBEGIN)
             freeseg = uproot.write.TFree.TFree(cursor.index + freekey.fNbytes)
@@ -256,6 +259,7 @@ class TFileRecreate(TFileUpdate):
         key.write(cursor, self._sink)
         self._rootdir.write(cursor, self._sink)
 
+        print("_writerootdir")
         self._expandfile(cursor)
 
     def _writestreamers(self):
@@ -275,6 +279,7 @@ class TFileRecreate(TFileUpdate):
         self._fNbytesInfo = streamerkey.fNbytes
         self._nbytescursor.update_fields(self._sink, self._format_nbytesinfo, self._fNbytesInfo)
 
+        print("_writestreamers")
         self._expandfile(cursor)
 
     def _writerootkeys(self):
