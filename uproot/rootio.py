@@ -500,10 +500,6 @@ def _classof(context, classname):
     return cls
 
 def _readstreamers(source, cursor, context, parent):
-    # print out streamers (for pasting into uproot/write/streamers.py)
-    # cnt = (int(numpy.int64(source._source[cursor.index : cursor.index + 4].view(">i4")[0]) & ~uproot.const.kByteCountMask)) + 4
-    # print(repr(source._source[cursor.index : cursor.index + cnt].tostring()))
-
     tlist = TList.read(source, cursor, context, parent)
 
     streamerinfos = []

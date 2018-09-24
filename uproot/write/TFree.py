@@ -31,19 +31,24 @@
 import math
 import struct
 
+import numpy
+
 class TFree(object):
     def __init__(self, fEND):
         self.fFirst = fEND
         self.fLast = int(math.ceil(fEND / 2000000000.0)) * 2000000000
 
-    _version = 1
-    _format1 = struct.Struct(">hii")
-    # _version = 1001
-    # _format1 = struct.Struct(">hqq")
+    _format_big = struct.Struct(">hqq")
+    _format_small = struct.Struct(">hii")
 
     def write(self, cursor, sink):
-        cursor.write_fields(sink, self._format1, self._version, self.fFirst, self.fLast)
+        if self.fLast > numpy.iinfo(numpy.int32).max:
+            cursor.write_fields(sink, self._format_big, 1001, self.fFirst, self.fLast)
+        else:
+            cursor.write_fields(sink, self._format_small, 1, self.fFirst, self.fLast)
 
-    @staticmethod
-    def size():
-        return TFree._format1.size
+    def size(self):
+        if self.fLast > numpy.iinfo(numpy.int32).max:
+            return TFree._format_big.size
+        else:
+            return TFree._format_small.size

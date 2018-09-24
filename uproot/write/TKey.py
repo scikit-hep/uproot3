@@ -66,10 +66,8 @@ class TKey(object):
         cursor.write_string(sink, self.fName)
         cursor.write_string(sink, self.fTitle)
 
-    _version = 4
-    _format1 = struct.Struct(">ihiIhhii")
-    # _version = 1004
-    # _format1 = struct.Struct(">ihiIhhqq")
+    _version = 1004
+    _format1 = struct.Struct(">ihiIhhqq")
 
 class TKey32(TKey):
     _version = 4

@@ -96,7 +96,6 @@ class TFileUpdate(object):
 
         newkey.write(cursor, self._sink)
         what.write(cursor, self._sink, where)
-        print("__setitem__")
         self._expandfile(cursor)
 
         self._rootdir.setkey(newkey)
@@ -199,14 +198,14 @@ class TFileRecreate(TFileUpdate):
         self._sink.flush()
 
     _format1           = struct.Struct(">4sii")
-    _format_end        = struct.Struct(">iiii")   # struct.Struct(">qqii")
+    _format_end        = struct.Struct(">qqii")
     _format2           = struct.Struct(">iBi")
-    _format_seekinfo   = struct.Struct(">i")    # struct.Struct(">q")
+    _format_seekinfo   = struct.Struct(">q")
     _format_nbytesinfo = struct.Struct(">i")
 
     def _writeheader(self):
         cursor = uproot.write.sink.cursor.Cursor(0)
-        self._fVersion = 61404   # self._fVersion = 1061404
+        self._fVersion = self._fVersion = 1061404
         self._fBEGIN = 100
         cursor.write_fields(self._sink, self._format1, b"root", self._fVersion, self._fBEGIN)
 
@@ -217,10 +216,10 @@ class TFileRecreate(TFileUpdate):
         self._endcursor = uproot.write.sink.cursor.Cursor(cursor.index)
         cursor.write_fields(self._sink, self._format_end, self._fEND, self._fSeekFree, self._fNbytesFree, self._nfree)
 
-        self._fNbytesName = 2*len(self._filename) + 36  # + 8                             # two fields in TKey are 'q' rather than 'i', so +8
-        fCompress = uproot.const.kZLIB * 100  # (FIXME!)
+        self._fNbytesName = 2*len(self._filename) + 36 + 8   # + 8 because two fields in TKey are 'q' rather than 'i'
+        fCompress = uproot.const.kZLIB * 100  # FIXME!
         fUnits = 4
-        cursor.write_fields(self._sink, self._format2, self._fNbytesName, 4, fCompress)
+        cursor.write_fields(self._sink, self._format2, self._fNbytesName, fUnits, fCompress)
 
         self._fSeekInfo = 0
         self._seekcursor = uproot.write.sink.cursor.Cursor(cursor.index)
@@ -233,14 +232,12 @@ class TFileRecreate(TFileUpdate):
         cursor.write_data(self._sink, b"\x00\x010\xd5\xf5\xea~\x0b\x11\xe8\xa2D~S\x1f\xac\xbe\xef")  # fUUID (FIXME!)
 
     def _expandfile(self, cursor):
-        print("_expandfile", cursor.index, self._fSeekFree)
-
         if cursor.index > self._fSeekFree:
-            print("yes")
-
             freecursor = uproot.write.sink.cursor.Cursor(cursor.index)
-            freekey = uproot.write.TKey.TKey(b"TFile", self._filename, fObjlen=uproot.write.TFree.TFree.size(), fSeekKey=cursor.index, fSeekPdir=self._fBEGIN)
+            freekey = uproot.write.TKey.TKey(b"TFile", self._filename, fObjlen=0, fSeekKey=cursor.index, fSeekPdir=self._fBEGIN)
             freeseg = uproot.write.TFree.TFree(cursor.index + freekey.fNbytes)
+            freekey.fObjlen = freeseg.size()
+
             freekey.write(freecursor, self._sink)
             freeseg.write(freecursor, self._sink)
 
@@ -259,7 +256,6 @@ class TFileRecreate(TFileUpdate):
         key.write(cursor, self._sink)
         self._rootdir.write(cursor, self._sink)
 
-        print("_writerootdir")
         self._expandfile(cursor)
 
     def _writestreamers(self):
@@ -279,7 +275,6 @@ class TFileRecreate(TFileUpdate):
         self._fNbytesInfo = streamerkey.fNbytes
         self._nbytescursor.update_fields(self._sink, self._format_nbytesinfo, self._fNbytesInfo)
 
-        print("_writestreamers")
         self._expandfile(cursor)
 
     def _writerootkeys(self):

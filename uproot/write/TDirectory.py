@@ -59,7 +59,7 @@ class TDirectory(object):
         return uproot.write.sink.cursor.Cursor.length_string(self.fName) + 1 + self._format1.size + len(self.fUUID) + 12
 
     def update(self):
-        fVersion = 5   # 1005
+        fVersion = 5
         fDatimeC = 1573188772   # FIXME!
         fDatimeM = 1573188772   # FIXME!
         self.cursor.update_fields(self.sink, self._format1, fVersion, fDatimeC, fDatimeM, self.fNbytesKeys, self.fNbytesName, self.fSeekDir, self.fSeekParent, self.fSeekKeys)
@@ -76,7 +76,7 @@ class TDirectory(object):
         cursor.write_data(self.sink, self.fUUID)
         cursor.write_data(sink, b"\x00" * 12)   # FIXME! what is this?
 
-    _format1 = struct.Struct(">hIIiiiii")   # struct.Struct(">hIIiiqqq")
+    _format1 = struct.Struct(">hIIiiiii")
     _format2 = struct.Struct(">i")
 
     def _nbyteskeys(self):
@@ -86,7 +86,6 @@ class TDirectory(object):
         self.fSeekKeys = cursor.index
         self.fNbytesKeys = self._nbyteskeys()
 
-        print("TDirectory.writekeys")
         self.tfile._expandfile(uproot.write.sink.cursor.Cursor(self.fSeekKeys + self.allocationbytes))
 
         self.keycursor = uproot.write.sink.cursor.Cursor(self.fSeekKeys)
