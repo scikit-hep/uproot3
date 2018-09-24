@@ -52,6 +52,7 @@ class TDirectory(object):
                                               fObjlen    = self._format2.size,
                                               fSeekKey   = self.fSeekKeys)
         self.keys = collections.OrderedDict()
+        self.maxcycle = collections.Counter()
 
     def update(self):
         fVersion = 1005
@@ -90,15 +91,18 @@ class TDirectory(object):
 
         self.update()
 
+    def newcycle(self, name):
+        self.maxcycle[name] += 1
+        return self.maxcycle[name]
+
     def setkey(self, newkey):
         newcursor = None
-
-        if newkey.fName in self.keys:
-            self.headkey.fObjlen -= self.keys[newkey.fName].fKeylen
+        if (newkey.fName, newkey.fCycle) in self.keys:
+            self.headkey.fObjlen -= self.keys[(newkey.fName, newkey.fCycle)].fKeylen
             newcursor = uproot.write.sink.cursor.Cursor(self.fSeekKeys)
 
         self.headkey.fObjlen += newkey.fKeylen
-        self.keys[newkey.fName] = newkey
+        self.keys[(newkey.fName, newkey.fCycle)] = newkey
 
         self.fNbytesKeys = self._nbyteskeys()
         while self.fNbytesKeys > self.allocationbytes:
@@ -113,10 +117,15 @@ class TDirectory(object):
             self.nkeycursor.update_fields(self.sink, self._format2, len(self.keys))
             self.update()
 
-    def delkey(self, name):
-        oldkey = self.keys[name]
-        self.headkey.fObjlen -= oldkey.fKeylen
-        del self.keys[name]
+    def delkey(self, name, cycle):
+        if cycle is None:
+            for x in range(self.maxcycle[name]):
+                self.delkey(name, x + 1)
 
-        self.fNbytesKeys = self._nbyteskeys()
-        self.writekeys(uproot.write.sink.cursor.Cursor(self.fSeekKeys))
+        else:
+            oldkey = self.keys[(name, cycle)]
+            self.headkey.fObjlen -= oldkey.fKeylen
+            del self.keys[(name, cycle)]
+
+            self.fNbytesKeys = self._nbyteskeys()
+            self.writekeys(uproot.write.sink.cursor.Cursor(self.fSeekKeys))

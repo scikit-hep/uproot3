@@ -67,13 +67,20 @@ class TFileUpdate(object):
         if not isinstance(where, bytes):
             raise TypeError("ROOT file key must be a string")
 
+        if b";" in where:
+            at = where.rindex(b";")
+            where, cycle = where[:at], where[at + 1:]
+            cycle = int(cycle)
+        else:
+            cycle = None
+
         if b"/" in where:
             raise NotImplementedError("subdirectories not supported yet")
 
-        return where
+        return where, cycle
 
     def __setitem__(self, where, what):
-        where = self._normalizewhere(where)
+        where, cycle = self._normalizewhere(where)
         what = uproot.write.registry.writeable(what)
 
         location = self._fSeekFree
@@ -83,7 +90,8 @@ class TFileUpdate(object):
                                         fTitle     = what.fTitle,
                                         fObjlen    = what.length(where),
                                         fSeekKey   = location,
-                                        fSeekPdir  = self._fBEGIN)
+                                        fSeekPdir  = self._fBEGIN,
+                                        fCycle     = cycle if cycle is not None else self._rootdir.newcycle(where))
 
         self._fSeekFree += newkey.fKeylen + what.length(where)
         
@@ -94,9 +102,9 @@ class TFileUpdate(object):
         self._sink.flush()
 
     def __delitem__(self, where):
-        where = self._normalizewhere(where)
+        where, cycle = self._normalizewhere(where)
         try:
-            self._rootdir.delkey(where)
+            self._rootdir.delkey(where, cycle)
         except KeyError:
             raise KeyError("ROOT directory does not contain key {0}".format(where))
 
@@ -223,7 +231,7 @@ class TFileRecreate(TFileUpdate):
         if cursor.index > self._fEND:
             fillcursor = uproot.write.sink.cursor.Cursor(cursor.index - 1)
             fillcursor.update_data(self._sink, b"\x00")
-        
+
         self._fSeekFree = self._fEND = cursor.index
         self._endcursor.update_fields(self._sink, self._format_end, self._fEND, self._fSeekFree)
 
