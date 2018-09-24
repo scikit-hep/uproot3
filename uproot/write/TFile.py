@@ -31,6 +31,7 @@
 import os
 import sys
 import struct
+import uuid
 
 import uproot.const
 import uproot.source.file
@@ -229,7 +230,7 @@ class TFileRecreate(TFileUpdate):
         self._nbytescursor = uproot.write.sink.cursor.Cursor(cursor.index)
         cursor.write_fields(self._sink, self._format_nbytesinfo, self._fNbytesInfo)
 
-        cursor.write_data(self._sink, b"\x00\x010\xd5\xf5\xea~\x0b\x11\xe8\xa2D~S\x1f\xac\xbe\xef")  # fUUID (FIXME!)
+        cursor.write_data(self._sink, uuid.uuid1().bytes)
 
     def _expandfile(self, cursor):
         if cursor.index > self._fSeekFree:

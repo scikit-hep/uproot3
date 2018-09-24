@@ -30,6 +30,7 @@
 
 import collections
 import struct
+import uuid
 
 import uproot.write.sink.cursor
 import uproot.write.TKey
@@ -43,7 +44,7 @@ class TDirectory(object):
         self.fSeekDir = fSeekDir
         self.fSeekParent = fSeekParent
         self.fSeekKeys = fSeekKeys
-        self.fUUID = b"\x00\x014z\xe4\x02\xc0)\x11\xe8\xb8]\xef8\xe1\x83\xbe\xef"  # fUUID (FIXME!)
+        self.fUUID = uuid.uuid1().bytes
 
         self.allocationbytes = allocationbytes
         self.growfactor = growfactor
