@@ -28,49 +28,22 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import math
 import struct
 
-import uproot.write.sink.cursor
+class TFree(object):
+    def __init__(self, fEND):
+        self.fFirst = fEND
+        self.fLast = int(math.ceil(fEND / 2000000000.0)) * 2000000000
 
-class TKey(object):
-    def __init__(self, fClassName, fName, fTitle=b"", fObjlen=0, fSeekKey=100, fSeekPdir=0, fCycle=1):
-        self.fClassName = fClassName
-        self.fName = fName
-        self.fTitle = fTitle
-
-        self.fObjlen = fObjlen
-        self.fSeekKey = fSeekKey
-        self.fSeekPdir = fSeekPdir
-        self.fCycle = fCycle
-
-    @property
-    def fKeylen(self):
-        return self._format1.size + uproot.write.sink.cursor.Cursor.length_strings([self.fClassName, self.fName, self.fTitle])
-
-    @property
-    def fNbytes(self):
-        return self.fObjlen + self.fKeylen
-
-    def update(self):
-        fDatime = 1573188772   # FIXME!
-        self.cursor.update_fields(self.sink, self._format1, self.fNbytes, self._version, self.fObjlen, fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
+    _version = 1
+    _format1 = struct.Struct(">hii")
+    # _version = 1001
+    # _format1 = struct.Struct(">hqq")
 
     def write(self, cursor, sink):
-        self.cursor = uproot.write.sink.cursor.Cursor(cursor.index)
-        self.sink = sink
+        cursor.write_fields(sink, self._format1, self._version, self.fFirst, self.fLast)
 
-        self.update()
-
-        cursor.skip(self._format1.size)
-        cursor.write_string(sink, self.fClassName)
-        cursor.write_string(sink, self.fName)
-        cursor.write_string(sink, self.fTitle)
-
-    _version = 4
-    _format1 = struct.Struct(">ihiIhhii")
-    # _version = 1004
-    # _format1 = struct.Struct(">ihiIhhqq")
-
-class TKey32(TKey):
-    _version = 4
-    _format1 = struct.Struct(">ihiIhhii")
+    @staticmethod
+    def size():
+        return TFree._format1.size

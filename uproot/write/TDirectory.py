@@ -35,7 +35,7 @@ import uproot.write.sink.cursor
 import uproot.write.TKey
 
 class TDirectory(object):
-    def __init__(self, tfile, fName, fNbytesName, fSeekDir=100, fSeekParent=0, fSeekKeys=0, allocationbytes=1024, growfactor=10):
+    def __init__(self, tfile, fName, fNbytesName, fSeekDir=100, fSeekParent=0, fSeekKeys=0, allocationbytes=128, growfactor=8):
         self.tfile = tfile
         self.fName = fName
         self.fNbytesName = fNbytesName
@@ -43,6 +43,7 @@ class TDirectory(object):
         self.fSeekDir = fSeekDir
         self.fSeekParent = fSeekParent
         self.fSeekKeys = fSeekKeys
+        self.fUUID = b"\x00\x010\xd5\xf5\xea~\x0b\x11\xe8\xa2D~S\x1f\xac\xbe\xef"  # fUUID (FIXME!)
 
         self.allocationbytes = allocationbytes
         self.growfactor = growfactor
@@ -54,8 +55,11 @@ class TDirectory(object):
         self.keys = collections.OrderedDict()
         self.maxcycle = collections.Counter()
 
+    def size(self):
+        return uproot.write.sink.cursor.Cursor.length_string(self.fName) + 1 + self._format1.size + len(self.fUUID) + 12
+
     def update(self):
-        fVersion = 1005
+        fVersion = 5   # 1005
         fDatimeC = 1573188772   # FIXME!
         fDatimeM = 1573188772   # FIXME!
         self.cursor.update_fields(self.sink, self._format1, fVersion, fDatimeC, fDatimeM, self.fNbytesKeys, self.fNbytesName, self.fSeekDir, self.fSeekParent, self.fSeekKeys)
@@ -69,8 +73,10 @@ class TDirectory(object):
         self.update()
 
         cursor.skip(self._format1.size)
+        cursor.write_data(self.sink, self.fUUID)
+        cursor.skip(12)   # FIXME!
 
-    _format1 = struct.Struct(">hIIiiqqq")
+    _format1 = struct.Struct(">hIIiiiii")   # struct.Struct(">hIIiiqqq")
     _format2 = struct.Struct(">i")
 
     def _nbyteskeys(self):
@@ -90,7 +96,7 @@ class TDirectory(object):
             key.write(self.keycursor, self.sink)
 
         self.update()
-
+        
     def newcycle(self, name):
         self.maxcycle[name] += 1
         return self.maxcycle[name]
