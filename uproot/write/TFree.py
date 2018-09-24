@@ -28,47 +28,27 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import math
 import struct
 
-import uproot.write.sink.cursor
+import numpy
 
-class TKey(object):
-    def __init__(self, fClassName, fName, fTitle=b"", fObjlen=0, fSeekKey=100, fSeekPdir=0, fCycle=1):
-        self.fClassName = fClassName
-        self.fName = fName
-        self.fTitle = fTitle
+class TFree(object):
+    def __init__(self, fEND):
+        self.fFirst = fEND
+        self.fLast = int(math.ceil(fEND / 2000000000.0)) * 2000000000
 
-        self.fObjlen = fObjlen
-        self.fSeekKey = fSeekKey
-        self.fSeekPdir = fSeekPdir
-        self.fCycle = fCycle
-
-    @property
-    def fKeylen(self):
-        return self._format1.size + uproot.write.sink.cursor.Cursor.length_strings([self.fClassName, self.fName, self.fTitle])
-
-    @property
-    def fNbytes(self):
-        return self.fObjlen + self.fKeylen
-
-    def update(self):
-        fDatime = 1573188772   # FIXME!
-        self.cursor.update_fields(self.sink, self._format1, self.fNbytes, self._version, self.fObjlen, fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
+    _format_big = struct.Struct(">hqq")
+    _format_small = struct.Struct(">hii")
 
     def write(self, cursor, sink):
-        self.cursor = uproot.write.sink.cursor.Cursor(cursor.index)
-        self.sink = sink
+        if self.fLast > numpy.iinfo(numpy.int32).max:
+            cursor.write_fields(sink, self._format_big, 1001, self.fFirst, self.fLast)
+        else:
+            cursor.write_fields(sink, self._format_small, 1, self.fFirst, self.fLast)
 
-        self.update()
-
-        cursor.skip(self._format1.size)
-        cursor.write_string(sink, self.fClassName)
-        cursor.write_string(sink, self.fName)
-        cursor.write_string(sink, self.fTitle)
-
-    _version = 1004
-    _format1 = struct.Struct(">ihiIhhqq")
-
-class TKey32(TKey):
-    _version = 4
-    _format1 = struct.Struct(">ihiIhhii")
+    def size(self):
+        if self.fLast > numpy.iinfo(numpy.int32).max:
+            return TFree._format_big.size
+        else:
+            return TFree._format_small.size

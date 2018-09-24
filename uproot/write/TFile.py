@@ -31,10 +31,13 @@
 import os
 import sys
 import struct
+import uuid
 
+import uproot.const
 import uproot.source.file
 import uproot.write.sink.file
 import uproot.write.sink.cursor
+import uproot.write.TFree
 import uproot.write.TKey
 import uproot.write.TDirectory
 import uproot.write.streamers
@@ -67,36 +70,42 @@ class TFileUpdate(object):
         if not isinstance(where, bytes):
             raise TypeError("ROOT file key must be a string")
 
+        if b";" in where:
+            at = where.rindex(b";")
+            where, cycle = where[:at], where[at + 1:]
+            cycle = int(cycle)
+        else:
+            cycle = None
+
         if b"/" in where:
             raise NotImplementedError("subdirectories not supported yet")
 
-        return where
+        return where, cycle
 
     def __setitem__(self, where, what):
-        where = self._normalizewhere(where)
+        where, cycle = self._normalizewhere(where)
         what = uproot.write.registry.writeable(what)
 
-        location = self._fSeekFree
-        cursor = uproot.write.sink.cursor.Cursor(location)
+        cursor = uproot.write.sink.cursor.Cursor(self._fSeekFree)
         newkey = uproot.write.TKey.TKey(fClassName = what.fClassName,
                                         fName      = where,
                                         fTitle     = what.fTitle,
                                         fObjlen    = what.length(where),
-                                        fSeekKey   = location,
-                                        fSeekPdir  = self._fBEGIN)
+                                        fSeekKey   = self._fSeekFree,
+                                        fSeekPdir  = self._fBEGIN,
+                                        fCycle     = cycle if cycle is not None else self._rootdir.newcycle(where))
 
-        self._fSeekFree += newkey.fKeylen + what.length(where)
-        
         newkey.write(cursor, self._sink)
         what.write(cursor, self._sink, where)
+        self._expandfile(cursor)
 
         self._rootdir.setkey(newkey)
         self._sink.flush()
 
     def __delitem__(self, where):
-        where = self._normalizewhere(where)
+        where, cycle = self._normalizewhere(where)
         try:
-            self._rootdir.delkey(where)
+            self._rootdir.delkey(where, cycle)
         except KeyError:
             raise KeyError("ROOT directory does not contain key {0}".format(where))
 
@@ -190,24 +199,28 @@ class TFileRecreate(TFileUpdate):
         self._sink.flush()
 
     _format1           = struct.Struct(">4sii")
-    _format_end        = struct.Struct(">qq")
-    _format2           = struct.Struct(">iiiBi")
+    _format_end        = struct.Struct(">qqii")
+    _format2           = struct.Struct(">iBi")
     _format_seekinfo   = struct.Struct(">q")
     _format_nbytesinfo = struct.Struct(">i")
 
     def _writeheader(self):
         cursor = uproot.write.sink.cursor.Cursor(0)
-        self._fVersion = 1061404
+        self._fVersion = self._fVersion = 1061404
         self._fBEGIN = 100
         cursor.write_fields(self._sink, self._format1, b"root", self._fVersion, self._fBEGIN)
 
         self._fEND = 0
         self._fSeekFree = 0
+        self._fNbytesFree = 0
+        self._nfree = 0
         self._endcursor = uproot.write.sink.cursor.Cursor(cursor.index)
-        cursor.write_fields(self._sink, self._format_end, self._fEND, self._fSeekFree)
+        cursor.write_fields(self._sink, self._format_end, self._fEND, self._fSeekFree, self._fNbytesFree, self._nfree)
 
-        self._fNbytesName = 2*len(self._filename) + 36 + 8                             # two fields in TKey are 'q' rather than 'i', so +8
-        cursor.write_fields(self._sink, self._format2, 1, 1, self._fNbytesName, 8, 0)  # fNbytesFree, nfree, fNbytesName, fUnits, fCompress (FIXME!)
+        self._fNbytesName = 2*len(self._filename) + 36 + 8   # + 8 because two fields in TKey are 'q' rather than 'i'
+        fCompress = uproot.const.kZLIB * 100  # FIXME!
+        fUnits = 4
+        cursor.write_fields(self._sink, self._format2, self._fNbytesName, fUnits, fCompress)
 
         self._fSeekInfo = 0
         self._seekcursor = uproot.write.sink.cursor.Cursor(cursor.index)
@@ -217,22 +230,33 @@ class TFileRecreate(TFileUpdate):
         self._nbytescursor = uproot.write.sink.cursor.Cursor(cursor.index)
         cursor.write_fields(self._sink, self._format_nbytesinfo, self._fNbytesInfo)
 
-        cursor.write_data(self._sink, b"\x00\x010\xd5\xf5\xea~\x0b\x11\xe8\xa2D~S\x1f\xac\xbe\xef")  # fUUID (FIXME!)
+        cursor.write_data(self._sink, b'\x00\x01' + uuid.uuid1().bytes)
 
     def _expandfile(self, cursor):
-        if cursor.index > self._fEND:
-            fillcursor = uproot.write.sink.cursor.Cursor(cursor.index - 1)
-            fillcursor.update_data(self._sink, b"\x00")
-        
-        self._fSeekFree = self._fEND = cursor.index
-        self._endcursor.update_fields(self._sink, self._format_end, self._fEND, self._fSeekFree)
+        if cursor.index > self._fSeekFree:
+            freecursor = uproot.write.sink.cursor.Cursor(cursor.index)
+            freekey = uproot.write.TKey.TKey(b"TFile", self._filename, fObjlen=0, fSeekKey=cursor.index, fSeekPdir=self._fBEGIN)
+            freeseg = uproot.write.TFree.TFree(cursor.index + freekey.fNbytes)
+            freekey.fObjlen = freeseg.size()
+
+            freekey.write(freecursor, self._sink)
+            freeseg.write(freecursor, self._sink)
+
+            self._fSeekFree = cursor.index
+            self._fEND = cursor.index + freekey.fNbytes
+            self._fNbytesFree = freekey.fNbytes
+            self._nfree = 1
+            self._endcursor.update_fields(self._sink, self._format_end, self._fEND, self._fSeekFree, self._fNbytesFree, self._nfree)
 
     def _writerootdir(self):
         cursor = uproot.write.sink.cursor.Cursor(self._fBEGIN)
-        key = uproot.write.TKey.TKey(b"TFile", self._filename)
-        key.write(cursor, self._sink)
+
         self._rootdir = uproot.write.TDirectory.TDirectory(self, self._filename, self._fNbytesName)
+
+        key = uproot.write.TKey.TKey(b"TFile", self._filename, fObjlen=self._rootdir.size())
+        key.write(cursor, self._sink)
         self._rootdir.write(cursor, self._sink)
+
         self._expandfile(cursor)
 
     def _writestreamers(self):

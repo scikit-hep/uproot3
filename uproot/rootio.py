@@ -330,11 +330,22 @@ class ROOTDirectory(object):
                 name, cycle = name[:at], name[at + 1:]
                 cycle = int(cycle)
 
+            last = None
             for key in self._keys:
                 if key._fName == name:
-                    if cycle is None or key._fCycle == cycle:
+                    if cycle == key._fCycle:
                         return key.get()
-            raise KeyError("not found: {0}".format(repr(name)))
+                    elif cycle is None and last is None:
+                        last = key
+                    elif cycle is None and last._fCycle < key._fCycle:
+                        last = key
+
+            if last is not None:
+                return last.get()
+            elif cycle is None:
+                raise KeyError("not found: {0}".format(repr(name)))
+            else:
+                raise KeyError("not found: {0} with cycle {1}".format(repr(name), cycle))
 
     def __contains__(self, name):
         try:
