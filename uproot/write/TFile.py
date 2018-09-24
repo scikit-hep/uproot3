@@ -230,7 +230,7 @@ class TFileRecreate(TFileUpdate):
         self._nbytescursor = uproot.write.sink.cursor.Cursor(cursor.index)
         cursor.write_fields(self._sink, self._format_nbytesinfo, self._fNbytesInfo)
 
-        cursor.write_data(self._sink, uuid.uuid1().bytes)
+        cursor.write_data(self._sink, b'\x00\x01' + uuid.uuid1().bytes)
 
     def _expandfile(self, cursor):
         if cursor.index > self._fSeekFree:

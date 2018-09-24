@@ -44,7 +44,7 @@ class TDirectory(object):
         self.fSeekDir = fSeekDir
         self.fSeekParent = fSeekParent
         self.fSeekKeys = fSeekKeys
-        self.fUUID = uuid.uuid1().bytes
+        self.fUUID = b'\x00\x01' + uuid.uuid1().bytes
 
         self.allocationbytes = allocationbytes
         self.growfactor = growfactor
