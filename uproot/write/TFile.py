@@ -33,6 +33,8 @@ import sys
 import struct
 import uuid
 
+import uproot_methods.convert
+
 import uproot.const
 import uproot.source.file
 import uproot.write.sink.file
@@ -41,7 +43,6 @@ import uproot.write.TFree
 import uproot.write.TKey
 import uproot.write.TDirectory
 import uproot.write.streamers
-import uproot.write.registry
 from uproot.rootio import nofilter
 
 class TFileUpdate(object):
@@ -84,8 +85,7 @@ class TFileUpdate(object):
 
     def __setitem__(self, where, what):
         where, cycle = self._normalizewhere(where)
-        what = uproot.write.registry.writeable(what)
-
+        what = uproot_methods.convert.towriteable(what)
         cursor = uproot.write.sink.cursor.Cursor(self._fSeekFree)
         newkey = uproot.write.TKey.TKey(fClassName = what.fClassName,
                                         fName      = where,
