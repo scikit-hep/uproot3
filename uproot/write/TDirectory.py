@@ -31,7 +31,6 @@
 import collections
 import struct
 import uuid
-import datetime
 
 import uproot.write.sink.cursor
 import uproot.write.TKey
