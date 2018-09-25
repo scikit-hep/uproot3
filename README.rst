@@ -49,7 +49,7 @@ The following are installed automatically when you install uproot with pip:
 
 - `Numpy <https://scipy.org/install.html>`__ (1.13.1+)
 - `awkward-array <https://pypi.org/project/awkward>`__ to manipulate data from non-flat TTrees, such as jagged arrays (`part of Scikit-HEP <https://github.com/scikit-hep/awkward-array>`__)
-- `uproot-methods <https://pypi.org/project/uproot-methods>`__ for histogram and physics object methods, such as TLorentzVector (`part of Scikit-HEP <https://github.com/scikit-hep/uproot-methods>`__)
+- `uproot-methods <https://pypi.org/project/uproot-methods>`__ (0.2.0+) for histogram and physics object methods, such as TLorentzVector (`part of Scikit-HEP <https://github.com/scikit-hep/uproot-methods>`__)
 - `cachetools <https://pypi.org/project/cachetools>`__ for dict-like caches (replaces uproot 2's custom caches)
 - `lz4 <https://pypi.org/project/lz4>`__ to read lz4-compressed ROOT files (now ROOT's default compression method)
 

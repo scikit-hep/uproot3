@@ -13,12 +13,12 @@ environment:
     - PYTHON: "C:\\Python27"
       PYTHON_VERSION: "2.7.10"
       PYTHON_ARCH: "32"
-      NUMPY: "numpy==1.15"
+      NUMPY: "numpy>=1.15"
 
     - PYTHON: "C:\\Python27"
       PYTHON_VERSION: "2.7.10"
       PYTHON_ARCH: "64"
-      NUMPY: "numpy==1.15"
+      NUMPY: "numpy>=1.15"
 
     - PYTHON: "C:\\Python36"
       PYTHON_VERSION: "3.6.x"
@@ -33,17 +33,18 @@ environment:
     - PYTHON: "C:\\Python36"
       PYTHON_VERSION: "3.6.x"
       PYTHON_ARCH: "32"
-      NUMPY: "numpy==1.15"
+      NUMPY: "numpy>=1.15"
 
     - PYTHON: "C:\\Python36-x64"
       PYTHON_VERSION: "3.6.x"
       PYTHON_ARCH: "64"
-      NUMPY: "numpy==1.15"
+      NUMPY: "numpy>=1.15"
 
 install:
   - "python --version"
 
 build_script:
   - "pip install %NUMPY%"
+  - "pip install uproot-methods>=0.2.0"
   - "pip install -i https://pypi.anaconda.org/carlkl/simple backports.lzma"
   - "python setup.py test"
