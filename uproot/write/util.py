@@ -1,5 +1,6 @@
 import datetime
 
-def time():
-    now = datetime.datetime.now()
-    return (now.year - 1995) << 26 | now.month << 22 | now.day << 17 | now.hour << 12 | now.minute << 6 | now.second
+def datime(when=None):
+    if when is None:
+        when = datetime.datetime.now()
+    return (when.year - 1995) << 26 | when.month << 22 | when.day << 17 | when.hour << 12 | when.minute << 6 | when.second

@@ -45,7 +45,7 @@ class TDirectory(object):
         self.fSeekDir = fSeekDir
         self.fSeekParent = fSeekParent
         self.fSeekKeys = fSeekKeys
-        self.fDatimeC = uproot.write.util.time()
+        self.fDatimeC = uproot.write.util.datime()
         self.fUUID = b'\x00\x01' + uuid.uuid1().bytes
 
         self.allocationbytes = allocationbytes
@@ -63,7 +63,7 @@ class TDirectory(object):
 
     def update(self):
         fVersion = 5
-        fDatimeM = uproot.write.util.time()
+        fDatimeM = uproot.write.util.datime()
         self.cursor.update_fields(self.sink, self._format1, fVersion, self.fDatimeC, fDatimeM, self.fNbytesKeys, self.fNbytesName, self.fSeekDir, self.fSeekParent, self.fSeekKeys)
 
     def write(self, cursor, sink):
