@@ -35,9 +35,10 @@ import datetime
 
 import uproot.write.sink.cursor
 import uproot.write.TKey
+import uproot.write.util
 
 class TDirectory(object):
-    def __init__(self, tfile, fName, fNbytesName, fSeekDir=100, fSeekParent=0, fSeekKeys=0, fDatimeC=0, fDatimeM=0, allocationbytes=128, growfactor=8):
+    def __init__(self, tfile, fName, fNbytesName, fSeekDir=100, fSeekParent=0, fSeekKeys=0, allocationbytes=128, growfactor=8):
         self.tfile = tfile
         self.fName = fName
         self.fNbytesName = fNbytesName
@@ -45,8 +46,7 @@ class TDirectory(object):
         self.fSeekDir = fSeekDir
         self.fSeekParent = fSeekParent
         self.fSeekKeys = fSeekKeys
-        self.fDatimeC = fDatimeC
-        self.fDatimeM = fDatimeM
+        self.fDatimeC = uproot.write.util.time()
         self.fUUID = b'\x00\x01' + uuid.uuid1().bytes
 
         self.allocationbytes = allocationbytes
@@ -64,15 +64,10 @@ class TDirectory(object):
 
     def update(self):
         fVersion = 5
-        now = datetime.datetime.now()
-        self.fDatimeM = (now.year - 1995) << 26 | now.month << 22 | now.day << 17 | now.hour << 12 | now.minute << 6 | now.second
-        self.cursor.update_fields(self.sink, self._format1, fVersion, self.fDatimeC, self.fDatimeM, self.fNbytesKeys, self.fNbytesName, self.fSeekDir, self.fSeekParent, self.fSeekKeys)
+        fDatimeM = uproot.write.util.time()
+        self.cursor.update_fields(self.sink, self._format1, fVersion, self.fDatimeC, fDatimeM, self.fNbytesKeys, self.fNbytesName, self.fSeekDir, self.fSeekParent, self.fSeekKeys)
 
     def write(self, cursor, sink):
-        now = datetime.datetime.now()
-        self.fDatimeC = (now.year - 1995) << 26 | now.month << 22 | now.day << 17 | now.hour << 12 | now.minute << 6 | now.second
-        self.fDatimeM = (now.year - 1995) << 26 | now.month << 22 | now.day << 17 | now.hour << 12 | now.minute << 6 | now.second
-
         cursor.write_string(sink, self.fName)
         cursor.write_data(sink, b"\x00")
 
