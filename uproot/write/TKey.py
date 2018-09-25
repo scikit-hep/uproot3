@@ -34,7 +34,7 @@ import datetime
 import uproot.write.sink.cursor
 
 class TKey(object):
-    def __init__(self, fClassName, fName, fTitle=b"", fObjlen=0, fSeekKey=100, fSeekPdir=0, fCycle=1, fDatime = 0):
+    def __init__(self, fClassName, fName, fTitle=b"", fObjlen=0, fSeekKey=100, fSeekPdir=0, fCycle=1, fDatime=0):
         self.fClassName = fClassName
         self.fName = fName
         self.fTitle = fTitle
@@ -56,7 +56,6 @@ class TKey(object):
     def update(self):
         now = datetime.datetime.now()
         self.fDatime = (now.year - 1995) << 26 | now.month << 22 | now.day << 17 | now.hour << 12 | now.minute << 6 | now.second
-
         self.cursor.update_fields(self.sink, self._format1, self.fNbytes, self._version, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
 
     def write(self, cursor, sink):
