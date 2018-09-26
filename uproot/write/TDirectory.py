@@ -34,6 +34,7 @@ import uuid
 
 import uproot.write.sink.cursor
 import uproot.write.TKey
+import uproot.write.util
 
 class TDirectory(object):
     def __init__(self, tfile, fName, fNbytesName, fSeekDir=100, fSeekParent=0, fSeekKeys=0, allocationbytes=128, growfactor=8):
@@ -44,6 +45,7 @@ class TDirectory(object):
         self.fSeekDir = fSeekDir
         self.fSeekParent = fSeekParent
         self.fSeekKeys = fSeekKeys
+        self.fDatimeC = uproot.write.util.datime()
         self.fUUID = b'\x00\x01' + uuid.uuid1().bytes
 
         self.allocationbytes = allocationbytes
@@ -61,9 +63,8 @@ class TDirectory(object):
 
     def update(self):
         fVersion = 5
-        fDatimeC = 1573188772   # FIXME!
-        fDatimeM = 1573188772   # FIXME!
-        self.cursor.update_fields(self.sink, self._format1, fVersion, fDatimeC, fDatimeM, self.fNbytesKeys, self.fNbytesName, self.fSeekDir, self.fSeekParent, self.fSeekKeys)
+        fDatimeM = uproot.write.util.datime()
+        self.cursor.update_fields(self.sink, self._format1, fVersion, self.fDatimeC, fDatimeM, self.fNbytesKeys, self.fNbytesName, self.fSeekDir, self.fSeekParent, self.fSeekKeys)
 
     def write(self, cursor, sink):
         cursor.write_string(sink, self.fName)
