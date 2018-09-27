@@ -38,7 +38,7 @@ Install uproot like any other Python package:
 
     pip install uproot
 
-or similar (use ``sudo``, ``--user``, ``virtualenv``, or ``conda`` if you wish).
+or similar (use ``sudo``, ``--user``, ``virtualenv``, or pip-in-conda if you wish).
 
 Strict dependencies:
 ====================
