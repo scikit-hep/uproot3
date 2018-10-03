@@ -141,7 +141,7 @@ class asjagged(uproot.interp.interp.Interpretation):
 
     def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
         self.content.fill(source.content, destination.content, itemstart, itemstop, entrystart, entrystop)
-        destination.counts[entrystart:entrystop] = source.counts
+        destination.counts[entrystart:entrystop] = source.stops - source.starts
 
     def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
         destination.content = self.content.clip(destination.content, itemstart, itemstop, entrystart, entrystop)
