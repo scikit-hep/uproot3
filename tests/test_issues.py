@@ -169,3 +169,11 @@ class Test(unittest.TestCase):
     def test_issue96(self):
         t = uproot.open("tests/samples/issue96.root")["tree"]
         self.assertTrue(all(isinstance(x, uproot_methods.classes.TLorentzVector.Methods) for x in t.array("jet1P4")))
+
+    def test_geant4(self):
+        f = uproot.open("tests/samples/from-geant4.root")
+        arrays = f["Details"].arrays()
+        self.assertEqual(arrays[b"numgood"][0], 224)
+        self.assertEqual([len(x) for x in f["HitStrips"].arrays().values()], [4808, 4808, 4808])
+        self.assertEqual(sum(f["edep_inner"].values), 1547.0)
+        self.assertEqual(sum(sum(x) for x in f["recon_orig"].values), 141.0)
