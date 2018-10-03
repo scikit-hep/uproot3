@@ -378,14 +378,21 @@ def _bytesid(x):
 def _startcheck(source, cursor):
     start = cursor.index
     cnt, vers = cursor.fields(source, _startcheck._format_cntvers)
-    cnt = int(numpy.int64(cnt) & ~uproot.const.kByteCountMask)
-    return start, cnt + 4, vers
+    if numpy.int64(cnt) & uproot.const.kByteCountMask:
+        cnt = int(numpy.int64(cnt) & ~uproot.const.kByteCountMask)
+        return start, cnt + 4, vers
+    else:
+        cursor.index = start
+        vers, = cursor.fields(source, _startcheck._format_cntvers2)
+        return start, None, vers
 _startcheck._format_cntvers = struct.Struct(">IH")
+_startcheck._format_cntvers2 = struct.Struct(">H")
 
 def _endcheck(start, cursor, cnt):
-    observed = cursor.index - start
-    if observed != cnt:
-        raise ValueError("object has {0} bytes; expected {1}".format(observed, cnt))
+    if cnt is not None:
+        observed = cursor.index - start
+        if observed != cnt:
+            raise ValueError("object has {0} bytes; expected {1}".format(observed, cnt))
 
 def _skiptobj(source, cursor):
     version = cursor.field(source, _skiptobj._format1)
@@ -967,7 +974,7 @@ class TStreamerBase(TStreamerElement):
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
         super(TStreamerBase, self)._readinto(self, source, cursor, context, parent)
-        if self._classversion > 2:
+        if self._classversion >= 2:
             self._fBaseVersion = cursor.field(source, TStreamerBase._format)
         _endcheck(start, cursor, cnt)
         return self
