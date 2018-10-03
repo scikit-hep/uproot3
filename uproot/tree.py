@@ -272,7 +272,7 @@ class TTreeMethods(object):
                 if branch._countleaf is not None:
                     branch._countbranch = leaf2branch.get(id(branch._countleaf), None)
 
-        if self._fAliases is None:
+        if getattr(self, "_fAliases", None) is None:
             self.aliases = {}
         else:
             self.aliases = dict((alias._fName, alias._fTitle) for alias in self._fAliases)
@@ -287,7 +287,7 @@ class TTreeMethods(object):
 
     @property
     def numentries(self):
-        return self._fEntries
+        return int(self._fEntries)
 
     @property
     def numbranches(self):
@@ -849,7 +849,7 @@ class TBranchMethods(object):
 
     @property
     def numentries(self):
-        return self._fEntries   # or self._fEntryNumber?
+        return int(self._fEntries)   # or self._fEntryNumber?
 
     @property
     def numbranches(self):
