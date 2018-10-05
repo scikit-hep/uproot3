@@ -41,10 +41,50 @@ void allstreamers(){
     TProfile3D profile3("hprof3d","Profile of pt versus px, py and pz",40,-4,4,40,-4,4,40,0,20);
     profile3.Write();
     
-    std::vector<int> g1; 
-    for (int i = 1; i <= 5; i++){ 
-        g1.push_back(i); 
-    }
+    TTree *t = new TTree("tvec","Tree with vectors");
+    
+    int i1;
+    double d1;
+    float f1;
+    Long64_t l1;
+    char c1;
+    short s1;
+    
+    t -> Branch("intBranch", &i1);
+    t -> Branch("doubleBranch", &d1);
+    t -> Branch("floatBranch", &f1);
+    t -> Branch("longBranch", &l1);
+    t -> Branch("charBranch", &c1);
+    t -> Branch("shortBranch", &s1);
+    
+    std::vector<int> i2; 
+    std::vector<double> d2;
+    std::vector<float> f2;
+    std::vector<long> l2;
+    std::vector<char> c2;
+    std::vector<short> s2;
+    
+    t -> Branch("intvector", &i2);
+    t -> Branch("doublevector", &d2);
+    t -> Branch("floatvector", &f2);
+    t -> Branch("longVector", &l2);
+    t -> Branch("charVector", &c2);
+    t -> Branch("shortVector", &s2);
+    
+    std::string a_string("blah");
+    t -> Branch("str_branch_name", &a_string);
+    
+    std::vector<string> sample;
+    t -> Branch("sample string", &sample);
+    
+    t -> Fill();
+    t -> Write();
+     
+    TGraph g(10);
+    g.Write();
+    
+    TMultiGraph *mg = new TMultiGraph();
+    mg -> Write();
     
     tfile -> Write();
     tfile -> Close();
