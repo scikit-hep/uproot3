@@ -52,11 +52,9 @@ notifications:
 stages:
   - test
   - name: docs
-    # if: (branch = master) AND (NOT (type IN (pull_request)))
-    if: (branch = master)
+    if: (branch = master) AND (NOT (type IN (pull_request)))
   - name: deploy
-    # if: (branch = master) AND (NOT (type IN (pull_request)))
-    if: (branch = master)
+    if: (branch = master) AND (NOT (type IN (pull_request)))
 
 jobs:
   include:
