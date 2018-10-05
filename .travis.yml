@@ -52,14 +52,15 @@ notifications:
 stages:
   - test
   - name: docs
-    # if: (branch = master) AND (NOT (type IN (pull_request)))
-    if: (branch = master)
+    if: (branch = master) AND (NOT (type IN (pull_request)))
   - name: deploy
+    if: (branch = master) AND (NOT (type IN (pull_request)))
 
 jobs:
   include:
   - stage: docs
     python: '3.6'
+    env: NUMPY="numpy>=1.15"
     addons:
       chrome: stable
       apt:
@@ -77,7 +78,12 @@ jobs:
     script:
     # Open Binder example in browser to trigger repo2docker to build image
     - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Ftutorial.ipynb
+
   - stage: deploy
+    python: '3.6'
+    env: NUMPY="numpy>=1.15"
+    install: skip
+    script: skip
     provider: pypi
     user: pivarski
     password:
