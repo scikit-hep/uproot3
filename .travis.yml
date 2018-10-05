@@ -77,7 +77,9 @@ jobs:
       - ln --symbolic /usr/lib/chromium-browser/chromedriver "${HOME}/bin/chromedriver"
     script:
     # Open Binder example in browser to trigger repo2docker to build image
+    - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master
     - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Ftutorial.ipynb
+    - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Fversion-3-features.ipynb
 
   - stage: deploy
     python: '3.6'
