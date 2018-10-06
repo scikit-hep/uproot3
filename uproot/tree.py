@@ -2,21 +2,21 @@
 
 # Copyright (c) 2017, DIANA-HEP
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
-# 
+#
 # * Redistributions of source code must retain the above copyright notice, this
 #   list of conditions and the following disclaimer.
-# 
+#
 # * Redistributions in binary form must reproduce the above copyright notice,
 #   this list of conditions and the following disclaimer in the documentation
 #   and/or other materials provided with the distribution.
-# 
+#
 # * Neither the name of the copyright holder nor the names of its
 #   contributors may be used to endorse or promote products derived from
 #   this software without specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -183,7 +183,7 @@ class TTreeMethods(object):
                     streamer = streamerinfosmap[branch.name]
                 else:
                     return
-                
+
             else:
                 if m.group(1) in streamerinfosmap:
                     substreamer = streamerinfosmap[m.group(1)]
@@ -323,6 +323,10 @@ class TTreeMethods(object):
     def keys(self, recursive=False, filtername=nofilter, filtertitle=nofilter, aliases=True):
         return list(self.iterkeys(recursive=recursive, filtername=filtername, filtertitle=filtertitle, aliases=aliases))
 
+    def _ipython_key_completions_(self):
+        "Support for completion of keys in an IPython kernel"
+        return [item.decode("ascii") for item in self.iterkeys()]
+
     def values(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
         return list(self.itervalues(recursive=recursive, filtername=filtername, filtertitle=filtertitle))
 
@@ -455,7 +459,7 @@ class TTreeMethods(object):
                         else:
                             columns.append(name)
                             data[name] = list(future())     # must be serialized as a Python list for Pandas to accept it
-                            
+
                     return outputtype(columns=columns, data=data)
 
                 else:
@@ -495,7 +499,7 @@ class TTreeMethods(object):
                             df = outputtype(index=index, columns=[name], data={name: list(array)})
 
                         out = pandas.merge(out, df, how="outer", left_index=True, right_index=True)
-                            
+
                     return out
 
         elif isinstance(outputtype, type) and issubclass(outputtype, dict):
@@ -881,6 +885,10 @@ class TBranchMethods(object):
     def keys(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
         return list(self.iterkeys(recursive=recursive, filtername=filtername, filtertitle=filtertitle))
 
+    def _ipython_key_completions_(self):
+        "Support for completion of keys in an IPython kernel"
+        return [item.decode("ascii") for item in self.iterkeys()]
+
     def values(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
         return list(self.itervalues(recursive=recursive, filtername=filtername, filtertitle=filtertitle))
 
@@ -895,7 +903,7 @@ class TBranchMethods(object):
 
     def allitems(self, filtername=nofilter, filtertitle=nofilter):
         return self.items(recursive=True, filtername=filtername, filtertitle=filtertitle)
-            
+
     def get(self, name, recursive=True, filtername=nofilter, filtertitle=nofilter, aliases=True):
         name = _bytesid(name)
         for n, b in self.iteritems(recursive=recursive, filtername=filtername, filtertitle=filtertitle):
@@ -1001,7 +1009,7 @@ class TBranchMethods(object):
 
         else:
             return interpretation
-            
+
     def _normalize_interpretation(self, interpretation):
         if interpretation is None:
             interpretation = interpret(self)
@@ -1311,7 +1319,7 @@ class TBranchMethods(object):
         basket_entryoffset = self._basket_entryoffset(basketstart, basketstop)
 
         destination = interpretation.destination(basket_itemoffset[-1], basket_entryoffset[-1])
-        
+
         def fill(j):
             try:
                 i = j + basketstart
@@ -1322,7 +1330,7 @@ class TBranchMethods(object):
                 source_numitems = interpretation.source_numitems(source)
 
                 expectedentries = basket_entryoffset[j + 1] - basket_entryoffset[j]
-                source_numentries = local_entrystop - local_entrystart 
+                source_numentries = local_entrystop - local_entrystart
 
                 if j + 1 == basketstop - basketstart:
                     if expecteditems > source_numitems:
@@ -1511,7 +1519,7 @@ class TBranchMethods(object):
                 return self.cursor.copied().bytes(datasource, self._fObjlen)
             finally:
                 datasource.dismiss()
-            
+
     class _RecoveredTBasket(uproot.rootio.ROOTObject):
         @classmethod
         def _readinto(cls, self, source, cursor, context, parent):
@@ -1646,7 +1654,7 @@ def _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, e
             self._fEntries, = cursor.fields(source, _TTreeForNumEntries._format1)
             return self
         _format1 = struct.Struct('>q')
-    
+
     out = [None] * len(paths)
 
     def fill(i):
@@ -1681,7 +1689,7 @@ def _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, e
             return sum(out)
         else:
             return OrderedDict(zip(paths, out))
-        
+
     if blocking:
         return wait()
     else:
@@ -1927,7 +1935,7 @@ class LazyArray(object):
                         else:
                             local_stop = None
                             size = local_start + 1
-                    
+
                     piece = self._piece(filenum, local_start, local_stop, step)
                     skip = int(math.ceil(size / float(abs(step)))) * abs(step) - size
 

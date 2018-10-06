@@ -2,21 +2,21 @@
 
 # Copyright (c) 2017, DIANA-HEP
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
-# 
+#
 # * Redistributions of source code must retain the above copyright notice, this
 #   list of conditions and the following disclaimer.
-# 
+#
 # * Redistributions in binary form must reproduce the above copyright notice,
 #   this list of conditions and the following disclaimer in the documentation
 #   and/or other materials provided with the distribution.
-# 
+#
 # * Neither the name of the copyright holder nor the names of its
 #   contributors may be used to endorse or promote products derived from
 #   this software without specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -294,6 +294,10 @@ class ROOTDirectory(object):
     def keys(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         return list(self.iterkeys(recursive=recursive, filtername=filtername, filterclass=filterclass))
 
+    def _ipython_key_completions_(self):
+        "Support for completion of keys in an IPython kernel"
+        return [item.decode("ascii") for item in self.iterkeys()]
+
     def values(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         return list(self.itervalues(recursive=recursive, filtername=filtername, filterclass=filterclass))
 
@@ -457,7 +461,7 @@ def _readobjany(source, cursor, context, parent, asclass=None):
             cursor.refs[start + uproot.const.kMapOffset] = fct
         else:
             cursor.refs[len(cursor.refs) + 1] = fct
-        
+
         if asclass is None:
             obj = fct.read(source, cursor, context, parent)     # new object
             if isinstance(obj, Undefined):
@@ -715,7 +719,7 @@ def _defineclasses(streamerinfos, classes):
                             recarray.append("raise ValueError('not a recarray')")
                         else:
                             recarray.append("out.append(({0}, {1}, {2}))".format(repr(str(element._fName.decode("ascii"))), fielddtype, element._fArrayLength))
-                    
+
                 elif isinstance(element, TStreamerLoop):
                     code.extend(["        cursor.skip(6)",
                                  "        for index in range(self._{0}):".format(_safename(element._fCountName)),
@@ -914,7 +918,7 @@ class TStreamerInfo(ROOTObject):
 
 class TStreamerElement(ROOTObject):
     @classmethod
-    def _readinto(cls, self, source, cursor, context, parent):    
+    def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
 
         self._fOffset = 0
@@ -1277,9 +1281,9 @@ class TArrayD(TArray):
 
 # FIXME: I want to generalize this. It's the first example of a class that doesn't
 # follow the usual pattern. The full 11 bytes are
-# 
+#
 #     "40 00 00 07 00 00 1a a1 2f 10 00"
-# 
+#
 # I'm reasonably certain the first "40 00 00 07" is count with a kByteCountMask.
 # The next "00 00" probably isn't the version, since the streamer said it's version 1.
 # I'm also reasonably certain that the last byte is the fIOBits data.

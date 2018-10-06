@@ -146,6 +146,10 @@ class TFileUpdate(object):
     def keys(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         return self._reopen().keys(recursive=recursive, filtername=filtername, filterclass=filterclass)
 
+    def _ipython_key_completions_(self):
+        "Support for completion of keys in an IPython kernel"
+        return self._reopen()._ipython_key_completions_()
+
     def values(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         return self._reopen().values(recursive=recursive, filtername=filtername, filterclass=filterclass)
 
