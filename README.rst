@@ -243,7 +243,7 @@ In addition, `ROOTDirectory <http://uproot.readthedocs.io/en/latest/root-io.html
 
     >>> for n, x in file.allclasses():
     ...     print(repr(n), "\t", x)
-    ... 
+    ...
     b'one;1'          <class 'uproot.rootio.ROOTDirectory'>
     b'one/two;1'      <class 'uproot.rootio.ROOTDirectory'>
     b'one/two/tree;1' <class 'uproot.rootio.TTree'>
@@ -461,7 +461,7 @@ The **outputtype** parameter lets you specify the container for your arrays. By 
 
     >>> for x, y, z in tree.iterate(["Float64", "Str", "ArrayInt32"]):
     ...     print(x, y, z)
-    ... 
+    ...
     ArrayInt32 Str Float64
 
 A ``for`` loop over a ``dict`` just iterates over the names. We've read in three arrays, thrown away the arrays, and returned the names. In this case, we really wanted a tuple, which drops the names (normally needed for context), but preserves the order and unpacks into a given set of variables:
@@ -661,7 +661,7 @@ Another reason to want to read part of an array is to efficiently iterate over d
     >>> tree = uproot.open("foriter.root")["foriter"]
     >>> for chunk in tree.iterate("data"):
     ...     print(chunk)
-    ... 
+    ...
     {b'data': array([0, 1, 2, 3, 4, 5], dtype=int32)}
     {b'data': array([ 6,  7,  8,  9, 10, 11], dtype=int32)}
     {b'data': array([12, 13, 14, 15, 16, 17], dtype=int32)}
@@ -672,7 +672,7 @@ Another reason to want to read part of an array is to efficiently iterate over d
     {b'data': array([42, 43, 44, 45], dtype=int32)}
     >>> for chunk in tree.iterate("data", entrysteps=5):
     ...     print(chunk)
-    ... 
+    ...
     {b'data': array([0, 1, 2, 3, 4], dtype=int32)}
     {b'data': array([5, 6, 7, 8, 9], dtype=int32)}
     {b'data': array([10, 11, 12, 13, 14], dtype=int32)}
