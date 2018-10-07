@@ -1,5 +1,7 @@
 language: python
 
+cache: pip
+
 os:
   - linux
 
@@ -27,14 +29,6 @@ matrix:
     - python: pypy3.5
       env: NUMPY="numpy==1.13.1"
 
-addons:
-  apt:
-    packages:
-      - python-setuptools
-
-script:
-  python setup.py test
-
 install:
   - pip install --upgrade setuptools_scm
   - pip install $NUMPY
@@ -43,6 +37,14 @@ install:
   - python -c 'import awkward; print(awkward.__version__)'
   - pip install "uproot-methods>=0.2.0"
   - python -c 'import uproot_methods; print(uproot_methods.__version__)'
+
+addons:
+  apt:
+    packages:
+      - python-setuptools
+
+script:
+  python setup.py test
 
 notifications:
   slack: scikit-hep:b6cgBXwccPoaCNLn5VKFJFVy
@@ -57,3 +59,33 @@ deploy:
     tags: true
     branch: master
     condition: '$TRAVIS_PYTHON_VERSION = "3.6" && $NUMPY = "numpy>=1.15"'
+
+stages:
+  - test
+  - name: docs
+    if: (branch = master) AND (NOT (type IN (pull_request)))
+
+jobs:
+  include:
+  - stage: docs
+    python: '3.6'
+    env: NUMPY="numpy>=1.15"
+    addons:
+      chrome: stable
+      apt:
+        packages:
+          - chromium-chromedriver
+    before_install:
+      - sudo apt-get update
+      - sudo apt-get -qq install pandoc
+      - pip install --upgrade pip setuptools wheel
+      - pip install selenium
+    install:
+      - pip install -U -q .
+    before_script:
+      - ln --symbolic /usr/lib/chromium-browser/chromedriver "${HOME}/bin/chromedriver"
+    script:
+    # Open Binder example in browser to trigger repo2docker to build image
+    - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master
+    - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Ftutorial.ipynb
+    - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Fversion-3-features.ipynb
