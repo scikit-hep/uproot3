@@ -49,12 +49,21 @@ script:
 notifications:
   slack: scikit-hep:b6cgBXwccPoaCNLn5VKFJFVy
 
+deploy:
+  provider: pypi
+  user: pivarski
+  password:
+    secure: "BpSLpIcnkTtey4MILj0hiBPCF2W89iAyPbMs4eGO+KMYrACbuXoSR5Pt+Fm4JZpBF5apQeW2ul3WZLpJYNCnkZ/FnliUJwmfJVzcSJrJBmG0dkYyGtASaxuIR7BK4GWuMC00YVcqUX33mExwodU+P54LzXsFYIM4uVjjZgUWrlMxgZTPrYmfSowQfSAxkSV9TUSPZoh8ofONBUZJrt0dzeO8MnIfbssMnI2VMnWv3FG9H0eWxbzaWLjQBOQmMHRXPqGWBflwJ5uUsdBEFKoDpbj9JhDesiULcxezHHFxnWeXr0z7lR6KGM+R3rSwjCrLrS/0MQnXmW8+00pNVLwxjGOYrbSinnvBdZ+Olwb8PcGnqXVFAf0EdwWsYgrX2055vzJDpH0d82t3CAu2RrvpStq/TuDydCfPHmehIpJwBbicKAOmK+DIcMKs/rqpGnb4TCFav0L+zB+xQBqn5tZhbev6F0fPtyuUbrjCPqpb/HikzaZoSnqKA39FSK3wBDP3K13GkEJZiYlq0lvynQD5Ye/1DB9OKH3Vdzohi0JStopAtEga5YvH/CzpIm3D9gK7ZpIVKLXf79ebxAMeYGBNFxEI9SKLdWgxL0kJoCxyZWxdzusyafxWRLp76xJ5mMMNEb+RgNXThgybVBISWhD+WjhOodUm/43sty5eMM4mKRs="
+  distributions: "sdist bdist_wheel --universal"
+  on:
+    tags: true
+    branch: master
+    condition: '$TRAVIS_PYTHON_VERSION = "3.6" && $NUMPY = "numpy>=1.15"'
+
 stages:
   - test
   - name: docs
     if: (branch = master) AND (NOT (type IN (pull_request)))
-  - name: deploy
-    if: (tag =~ v[0-9\.]*)
 
 jobs:
   include:
@@ -80,17 +89,3 @@ jobs:
     - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master
     - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Ftutorial.ipynb
     - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Fversion-3-features.ipynb
-
-  - stage: deploy
-    python: '3.6'
-    env: NUMPY="numpy>=1.15"
-    install: skip
-    script: skip
-    deploy:
-      provider: pypi
-      on:
-        tags: true
-      user: pivarski
-      password:
-        secure: "BpSLpIcnkTtey4MILj0hiBPCF2W89iAyPbMs4eGO+KMYrACbuXoSR5Pt+Fm4JZpBF5apQeW2ul3WZLpJYNCnkZ/FnliUJwmfJVzcSJrJBmG0dkYyGtASaxuIR7BK4GWuMC00YVcqUX33mExwodU+P54LzXsFYIM4uVjjZgUWrlMxgZTPrYmfSowQfSAxkSV9TUSPZoh8ofONBUZJrt0dzeO8MnIfbssMnI2VMnWv3FG9H0eWxbzaWLjQBOQmMHRXPqGWBflwJ5uUsdBEFKoDpbj9JhDesiULcxezHHFxnWeXr0z7lR6KGM+R3rSwjCrLrS/0MQnXmW8+00pNVLwxjGOYrbSinnvBdZ+Olwb8PcGnqXVFAf0EdwWsYgrX2055vzJDpH0d82t3CAu2RrvpStq/TuDydCfPHmehIpJwBbicKAOmK+DIcMKs/rqpGnb4TCFav0L+zB+xQBqn5tZhbev6F0fPtyuUbrjCPqpb/HikzaZoSnqKA39FSK3wBDP3K13GkEJZiYlq0lvynQD5Ye/1DB9OKH3Vdzohi0JStopAtEga5YvH/CzpIm3D9gK7ZpIVKLXf79ebxAMeYGBNFxEI9SKLdWgxL0kJoCxyZWxdzusyafxWRLp76xJ5mMMNEb+RgNXThgybVBISWhD+WjhOodUm/43sty5eMM4mKRs="
-      distributions: "sdist bdist_wheel --universal"
