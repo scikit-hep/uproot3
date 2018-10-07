@@ -158,7 +158,7 @@ void make_HZZ_objects() {
       electronq.push_back(Electron_Charge[i]);
       electroniso.push_back(Electron_Iso[i]);
     }
-    
+
     photonp4.clear();
     photoniso.clear();
     for (int i = 0;  i < *NPhoton;  i++) {

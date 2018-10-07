@@ -2,21 +2,21 @@
 
 # Copyright (c) 2017, DIANA-HEP
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
-# 
+#
 # * Redistributions of source code must retain the above copyright notice, this
 #   list of conditions and the following disclaimer.
-# 
+#
 # * Redistributions in binary form must reproduce the above copyright notice,
 #   this list of conditions and the following disclaimer in the documentation
 #   and/or other materials provided with the distribution.
-# 
+#
 # * Neither the name of the copyright holder nor the names of its
 #   contributors may be used to endorse or promote products derived from
 #   this software without specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -102,17 +102,17 @@ class Test(unittest.TestCase):
         # 2009-02-26, TTree version 16
         for compression in "uncompressed", "zlib":
             self.compare(uproot.open("tests/samples/sample-5.23.02-{0}.root".format(compression))["sample"].arrays())
-    
+
     def test_5_24_00(self):
         # 2009-06-30, TTree version 16
         for compression in "uncompressed", "zlib":
             self.compare(uproot.open("tests/samples/sample-5.24.00-{0}.root".format(compression))["sample"].arrays())
-    
+
     def test_5_25_02(self):
         # 2009-10-01, TTree version 17
         for compression in "uncompressed", "zlib":
             self.compare(uproot.open("tests/samples/sample-5.25.02-{0}.root".format(compression))["sample"].arrays())
-    
+
     def test_5_26_00(self):
         # 2009-12-14, TTree version 18
         for compression in "uncompressed", "zlib":
