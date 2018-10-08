@@ -12,6 +12,7 @@ class Test(unittest.TestCase):
     def runTest(self):
         pass
 
+    @unittest.skipUnless(sys.version_info >= (3, 5), 'requires modern Python')
     def test_notebooks(self):
         output_nb = os.path.join(tempfile.mkdtemp(), 'output.ipynb')
         common_kwargs = {
