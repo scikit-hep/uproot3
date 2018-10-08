@@ -22,13 +22,13 @@ class Test(unittest.TestCase):
         subprocess.call('binder/postBuild', shell=True)
 
         cwd = os.getcwd()
-        os.chdir(os.path.join(cwd, 'binder'))
+        try:
+            os.chdir(os.path.join(cwd, 'binder'))
 
-        pm.execute_notebook('tutorial.ipynb', **common_kwargs)
-
-        pm.execute_notebook('version-3-features.ipynb', **common_kwargs)
-
-        os.chdir(cwd)
+            pm.execute_notebook('tutorial.ipynb', **common_kwargs)
+            pm.execute_notebook('version-3-features.ipynb', **common_kwargs)
+        finally:
+            os.chdir(cwd)
 
 
 if __name__ == '__main__':
