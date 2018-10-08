@@ -1,24 +1,40 @@
 #!/usr/bin/env python
 
 import argparse
-import time
+from contextlib import contextmanager
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.expected_conditions import staleness_of
+
+
+class SeleniumSession():
+    def __init__(self, args):
+        self.options = Options()
+        self.options.set_headless()
+        self.options.add_argument('--no-sandbox')
+        if args.chromedriver_path is not None:
+            self.browser = webdriver.Chrome(
+                args.chromedriver_path, chrome_options=self.options)
+        else:
+            self.browser = webdriver.Chrome(chrome_options=self.options)
+
+    @contextmanager
+    def wait_for_page_load(self, timeout=20):
+        old_page = self.browser.find_element_by_tag_name('html')
+        yield
+        WebDriverWait(self.browser, timeout).until(staleness_of(old_page))
+
+    def trigger_binder(self, url):
+        with self.wait_for_page_load():
+            self.browser.get(url)
 
 
 def main(args):
-    options = Options()
-    options.set_headless()
-    options.add_argument('--no-sandbox')
-    if args.chromedriver_path is not None:
-        driver = webdriver.Chrome(args.chromedriver_path, chrome_options=options)
-    else:
-        driver = webdriver.Chrome(chrome_options=options)
+    driver = SeleniumSession(args)
     if args.is_verbose:
         print('Chrome Headless Browser Invoked')
-    driver.get(args.url)
-    time.sleep(10)
-    driver.close()
+    driver.trigger_binder(args.url)
 
 
 if __name__ == '__main__':
