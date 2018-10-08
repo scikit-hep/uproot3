@@ -104,7 +104,7 @@ setup(name = "uproot",
       license = "BSD 3-clause",
       test_suite = "tests",
       install_requires = ["numpy>=1.13.1", "awkward", "uproot-methods>=0.2.0", "cachetools", "lz4"],
-      tests_require = ['backports.lzma;python_version<"3.3"'],
+      tests_require = ['backports.lzma;python_version<"3.3"', 'papermill'],
       classifiers = [
           "Development Status :: 5 - Production/Stable",
           "Intended Audience :: Developers",
