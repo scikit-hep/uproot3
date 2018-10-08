@@ -66,7 +66,9 @@ def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defa
     if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0:
         path = parsed.netloc + parsed.path
         if isinstance(localsource, dict):
-            openfcn = lambda path: MemmapSource(path, **localsource)
+            kwargs = dict(MemmapSource.defaults)
+            kwargs.update(localsource)
+            openfcn = lambda path: MemmapSource(path, **kwargs)
         else:
             openfcn = localsource
         return ROOTDirectory.read(openfcn(path), **options)
@@ -82,14 +84,18 @@ def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defa
 
 def xrootd(path, xrootdsource=XRootDSource.defaults, **options):
     if isinstance(xrootdsource, dict):
-        openfcn = lambda path: XRootDSource(path, **xrootdsource)
+        kwargs = dict(XRootDSource.defaults)
+        kwargs.update(xrootdsource)
+        openfcn = lambda path: XRootDSource(path, **kwargs)
     else:
         openfcn = xrootdsource
     return ROOTDirectory.read(openfcn(path), **options)
 
 def http(path, httpsource=HTTPSource.defaults, **options):
     if isinstance(httpsource, dict):
-        openfcn = lambda path: HTTPSource(path, **httpsource)
+        kwargs = dict(HTTPSource.defaults)
+        kwargs.update(httpsource)
+        openfcn = lambda path: HTTPSource(path, **kwargs)
     else:
         openfcn = httpsource
     return ROOTDirectory.read(openfcn(path), **options)

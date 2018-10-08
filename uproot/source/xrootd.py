@@ -38,13 +38,12 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (uproot.source.chunked.ChunkedSource.__metaclass__,), {})
 
-    def __init__(self, path, *args, **kwds):
+    def __init__(self, path, timeout=None, *args, **kwds):
         self._size = None
+        self.timeout = timeout
         super(XRootDSource, self).__init__(path, *args, **kwds)
 
-    @staticmethod
-    def defaults(path):
-        return XRootDSource(path, chunkbytes=16*1024, limitbytes=16*1024**2)
+    defaults = {"timeout": None, "chunkbytes": 16*1024, "limitbytes": 16*1024**2}
 
     def _open(self):
         try:
@@ -54,10 +53,10 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
 
         if self._source is None or not self._source.is_open():
             self._source = pyxrootd.client.File()
-            status, dummy = self._source.open(self.path)
+            status, dummy = self._source.open(self.path, timeout=(0 if self.timeout is None else self.timeout))
             if status.get("error", None):
                 raise OSError(status["message"])
-            status, info = self._source.stat()
+            status, info = self._source.stat(timeout=(0 if self.timeout is None else self.timeout))
             if status.get("error", None):
                 raise OSError(status["message"])
             self._size = info["size"]
@@ -77,14 +76,14 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
 
     def _read(self, chunkindex):
         self._open()
-        status, data = self._source.read(chunkindex * self._chunkbytes, self._chunkbytes)
+        status, data = self._source.read(chunkindex * self._chunkbytes, self._chunkbytes, timeout=(0 if self.timeout is None else self.timeout))
         if status.get("error", None):
             raise OSError(status["message"])
         return numpy.frombuffer(data, dtype=numpy.uint8)
 
     def __del__(self):
         if self._source is not None:
-            self._source.close()
+            self._source.close(timeout=(0 if self.timeout is None else self.timeout))
 
     def dismiss(self):
         pass
