@@ -3,6 +3,7 @@
 import unittest
 import sys
 import os
+import tempfile
 import subprocess
 import papermill as pm
 
@@ -12,7 +13,7 @@ class Test(unittest.TestCase):
         pass
 
     def test_notebooks(self):
-        output_nb = os.path.join(os.getcwd(), 'output.ipynb')
+        output_nb = os.path.join(tempfile.mkdtemp(), 'output.ipynb')
         common_kwargs = {
             'output': str(output_nb),
             'kernel_name': 'python{}'.format(sys.version_info.major)
