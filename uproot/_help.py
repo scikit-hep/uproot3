@@ -1940,25 +1940,6 @@ source_fragments = {
 
 ################################################################ uproot.source.file.FileSource
 
-uproot.source.file.FileSource.defaults.__doc__ = \
-u"""Provide sensible defaults for a :py:class:`FileSource <uproot.source.file.FileSource>`.
-
-    The default parameters are:
-
-    - **chunkbytes:** 8*1024 (8 kB per chunk, the minimum that pages into memory if you try to read one byte on a typical Linux system).
-    - **limitbytes:** 1024**2 (1 MB), a very modest amount of RAM.
-
-    Parameters
-    ----------
-    path : str
-        local file path of the input file (it must not be moved during reading!).
-
-    Returns
-    -------
-    :py:class:`FileSource <uproot.source.file.FileSource>`
-        a new file source.
-"""
-
 uproot.source.file.FileSource.__doc__ = \
 u"""Emulate a memory-mapped interface with traditional file handles, opening many if necessary.
 
@@ -1988,22 +1969,6 @@ _method(uproot.source.file.FileSource.data).__doc__ = source_fragments["see1"]
 
 ################################################################ uproot.source.memmap.MemmapSource
 
-uproot.source.memmap.MemmapSource.defaults.__doc__ = \
-u"""Provide sensible defaults for a :py:class:`MemmapSource <uproot.source.memmap.MemmapSource>`.
-
-    This is a dummy function, as :py:class:`MemmapSource <uproot.source.memmap.MemmapSource>` is not parameterizable. It exists to satisfy code symmetry.
-
-    Parameters
-    ----------
-    path : str
-        local file path of the input file.
-
-    Returns
-    -------
-    :py:class:`MemmapSource <uproot.source.memmap.MemmapSource>`
-        a new memory-mapped source.
-"""
-
 uproot.source.memmap.MemmapSource.__doc__ = \
 u"""Thin wrapper around a memory-mapped file, which already behaves like a :py:class:`Source <uproot.source.source.Source>`.
 
@@ -2024,25 +1989,6 @@ _method(uproot.source.memmap.MemmapSource.dismiss).__doc__ = source_fragments["s
 _method(uproot.source.memmap.MemmapSource.data).__doc__ = source_fragments["see1"]
 
 ################################################################ uproot.source.xrootd.XRootDSource
-
-uproot.source.xrootd.XRootDSource.defaults.__doc__ = \
-u"""Provide sensible defaults for a :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>`.
-
-    The default parameters are:
-
-    - **chunkbytes:** 8*1024 (8 kB per chunk).
-    - **limitbytes:** 1024**2 (1 MB), a very modest amount of RAM.
-
-    Parameters
-    ----------
-    path : str
-        remote file URL.
-
-    Returns
-    -------
-    :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>`
-        a new XRootD source.
-"""
 
 uproot.source.xrootd.XRootDSource.__doc__ = \
 u"""Emulate a memory-mapped interface with XRootD.
