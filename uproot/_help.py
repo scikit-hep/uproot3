@@ -2,21 +2,21 @@
 
 # Copyright (c) 2017, DIANA-HEP
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
-# 
+#
 # * Redistributions of source code must retain the above copyright notice, this
 #   list of conditions and the following disclaimer.
-# 
+#
 # * Redistributions in binary form must reproduce the above copyright notice,
 #   this list of conditions and the following disclaimer in the documentation
 #   and/or other materials provided with the distribution.
-# 
+#
 # * Neither the name of the copyright holder nor the names of its
 #   contributors may be used to endorse or promote products derived from
 #   this software without specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -174,7 +174,7 @@ u"""Read an object from the ROOT file or directory by name.
     -------
     :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`
         a freshly read object from the ROOT file.
-    
+
     Notes
     -----
 
@@ -204,7 +204,7 @@ u"""Iterate over key names in this directory.
 
     This method can be accessed more directly by simply iterating over a :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` object.
 """.format(**rootdirectory_fragments)
-    
+
 _method(uproot.rootio.ROOTDirectory.itervalues).__doc__ = \
 u"""Iterate over objects in this directory.
 
@@ -276,7 +276,7 @@ u"""Return key names in this directory.
     list of bytes
         names of objects and subdirectories in the file.
 """.format(**rootdirectory_fragments)
-    
+
 _method(uproot.rootio.ROOTDirectory.values).__doc__ = \
 u"""Return objects in this directory.
 
@@ -346,7 +346,7 @@ u"""Return keys at all levels of depth (shortcut for passing ``recursive=True`` 
     list of bytes
         names of objects and subdirectories in the file.
 """.format(**rootdirectory_fragments)
-    
+
 _method(uproot.rootio.ROOTDirectory.allvalues).__doc__ = \
 u"""Return objects at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`values <uproot.rootio.ROOTDirectory.values>`).
 
@@ -404,7 +404,7 @@ u"""Superclass of all objects read out of a ROOT file (except :py:class:`ROOTDir
 
 uproot.rootio.ROOTStreamedObject.__doc__ = \
 u"""Superclass of all objects read out of a ROOT file with an automatically generated class, derived from the file's *streamer info*.
-    
+
     Each subclass of a :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>` has a ``classversion`` attribute, corresponding to the class version in the *streamer info*. If this version does not match the version of the serialized class, an error is raised during the read.
 """
 
@@ -1230,7 +1230,7 @@ u"""The number of bytes contained in the basket (data and offsets; not including
     Returns
     -------
     int
-        number of uncompressed bytes.    
+        number of uncompressed bytes.
 """.format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.basket_compressedbytes).__doc__ = \
@@ -1726,7 +1726,7 @@ format_source_cursor = {
 
 _method(uproot.source.cursor.Cursor.copied).__doc__ = \
 u"""Return a copy of this :py:class:`Cursor <uproot.source.cursor.Cursor>` with modifications.
-    
+
     Parameters
     ----------
     index : ``None`` or int
@@ -1856,7 +1856,7 @@ u"""Read a string from the :py:class:`Source <uproot.source.source.Source>`, int
     Parameters
     ----------
     {source}
-    
+
     Returns
     -------
     bytes
@@ -1871,7 +1871,7 @@ u"""Read a null-terminated string from the :py:class:`Source <uproot.source.sour
     Parameters
     ----------
     {source}
-    
+
     Returns
     -------
     bytes
@@ -1940,25 +1940,6 @@ source_fragments = {
 
 ################################################################ uproot.source.file.FileSource
 
-uproot.source.file.FileSource.defaults.__doc__ = \
-u"""Provide sensible defaults for a :py:class:`FileSource <uproot.source.file.FileSource>`.
-
-    The default parameters are:
-
-    - **chunkbytes:** 8*1024 (8 kB per chunk, the minimum that pages into memory if you try to read one byte on a typical Linux system).
-    - **limitbytes:** 1024**2 (1 MB), a very modest amount of RAM.
-
-    Parameters
-    ----------
-    path : str
-        local file path of the input file (it must not be moved during reading!).
-
-    Returns
-    -------
-    :py:class:`FileSource <uproot.source.file.FileSource>`
-        a new file source.
-"""
-
 uproot.source.file.FileSource.__doc__ = \
 u"""Emulate a memory-mapped interface with traditional file handles, opening many if necessary.
 
@@ -1988,22 +1969,6 @@ _method(uproot.source.file.FileSource.data).__doc__ = source_fragments["see1"]
 
 ################################################################ uproot.source.memmap.MemmapSource
 
-uproot.source.memmap.MemmapSource.defaults.__doc__ = \
-u"""Provide sensible defaults for a :py:class:`MemmapSource <uproot.source.memmap.MemmapSource>`.
-
-    This is a dummy function, as :py:class:`MemmapSource <uproot.source.memmap.MemmapSource>` is not parameterizable. It exists to satisfy code symmetry.
-
-    Parameters
-    ----------
-    path : str
-        local file path of the input file.
-
-    Returns
-    -------
-    :py:class:`MemmapSource <uproot.source.memmap.MemmapSource>`
-        a new memory-mapped source.
-"""
-
 uproot.source.memmap.MemmapSource.__doc__ = \
 u"""Thin wrapper around a memory-mapped file, which already behaves like a :py:class:`Source <uproot.source.source.Source>`.
 
@@ -2024,25 +1989,6 @@ _method(uproot.source.memmap.MemmapSource.dismiss).__doc__ = source_fragments["s
 _method(uproot.source.memmap.MemmapSource.data).__doc__ = source_fragments["see1"]
 
 ################################################################ uproot.source.xrootd.XRootDSource
-
-uproot.source.xrootd.XRootDSource.defaults.__doc__ = \
-u"""Provide sensible defaults for a :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>`.
-
-    The default parameters are:
-
-    - **chunkbytes:** 8*1024 (8 kB per chunk).
-    - **limitbytes:** 1024**2 (1 MB), a very modest amount of RAM.
-
-    Parameters
-    ----------
-    path : str
-        remote file URL.
-
-    Returns
-    -------
-    :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>`
-        a new XRootD source.
-"""
 
 uproot.source.xrootd.XRootDSource.__doc__ = \
 u"""Emulate a memory-mapped interface with XRootD.
