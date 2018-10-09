@@ -70,6 +70,9 @@ void allstreamers(){
     t -> Branch("longVector", &l2);
     t -> Branch("charVector", &c2);
     t -> Branch("shortVector", &s2);
+
+    char* s;
+    t -> Branch("character star", s);
     
     std::string a_string("blah");
     t -> Branch("str_branch_name", &a_string);
