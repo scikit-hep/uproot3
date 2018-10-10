@@ -30,6 +30,8 @@ matrix:
       env: NUMPY="numpy==1.13.1"
 
 install:
+  - env
+  - echo $TRAVIS_PYTHON_VERSION
   - pip install --upgrade setuptools_scm
   - pip install $NUMPY
   - python -c 'import numpy; print(numpy.__version__)'
@@ -37,6 +39,7 @@ install:
   - python -c 'import awkward; print(awkward.__version__)'
   - pip install "uproot-methods>=0.2.0"
   - python -c 'import uproot_methods; print(uproot_methods.__version__)'
+  - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install pandas ; fi
 
 addons:
   apt:

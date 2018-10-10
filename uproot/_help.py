@@ -452,8 +452,8 @@ tree_fragments = {
         if ``False`` *(default)*, yield only arrays (as ``outputtype``); otherwise, yield 3-tuple: *(entry start, entry stop, arrays)*, where *entry start* is inclusive and *entry stop* is exclusive.""",
 
     # flatten
-    "flatten": u"""flatten : bool
-        if ``True`` *(not default)*, convert JaggedArrays into flat Numpy arrays.""",
+    "flatten": u"""flatten : None or bool
+        if ``True``, convert JaggedArrays into flat Numpy arrays. If False *(default)*, make JaggedArrays lists. If None, remove JaggedArrays.""",
 
     # cache
     "cache": u"""cache : ``None`` or ``dict``-like object
@@ -1416,8 +1416,8 @@ u"""Create a Pandas DataFrame from some branches.
 
     {entrystop}
 
-    flatten : bool
-        if ``True`` *(default)*, convert JaggedArrays into flat Numpy arrays and turn the DataFrame index into a two-level MultiIndex to represent the structure.
+    flatten : None or bool
+        if ``True`` *(default)*, convert JaggedArrays into flat Numpy arrays and turn the DataFrame index into a two-level MultiIndex to represent the structure. If False, make JaggedArrays into lists. If None, remove JaggedArrays.
 
     {cache}
 
