@@ -429,7 +429,7 @@ class TTreeMethods(object):
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
 
         # start the job of filling the arrays
-        futures = [(branch.name if namedecode is None else branch.name.decode(namedecode), interpretation, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=(flatten and not ispandas), cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=False)) for branch, interpretation in branches]
+        futures = [(branch.name if namedecode is None else branch.name.decode(namedecode), interpretation, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=(flatten and not ispandas), cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=False)) for branch, interpretation in branches if not (isinstance(interpretation, asjagged) and flatten is None) ]
 
         # make functions that wait for the filling job to be done and return the right outputtype
         if outputtype == namedtuple:
