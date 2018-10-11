@@ -28,10 +28,37 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import re
+import unittest
+import uproot
+try:
+    import pandas
+except ImportError:
+    pandas = None
 
-__version__ = "3.2.3"
-version = __version__
-version_info = tuple(re.split(r"[-\.]", __version__))
+class Test(unittest.TestCase):
+    def runTest(self):
+        pass
 
-del re
+    def setUp(self):
+        self.sample = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]
+
+    @unittest.skipIf(pandas is None, "Pandas not installed")
+    def test_flatten_False(self):
+        df = self.sample.pandas.df(flatten=False)
+        self.assertEqual(len(df.keys()), 57)
+        self.assertIn("Af8", df)
+        self.assertEqual(len(df.at[0, "Af8"]), 0)
+        self.assertEqual(len(df.at[1, "Af8"]), 1)
+        self.assertEqual(len(df.at[2, "Af8"]), 2)
+
+    @unittest.skipIf(pandas is None, "Pandas not installed")
+    def test_flatten_None(self):
+        df = self.sample.pandas.df(flatten=None)
+        self.assertEqual(len(df.keys()), 46)
+        self.assertNotIn("Af8", df)
+
+    @unittest.skipIf(pandas is None, "Pandas not installed")
+    def test_flatten_True(self):
+        df = self.sample.pandas.df(flatten=True)
+        self.assertEqual(len(df.keys()), 57)
+        self.assertIn("Af8", df)
