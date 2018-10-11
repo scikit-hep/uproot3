@@ -49,6 +49,7 @@ void allstreamers(){
     Long64_t l1;
     char c1;
     short s1;
+    bool b1;
     
     t -> Branch("intBranch", &i1);
     t -> Branch("doubleBranch", &d1);
@@ -56,6 +57,7 @@ void allstreamers(){
     t -> Branch("longBranch", &l1);
     t -> Branch("charBranch", &c1);
     t -> Branch("shortBranch", &s1);
+    t -> Branch("boolBranch", &b1);
     
     std::vector<int> i2; 
     std::vector<double> d2;
