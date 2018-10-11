@@ -36,28 +36,29 @@ except ImportError:
     pandas = None
 
 class Test(unittest.TestCase):
+    def runTest(self):
+        pass
+
     def setUp(self):
-        self.sample = uproot.open('tests/samples/sample-6.10.05-uncompressed.root')["sample"]
+        self.sample = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]
 
     @unittest.skipIf(pandas is None, "Pandas not installed")
     def test_flatten_False(self):
         df = self.sample.pandas.df(flatten=False)
         self.assertEqual(len(df.keys()), 57)
-        self.assertIn('Af8', df)
-        self.assertEqual(len(df.at[0,'Af8']), 0)
-        self.assertEqual(len(df.at[1,'Af8']), 1)
-        self.assertEqual(len(df.at[2,'Af8']), 2)
+        self.assertIn("Af8", df)
+        self.assertEqual(len(df.at[0, "Af8"]), 0)
+        self.assertEqual(len(df.at[1, "Af8"]), 1)
+        self.assertEqual(len(df.at[2, "Af8"]), 2)
 
     @unittest.skipIf(pandas is None, "Pandas not installed")
     def test_flatten_None(self):
         df = self.sample.pandas.df(flatten=None)
         self.assertEqual(len(df.keys()), 46)
-        self.assertNotIn('Af8', df)
+        self.assertNotIn("Af8", df)
 
     @unittest.skipIf(pandas is None, "Pandas not installed")
-    @unittest.expectedFailure
     def test_flatten_True(self):
         df = self.sample.pandas.df(flatten=True)
-        self.assertEquals(len(df.keys()), 57)
-        self.assertIn('Af8', df)
-        # Add tests when this starts working
+        self.assertEqual(len(df.keys()), 57)
+        self.assertIn("Af8", df)
