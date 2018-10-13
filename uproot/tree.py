@@ -423,6 +423,9 @@ class TTreeMethods(object):
 
     def arrays(self, branches=None, outputtype=dict, namedecode=None, entrystart=None, entrystop=None, flatten=False, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         branches = list(self._normalize_branches(branches))
+        if flatten is None:
+            branches = [(branch, interpretation) for branch, interpretation in branches if not isinstance(interpretation, asjagged)]
+            flatten = False
 
         # for the case of outputtype == pandas.DataFrame, do some preparation to fill DataFrames efficiently
         ispandas = getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame"
@@ -481,10 +484,10 @@ class TTreeMethods(object):
                                 i += 1
 
                             df = outputtype(index=pandas.MultiIndex.from_arrays([entries, subentries], names=["entry", "subentry"]))
-                            if interpretation.asdtype.todims == ():
+                            if interpretation.content.todims == ():
                                 df[name] = array.content
                             else:
-                                for tup in itertools.product(*[range(x) for x in interpretation.asdtype.todims]):
+                                for tup in itertools.product(*[range(x) for x in interpretation.content.todims]):
                                         df["{0}[{1}]".format(name, "][".join(str(x) for x in tup))] = array[(slice(None),) + tup].content
 
                         elif isinstance(interpretation, asdtype):

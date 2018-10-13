@@ -47,4 +47,5 @@ build_script:
   - "pip install %NUMPY%"
   - "pip install uproot-methods>=0.2.0"
   - "pip install -i https://pypi.anaconda.org/carlkl/simple backports.lzma"
+  - "pip install pandas"
   - "python setup.py test"
