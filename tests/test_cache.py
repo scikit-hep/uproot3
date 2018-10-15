@@ -29,42 +29,38 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from collections import namedtuple
-import unittest
 
 import numpy
 
 import uproot
 
-class Test(unittest.TestCase):
-    def runTest(self):
-        pass
-
+class Test(object):
     def test_flat_array(self):
         branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["i8"]
         expectation = [-15, -14, -13, -12, -11, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 
         cache = {}
         for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
-            self.assertTrue(len(cache) == 0)
-            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop, cache=cache).tolist(), expectation[entrystart:entrystop])
-            self.assertTrue(len(cache) > 0)
-            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop, cache=cache).tolist(), expectation[entrystart:entrystop])
+            assert len(cache) == 0
+            assert branch.array(entrystart=entrystart, entrystop=entrystop, cache=cache).tolist() == expectation[entrystart:entrystop]
+            assert len(cache) > 0
+            assert branch.array(entrystart=entrystart, entrystop=entrystop, cache=cache).tolist() == expectation[entrystart:entrystop]
             cache = {}
 
         basketcache = {}
         for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
-            self.assertTrue(len(basketcache) == 0)
-            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop, basketcache=basketcache).tolist(), expectation[entrystart:entrystop])
-            self.assertTrue(len(basketcache) > 0)
-            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop, basketcache=basketcache).tolist(), expectation[entrystart:entrystop])
+            assert len(basketcache) == 0
+            assert branch.array(entrystart=entrystart, entrystop=entrystop, basketcache=basketcache).tolist() == expectation[entrystart:entrystop]
+            assert len(basketcache) > 0
+            assert branch.array(entrystart=entrystart, entrystop=entrystop, basketcache=basketcache).tolist() == expectation[entrystart:entrystop]
             basketcache = {}
 
         keycache = {}
         for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
-            self.assertTrue(len(keycache) == 0)
-            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop, keycache=keycache).tolist(), expectation[entrystart:entrystop])
-            self.assertTrue(len(keycache) > 0)
-            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop, keycache=keycache).tolist(), expectation[entrystart:entrystop])
+            assert len(keycache) == 0
+            assert branch.array(entrystart=entrystart, entrystop=entrystop, keycache=keycache).tolist() == expectation[entrystart:entrystop]
+            assert len(keycache) > 0
+            assert branch.array(entrystart=entrystart, entrystop=entrystop, keycache=keycache).tolist() == expectation[entrystart:entrystop]
             keycache = {}
 
     def test_regular_array(self):
@@ -73,55 +69,55 @@ class Test(unittest.TestCase):
 
         cache = {}
         for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
-            self.assertTrue(len(cache) == 0)
-            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop, cache=cache).tolist(), expectation[entrystart:entrystop])
-            self.assertTrue(len(cache) > 0)
-            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop, cache=cache).tolist(), expectation[entrystart:entrystop])
+            assert len(cache) == 0
+            assert branch.array(entrystart=entrystart, entrystop=entrystop, cache=cache).tolist() == expectation[entrystart:entrystop]
+            assert len(cache) > 0
+            assert branch.array(entrystart=entrystart, entrystop=entrystop, cache=cache).tolist() == expectation[entrystart:entrystop]
             cache = {}
 
         basketcache = {}
         for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
-            self.assertTrue(len(basketcache) == 0)
-            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop, basketcache=basketcache).tolist(), expectation[entrystart:entrystop])
-            self.assertTrue(len(basketcache) > 0)
-            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop, basketcache=basketcache).tolist(), expectation[entrystart:entrystop])
+            assert len(basketcache) == 0
+            assert branch.array(entrystart=entrystart, entrystop=entrystop, basketcache=basketcache).tolist() == expectation[entrystart:entrystop]
+            assert len(basketcache) > 0
+            assert branch.array(entrystart=entrystart, entrystop=entrystop, basketcache=basketcache).tolist() == expectation[entrystart:entrystop]
             basketcache = {}
 
         keycache = {}
         for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
-            self.assertTrue(len(keycache) == 0)
-            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop, keycache=keycache).tolist(), expectation[entrystart:entrystop])
-            self.assertTrue(len(keycache) > 0)
-            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop, keycache=keycache).tolist(), expectation[entrystart:entrystop])
+            assert len(keycache) == 0
+            assert branch.array(entrystart=entrystart, entrystop=entrystop, keycache=keycache).tolist() == expectation[entrystart:entrystop]
+            assert len(keycache) > 0
+            assert branch.array(entrystart=entrystart, entrystop=entrystop, keycache=keycache).tolist() == expectation[entrystart:entrystop]
             keycache = {}
 
     def test_irregular_array(self):
         branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["Ai8"]
         expectation = [[], [-15], [-15, -13], [-15, -13, -11], [-15, -13, -11, -9], [], [-10], [-10, -8], [-10, -8, -6], [-10, -8, -6, -4], [], [-5], [-5, -3], [-5, -3, -1], [-5, -3, -1, 1], [], [0], [0, 2], [0, 2, 4], [0, 2, 4, 6], [], [5], [5, 7], [5, 7, 9], [5, 7, 9, 11], [], [10], [10, 12], [10, 12, 14], [10, 12, 14, 16]]
-        self.assertEqual([len(x) for x in expectation], [0, 1, 2, 3, 4] * 6)
+        assert [len(x) for x in expectation] == [0, 1, 2, 3, 4] * 6
 
         cache = {}
         for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
-            self.assertTrue(len(cache) == 0)
-            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop, cache=cache).tolist(), expectation[entrystart:entrystop])
-            self.assertTrue(len(cache) > 0)
-            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop, cache=cache).tolist(), expectation[entrystart:entrystop])
+            assert len(cache) == 0
+            assert branch.array(entrystart=entrystart, entrystop=entrystop, cache=cache).tolist() == expectation[entrystart:entrystop]
+            assert len(cache) > 0
+            assert branch.array(entrystart=entrystart, entrystop=entrystop, cache=cache).tolist() == expectation[entrystart:entrystop]
             cache = {}
 
         basketcache = {}
         for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
-            self.assertTrue(len(basketcache) == 0)
-            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop, basketcache=basketcache).tolist(), expectation[entrystart:entrystop])
-            self.assertTrue(len(basketcache) > 0)
-            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop, basketcache=basketcache).tolist(), expectation[entrystart:entrystop])
+            assert len(basketcache) == 0
+            assert branch.array(entrystart=entrystart, entrystop=entrystop, basketcache=basketcache).tolist() == expectation[entrystart:entrystop]
+            assert len(basketcache) > 0
+            assert branch.array(entrystart=entrystart, entrystop=entrystop, basketcache=basketcache).tolist() == expectation[entrystart:entrystop]
             basketcache = {}
 
         keycache = {}
         for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
-            self.assertTrue(len(keycache) == 0)
-            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop, keycache=keycache).tolist(), expectation[entrystart:entrystop])
-            self.assertTrue(len(keycache) > 0)
-            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop, keycache=keycache).tolist(), expectation[entrystart:entrystop])
+            assert len(keycache) == 0
+            assert branch.array(entrystart=entrystart, entrystop=entrystop, keycache=keycache).tolist() == expectation[entrystart:entrystop]
+            assert len(keycache) > 0
+            assert branch.array(entrystart=entrystart, entrystop=entrystop, keycache=keycache).tolist() == expectation[entrystart:entrystop]
             keycache = {}
 
     def test_strings_array(self):
@@ -130,24 +126,24 @@ class Test(unittest.TestCase):
 
         cache = {}
         for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
-            self.assertTrue(len(cache) == 0)
-            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop, cache=cache).tolist(), expectation[entrystart:entrystop])
-            self.assertTrue(len(cache) > 0)
-            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop, cache=cache).tolist(), expectation[entrystart:entrystop])
+            assert len(cache) == 0
+            assert branch.array(entrystart=entrystart, entrystop=entrystop, cache=cache).tolist() == expectation[entrystart:entrystop]
+            assert len(cache) > 0
+            assert branch.array(entrystart=entrystart, entrystop=entrystop, cache=cache).tolist() == expectation[entrystart:entrystop]
             cache = {}
 
         basketcache = {}
         for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
-            self.assertTrue(len(basketcache) == 0)
-            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop, basketcache=basketcache).tolist(), expectation[entrystart:entrystop])
-            self.assertTrue(len(basketcache) > 0)
-            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop, basketcache=basketcache).tolist(), expectation[entrystart:entrystop])
+            assert len(basketcache) == 0
+            assert branch.array(entrystart=entrystart, entrystop=entrystop, basketcache=basketcache).tolist() == expectation[entrystart:entrystop]
+            assert len(basketcache) > 0
+            assert branch.array(entrystart=entrystart, entrystop=entrystop, basketcache=basketcache).tolist() == expectation[entrystart:entrystop]
             basketcache = {}
 
         keycache = {}
         for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
-            self.assertTrue(len(keycache) == 0)
-            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop, keycache=keycache).tolist(), expectation[entrystart:entrystop])
-            self.assertTrue(len(keycache) > 0)
-            self.assertEqual(branch.array(entrystart=entrystart, entrystop=entrystop, keycache=keycache).tolist(), expectation[entrystart:entrystop])
+            assert len(keycache) == 0
+            assert branch.array(entrystart=entrystart, entrystop=entrystop, keycache=keycache).tolist() == expectation[entrystart:entrystop]
+            assert len(keycache) > 0
+            assert branch.array(entrystart=entrystart, entrystop=entrystop, keycache=keycache).tolist() == expectation[entrystart:entrystop]
             keycache = {}
