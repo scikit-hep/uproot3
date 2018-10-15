@@ -261,6 +261,9 @@ class TTreeMethods(object):
         for branch in self._fBranches:
             self._attachstreamer(branch, context.streamerinfosmap.get(getattr(branch, "_fClassName", None), None), context.streamerinfosmap)
 
+        self._branchlookup = {}
+        self._fill_branchlookup(self._branchlookup)
+
         leaf2branch = {}
         for branch in self.itervalues(recursive=True):
             if len(branch._fLeaves) == 1:
@@ -276,6 +279,11 @@ class TTreeMethods(object):
             self.aliases = {}
         else:
             self.aliases = dict((alias._fName, alias._fTitle) for alias in self._fAliases)
+
+    def _fill_branchlookup(self, branchlookup):
+        for subbranch in self._fBranches:
+            subbranch._fill_branchlookup(branchlookup)
+            branchlookup[subbranch.name] = subbranch
 
     @property
     def name(self):
@@ -344,10 +352,14 @@ class TTreeMethods(object):
 
     def get(self, name, recursive=True, filtername=nofilter, filtertitle=nofilter, aliases=True):
         name = _bytesid(name)
-        for n, b in self.iteritems(recursive=recursive, filtername=filtername, filtertitle=filtertitle, aliases=aliases):
-            if n == name:
-                return b
-        raise KeyError("not found: {0}".format(repr(name)))
+        try:
+            return self._branchlookup[name]
+        except KeyError:
+            for n, b in self.iteritems(recursive=recursive, filtername=filtername, filtertitle=filtertitle, aliases=aliases):
+                if n == name:
+                    self._branchlookup[name] = b
+                    return b
+            raise KeyError("not found: {0}".format(repr(name)))
 
     def __contains__(self, name):
         try:
@@ -813,6 +825,7 @@ class TBranchMethods(object):
         self._source = source
         self._context = context
         self._streamer = None
+        self._interpretation = None
 
         self._numgoodbaskets = 0
         for i, x in enumerate(self._fBasketSeek):
@@ -834,6 +847,11 @@ class TBranchMethods(object):
         if hasattr(parent, "_fIOFeatures"):
             self._tree_iofeatures = parent._fIOFeatures._fIOBits
 
+    def _fill_branchlookup(self, branchlookup):
+        for subbranch in self._fBranches:
+            subbranch._fill_branchlookup(branchlookup)
+            branchlookup[subbranch.name] = subbranch
+
     @property
     def name(self):
         return self._fName
@@ -844,7 +862,9 @@ class TBranchMethods(object):
 
     @property
     def interpretation(self):
-        return interpret(self)
+        if self._interpretation is None:
+            self._interpretation = interpret(self)
+        return self._interpretation
 
     @property
     def countbranch(self):
