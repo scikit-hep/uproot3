@@ -28,8 +28,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import unittest
-
 import numpy
 try:
     import lzma
@@ -39,7 +37,7 @@ import lz4
 
 import uproot
 
-class Test(unittest.TestCase):
+class Test(object):
     def runTest(self):
         pass
 
@@ -94,9 +92,9 @@ class Test(unittest.TestCase):
         }
 
     def compare(self, arrays):
-        self.assertEqual(set(arrays.keys()), set(self.sample.keys()))
+        assert set(arrays.keys()) == set(self.sample.keys())
         for name in arrays.keys():
-            self.assertEqual(arrays[name].tolist(), self.sample[name])
+            assert arrays[name].tolist() == self.sample[name]
 
     def test_5_23_02(self):
         # 2009-02-26, TTree version 16
