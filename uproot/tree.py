@@ -936,8 +936,6 @@ class TBranchMethods(object):
 
     @property
     def numbaskets(self):
-        if self.interpretation is None:
-            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
         return self._numgoodbaskets + len(self._recoveredbaskets)
@@ -1060,8 +1058,6 @@ class TBranchMethods(object):
             return self._context.compression
 
     def basket_entrystart(self, i):
-        if self.interpretation is None:
-            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
         if 0 <= i < self.numbaskets:
@@ -1070,8 +1066,6 @@ class TBranchMethods(object):
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
     def basket_entrystop(self, i):
-        if self.interpretation is None:
-            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
         if 0 <= i < self.numbaskets:
@@ -1080,8 +1074,6 @@ class TBranchMethods(object):
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
     def basket_numentries(self, i):
-        if self.interpretation is None:
-            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
         if 0 <= i < self.numbaskets:
@@ -1090,23 +1082,17 @@ class TBranchMethods(object):
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
     def basket_uncompressedbytes(self, i, keycache=None):
-        if self.interpretation is None:
-            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
         return self._threadsafe_key(i, keycache, False)._fObjlen
 
     def basket_compressedbytes(self, i):
-        if self.interpretation is None:
-            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
         key = self._threadsafe_key(i, keycache, False)
         return key._fNbytes - key._fKeylen
 
     def basket_numitems(self, i, interpretation=None, keycache=None):
-        if self.interpretation is None:
-            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
         interpretation = self._normalize_interpretation(interpretation)
