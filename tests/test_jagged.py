@@ -45,20 +45,20 @@ class Test(unittest.TestCase):
     @unittest.skipIf(pandas is None, "Pandas not installed")
     def test_flatten_False(self):
         df = self.sample.pandas.df(flatten=False)
-        self.assertEqual(len(df.keys()), 57)
-        self.assertIn("Af8", df)
-        self.assertEqual(len(df.at[0, "Af8"]), 0)
-        self.assertEqual(len(df.at[1, "Af8"]), 1)
-        self.assertEqual(len(df.at[2, "Af8"]), 2)
+        assert len(df.keys()) == 57
+        assert "Af8" in df
+        assert len(df.at[0, "Af8"]) == 0
+        assert len(df.at[1, "Af8"]) == 1
+        assert len(df.at[2, "Af8"]) == 2
 
     @unittest.skipIf(pandas is None, "Pandas not installed")
     def test_flatten_None(self):
         df = self.sample.pandas.df(flatten=None)
-        self.assertEqual(len(df.keys()), 46)
-        self.assertNotIn("Af8", df)
+        assert len(df.keys()) == 46
+        assert "Af8" not in df
 
     @unittest.skipIf(pandas is None, "Pandas not installed")
     def test_flatten_True(self):
         df = self.sample.pandas.df(flatten=True)
-        self.assertEqual(len(df.keys()), 57)
-        self.assertIn("Af8", df)
+        assert len(df.keys()) == 57
+        assert "Af8" in df
