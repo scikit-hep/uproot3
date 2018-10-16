@@ -28,37 +28,33 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import unittest
 import uproot
 try:
     import pandas
 except ImportError:
     pandas = None
 
-class Test(unittest.TestCase):
-    def runTest(self):
-        pass
+class Test(object):
+    if pandas is not None:
+        sample = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]
 
-    def setUp(self):
-        self.sample = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]
-
-    @unittest.skipIf(pandas is None, "Pandas not installed")
     def test_flatten_False(self):
-        df = self.sample.pandas.df(flatten=False)
-        assert len(df.keys()) == 57
-        assert "Af8" in df
-        assert len(df.at[0, "Af8"]) == 0
-        assert len(df.at[1, "Af8"]) == 1
-        assert len(df.at[2, "Af8"]) == 2
+        if pandas is not None:
+            df = self.sample.pandas.df(flatten=False)
+            assert len(df.keys()) == 57
+            assert "Af8" in df
+            assert len(df.at[0, "Af8"]) == 0
+            assert len(df.at[1, "Af8"]) == 1
+            assert len(df.at[2, "Af8"]) == 2
 
-    @unittest.skipIf(pandas is None, "Pandas not installed")
     def test_flatten_None(self):
-        df = self.sample.pandas.df(flatten=None)
-        assert len(df.keys()) == 46
-        assert "Af8" not in df
+        if pandas is not None:
+            df = self.sample.pandas.df(flatten=None)
+            assert len(df.keys()) == 46
+            assert "Af8" not in df
 
-    @unittest.skipIf(pandas is None, "Pandas not installed")
     def test_flatten_True(self):
-        df = self.sample.pandas.df(flatten=True)
-        assert len(df.keys()) == 57
-        assert "Af8" in df
+        if pandas is not None:
+            df = self.sample.pandas.df(flatten=True)
+            assert len(df.keys()) == 57
+            assert "Af8" in df

@@ -38,9 +38,6 @@ import lz4
 import uproot
 
 class Test(object):
-    def runTest(self):
-        pass
-
     sample = {
         b"n": [0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4],
 

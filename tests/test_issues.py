@@ -29,7 +29,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from collections import namedtuple
-import unittest
 
 import numpy
 
@@ -38,10 +37,7 @@ import uproot
 import uproot_methods.classes.TVector3
 import uproot_methods.classes.TLorentzVector
 
-class Test(unittest.TestCase):
-    def runTest(self):
-        pass
-
+class Test(object):
     def test_issue21(self):
         t = uproot.open("tests/samples/issue21.root")["nllscan"]
 
@@ -89,13 +85,13 @@ class Test(unittest.TestCase):
 
     def test_issue54(self):
         h = uproot.open("tests/samples/hepdata-example.root")["hpx"]
-        self.assertTrue(h._fFunctions[0]._fParent is h)
+        assert h._fFunctions[0]._fParent is h
 
     def test_issue55(self):
         withoffsets = uproot.open("tests/samples/small-dy-withoffsets.root")["tree"]
         nooffsets = uproot.open("tests/samples/small-dy-nooffsets.root")["tree"]
-        self.assertTrue(numpy.array_equal(withoffsets.array("nJet"), nooffsets.array("nJet")))
-        self.assertTrue(numpy.array_equal(withoffsets.array("nMuon"), nooffsets.array("nMuon")))
+        assert numpy.array_equal(withoffsets.array("nJet"), nooffsets.array("nJet"))
+        assert numpy.array_equal(withoffsets.array("nMuon"), nooffsets.array("nMuon"))
 
         def equal(left, right):
             if len(left) != len(right):
@@ -105,17 +101,17 @@ class Test(unittest.TestCase):
                     return False
             return True
 
-        self.assertTrue(equal(withoffsets.array("Jet_jetId"), nooffsets.array("Jet_jetId")))
-        self.assertTrue(equal(withoffsets.array("Jet_pt"), nooffsets.array("Jet_pt")))
-        self.assertTrue(equal(withoffsets.array("MET_pt"), nooffsets.array("MET_pt")))
-        self.assertTrue(equal(withoffsets.array("Muon_charge"), nooffsets.array("Muon_charge")))
-        self.assertTrue(equal(withoffsets.array("Muon_pt"), nooffsets.array("Muon_pt")))
-        self.assertTrue(equal(withoffsets.array("event"), nooffsets.array("event")))
+        assert equal(withoffsets.array("Jet_jetId"), nooffsets.array("Jet_jetId"))
+        assert equal(withoffsets.array("Jet_pt"), nooffsets.array("Jet_pt"))
+        assert equal(withoffsets.array("MET_pt"), nooffsets.array("MET_pt"))
+        assert equal(withoffsets.array("Muon_charge"), nooffsets.array("Muon_charge"))
+        assert equal(withoffsets.array("Muon_pt"), nooffsets.array("Muon_pt"))
+        assert equal(withoffsets.array("event"), nooffsets.array("event"))
 
     def test_issue57(self):
         tree = uproot.open("tests/samples/issue57.root")["outtree"]
-        self.assertTrue(all(isinstance(y, uproot_methods.classes.TLorentzVector.Methods) and isinstance(y._fP, uproot_methods.classes.TVector3.Methods) for x in tree["sel_lep"].array() for y in x))
-        self.assertTrue(all(isinstance(y, uproot_methods.classes.TLorentzVector.Methods) and isinstance(y._fP, uproot_methods.classes.TVector3.Methods) for x in tree["selJet"].array() for y in x))
+        assert all(isinstance(y, uproot_methods.classes.TLorentzVector.Methods) and isinstance(y._fP, uproot_methods.classes.TVector3.Methods) for x in tree["sel_lep"].array() for y in x)
+        assert all(isinstance(y, uproot_methods.classes.TLorentzVector.Methods) and isinstance(y._fP, uproot_methods.classes.TVector3.Methods) for x in tree["selJet"].array() for y in x)
 
     def test_issue60(self):
         t = uproot.open("tests/samples/issue60.root")["nllscan"]
@@ -168,7 +164,7 @@ class Test(unittest.TestCase):
 
     def test_issue96(self):
         t = uproot.open("tests/samples/issue96.root")["tree"]
-        self.assertTrue(all(isinstance(x, uproot_methods.classes.TLorentzVector.Methods) for x in t.array("jet1P4")))
+        assert all(isinstance(x, uproot_methods.classes.TLorentzVector.Methods) for x in t.array("jet1P4"))
 
     def test_geant4(self):
         f = uproot.open("tests/samples/from-geant4.root")
