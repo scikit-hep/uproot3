@@ -28,3 +28,18 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import uproot
+
+import subprocess
+import numpy
+
+subprocess.run("root -l -q allstreamers.c", shell = True)
+
+f = uproot.open("allstreamers.root")
+tkey = uproot.rootio.TKey.read(f._context.source, uproot.source.cursor.Cursor(f._context.tfile["_fSeekInfo"]), None, None)
+start = f._context.tfile._fSeekInfo + tkey._fKeylen
+streamerlen = tkey._fObjlen
+
+file = numpy.memmap(filename = "allstreamers.root", mode = "r", dtype = numpy.uint8)
+print (file[start:start+streamerlen+1])
+
