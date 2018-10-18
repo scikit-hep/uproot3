@@ -46,4 +46,15 @@ streamerlen = tkey._fObjlen
 
 file = numpy.memmap(filename = "allstreamers.root", mode = "r", dtype = numpy.uint8)
 print (bytes(file[start:start+streamerlen+1]))
+streamers = "streamers = b\"" + bytes(file[start:start+streamerlen+1]).decode("utf-8") + "\""
 
+lines = []
+for line in open("streamers.py"):
+    if line.startswith("streamers"):
+        lines.append(streamers)
+    else:
+        lines.append(line)
+
+with open("streamers.py", "w") as streamerfile:
+    for line in lines:
+        streamerfile.writelines(line)
