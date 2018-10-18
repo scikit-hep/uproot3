@@ -282,6 +282,10 @@ def interpret(branch, swapbytes=True, cntvers=False, tobject=True):
                             if len(branch._fLeaves) == 1 and branch._fLeaves[0]._fLeafCount is not None:
                                 return asjagged(asdtype(fromdtype, todtype), skipbytes=1)
 
+                if isinstance(branch._streamer, uproot.rootio.TStreamerObjectAny):
+                    if getattr(branch._streamer, "_fTypeName", None) in (b"TArrayC", b"TArrayS", b"TArrayI", b"TArrayL", b"TArrayL64", b"TArrayF", b"TArrayD"):
+                        return asjagged(asdtype(getattr(uproot.rootio, branch._streamer._fTypeName.decode("ascii"))._dtype), skipbytes=4)
+
                 if isinstance(branch._streamer, uproot.rootio.TStreamerString):
                     return asstring(skipbytes=1)
 

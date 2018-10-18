@@ -261,6 +261,9 @@ class TTreeMethods(object):
         for branch in self._fBranches:
             self._attachstreamer(branch, context.streamerinfosmap.get(getattr(branch, "_fClassName", None), None), context.streamerinfosmap)
 
+        self._branchlookup = {}
+        self._fill_branchlookup(self._branchlookup)
+
         leaf2branch = {}
         for branch in self.itervalues(recursive=True):
             if len(branch._fLeaves) == 1:
@@ -276,6 +279,11 @@ class TTreeMethods(object):
             self.aliases = {}
         else:
             self.aliases = dict((alias._fName, alias._fTitle) for alias in self._fAliases)
+
+    def _fill_branchlookup(self, branchlookup):
+        for subbranch in self._fBranches:
+            subbranch._fill_branchlookup(branchlookup)
+            branchlookup[subbranch.name] = subbranch
 
     @property
     def name(self):
@@ -344,10 +352,14 @@ class TTreeMethods(object):
 
     def get(self, name, recursive=True, filtername=nofilter, filtertitle=nofilter, aliases=True):
         name = _bytesid(name)
-        for n, b in self.iteritems(recursive=recursive, filtername=filtername, filtertitle=filtertitle, aliases=aliases):
-            if n == name:
-                return b
-        raise KeyError("not found: {0}".format(repr(name)))
+        try:
+            return self._branchlookup[name]
+        except KeyError:
+            for n, b in self.iteritems(recursive=recursive, filtername=filtername, filtertitle=filtertitle, aliases=aliases):
+                if n == name:
+                    self._branchlookup[name] = b
+                    return b
+            raise KeyError("not found: {0}".format(repr(name)))
 
     def __contains__(self, name):
         try:
@@ -813,6 +825,7 @@ class TBranchMethods(object):
         self._source = source
         self._context = context
         self._streamer = None
+        self._interpretation = None
 
         self._numgoodbaskets = 0
         for i, x in enumerate(self._fBasketSeek):
@@ -834,6 +847,11 @@ class TBranchMethods(object):
         if hasattr(parent, "_fIOFeatures"):
             self._tree_iofeatures = parent._fIOFeatures._fIOBits
 
+    def _fill_branchlookup(self, branchlookup):
+        for subbranch in self._fBranches:
+            subbranch._fill_branchlookup(branchlookup)
+            branchlookup[subbranch.name] = subbranch
+
     @property
     def name(self):
         return self._fName
@@ -844,7 +862,9 @@ class TBranchMethods(object):
 
     @property
     def interpretation(self):
-        return interpret(self)
+        if self._interpretation is None:
+            self._interpretation = interpret(self)
+        return self._interpretation
 
     @property
     def countbranch(self):
@@ -916,8 +936,6 @@ class TBranchMethods(object):
 
     @property
     def numbaskets(self):
-        if self.interpretation is None:
-            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
         return self._numgoodbaskets + len(self._recoveredbaskets)
@@ -1040,8 +1058,6 @@ class TBranchMethods(object):
             return self._context.compression
 
     def basket_entrystart(self, i):
-        if self.interpretation is None:
-            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
         if 0 <= i < self.numbaskets:
@@ -1050,8 +1066,6 @@ class TBranchMethods(object):
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
     def basket_entrystop(self, i):
-        if self.interpretation is None:
-            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
         if 0 <= i < self.numbaskets:
@@ -1060,8 +1074,6 @@ class TBranchMethods(object):
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
     def basket_numentries(self, i):
-        if self.interpretation is None:
-            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
         if 0 <= i < self.numbaskets:
@@ -1070,23 +1082,17 @@ class TBranchMethods(object):
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
     def basket_uncompressedbytes(self, i, keycache=None):
-        if self.interpretation is None:
-            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
         return self._threadsafe_key(i, keycache, False)._fObjlen
 
     def basket_compressedbytes(self, i):
-        if self.interpretation is None:
-            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
         key = self._threadsafe_key(i, keycache, False)
         return key._fNbytes - key._fKeylen
 
     def basket_numitems(self, i, interpretation=None, keycache=None):
-        if self.interpretation is None:
-            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
             self._tryrecover()
         interpretation = self._normalize_interpretation(interpretation)
