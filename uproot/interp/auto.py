@@ -28,6 +28,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import copy
 import re
 import ast
 from functools import reduce
@@ -114,7 +115,7 @@ def _leaf2dtype(leaf):
     else:
         raise _NotNumerical
 
-def _obj_or_genobj(streamerClass, branch, isjagged, cntvers=False, tobject=True):
+def _obj_or_genobj(streamerClass, branch, isjagged, cntvers=False, tobject=True, speedbump=True):
     if len(branch._fBranches) != 0:
         return None
 
@@ -122,10 +123,16 @@ def _obj_or_genobj(streamerClass, branch, isjagged, cntvers=False, tobject=True)
         recarray = streamerClass._recarray_dtype(cntvers=cntvers, tobject=tobject)
 
     except (AttributeError, ValueError):
-        if isjagged:
-            return asgenobj(SimpleArray(streamerClass), branch._context, 0)
+        if not speedbump:
+            context = copy.copy(branch._context)
+            context.speedbump = False
         else:
-            return asgenobj(streamerClass, branch._context, 0)
+            context = branch._context
+
+        if isjagged:
+            return asgenobj(SimpleArray(streamerClass), context, 0)
+        else:
+            return asgenobj(streamerClass, context, 0)
 
     else:
         if streamerClass._methods is None:
@@ -142,7 +149,7 @@ def _obj_or_genobj(streamerClass, branch, isjagged, cntvers=False, tobject=True)
                 else:
                     return asobj(astable(asdtype(recarray)), streamerClass._methods)
 
-def interpret(branch, swapbytes=True, cntvers=False, tobject=True):
+def interpret(branch, swapbytes=True, cntvers=False, tobject=True, speedbump=True):
     dims, isjagged = (), False
     if len(branch._fLeaves) == 1:
         m = interpret._titlehasdims.match(branch._fLeaves[0]._fTitle)
@@ -163,7 +170,7 @@ def interpret(branch, swapbytes=True, cntvers=False, tobject=True):
                     obj = obj[:-1]
                 obj = uproot.rootio._safename(obj)
                 if obj in branch._context.classes:
-                    return _obj_or_genobj(branch._context.classes.get(obj), branch, isjagged, cntvers=cntvers, tobject=tobject)
+                    return _obj_or_genobj(branch._context.classes.get(obj), branch, isjagged, cntvers=cntvers, tobject=tobject, speedbump=speedbump)
 
             if branch._fLeaves[0].__class__.__name__ == "TLeafElement" and branch._fLeaves[0]._fType == uproot.const.kDouble32:
                 def transform(node, tofloat=True):
@@ -238,14 +245,14 @@ def interpret(branch, swapbytes=True, cntvers=False, tobject=True):
                 if obj == "string":
                     return asgenobj(STLString(), branch._context, 0)
                 elif obj in branch._context.classes:
-                    return _obj_or_genobj(branch._context.classes.get(obj), branch, isjagged, cntvers=cntvers, tobject=tobject)
+                    return _obj_or_genobj(branch._context.classes.get(obj), branch, isjagged, cntvers=cntvers, tobject=tobject, speedbump=speedbump)
 
             if isinstance(branch._streamer, uproot.rootio.TStreamerInfo):
                 obj = uproot.rootio._safename(branch._streamer._fName)
                 if obj == "string":
                     return asgenobj(STLString(), branch._context, 0)
                 elif obj in branch._context.classes:
-                    return _obj_or_genobj(branch._context.classes.get(obj), branch, isjagged, cntvers=cntvers, tobject=tobject)
+                    return _obj_or_genobj(branch._context.classes.get(obj), branch, isjagged, cntvers=cntvers, tobject=tobject, speedbump=speedbump)
 
             if branch._fLeaves[0].__class__.__name__ == "TLeafC":
                 return asstring(skipbytes=1)
