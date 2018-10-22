@@ -173,3 +173,11 @@ class Test(object):
         assert [len(x) for x in f["HitStrips"].arrays().values()] == [4808, 4808, 4808]
         assert sum(f["edep_inner"].values), 1547 == 0
         assert sum(sum(x) for x in f["recon_orig"].values), 141 == 0
+
+    ### file is too big to include
+    # def test_issue168(self):
+    #     t = uproot.open("tests/samples/issue168.root")["Events"]
+    #     a1 = t["MRawEvtData.fHiGainFadcSamples"].array(t["MRawEvtData.fHiGainFadcSamples"].interpretation.speedbump(False), entrystop=4)
+    #     assert a1[0]._fArray.shape == (108400,)
+    #     a2 = t["MRawEvtData.fHiGainPixId"].array(t["MRawEvtData.fHiGainPixId"].interpretation.speedbump(False))
+    #     assert a2[0]._fArray.shape == (1084,)

@@ -682,7 +682,8 @@ def _defineclasses(streamerinfos, classes):
                     bases.append(_safename(element._fName))
 
                 elif isinstance(element, TStreamerBasicPointer):
-                    code.append("        cursor.skip(1)")
+                    code.append("        if getattr(context, \"speedbump\", True):")
+                    code.append("            cursor.skip(1)")
 
                     assert uproot.const.kOffsetP < element._fType < uproot.const.kOffsetP + 20
                     fType = element._fType - uproot.const.kOffsetP
