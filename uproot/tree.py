@@ -257,6 +257,7 @@ class TTreeMethods(object):
     def _postprocess(self, source, cursor, context, parent):
         self._context = context
         self._context.treename = self.name
+        self._context.speedbump = True
 
         for branch in self._fBranches:
             self._attachstreamer(branch, context.streamerinfosmap.get(getattr(branch, "_fClassName", None), None), context.streamerinfosmap)

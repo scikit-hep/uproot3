@@ -28,6 +28,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import copy
 import struct
 
 import awkward
@@ -281,6 +282,13 @@ class asgenobj(_variable):
 
     def __init__(self, cls, context, skipbytes):
         super(asgenobj, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(awkward.util.CHARTYPE), skipbytes=skipbytes), asgenobj._Wrapper(cls, context))
+
+    def speedbump(self, value):
+        out = copy.copy(self)
+        out.generator = copy.copy(self.generator)
+        out.generator.context = copy.copy(out.generator.context)
+        out.generator.context.speedbump = value
+        return out
 
     def __repr__(self):
         return "asgenobj({0})".format(self.generator)
