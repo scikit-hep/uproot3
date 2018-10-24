@@ -35,8 +35,8 @@ sys.path.insert(0, os.path.abspath('../..'))
 import uproot
 
 import subprocess
-import numpy
 
+# Make sure c file is named allstreamers.c
 subprocess.run("root -l -q allstreamers.c", shell = True)
 
 f = uproot.open("allstreamers.root")
@@ -44,9 +44,10 @@ tkey = uproot.rootio.TKey.read(f._context.source, uproot.source.cursor.Cursor(f.
 start = f._context.tfile["_fSeekInfo"] + tkey._fKeylen
 streamerlen = tkey._fObjlen
 
-file = numpy.memmap(filename = "allstreamers.root", mode = "r", dtype = numpy.uint8)
-print (bytes(file[start:start+streamerlen+1]))
-streamers = "streamers = b\"" + bytes(file[start:start+streamerlen+1]).decode("utf-8") + "\""
+with open("allstreamers.root", "rb") as binary_file:
+    binary_file.seek(start)
+    couple_bytes = binary_file.read(streamerlen + 1)
+streamers = "streamers = {0}".format(repr(couple_bytes))
 
 lines = []
 for line in open("streamers.py"):
