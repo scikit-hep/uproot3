@@ -35,11 +35,19 @@ sys.path.insert(0, os.path.abspath('../..'))
 import uproot
 
 import subprocess
+import json
 
 # Make sure c file is named allstreamers.c
 subprocess.run("root -l -q allstreamers.c", shell = True)
 
 f = uproot.open("allstreamers.root")
+
+# Check with json
+data = json.load(open("streamerversions.json"))
+for x in f._context.streamerinfos:
+    if data[x._fName.decode("ascii")] != x._fClassVersion:
+        print("Old {0} version = {1}. New {0} version = {2}".format(x._fName, data[x._fName.decode("ascii")], x._fClassVersion))
+
 tkey = uproot.rootio.TKey.read(f._context.source, uproot.source.cursor.Cursor(f._context.tfile["_fSeekInfo"]), None, None)
 start = f._context.tfile["_fSeekInfo"] + tkey._fKeylen
 streamerlen = tkey._fObjlen
