@@ -948,7 +948,7 @@ class TStreamerInfo(ROOTObject):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
-        self._fName, _ = _nametitle(source, cursor)
+        self._fName = _canonicaltype(_nametitle(source, cursor)[0])
         self._fCheckSum, self._fClassVersion = cursor.fields(source, TStreamerInfo._format)
         self._fElements = _readobjany(source, cursor, context, parent)
         assert isinstance(self._fElements, list)
@@ -981,7 +981,7 @@ class TStreamerElement(ROOTObject):
         else:
             self._fMaxIndex = cursor.array(source, 5, ">i4")
 
-        self._fTypeName = cursor.string(source)
+        self._fTypeName = _canonicaltype(cursor.string(source))
 
         if self._fType == 11 and (self._fTypeName == "Bool_t" or self._fTypeName == "bool"):
             self._fType = 18
