@@ -110,7 +110,7 @@ class TFileUpdate(object):
             raise KeyError("ROOT directory does not contain key {0}".format(where))
 
     def _reopen(self):
-        return uproot.open(self._path, localsource=uproot.source.file.FileSource.defaults)
+        return uproot.open(self._path, localsource=lambda path: uproot.source.file.FileSource(path, **uproot.source.file.FileSource.defaults))
 
     @property
     def compression(self):

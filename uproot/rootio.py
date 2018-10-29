@@ -1189,7 +1189,7 @@ class TString(bytes, ROOTStreamedObject):
         return self.decode("utf-8", "replace")
 
 class TNamed(TObject):
-    _fields = ["_fName", "_fTitle"]
+    _fields = ["fName", "fTitle"]
 
     @classmethod
     def _recarray(cls):
@@ -1296,8 +1296,8 @@ class TArrayD(TArray):
 # I'm also reasonably certain that the last byte is the fIOBits data.
 # That leaves 4 bytes unaccounted for.
 class ROOT_3a3a_TIOFeatures(ROOTStreamedObject):
-    _fields = [u'fIOBits']
-    _classname = b'ROOT::TIOFeatures'
+    _fields = ["fIOBits"]
+    _classname = b"ROOT::TIOFeatures"
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1305,7 +1305,7 @@ class ROOT_3a3a_TIOFeatures(ROOTStreamedObject):
         self._fIOBits = cursor.field(source, ROOT_3a3a_TIOFeatures._format1)
         _endcheck(start, cursor, cnt)
         return self
-    _format1 = struct.Struct('>B')
+    _format1 = struct.Struct(">B")
 
 class Undefined(ROOTStreamedObject):
     _classname = None

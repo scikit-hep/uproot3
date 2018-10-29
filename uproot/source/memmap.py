@@ -38,9 +38,7 @@ class MemmapSource(uproot.source.source.Source):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (uproot.source.source.Source.__metaclass__,), {})
 
-    @staticmethod
-    def defaults(path):
-        return MemmapSource(path)
+    defaults = {}
 
     def __init__(self, path):
         self.path = os.path.expanduser(path)
