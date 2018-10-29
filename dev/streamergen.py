@@ -38,12 +38,12 @@ import subprocess
 import json
 
 # Make sure c file is named allstreamers.c
-subprocess.run("root -l -q allstreamers.c", shell = True)
+subprocess.run("root -l -q dev/allstreamers.c", shell=True)
 
-f = uproot.open("allstreamers.root")
+f = uproot.open("dev/allstreamers.root")
 
 # Check with json
-data = json.load(open("streamerversions.json"))
+data = json.load(open("dev/streamerversions.json"))
 for x in f._context.streamerinfos:
     if data[x._fName.decode("ascii")] != x._fClassVersion:
         print("Old {0} version = {1}. New {0} version = {2}".format(x._fName, data[x._fName.decode("ascii")], x._fClassVersion))
@@ -52,18 +52,20 @@ tkey = uproot.rootio.TKey.read(f._context.source, uproot.source.cursor.Cursor(f.
 start = f._context.tfile["_fSeekInfo"] + tkey._fKeylen
 streamerlen = tkey._fObjlen
 
-with open("allstreamers.root", "rb") as binary_file:
+with open("dev/allstreamers.root", "rb") as binary_file:
     binary_file.seek(start)
     couple_bytes = binary_file.read(streamerlen + 1)
 streamers = "streamers = {0}".format(repr(couple_bytes))
 
 lines = []
-for line in open("streamers.py"):
+for line in open("uproot/write/streamers.py"):
     if line.startswith("streamers"):
         lines.append(streamers)
     else:
         lines.append(line)
 
-with open("streamers.py", "w") as streamerfile:
+with open("uproot/write/streamers.py", "w") as streamerfile:
     for line in lines:
         streamerfile.writelines(line)
+
+os.remove("dev/allstreamers.root")
