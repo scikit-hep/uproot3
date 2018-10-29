@@ -28,6 +28,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import unittest
+
 from collections import namedtuple
 
 import numpy
@@ -39,7 +41,7 @@ def basest(array):
         array = array.base
     return array
 
-class Test(object):
+class Test(unittest.TestCase):
     ###################################################### double32
 
     def test_double32(self):

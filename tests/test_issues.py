@@ -28,6 +28,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import unittest
+
 from collections import namedtuple
 
 import numpy
@@ -37,7 +39,7 @@ import uproot
 import uproot_methods.classes.TVector3
 import uproot_methods.classes.TLorentzVector
 
-class Test(object):
+class Test(unittest.TestCase):
     def test_issue21(self):
         t = uproot.open("tests/samples/issue21.root")["nllscan"]
 

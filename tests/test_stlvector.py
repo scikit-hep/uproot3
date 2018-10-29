@@ -28,13 +28,15 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import unittest
+
 from collections import namedtuple
 
 import numpy
 
 import uproot
 
-class Test(object):
+class Test(unittest.TestCase):
     def runTest(self):
         pass
 

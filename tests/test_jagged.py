@@ -28,13 +28,15 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import unittest
+
 import uproot
 try:
     import pandas
 except ImportError:
     pandas = None
 
-class Test(object):
+class Test(unittest.TestCase):
     if pandas is not None:
         sample = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]
 

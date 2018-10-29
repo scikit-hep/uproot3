@@ -28,6 +28,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import unittest
+
 import numpy
 try:
     import lzma
@@ -37,7 +39,7 @@ import lz4
 
 import uproot
 
-class Test(object):
+class Test(unittest.TestCase):
     def test_compression_identity(self):
         assert uproot.open("tests/samples/Zmumu-zlib.root").compression.algoname == "zlib"
         assert uproot.open("tests/samples/Zmumu-zlib.root").compression.level == 4
