@@ -78,6 +78,7 @@ from uproot.rootio import _bytesid
 from uproot.rootio import nofilter
 from uproot.interp.auto import interpret
 from uproot.interp.numerical import asdtype
+from uproot.interp.objects import astable
 from uproot.interp.jagged import asjagged
 from uproot.source.cursor import Cursor
 from uproot.source.memmap import MemmapSource
@@ -461,20 +462,33 @@ class TTreeMethods(object):
                     columns = []
                     data = {}
                     for name, interpretation, future in futures:
+                        array = future()
+
+                        if isinstance(interpretation, astable) and isinstance(interpretation.content, asdtype):
+                            interpretation = interpretation.content
+
                         if isinstance(interpretation, asdtype):
                             if interpretation.todims == ():
-                                columns.append(name)
-                                data[name] = future()
+                                if interpretation.todtype.names is None:
+                                    columns.append(name)
+                                    data[name] = array
+                                else:
+                                    for nn in interpretation.todtype.names:
+                                        columns.append("{0}.{1}".format(name, nn))
+                                        data["{0}.{1}".format(name, nn)] = array[nn]
                             else:
-                                array = future()
                                 for tup in itertools.product(*[range(x) for x in interpretation.todims]):
                                     n = "{0}[{1}]".format(name, "][".join(str(x) for x in tup))
-                                    columns.append(n)
-                                    data[n] = array[(slice(None),) + tup]
-
+                                    if interpretation.todtype.names is None:
+                                        columns.append(n)
+                                        data[n] = array[(slice(None),) + tup]
+                                    else:
+                                        for nn in interpretation.todtype.names:
+                                            columns.append("{0}.{1}".format(name, nn))
+                                            data["{0}.{1}".format(name, nn)] = array[nn][(slice(None),) + tup]
                         else:
                             columns.append(name)
-                            data[name] = list(future())     # must be serialized as a Python list for Pandas to accept it
+                            data[name] = list(array)     # must be serialized as a Python list for Pandas to accept it
 
                     return outputtype(columns=columns, data=data)
 
@@ -484,6 +498,9 @@ class TTreeMethods(object):
 
                     for name, interpretation, future in futures:
                         array = future()
+
+                        if isinstance(interpretation, astable) and isinstance(interpretation.content, asdtype):
+                            interpretation = interpretation.content
 
                         if isinstance(interpretation, asjagged):
                             entries = numpy.empty(len(array.content), dtype=numpy.int64)
@@ -497,19 +514,44 @@ class TTreeMethods(object):
                                 i += 1
 
                             df = outputtype(index=pandas.MultiIndex.from_arrays([entries, subentries], names=["entry", "subentry"]))
-                            if interpretation.content.todims == ():
-                                df[name] = array.content
+                            if isinstance(interpretation.content, astable) and isinstance(interpretation.content.content, asdtype):
+                                content = interpretation.content.content
                             else:
-                                for tup in itertools.product(*[range(x) for x in interpretation.content.todims]):
-                                        df["{0}[{1}]".format(name, "][".join(str(x) for x in tup))] = array[(slice(None),) + tup].content
+                                content = interpretation.content
+
+                            if isinstance(content, asdtype):
+                                if content.todims == ():
+                                    if content.todtype.names is None:
+                                        df[name] = array.flatten()
+                                    else:
+                                        for nn in content.todtype.names:
+                                            df["{0}.{1}".format(name, nn)] = array[nn].flatten()
+                                else:
+                                    for tup in itertools.product(*[range(x) for x in content.todims]):
+                                        if content.todtype.names is None:
+                                            df["{0}[{1}]".format(name, "][".join(str(x) for x in tup))] = array[(slice(None),) + tup].flatten()
+                                        else:
+                                            for nn in content.todtype.names:
+                                                df["{0}[{1}].{2}".format(name, "][".join(str(x) for x in tup), nn)] = array[nn][(slice(None),) + tup].flatten()
+
+                            else:
+                                df[name] = list(array.flatten())
 
                         elif isinstance(interpretation, asdtype):
                             df = outputtype(index=index)
                             if interpretation.todims == ():
-                                df[name] = array
+                                if interpretation.todtype.names is None:
+                                    df[name] = array
+                                else:
+                                    for nn in interpretation.todtype.names:
+                                        df["{0}.{1}".format(name, nn)] = array[nn]
                             else:
                                 for tup in itertools.product(*[range(x) for x in interpretation.todims]):
-                                    df["{0}[{1}]".format(name, "][".join(str(x) for x in tup))] = array[(slice(None),) + tup]
+                                    if interpretation.todtype.names is None:
+                                        df["{0}[{1}]".format(name, "][".join(str(x) for x in tup))] = array[(slice(None),) + tup]
+                                    else:
+                                        for nn in interpretation.todtype.names:
+                                            df["{0}[{1}].{2}".format(name, "][".join(str(x) for x in tup), nn)] = array[nn][(slice(None),) + tup]
 
                         else:
                             df = outputtype(index=index, columns=[name], data={name: list(array)})
