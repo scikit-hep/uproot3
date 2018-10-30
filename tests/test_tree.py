@@ -616,3 +616,21 @@ class Test(unittest.TestCase):
                  1.0, 0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
                  0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         assert tree.array("fH")[20].values == check
+
+    def test_leaflist(self):
+        tree = uproot.open("tests/samples/leaflist.root")["tree"]
+        a = tree.array("leaflist")
+        assert a["x"].tolist() == [1.1, 2.2, 3.3, 4.0, 5.5]   # yeah, I goofed up when making it
+        assert a["y"].tolist() == [1, 2, 3, 4, 5]
+        assert a["z"].tolist() == [ord("a"), ord("b"), ord("c"), ord("d"), ord("e")]
+
+        try:
+            import pandas
+        except ImportError:
+            pass
+        else:
+            assert tree.pandas.df()["leaflist.x"].tolist() == [1.1, 2.2, 3.3, 4.0, 5.5]
+
+            tree = uproot.open("tests/samples/HZZ-objects.root")["events"]
+            tree.pandas.df("muonp4")
+            tree.pandas.df("muonp4", flatten=False)
