@@ -630,3 +630,7 @@ class Test(unittest.TestCase):
             pass
         else:
             assert tree.pandas.df()["leaflist.x"].tolist() == [1.1, 2.2, 3.3, 4.0, 5.5]
+
+            tree = uproot.open("tests/samples/HZZ-objects.root")["events"]
+            tree.pandas.df("muonp4")
+            tree.pandas.df("muonp4", flatten=False)
