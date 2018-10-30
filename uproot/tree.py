@@ -465,6 +465,8 @@ class TTreeMethods(object):
                     for name, interpretation, future in futures:
                         array = future()
 
+                        if isinstance(interpretation, asobj) and isinstance(interpretation.content, astable):
+                            interpretation = interpretation.content
                         if isinstance(interpretation, astable) and isinstance(interpretation.content, asdtype):
                             interpretation = interpretation.content
 
@@ -502,6 +504,8 @@ class TTreeMethods(object):
                     for name, interpretation, future in futures:
                         array = future()
 
+                        if isinstance(interpretation, asobj) and isinstance(interpretation.content, astable):
+                            interpretation = interpretation.content
                         if isinstance(interpretation, astable) and isinstance(interpretation.content, asdtype):
                             interpretation = interpretation.content
 
@@ -519,10 +523,8 @@ class TTreeMethods(object):
                             df = outputtype(index=pandas.MultiIndex.from_arrays([entries, subentries], names=["entry", "subentry"]))
 
                             interpretation = interpretation.content
-
                             if isinstance(interpretation, asobj) and isinstance(interpretation.content, astable):
                                 interpretation = interpretation.content
-
                             if isinstance(interpretation, astable) and isinstance(interpretation.content, asdtype):
                                 interpretation = interpretation.content
 
