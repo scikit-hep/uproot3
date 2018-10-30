@@ -902,11 +902,53 @@ class TKey(ROOTObject):
             if dismiss:
                 self._source.dismiss()
 
+def _canonicaltype(name):
+    for pattern, replacement in _canonicaltype.patterns:
+        name = pattern.sub(replacement, name)
+    return name
+
+_canonicaltype.patterns = [
+    (re.compile(br"\bChar_t\b"),       b"char"),               # Signed Character 1 byte (char)
+    (re.compile(br"\bUChar_t\b"),      b"unsigned char"),      # Unsigned Character 1 byte (unsigned char)
+    (re.compile(br"\bShort_t\b"),      b"short"),              # Signed Short integer 2 bytes (short)
+    (re.compile(br"\bUShort_t\b"),     b"unsigned short"),     # Unsigned Short integer 2 bytes (unsigned short)
+    (re.compile(br"\bInt_t\b"),        b"int"),                # Signed integer 4 bytes (int)
+    (re.compile(br"\bUInt_t\b"),       b"unsigned int"),       # Unsigned integer 4 bytes (unsigned int)
+    (re.compile(br"\bSeek_t\b"),       b"int"),                # File pointer (int)
+    (re.compile(br"\bLong_t\b"),       b"long"),               # Signed long integer 4 bytes (long)
+    (re.compile(br"\bULong_t\b"),      b"unsigned long"),      # Unsigned long integer 4 bytes (unsigned long)
+    (re.compile(br"\bFloat_t\b"),      b"float"),              # Float 4 bytes (float)
+    (re.compile(br"\bFloat16_t\b"),    b"float"),              # Float 4 bytes written with a truncated mantissa
+    (re.compile(br"\bDouble_t\b"),     b"double"),             # Double 8 bytes
+    (re.compile(br"\bDouble32_t\b"),   b"double"),             # Double 8 bytes in memory, written as a 4 bytes float
+    (re.compile(br"\bLongDouble_t\b"), b"long double"),        # Long Double
+    (re.compile(br"\bText_t\b"),       b"char"),               # General string (char)
+    (re.compile(br"\bBool_t\b"),       b"bool"),               # Boolean (0=false, 1=true) (bool)
+    (re.compile(br"\bByte_t\b"),       b"unsigned char"),      # Byte (8 bits) (unsigned char)
+    (re.compile(br"\bVersion_t\b"),    b"short"),              # Class version identifier (short)
+    (re.compile(br"\bOption_t\b"),     b"const char"),         # Option string (const char)
+    (re.compile(br"\bSsiz_t\b"),       b"int"),                # String size (int)
+    (re.compile(br"\bReal_t\b"),       b"float"),              # TVector and TMatrix element type (float)
+    (re.compile(br"\bLong64_t\b"),     b"long long"),          # Portable signed long integer 8 bytes
+    (re.compile(br"\bULong64_t\b"),    b"unsigned long long"), # Portable unsigned long integer 8 bytes
+    (re.compile(br"\bAxis_t\b"),       b"double"),             # Axis values type (double)
+    (re.compile(br"\bStat_t\b"),       b"double"),             # Statistics type (double)
+    (re.compile(br"\bFont_t\b"),       b"short"),              # Font number (short)
+    (re.compile(br"\bStyle_t\b"),      b"short"),              # Style number (short)
+    (re.compile(br"\bMarker_t\b"),     b"short"),              # Marker number (short)
+    (re.compile(br"\bWidth_t\b"),      b"short"),              # Line width (short)
+    (re.compile(br"\bColor_t\b"),      b"short"),              # Color number (short)
+    (re.compile(br"\bSCoord_t\b"),     b"short"),              # Screen coordinates (short)
+    (re.compile(br"\bCoord_t\b"),      b"double"),             # Pad world coordinates (double)
+    (re.compile(br"\bAngle_t\b"),      b"float"),              # Graphics angle (float)
+    (re.compile(br"\bSize_t\b"),       b"float"),              # Attribute size (float)
+    ]
+
 class TStreamerInfo(ROOTObject):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
-        self._fName, _ = _nametitle(source, cursor)
+        self._fName = _canonicaltype(_nametitle(source, cursor)[0])
         self._fCheckSum, self._fClassVersion = cursor.fields(source, TStreamerInfo._format)
         self._fElements = _readobjany(source, cursor, context, parent)
         assert isinstance(self._fElements, list)
@@ -939,7 +981,7 @@ class TStreamerElement(ROOTObject):
         else:
             self._fMaxIndex = cursor.array(source, 5, ">i4")
 
-        self._fTypeName = cursor.string(source)
+        self._fTypeName = _canonicaltype(cursor.string(source))
 
         if self._fType == 11 and (self._fTypeName == "Bool_t" or self._fTypeName == "bool"):
             self._fType = 18
