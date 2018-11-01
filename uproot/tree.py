@@ -500,6 +500,7 @@ class TTreeMethods(object):
                 else:
                     index = pandas.MultiIndex.from_arrays([numpy.arange(entrystart, entrystop, dtype=numpy.int64), numpy.zeros(entrystop - entrystart, dtype=numpy.int64)], names=["entry", "subentry"])
                     out = outputtype(index=index)
+                    scalars = []
 
                     for name, interpretation, future in futures:
                         array = future()
@@ -553,24 +554,31 @@ class TTreeMethods(object):
                             if interpretation.todims == ():
                                 if interpretation.todtype.names is None:
                                     df[name] = array
+                                    scalars.append(name)
                                 else:
                                     for nn in interpretation.todtype.names:
                                         if not nn.startswith(" "):
                                             df["{0}.{1}".format(name, nn)] = array[nn]
+                                            scalars.append("{0}.{1}".format(name, nn))
                             else:
                                 for tup in itertools.product(*[range(x) for x in interpretation.todims]):
                                     if interpretation.todtype.names is None:
                                         df["{0}[{1}]".format(name, "][".join(str(x) for x in tup))] = array[(slice(None),) + tup]
+                                        scalars.append("{0}[{1}]".format(name, "][".join(str(x) for x in tup)))
                                     else:
                                         for nn in interpretation.todtype.names:
                                             if not nn.startswith(" "):
                                                 df["{0}[{1}].{2}".format(name, "][".join(str(x) for x in tup), nn)] = array[nn][(slice(None),) + tup]
+                                                scalars.append("{0}[{1}].{2}".format(name, "][".join(str(x) for x in tup), nn))
 
                         else:
                             df = outputtype(index=index, columns=[name], data={name: list(array)})
+                            scalars.append(name)
 
                         out = pandas.merge(out, df, how="outer", left_index=True, right_index=True)
 
+                    for name in scalars:
+                        out[name].fillna(method="ffill", inplace=True)
                     return out
 
         elif isinstance(outputtype, type) and issubclass(outputtype, dict):
