@@ -41,11 +41,11 @@ class TTreeMethods_pandas(object):
     def __init__(self, tree):
         self._tree = tree
 
-    def df(self, branches=None, namedecode="utf-8", entrystart=None, entrystop=None, flatten=True, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+    def df(self, branches=None, namedecode="utf-8", entrystart=None, entrystop=None, flatten=True, flatname=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         import pandas
-        return self._tree.arrays(branches=branches, outputtype=pandas.DataFrame, namedecode=namedecode, entrystart=entrystart, entrystop=entrystop, flatten=flatten, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
+        return self._tree.arrays(branches=branches, outputtype=pandas.DataFrame, namedecode=namedecode, entrystart=entrystart, entrystop=entrystop, flatten=flatten, flatname=flatname, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
 
-def flatname(branchname, fieldname, index):
+def default_flatname(branchname, fieldname, index):
     out = branchname
     if not isinstance(branchname, str):
         out = branchname.decode("utf-8")
@@ -55,8 +55,11 @@ def flatname(branchname, fieldname, index):
         out += "[" + "][".join(str(x) for x in index) + "]"
     return out
 
-def futures2df(futures, outputtype, entrystart, entrystop, flatten):
+def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname):
     import pandas
+
+    if flatname is None:
+        flatname = default_flatname
 
     if not flatten or all(interpretation.__class__ is not asjagged for name, interpretation, future in futures):
         columns = []

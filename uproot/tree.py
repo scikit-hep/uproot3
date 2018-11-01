@@ -121,9 +121,9 @@ def _filename_explode(x):
 
 ################################################################ high-level interface
 
-def iterate(path, treepath, branches=None, entrysteps=None, outputtype=dict, namedecode=None, reportentries=False, flatten=False, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
+def iterate(path, treepath, branches=None, entrysteps=None, outputtype=dict, namedecode=None, reportentries=False, flatten=False, flatname=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
     for tree, newbranches, globalentrystart in _iterate(path, treepath, branches, localsource, xrootdsource, httpsource, **options):
-        for start, stop, arrays in tree.iterate(branches=newbranches, entrysteps=entrysteps, outputtype=outputtype, namedecode=namedecode, reportentries=True, entrystart=0, entrystop=tree.numentries, flatten=flatten, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking):
+        for start, stop, arrays in tree.iterate(branches=newbranches, entrysteps=entrysteps, outputtype=outputtype, namedecode=namedecode, reportentries=True, entrystart=0, entrystop=tree.numentries, flatten=flatten, flatname=flatname, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking):
             if getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame":
                 index = numpy.frombuffer(arrays.index.data, dtype=arrays.index.dtype)
                 numpy.add(index, globalentrystart, index)
@@ -431,10 +431,10 @@ class TTreeMethods(object):
                 if leadingstart >= entrystop:
                     break
 
-    def array(self, branch, interpretation=None, entrystart=None, entrystop=None, flatten=False, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
-        return self.get(branch).array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
+    def array(self, branch, interpretation=None, entrystart=None, entrystop=None, flatten=False, flatname=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+        return self.get(branch).array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, flatname=flatname, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
 
-    def arrays(self, branches=None, outputtype=dict, namedecode=None, entrystart=None, entrystop=None, flatten=False, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+    def arrays(self, branches=None, outputtype=dict, namedecode=None, entrystart=None, entrystop=None, flatten=False, flatname=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         branches = list(self._normalize_branches(branches))
         if flatten is None:
             branches = [(branch, interpretation) for branch, interpretation in branches if not isinstance(interpretation, asjagged)]
@@ -445,7 +445,7 @@ class TTreeMethods(object):
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
 
         # start the job of filling the arrays
-        futures = [(branch.name if namedecode is None else branch.name.decode(namedecode), interpretation, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=(flatten and not ispandas), cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=False)) for branch, interpretation in branches]
+        futures = [(branch.name if namedecode is None else branch.name.decode(namedecode), interpretation, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=(flatten and not ispandas), flatname=flatname, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=False)) for branch, interpretation in branches]
 
         # make functions that wait for the filling job to be done and return the right outputtype
         if outputtype == namedtuple:
@@ -456,7 +456,7 @@ class TTreeMethods(object):
         elif ispandas:
             import uproot._connect.to_pandas
             def wait():
-                return uproot._connect.to_pandas.futures2df(futures, outputtype, entrystart, entrystop, flatten)
+                return uproot._connect.to_pandas.futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname)
 
         elif isinstance(outputtype, type) and issubclass(outputtype, dict):
             def wait():
@@ -501,7 +501,7 @@ class TTreeMethods(object):
         else:
             return outputtype(*[lazyarray for name, lazyarray in lazyarrays])
 
-    def iterate(self, branches=None, entrysteps=None, outputtype=dict, namedecode=None, reportentries=False, entrystart=None, entrystop=None, flatten=False, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+    def iterate(self, branches=None, entrysteps=None, outputtype=dict, namedecode=None, reportentries=False, entrystart=None, entrystop=None, flatten=False, flatname=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
 
         if entrysteps is None:
@@ -1091,7 +1091,7 @@ class TBranchMethods(object):
 
         return interpretation.fromroot(data, byteoffsets, local_entrystart, local_entrystop)
 
-    def basket(self, i, interpretation=None, entrystart=None, entrystop=None, flatten=False, cache=None, basketcache=None, keycache=None):
+    def basket(self, i, interpretation=None, entrystart=None, entrystop=None, flatten=False, flatname=None, cache=None, basketcache=None, keycache=None):
         interpretation = self._normalize_interpretation(interpretation)
         if interpretation is None:
             raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
@@ -1146,7 +1146,7 @@ class TBranchMethods(object):
 
         return basketstart, basketstop
 
-    def baskets(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, cache=None, basketcache=None, keycache=None, reportentries=False, executor=None, blocking=True):
+    def baskets(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, flatname=None, cache=None, basketcache=None, keycache=None, reportentries=False, executor=None, blocking=True):
         interpretation = self._normalize_interpretation(interpretation)
         if interpretation is None:
             raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
@@ -1168,7 +1168,7 @@ class TBranchMethods(object):
 
         def fill(j):
             try:
-                basket = self.basket(j + basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, cache=cache, basketcache=basketcache, keycache=keycache)
+                basket = self.basket(j + basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, flatname=flatname, cache=cache, basketcache=basketcache, keycache=keycache)
                 if reportentries:
                     local_entrystart, local_entrystop = self._localentries(j + basketstart, entrystart, entrystop)
                     basket = (local_entrystart + self.basket_entrystart(j + basketstart),
@@ -1198,7 +1198,7 @@ class TBranchMethods(object):
                 return out
             return wait
 
-    def iterate_baskets(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, cache=None, basketcache=None, keycache=None, reportentries=False):
+    def iterate_baskets(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, flatname=None, cache=None, basketcache=None, keycache=None, reportentries=False):
         interpretation = self._normalize_interpretation(interpretation)
         if interpretation is None:
             raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
@@ -1215,9 +1215,9 @@ class TBranchMethods(object):
                     if reportentries:
                         yield (local_entrystart + self.basket_entrystart(i),
                                local_entrystop + self.basket_entrystart(i),
-                               self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, cache=cache, basketcache=basketcache, keycache=keycache))
+                               self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, flatname=flatname, cache=cache, basketcache=basketcache, keycache=keycache))
                     else:
-                        yield self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, cache=cache, basketcache=basketcache, keycache=keycache)
+                        yield self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, flatname=flatname, cache=cache, basketcache=basketcache, keycache=keycache)
 
     def _basket_itemoffset(self, interpretation, basketstart, basketstop, keycache):
         basket_itemoffset = [0]
@@ -1233,7 +1233,7 @@ class TBranchMethods(object):
             basket_entryoffset.append(basket_entryoffset[-1] + self.basket_numentries(i))
         return basket_entryoffset
 
-    def array(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+    def array(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, flatname=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         interpretation = self._normalize_interpretation(interpretation)
         if interpretation is None:
             raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
@@ -1822,9 +1822,9 @@ class LazyArray(object):
 
         if self._onlybranch is None:
             tree = self._tree(filenum)
-            array = tree[self._branchname].array(interpretation=self._interpretation, entrystart=entrystart, entrystop=entrystop, flatten=False, cache=None, basketcache=self._basketcache, keycache=self._keycache, executor=self._executor, blocking=True)
+            array = tree[self._branchname].array(interpretation=self._interpretation, entrystart=entrystart, entrystop=entrystop, flatten=False, flatname=None, cache=None, basketcache=self._basketcache, keycache=self._keycache, executor=self._executor, blocking=True)
         else:
-            array = self._onlybranch.array(interpretation=self._interpretation, entrystart=entrystart, entrystop=entrystop, flatten=False, cache=None, basketcache=self._basketcache, keycache=self._keycache, executor=self._executor, blocking=True)
+            array = self._onlybranch.array(interpretation=self._interpretation, entrystart=entrystart, entrystop=entrystop, flatten=False, flatname=None, cache=None, basketcache=self._basketcache, keycache=self._keycache, executor=self._executor, blocking=True)
 
         if step < 0:
             array = array[::step]
