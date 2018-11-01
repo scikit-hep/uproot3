@@ -45,6 +45,16 @@ class TTreeMethods_pandas(object):
         import pandas
         return self._tree.arrays(branches=branches, outputtype=pandas.DataFrame, namedecode=namedecode, entrystart=entrystart, entrystop=entrystop, flatten=flatten, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
 
+def flatname(branchname, fieldname, index):
+    out = branchname
+    if not isinstance(branchname, str):
+        out = branchname.decode("utf-8")
+    if fieldname is not None:
+        out += "." + fieldname
+    if index != ():
+        out += "[" + "][".join(str(x) for x in index) + "]"
+    return out
+
 def futures2df(futures, outputtype, entrystart, entrystop, flatten):
     import pandas
 
@@ -62,27 +72,31 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten):
             if isinstance(interpretation, asdtype):
                 if interpretation.todims == ():
                     if interpretation.todtype.names is None:
-                        columns.append(name)
-                        data[name] = array
+                        fn = flatname(name, None, ())
+                        columns.append(fn)
+                        data[fn] = array
                     else:
                         for nn in interpretation.todtype.names:
                             if not nn.startswith(" "):
-                                columns.append("{0}.{1}".format(name, nn))
-                                data["{0}.{1}".format(name, nn)] = array[nn]
+                                fn = flatname(name, nn, ())
+                                columns.append(fn)
+                                data[fn] = array[nn]
                 else:
                     for tup in itertools.product(*[range(x) for x in interpretation.todims]):
-                        n = "{0}[{1}]".format(name, "][".join(str(x) for x in tup))
                         if interpretation.todtype.names is None:
-                            columns.append(n)
-                            data[n] = array[(slice(None),) + tup]
+                            fn = flatname(name, None, tup)
+                            columns.append(fn)
+                            data[fn] = array[(slice(None),) + tup]
                         else:
                             for nn in interpretation.todtype.names:
                                 if not nn.startswith(" "):
-                                    columns.append("{0}.{1}".format(name, nn))
-                                    data["{0}.{1}".format(name, nn)] = array[nn][(slice(None),) + tup]
+                                    fn = flatname(name, nn, tup)
+                                    columns.append(fn)
+                                    data[fn] = array[nn][(slice(None),) + tup]
             else:
-                columns.append(name)
-                data[name] = list(array)     # must be serialized as a Python list for Pandas to accept it
+                fn = flatname(name, None, ())
+                columns.append(fn)
+                data[fn] = list(array)     # must be serialized as a Python list for Pandas to accept it
 
         return outputtype(columns=columns, data=data)
 
@@ -121,51 +135,61 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten):
                 if isinstance(interpretation, asdtype):
                     if interpretation.todims == ():
                         if interpretation.todtype.names is None:
-                            df[name] = array.flatten()
+                            fn = flatname(name, None, ())
+                            df[fn] = array.flatten()
                         else:
                             for nn in interpretation.todtype.names:
                                 if not nn.startswith(" "):
-                                    df["{0}.{1}".format(name, nn)] = array[nn].flatten()
+                                    fn = flatname(name, nn, ())
+                                    df[fn] = array[nn].flatten()
                     else:
                         for tup in itertools.product(*[range(x) for x in interpretation.todims]):
                             if interpretation.todtype.names is None:
-                                df["{0}[{1}]".format(name, "][".join(str(x) for x in tup))] = array[(slice(None),) + tup].flatten()
+                                fn = flatname(name, None, tup)
+                                df[fn] = array[(slice(None),) + tup].flatten()
                             else:
                                 for nn in interpretation.todtype.names:
                                     if not nn.startswith(" "):
-                                        df["{0}[{1}].{2}".format(name, "][".join(str(x) for x in tup), nn)] = array[nn][(slice(None),) + tup].flatten()
+                                        fn = flatname(name, nn, tup)
+                                        df[fn] = array[nn][(slice(None),) + tup].flatten()
 
                 else:
-                    df[name] = list(array.flatten())
+                    fn = flatname(name, None, ())
+                    df[fn] = list(array.flatten())
 
             elif isinstance(interpretation, asdtype):
                 df = outputtype(index=index)
                 if interpretation.todims == ():
                     if interpretation.todtype.names is None:
-                        df[name] = array
-                        scalars.append(name)
+                        fn = flatname(name, None, ())
+                        df[fn] = array
+                        scalars.append(fn)
                     else:
                         for nn in interpretation.todtype.names:
                             if not nn.startswith(" "):
-                                df["{0}.{1}".format(name, nn)] = array[nn]
-                                scalars.append("{0}.{1}".format(name, nn))
+                                fn = flatname(name, nn, ())
+                                df[fn] = array[nn]
+                                scalars.append(fn)
                 else:
                     for tup in itertools.product(*[range(x) for x in interpretation.todims]):
                         if interpretation.todtype.names is None:
-                            df["{0}[{1}]".format(name, "][".join(str(x) for x in tup))] = array[(slice(None),) + tup]
-                            scalars.append("{0}[{1}]".format(name, "][".join(str(x) for x in tup)))
+                            fn = flatname(name, None, tup)
+                            df[fn] = array[(slice(None),) + tup]
+                            scalars.append(fn)
                         else:
                             for nn in interpretation.todtype.names:
                                 if not nn.startswith(" "):
-                                    df["{0}[{1}].{2}".format(name, "][".join(str(x) for x in tup), nn)] = array[nn][(slice(None),) + tup]
-                                    scalars.append("{0}[{1}].{2}".format(name, "][".join(str(x) for x in tup), nn))
+                                    fn = flatname(name, nn, tup)
+                                    df[fn] = array[nn][(slice(None),) + tup]
+                                    scalars.append(fn)
 
             else:
-                df = outputtype(index=index, columns=[name], data={name: list(array)})
-                scalars.append(name)
+                fn = flatname(name, None, ())
+                df = outputtype(index=index, columns=[fn], data={fn: list(array)})
+                scalars.append(fn)
 
             out = pandas.merge(out, df, how="outer", left_index=True, right_index=True)
 
-        for name in scalars:
-            out[name].fillna(method="ffill", inplace=True)
+        for n in scalars:
+            out[n].fillna(method="ffill", inplace=True)
         return out
