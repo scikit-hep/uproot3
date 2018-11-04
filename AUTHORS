@@ -4,7 +4,7 @@ henryiii        Henry Schreiner         fspath support, IPython/Jupyter dict-key
 matthewfeickert Matthew Feickert        deployment to Binder
 riga            Marcel R.               supporting subclasses of lists and tuples in outputtype
 wiso            Ruggero Turra           default argument for TTree.pandas.df
-chrisburr       Chris Burr              README typo
+chrisburr       Chris Burr              fixed error in XRootD, README typo
 
 asymmetry       Chao Gu                 added hashlib.md5 to diskcache (which has since been removed due to OS incompatibilities) 
 demarley        Daniel Marley           added support for 2d histograms (moved to uproot-methods)
