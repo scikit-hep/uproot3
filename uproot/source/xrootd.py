@@ -28,8 +28,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import os.path
-
 import numpy
 
 import uproot.source.chunked
@@ -72,6 +70,8 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
         out._chunkbytes = self._chunkbytes
         out.cache = self.cache
         out._source = None             # XRootD connections are *not shared* among threads
+        out._size = self._size
+        out.timeout = self.timeout
         return out
 
     def _read(self, chunkindex):
