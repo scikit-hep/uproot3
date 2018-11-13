@@ -5,31 +5,30 @@ cache: pip
 os:
   - linux
 
-matrix:
-  include:
-    - env: CONDA_PYTHON_VERION=2.7 NUMPY="numpy==1.13.1"
-    - env: CONDA_PYTHON_VERION=2.7 NUMPY="numpy==1.14.5"
-    - env: CONDA_PYTHON_VERION=2.7 NUMPY="numpy>=1.15"
+env:
+  - CONDA_PYTHON_VERION=2.7 NUMPY="numpy==1.13.1"
+  - CONDA_PYTHON_VERION=2.7 NUMPY="numpy==1.14.5"
+  - CONDA_PYTHON_VERION=2.7 NUMPY="numpy>=1.15"
 
-    - env: CONDA_PYTHON_VERION=3.4 NUMPY="numpy==1.13.1"
-    - env: CONDA_PYTHON_VERION=3.4 NUMPY="numpy==1.14.5"
-    - env: CONDA_PYTHON_VERION=3.4 NUMPY="numpy>=1.15"
+  - CONDA_PYTHON_VERION=3.4 NUMPY="numpy==1.13.1"
+  - CONDA_PYTHON_VERION=3.4 NUMPY="numpy==1.14.5"
+  - CONDA_PYTHON_VERION=3.4 NUMPY="numpy>=1.15"
 
-    - env: CONDA_PYTHON_VERION=3.5 NUMPY="numpy==1.13.1"
-    - env: CONDA_PYTHON_VERION=3.5 NUMPY="numpy==1.14.5"
-    - env: CONDA_PYTHON_VERION=3.5 NUMPY="numpy>=1.15"
+  - CONDA_PYTHON_VERION=3.5 NUMPY="numpy==1.13.1"
+  - CONDA_PYTHON_VERION=3.5 NUMPY="numpy==1.14.5"
+  - CONDA_PYTHON_VERION=3.5 NUMPY="numpy>=1.15"
 
-    - env: CONDA_PYTHON_VERION=3.6 NUMPY="numpy==1.13.1"
-    - env: CONDA_PYTHON_VERION=3.6 NUMPY="numpy==1.14.5"
-    - env: CONDA_PYTHON_VERION=3.6 NUMPY="numpy>=1.15"
+  - CONDA_PYTHON_VERION=3.6 NUMPY="numpy==1.13.1"
+  - CONDA_PYTHON_VERION=3.6 NUMPY="numpy==1.14.5"
+  - CONDA_PYTHON_VERION=3.6 NUMPY="numpy>=1.15"
 
-    - env: CONDA_PYTHON_VERION=3.7 NUMPY="numpy==1.13.1"
-    - env: CONDA_PYTHON_VERION=3.7 NUMPY="numpy==1.14.5"
-    - env: CONDA_PYTHON_VERION=3.7 NUMPY="numpy>=1.15"
+  - CONDA_PYTHON_VERION=3.7 NUMPY="numpy==1.13.1"
+  - CONDA_PYTHON_VERION=3.7 NUMPY="numpy==1.14.5"
+  - CONDA_PYTHON_VERION=3.7 NUMPY="numpy>=1.15"
 
-    - env: CONDA_PYTHON_VERION=pypy2.7-5.10.0 NUMPY="numpy>=1.15"
+  - CONDA_PYTHON_VERION=pypy2.7-5.10.0 NUMPY="numpy>=1.15"
 
-    - env: CONDA_PYTHON_VERION=pypy3.5 NUMPY="numpy>=1.15"
+  - CONDA_PYTHON_VERION=pypy3.5 NUMPY="numpy>=1.15"
 
 install:
   - wget -nv http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
