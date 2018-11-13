@@ -47,7 +47,7 @@ install:
       conda create -q -n testenv python=${CONDA_PYTHON_VERION} pandas;
     fi
   - source activate testenv
-  - conda install --yes pytest pytest-runner
+  - pip install "pytest>=3.9" pytest-runner
   - pip install awkward
   - pip install "uproot-methods>=0.2.0"
 
