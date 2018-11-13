@@ -120,6 +120,8 @@ class asjagged(uproot.interp.interp.Interpretation):
                     sub = sub.content
                 if isinstance(sub, uproot.interp.numerical.asdtype):
                     itemsize = sub.fromdtype.itemsize
+                if isinstance(sub, uproot.interp.numerical.asstlbitset):
+                    itemsize = sub.numbytes + 4
 
                 counts = bytestops - bytestarts
                 shift = math.log(itemsize, 2)

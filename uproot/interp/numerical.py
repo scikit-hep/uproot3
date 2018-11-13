@@ -290,5 +290,46 @@ class asstlbitset(uproot.interp.interp.Interpretation):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (uproot.interp.interp.Interpretation.__metaclass__,), {})
 
+    todtype = awkward.util.numpy.dtype(awkward.util.numpy.bool_)
+
+    def __init__(self, numbytes):
+        self.numbytes = numbytes
+
+    def __repr__(self):
+        return self.identifier
+
+    @property
+    def identifier(self):
+        return "asstlbitset({0})".format(self.numbytes)
+
+    @property
+    def type(self):
+        return awkward.type.ArrayType(self.numbytes, self.todtype)
+
+    def empty(self):
+        return awkward.util.numpy.empty((0, self.numbytes), dtype=self.todtype)
+
     def compatible(self, other):
-        return isinstance(other, asstlbitset) and self.numbytes == other.numbytes
+        return (isinstance(other, asstlbitset) and self.numbytes == other.numbytes) or \
+               (isinstance(other, (asdtype, asarray)) and self.todtype == other.todtype and (self.numbytes,) == other.todims)
+
+    def numitems(self, numbytes, numentries):
+        return max(0, numbytes // (self.numbytes + 4))
+
+    def source_numitems(self, source):
+        return int(awkward.util.numpy.prod(source.shape))
+
+    def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop):
+        return data.view(self.todtype).reshape((-1, self.numbytes + 4))[:, 4:]
+
+    def destination(self, numitems, numentries):
+        return awkward.util.numpy.empty((numitems, self.numbytes), dtype=self.todtype)
+
+    def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
+        destination[itemstart:itemstop] = source
+
+    def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
+        return destination[itemstart:itemstop]
+
+    def finalize(self, destination, branch):
+        return destination
