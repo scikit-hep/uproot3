@@ -41,6 +41,7 @@ install:
       conda config --add channels chrisburr;
       conda create -q -n testenv python=${CONDA_PYTHON_VERION} nomkl root pandas;
     elif [[ "${CONDA_PYTHON_VERION}" = pypy* ]]; then
+      conda config --add channels conda-forge;
       conda create -q -n testenv ${CONDA_PYTHON_VERION};
     else
       conda config --add channels conda-forge;
