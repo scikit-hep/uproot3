@@ -41,7 +41,7 @@ def test_strings(tmp_path):
         f['hello'] = 'world'
 
     f = ROOT.TFile.Open(filename)
-    assert f.Get('hello') == 'world'
+    assert f.Get('hello') == 'orld'
     f.Close()
 
 
