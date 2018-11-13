@@ -174,7 +174,7 @@ class TTreeMethods(object):
 
     _vector_regex = re.compile(b"^vector<(.+)>$")
 
-    def _attachstreamer(self, branch, streamer, streamerinfosmap):
+    def _attachstreamer(self, branch, streamer, streamerinfosmap, isTClonesArray):
         if streamer is None:
             m = re.match(self._vector_regex, getattr(branch, "_fClassName", b""))
 
@@ -197,15 +197,16 @@ class TTreeMethods(object):
         if isinstance(streamer, uproot.rootio.TStreamerInfo):
             if len(streamer._fElements) == 1 and isinstance(streamer._fElements[0], uproot.rootio.TStreamerBase) and streamer._fElements[0]._fName == b"TObjArray":
                 if streamer._fName == b"TClonesArray":
-                    return self._attachstreamer(branch, streamerinfosmap.get(branch._fClonesName, None), streamerinfosmap)
+                    return self._attachstreamer(branch, streamerinfosmap.get(branch._fClonesName, None), streamerinfosmap, True)
                 else:
                     # FIXME: can only determine streamer by reading some values?
                     return
 
             elif len(streamer._fElements) == 1 and isinstance(streamer._fElements[0], uproot.rootio.TStreamerSTL) and streamer._fElements[0]._fName == b"This":
-                return self._attachstreamer(branch, streamer._fElements[0], streamerinfosmap)
+                return self._attachstreamer(branch, streamer._fElements[0], streamerinfosmap, isTClonesArray)
 
         branch._streamer = streamer
+        branch._isTClonesArray = isTClonesArray
         if isinstance(streamer, uproot.rootio.TStreamerSTL) and streamer._fSTLtype == uproot.const.kSTLvector:
             branch._vecstreamer = streamerinfosmap.get(re.match(self._vector_regex, streamer._fTypeName).group(1), None)
         else:
@@ -252,7 +253,7 @@ class TTreeMethods(object):
                 except ValueError:
                     pass
 
-                self._attachstreamer(subbranch, submembers.get(name, None), streamerinfosmap)
+                self._attachstreamer(subbranch, submembers.get(name, None), streamerinfosmap, isTClonesArray)
 
     def _postprocess(self, source, cursor, context, parent):
         self._context = context
@@ -260,7 +261,7 @@ class TTreeMethods(object):
         self._context.speedbump = True
 
         for branch in self._fBranches:
-            self._attachstreamer(branch, context.streamerinfosmap.get(getattr(branch, "_fClassName", None), None), context.streamerinfosmap)
+            self._attachstreamer(branch, context.streamerinfosmap.get(getattr(branch, "_fClassName", None), None), context.streamerinfosmap, False)
 
         self._branchlookup = {}
         self._fill_branchlookup(self._branchlookup)

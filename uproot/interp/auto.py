@@ -309,7 +309,10 @@ def interpret(branch, swapbytes=True, cntvers=False, tobject=True, speedbump=Tru
                             ascontent = asdtype(fromdtype, fromdtype.newbyteorder("="))
                         else:
                             ascontent = asdtype(fromdtype, fromdtype)
-                        return asjagged(ascontent, skipbytes=10)
+                        if branch._isTClonesArray:
+                            return asjagged(ascontent, skipbytes=6)
+                        else:
+                            return asjagged(ascontent, skipbytes=10)
 
                     except _NotNumerical:
                         if branch._vecstreamer is not None:
