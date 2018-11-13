@@ -7,53 +7,49 @@ os:
 
 matrix:
   include:
-    - python: 2.7
-      env: NUMPY="numpy==1.13.1"
-    - python: 2.7
-      env: NUMPY="numpy==1.14.5"
-    - python: 2.7
-      env: NUMPY="numpy>=1.15"
+    - env: CONDA_PYTHON_VERION=2.7 NUMPY="numpy==1.13.1"
+    - env: CONDA_PYTHON_VERION=2.7 NUMPY="numpy==1.14.5"
+    - env: CONDA_PYTHON_VERION=2.7 NUMPY="numpy>=1.15"
 
-    - python: 3.4
-      env: NUMPY="numpy==1.13.1"
-    - python: 3.4
-      env: NUMPY="numpy==1.14.5"
-    - python: 3.4
-      env: NUMPY="numpy>=1.15"
+    - env: CONDA_PYTHON_VERION=3.4 NUMPY="numpy==1.13.1"
+    - env: CONDA_PYTHON_VERION=3.4 NUMPY="numpy==1.14.5"
+    - env: CONDA_PYTHON_VERION=3.4 NUMPY="numpy>=1.15"
 
-    - python: 3.5
-      env: NUMPY="numpy==1.13.1"
-    - python: 3.5
-      env: NUMPY="numpy==1.14.5"
-    - python: 3.5
-      env: NUMPY="numpy>=1.15"
+    - env: CONDA_PYTHON_VERION=3.5 NUMPY="numpy==1.13.1"
+    - env: CONDA_PYTHON_VERION=3.5 NUMPY="numpy==1.14.5"
+    - env: CONDA_PYTHON_VERION=3.5 NUMPY="numpy>=1.15"
 
-    - python: 3.6
-      env: NUMPY="numpy==1.13.1"
-    - python: 3.6
-      env: NUMPY="numpy==1.14.5"
-    - python: 3.6
-      env: NUMPY="numpy>=1.15"
+    - env: CONDA_PYTHON_VERION=3.6 NUMPY="numpy==1.13.1"
+    - env: CONDA_PYTHON_VERION=3.6 NUMPY="numpy==1.14.5"
+    - env: CONDA_PYTHON_VERION=3.6 NUMPY="numpy>=1.15"
 
-    - python: pypy2.7-5.10.0
-      env: NUMPY="numpy>=1.15"
+    - env: CONDA_PYTHON_VERION=3.7 NUMPY="numpy==1.13.1"
+    - env: CONDA_PYTHON_VERION=3.7 NUMPY="numpy==1.14.5"
+    - env: CONDA_PYTHON_VERION=3.7 NUMPY="numpy>=1.15"
 
-    - python: pypy3.5
-      env: NUMPY="numpy>=1.15"
+    - env: CONDA_PYTHON_VERION=pypy2.7-5.10.0 NUMPY="numpy>=1.15"
+
+    - env: CONDA_PYTHON_VERION=pypy3.5 NUMPY="numpy>=1.15"
 
 install:
-  - env
-  - echo $TRAVIS_PYTHON_VERSION
-  - pip install --upgrade setuptools_scm
-  - pip install $NUMPY
-  - python -c 'import numpy; print(numpy.__version__)'
+  - wget -nv http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - if [ "${CONDA_PYTHON_VERION}" = "2.7" || "${CONDA_PYTHON_VERION}" = "3.6" || "${CONDA_PYTHON_VERION}" = "3.7" ]; then
+      conda config --add channels conda-forge/label/gcc7;
+      conda config --add channels chrisburr;
+      conda create -q -n testenv python=${CONDA_PYTHON_VERION} nomkl root pandas pytest pytest-runner
+    elif [[ "${CONDA_PYTHON_VERION}" = pypy* ]]; then
+      conda create -q -n testenv ${CONDA_PYTHON_VERION} pytest pytest-runner;
+    else
+      conda config --add channels conda-forge;
+      conda create -q -n testenv python=${CONDA_PYTHON_VERION} pandas pytest pytest-runner
+    fi
+  - source activate testenv
   - pip install awkward
-  - python -c 'import awkward; print(awkward.__version__)'
   - pip install "uproot-methods>=0.2.0"
-  - python -c 'import uproot_methods; print(uproot_methods.__version__)'
-  - pip install "pytest>=3.9" pytest-runner
-  - python -c 'import pytest; print(pytest.__version__)'
-  - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install pandas ; fi
 
 addons:
   apt:
@@ -106,22 +102,3 @@ jobs:
         - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master
         - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Ftutorial.ipynb
         - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Fversion-3-features.ipynb
-
-    - stage: test
-      python:
-      env:
-      install:
-        - wget -nv http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
-        - bash miniconda.sh -b -p $HOME/miniconda
-        - export PATH="$HOME/miniconda/bin:$PATH"
-        - hash -r
-        - conda config --set always_yes yes --set changeps1 no
-        - conda config --add channels conda-forge/label/gcc7
-        - conda config --add channels chrisburr
-        - conda create -q -n testenv python=3.7 nomkl root pandas "pytest>=3.9" pytest-runner
-        - source activate testenv
-        - pip install awkward
-        - pip install "uproot-methods>=0.2.0"
-        - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install pandas ; fi
-      script:
-        python setup.py pytest
