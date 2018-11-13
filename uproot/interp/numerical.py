@@ -323,13 +323,13 @@ class asstlbitset(uproot.interp.interp.Interpretation):
         return data.view(self.todtype).reshape((-1, self.numbytes + 4))[:, 4:]
 
     def destination(self, numitems, numentries):
-        return awkward.util.numpy.empty((numitems // self.numbytes, self.numbytes), dtype=self.todtype)
+        return awkward.util.numpy.empty((numitems, self.numbytes), dtype=self.todtype)
 
     def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
-        destination.reshape(-1)[itemstart:itemstop] = source.reshape(-1)
+        destination[itemstart:itemstop] = source
 
     def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
-        return destination[entrystart:entrystop]
+        return destination[itemstart:itemstop]
 
     def finalize(self, destination, branch):
         return destination
