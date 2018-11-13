@@ -339,10 +339,7 @@ def interpret(branch, swapbytes=True, cntvers=False, tobject=True, speedbump=Tru
                 if hasattr(branch._streamer, "_fTypeName"):
                     m = re.match(b"bitset<([1-9][0-9]*)>", branch._streamer._fTypeName)
                     if m is not None:
-                        if branch._isTClonesArray:
-                            return asjagged(asstlbitset(int(m.group(1))), skipbytes=6)
-                        else:
-                            return asstlbitset(int(m.group(1)))
+                        return asjagged(asstlbitset(int(m.group(1))), skipbytes=6)
 
                 if getattr(branch._streamer, "_fTypeName", None) == b"vector<bool>":
                     return asjagged(asdtype(awkward.util.numpy.bool_), skipbytes=10)
