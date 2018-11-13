@@ -26,7 +26,7 @@ env:
   - CONDA_PYTHON_VERION=3.7 NUMPY="numpy==1.14.5"
   - CONDA_PYTHON_VERION=3.7 NUMPY="numpy>=1.15"
 
-  - CONDA_PYTHON_VERION=pypy2.7-5.10.0 NUMPY="numpy>=1.15"
+  - CONDA_PYTHON_VERION=pypy2.7 NUMPY="numpy>=1.15"
 
   - CONDA_PYTHON_VERION=pypy3.5 NUMPY="numpy>=1.15"
 
