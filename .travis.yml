@@ -39,14 +39,15 @@ install:
   - if [ "${CONDA_PYTHON_VERION}" = "2.7" || "${CONDA_PYTHON_VERION}" = "3.6" || "${CONDA_PYTHON_VERION}" = "3.7" ]; then
       conda config --add channels conda-forge/label/gcc7;
       conda config --add channels chrisburr;
-      conda create -q -n testenv python=${CONDA_PYTHON_VERION} nomkl root pandas pytest pytest-runner;
+      conda create -q -n testenv python=${CONDA_PYTHON_VERION} nomkl root pandas;
     elif [[ "${CONDA_PYTHON_VERION}" = pypy* ]]; then
-      conda create -q -n testenv ${CONDA_PYTHON_VERION} pytest pytest-runner;
+      conda create -q -n testenv ${CONDA_PYTHON_VERION};
     else
       conda config --add channels conda-forge;
-      conda create -q -n testenv python=${CONDA_PYTHON_VERION} pandas pytest pytest-runner
+      conda create -q -n testenv python=${CONDA_PYTHON_VERION} pandas;
     fi
   - source activate testenv
+  - conda install --yes pytest pytest-runner
   - pip install awkward
   - pip install "uproot-methods>=0.2.0"
 
