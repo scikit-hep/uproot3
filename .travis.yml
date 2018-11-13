@@ -95,7 +95,7 @@ jobs:
         - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Fversion-3-features.ipynb
 
     - stage: test
-      python: '3.6'
+      python:
       env:
       install:
         - wget -nv http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
