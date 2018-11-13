@@ -33,7 +33,7 @@ import pytest
 import uproot
 
 
-def test_strings(self, tmp_path):
+def test_strings(tmp_path):
     ROOT = pytest.importorskip("ROOT")
     filename = join(tmp_path, 'example.root')
 
@@ -45,5 +45,5 @@ def test_strings(self, tmp_path):
     f.Close()
 
 
-def test_th1(self):
+def test_th1():
     pass
