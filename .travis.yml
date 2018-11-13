@@ -71,25 +71,42 @@ stages:
 
 jobs:
   include:
-  - stage: docs
-    python: '3.6'
-    env: NUMPY="numpy>=1.15"
-    addons:
-      chrome: stable
-      apt:
-        packages:
-          - chromium-chromedriver
-    before_install:
-      - sudo apt-get update
-      - sudo apt-get -qq install pandoc
-      - pip install --upgrade pip setuptools wheel
-      - pip install selenium
-    install:
-      - pip install -U -q .
-    before_script:
-      - ln --symbolic /usr/lib/chromium-browser/chromedriver "${HOME}/bin/chromedriver"
-    script:
-    # Open Binder example in browser to trigger repo2docker to build image
-    - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master
-    - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Ftutorial.ipynb
-    - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Fversion-3-features.ipynb
+    - stage: docs
+      python: '3.6'
+      env: NUMPY="numpy>=1.15"
+      addons:
+        chrome: stable
+        apt:
+          packages:
+            - chromium-chromedriver
+      before_install:
+        - sudo apt-get update
+        - sudo apt-get -qq install pandoc
+        - pip install --upgrade pip setuptools wheel
+        - pip install selenium
+      install:
+        - pip install -U -q .
+      before_script:
+        - ln --symbolic /usr/lib/chromium-browser/chromedriver "${HOME}/bin/chromedriver"
+      script:
+        # Open Binder example in browser to trigger repo2docker to build image
+        - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master
+        - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Ftutorial.ipynb
+        - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Fversion-3-features.ipynb
+
+    - stage: test
+      install:
+        - wget -nv http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+        - bash miniconda.sh -b -p $HOME/miniconda
+        - export PATH="$HOME/miniconda/bin:$PATH"
+        - hash -r
+        - conda config --set always_yes yes --set changeps1 no
+        - conda config --add channels conda-forge/label/gcc7
+        - conda config --add channels chrisburr
+        - conda create -q -n testenv python=3.7 nomkl root pandas pytest pytest-runner
+        - source activate testenv
+        - pip install awkward
+        - pip install "uproot-methods>=0.2.0"
+        - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install pandas ; fi
+      script:
+        python setup.py pytest
