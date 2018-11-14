@@ -105,7 +105,7 @@ setup(name = "uproot",
       test_suite = "tests",
       install_requires = ["numpy>=1.13.1", "awkward", "uproot-methods>=0.2.0", "cachetools", "lz4"],
       setup_requires = ["pytest-runner"],
-      tests_require = ["pytest", 'backports.lzma;python_version<"3.3"'],
+      tests_require = ["pytest>=3.9", 'backports.lzma;python_version<"3.3"'],
       classifiers = [
           "Development Status :: 5 - Production/Stable",
           "Intended Audience :: Developers",
