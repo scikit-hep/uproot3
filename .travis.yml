@@ -39,18 +39,24 @@ install:
   - if [ "${CONDA_PYTHON_VERION}" = "2.7" ] || [ "${CONDA_PYTHON_VERION}" = "3.6" ] || [ "${CONDA_PYTHON_VERION}" = "3.7" ]; then
       conda config --add channels conda-forge/label/gcc7;
       conda config --add channels chrisburr;
-      conda create -q -n testenv python=${CONDA_PYTHON_VERION} nomkl root pandas;
+      conda create -q -n testenv python=${CONDA_PYTHON_VERION} nomkl root;
     elif [[ "${CONDA_PYTHON_VERION}" = pypy* ]]; then
       conda config --add channels conda-forge;
       conda create -q -n testenv ${CONDA_PYTHON_VERION};
     else
       conda config --add channels conda-forge;
-      conda create -q -n testenv python=${CONDA_PYTHON_VERION} pandas;
+      conda create -q -n testenv python=${CONDA_PYTHON_VERION};
     fi
   - source activate testenv
-  - pip install "pytest>=3.9" pytest-runner
+  - pip install --upgrade setuptools_scm
+  - pip install $NUMPY
+  - python -c 'import numpy; print(numpy.__version__)'
   - pip install awkward
+  - python -c 'import awkward; print(awkward.__version__)'
   - pip install "uproot-methods>=0.2.0"
+  - python -c 'import uproot_methods; print(uproot_methods.__version__)'
+  - pip install "pytest>=3.9" pytest-runner
+  - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install pandas ; fi
 
 addons:
   apt:
@@ -81,25 +87,25 @@ stages:
 
 jobs:
   include:
-    - stage: docs
-      python: '3.6'
-      env: NUMPY="numpy>=1.15"
-      addons:
-        chrome: stable
-        apt:
-          packages:
-            - chromium-chromedriver
-      before_install:
-        - sudo apt-get update
-        - sudo apt-get -qq install pandoc
-        - pip install --upgrade pip setuptools wheel
-        - pip install selenium
-      install:
-        - pip install -U -q .
-      before_script:
-        - ln --symbolic /usr/lib/chromium-browser/chromedriver "${HOME}/bin/chromedriver"
-      script:
-        # Open Binder example in browser to trigger repo2docker to build image
-        - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master
-        - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Ftutorial.ipynb
-        - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Fversion-3-features.ipynb
+  - stage: docs
+    python: '3.6'
+    env: NUMPY="numpy>=1.15"
+    addons:
+      chrome: stable
+      apt:
+        packages:
+          - chromium-chromedriver
+    before_install:
+      - sudo apt-get update
+      - sudo apt-get -qq install pandoc
+      - pip install --upgrade pip setuptools wheel
+      - pip install selenium
+    install:
+      - pip install -U -q .
+    before_script:
+      - ln --symbolic /usr/lib/chromium-browser/chromedriver "${HOME}/bin/chromedriver"
+    script:
+    # Open Binder example in browser to trigger repo2docker to build image
+    - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master
+    - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Ftutorial.ipynb
+    - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Fversion-3-features.ipynb
