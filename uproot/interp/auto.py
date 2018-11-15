@@ -310,7 +310,7 @@ def interpret(branch, swapbytes=True, cntvers=False, tobject=True, speedbump=Tru
                         else:
                             ascontent = asdtype(fromdtype, fromdtype)
                         if branch._isTClonesArray:
-                            return asjagged(ascontent, skipbytes=6)
+                            return asgenobj(SimpleArray(STLVector(asdtype(">i2"))), branch._context, 6)
                         else:
                             return asjagged(ascontent, skipbytes=10)
 
