@@ -750,10 +750,10 @@ def _defineclasses(streamerinfos, classes):
                     else:
                         code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
 
-                elif isinstance(element, TStreamerSTL):
-                    code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
-
                 elif isinstance(element, TStreamerSTLstring):
+                    code.append("        self._{0} = STLString.read(source, cursor, context, self)".format(_safename(element._fName)))
+
+                elif isinstance(element, TStreamerSTL):
                     code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
 
                 elif isinstance(element, (TStreamerObject, TStreamerObjectAny, TStreamerString)):
@@ -835,6 +835,11 @@ class ROOTObject(object):
         return self.__class__.__name__
 
     @classmethod
+    def _readbuffer(cls, buffer, context=None, parent=None):
+        source = uproot.source.source.Source(numpy.frombuffer(buffer, dtype=numpy.uint8))
+        return cls.read(source, Cursor(0), context, parent)
+        
+    @classmethod
     def read(cls, source, cursor, context, parent):
         if cls._copycontext:
             context = context.copy()
@@ -842,7 +847,7 @@ class ROOTObject(object):
         out = cls._readinto(out, source, cursor, context, parent)
         out._postprocess(source, cursor, context, parent)
         return out
-
+        
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         raise NotImplementedError
@@ -1226,6 +1231,26 @@ class TString(bytes, ROOTStreamedObject):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         return TString(cursor.string(source))
+
+    def __str__(self):
+        return self.decode("utf-8", "replace")
+
+class STLString(bytes, ROOTStreamedObject):
+    @classmethod
+    def _readinto(cls, self, source, cursor, context, parent):
+        size, _ = cursor.fields(source, cls._format1)
+        size &= ~numpy.uint32(0x40000000)
+        stop = cursor.index + size - 2   # 2 bytes for the '09'
+        while True:
+            value = STLString(cursor.string(source))
+            print(value, cursor.index, stop)
+            if cursor.index == stop:
+                break
+            elif cursor.index > stop:
+                raise ValueError("STL string format: {0} > {1}".format(cursor.index, stop))
+        return value
+
+    _format1 = struct.Struct(">ih")
 
     def __str__(self):
         return self.decode("utf-8", "replace")
