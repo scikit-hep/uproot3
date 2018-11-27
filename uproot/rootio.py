@@ -1241,13 +1241,8 @@ class STLString(bytes, ROOTStreamedObject):
         size, _ = cursor.fields(source, cls._format1)
         size &= ~numpy.uint32(0x40000000)
         stop = cursor.index + size - 2   # 2 bytes for the '09'
-        while True:
-            value = STLString(cursor.string(source))
-            print(value, cursor.index, stop)
-            if cursor.index == stop:
-                break
-            elif cursor.index > stop:
-                raise ValueError("STL string format: {0} > {1}".format(cursor.index, stop))
+        value = STLString(cursor.string(source))
+        cursor.index = stop
         return value
 
     _format1 = struct.Struct(">ih")
