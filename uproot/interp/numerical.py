@@ -248,6 +248,10 @@ class asdouble32(_asnumeric):
     def todims(self):
         return self._todims
 
+    @property
+    def itemsize(self):
+        return 4
+
     def __repr__(self):
         args = [repr(self.low), repr(self.high), repr(self.numbits)]
 
