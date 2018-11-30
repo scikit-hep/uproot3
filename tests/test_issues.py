@@ -183,3 +183,8 @@ class Test(unittest.TestCase):
     #     assert a1[0]._fArray.shape == (108400,)
     #     a2 = t["MRawEvtData.fHiGainPixId"].array(t["MRawEvtData.fHiGainPixId"].interpretation.speedbump(False))
     #     assert a2[0]._fArray.shape == (1084,)
+
+    def test_issue187(self):
+        t = uproot.open("tests/samples/issue187.root")["fTreeV0"]
+        assert (t.array("fMultiplicity") == -1).all()
+        assert t.array("V0s.fEtaPos")[-3].tolist() == [-0.390625, 0.046875]
