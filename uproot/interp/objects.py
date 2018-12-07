@@ -93,7 +93,7 @@ class STLString(object):
 
     def read(self, source, cursor, context, parent):
         numitems = cursor.field(source, self._format1)
-        return cursor.array(source, numitems, awkward.array.base.AwkwardArray.CHARTYPE).tostring()
+        return cursor.array(source, numitems, awkward.ObjectArray.CHARTYPE).tostring()
 
 class astable(uproot.interp.interp.Interpretation):
     # makes __doc__ attribute mutable before Python 3.3
@@ -281,7 +281,7 @@ class asgenobj(_variable):
                 return repr(self.cls)
 
     def __init__(self, cls, context, skipbytes):
-        super(asgenobj, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(awkward.JaggedArray.CHARTYPE), skipbytes=skipbytes), asgenobj._Wrapper(cls, context))
+        super(asgenobj, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(awkward.ObjectArray.CHARTYPE), skipbytes=skipbytes), asgenobj._Wrapper(cls, context))
 
     def speedbump(self, value):
         out = copy.copy(self)
@@ -298,7 +298,7 @@ class asstring(_variable):
     __metaclass__ = type.__new__(type, "type", (_variable.__metaclass__,), {})
 
     def __init__(self, skipbytes=1):
-        super(asstring, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(awkward.JaggedArray.CHARTYPE), skipbytes=skipbytes), lambda array: array.tostring())
+        super(asstring, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(awkward.ObjectArray.CHARTYPE), skipbytes=skipbytes), lambda array: array.tostring())
 
     def __repr__(self):
         return "asstring({0})".format("" if self.content.skipbytes == 1 else repr(self.content.skipbytes))
