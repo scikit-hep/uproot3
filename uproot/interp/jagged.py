@@ -80,7 +80,7 @@ class asjagged(uproot.interp.interp.Interpretation):
         return awkward.type.ArrayType(awkward.util.numpy.inf, self.content.type)
 
     def empty(self):
-        return awkward.JaggedArray(awkward.util.numpy.empty(0, dtype=awkward.util.INDEXTYPE), awkward.util.numpy.empty(0, dtype=awkward.util.INDEXTYPE), self.content.empty())
+        return awkward.JaggedArray(awkward.util.numpy.empty(0, dtype=awkward.JaggedArray.INDEXTYPE), awkward.util.numpy.empty(0, dtype=awkward.JaggedArray.INDEXTYPE), self.content.empty())
 
     def compatible(self, other):
         return isinstance(other, asjagged) and self.content.compatible(other.content)
@@ -130,7 +130,7 @@ class asjagged(uproot.interp.interp.Interpretation):
                 else:
                     awkward.util.numpy.floor_divide(counts, itemsize, out=counts)
 
-                offsets = awkward.util.numpy.empty(len(counts) + 1, awkward.util.INDEXTYPE)
+                offsets = awkward.util.numpy.empty(len(counts) + 1, awkward.JaggedArray.INDEXTYPE)
                 offsets[0] = 0
                 awkward.util.numpy.cumsum(counts, out=offsets[1:])
 
@@ -138,7 +138,7 @@ class asjagged(uproot.interp.interp.Interpretation):
 
     def destination(self, numitems, numentries):
         content = self.content.destination(numitems, numentries)
-        counts = awkward.util.numpy.empty(numentries, dtype=awkward.util.INDEXTYPE)
+        counts = awkward.util.numpy.empty(numentries, dtype=awkward.JaggedArray.INDEXTYPE)
         return _JaggedArrayPrep(counts, content)
 
     def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
