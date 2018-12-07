@@ -35,7 +35,7 @@ install:
   - pip install --upgrade setuptools_scm
   - pip install $NUMPY
   - python -c 'import numpy; print(numpy.__version__)'
-  - pip install awkward
+  - pip install "awkward>=0.5.6"
   - python -c 'import awkward; print(awkward.__version__)'
   - pip install "uproot-methods>=0.2.0"
   - python -c 'import uproot_methods; print(uproot_methods.__version__)'

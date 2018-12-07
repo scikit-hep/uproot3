@@ -1,5 +1,5 @@
 numpy>=1.13.1
-awkward
+awkward>=0.5.6
 uproot-methods>=0.2.0
 cachetools
 lz4

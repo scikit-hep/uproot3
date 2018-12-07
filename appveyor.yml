@@ -45,6 +45,7 @@ install:
 
 build_script:
   - "pip install %NUMPY%"
+  - "pip install awkward>=0.5.6"
   - "pip install uproot-methods>=0.2.0"
   - "pip install -i https://pypi.anaconda.org/carlkl/simple backports.lzma"
   - "pip install pytest pytest-runner pandas"
