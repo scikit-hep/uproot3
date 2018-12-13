@@ -30,7 +30,6 @@
 
 import unittest
 
-import numpy
 try:
     import lzma
 except ImportError:

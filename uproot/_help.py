@@ -423,6 +423,10 @@ tree_fragments = {
     "entrysteps": u"""entrysteps : ``None``, positive int, or iterable of *(int, int)* pairs
         if ``None`` *(default)*, iterate in steps of TTree clusters (number of entries for which all branches' baskets align); if an integer, iterate in steps of equal numbers of entries (except at the end of a file); otherwise, iterate in explicit, user-specified *(start, stop)* intervals ("start" is inclusive and "stop" is exclusive).""",
 
+    # entrysteps_tree
+    "entrysteps_tree": u"""entrysteps : ``None``, positive int, or iterable of *(int, int)* pairs
+        if ``None`` *(default)*, iterate in steps of TTree clusters (number of entries for which all branches' baskets align); if an integer, iterate in steps of equal numbers of entries; otherwise, iterate in explicit, user-specified *(start, stop)* intervals ("start" is inclusive and "stop" is exclusive).""",
+
     # branch
     "branch": u"""branch : str
         name of the branch to read.""",
@@ -877,7 +881,7 @@ u"""Iterate over many arrays at once, yielding the same number of entries from a
     ----------
     {branches}
 
-    {entrysteps}
+    {entrysteps_tree}
 
     {outputtype}
 
