@@ -95,6 +95,7 @@ pass a dict-like object to the cache parameter and uproot will try the cache fir
     arrays = tree.arrays(["Muon_*"], cache=cache)    # fast
 
 You control the cache object. If you're running out of memory, remove it or remove items from it.
+Or use one of the dict-like caches from cachetools (already installed) or another library.
 
 For parallel processing, pass a Python 3 executor.
 

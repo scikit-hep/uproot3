@@ -4,5 +4,5 @@ uproot-methods>=0.2.0
 cachetools
 pkgconfig
 lz4
-pandas
 backports.lzma;python_version<"3.3"
+pandas
