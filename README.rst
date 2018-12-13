@@ -483,11 +483,11 @@ A ``for`` loop over a ``dict`` just iterates over the names. We've read in three
      [ 2  2  2  2  2  2  2  2  2  2]
      [ 3  3  3  3  3  3  3  3  3  3]
 
-The **entrystart** and **entrystop** parameters let you slice an array while reading it, to avoid reading more than you want. See `Reading only part of a TBranch`__ below.
+The **entrystart** and **entrystop** parameters let you slice an array while reading it, to avoid reading more than you want. See `Reading only part of a TBranch <#reading-only-part-of-a-tbranch>`__ below.
 
-The **cache**, **basketcache**, and **keycache** parameters allow you to avoid re-reading data without significantly altering your code. See `Caching data`__ below.
+The **cache**, **basketcache**, and **keycache** parameters allow you to avoid re-reading data without significantly altering your code. See `Caching data <#caching-data>`__ below.
 
-The **executor** and **blocking** parameters allow you to read and possibly decompress the branches in parallel. See `Parallel processing`__ below.
+The **executor** and **blocking** parameters allow you to read and possibly decompress the branches in parallel. See `Parallel processing <#parallel-processing>`__ below.
 
 All of the `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__ and `TBranch <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods>`__ methods that read data into arrays— ``array``, ``lazyarray``, ``arrays``,  ``lazyarrays``, ``iterate``, ``basket``, ``baskets``, and ``iterate_baskets``— all use these parameters consistently. If you understand what they do for one method, you understand them all.
 
@@ -572,7 +572,7 @@ When we ask for the whole array, all eight of the baskets would be read, decompr
     >>> branch.array(entrystart=5, entrystop=15)
     array([ 5,  6,  7,  8,  9, 10, 11, 12, 13, 14], dtype=int32)
 
-We can demonstrate that this is actually happening with a cache (see `Caching data`__ below).
+We can demonstrate that this is actually happening with a cache (see `Caching data <#caching-data>`__ below).
 
 .. code-block:: python
 
@@ -652,7 +652,7 @@ One reason you might want to only part of an array is to get a sense of the data
 
 Whenever a lazy array is indexed or sliced, it loads as little as possible to yield the result. Slicing everything (``[:]``) gives you a normal array.
 
-Since caching in uproot is always explicit (for consistency: see `Caching data`__), repeatedly indexing the same value repeatedly reads from the file unless you specify a cache. You'd probably always want to provide lazy arrays with caches.
+Since caching in uproot is always explicit (for consistency: see `Caching data <#caching-data>`__), repeatedly indexing the same value repeatedly reads from the file unless you specify a cache. You'd probably always want to provide lazy arrays with caches.
 
 Another reason to want to read part of an array is to efficiently iterate over data. `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__ has an ``iterate`` method for that purpose (which, incidentally, also takes **entrystart** and **entrystop** parameters).
 
