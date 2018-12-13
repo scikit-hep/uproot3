@@ -30,7 +30,7 @@
 
 import struct
 
-import numpy
+import awkward.util
 
 import uproot.const
 import uproot.source.source
@@ -168,12 +168,12 @@ class CompressedSource(uproot.source.source.Source):
 
                 if filled == 0:
                     if uncompressedbytes == self._uncompressedbytes:  # usual case: only one block
-                        self._uncompressed = numpy.frombuffer(asstr, dtype=numpy.uint8)
+                        self._uncompressed = awkward.util.numpy.frombuffer(asstr, dtype=awkward.util.numpy.uint8)
                         return
                     else:
-                        self._uncompressed = numpy.empty(self._uncompressedbytes, dtype=numpy.uint8)
+                        self._uncompressed = awkward.util.numpy.empty(self._uncompressedbytes, dtype=awkward.util.numpy.uint8)
 
-                self._uncompressed[filled : filled + uncompressedbytes] = numpy.frombuffer(asstr, dtype=numpy.uint8)
+                self._uncompressed[filled : filled + uncompressedbytes] = awkward.util.numpy.frombuffer(asstr, dtype=awkward.util.numpy.uint8)
                 filled += uncompressedbytes
 
     def size(self):

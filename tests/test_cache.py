@@ -32,8 +32,6 @@ import unittest
 
 from collections import namedtuple
 
-import numpy
-
 import uproot
 
 class Test(unittest.TestCase):

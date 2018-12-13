@@ -48,14 +48,14 @@ Strict dependencies:
 The following are installed automatically when you install uproot with pip:
 
 - `Numpy <https://scipy.org/install.html>`__ (1.13.1+)
-- `awkward-array <https://pypi.org/project/awkward>`__ to manipulate data from non-flat TTrees, such as jagged arrays (`part of Scikit-HEP <https://github.com/scikit-hep/awkward-array>`__)
-- `uproot-methods <https://pypi.org/project/uproot-methods>`__ (0.2.0+) for histogram and physics object methods, such as TLorentzVector (`part of Scikit-HEP <https://github.com/scikit-hep/uproot-methods>`__)
+- `awkward-array <https://pypi.org/project/awkward>`__ (0.7.0+) to manipulate data from non-flat TTrees, such as jagged arrays (`part of Scikit-HEP <https://github.com/scikit-hep/awkward-array>`__)
+- `uproot-methods <https://pypi.org/project/uproot-methods>`__ (0.3.0+) for histogram and physics object methods, such as TLorentzVector (`part of Scikit-HEP <https://github.com/scikit-hep/uproot-methods>`__)
 - `cachetools <https://pypi.org/project/cachetools>`__ for dict-like caches (replaces uproot 2's custom caches)
-- `lz4 <https://pypi.org/project/lz4>`__ to read lz4-compressed ROOT files (now ROOT's default compression method)
 
 Optional dependencies:
 ======================
 
+- `lz4 <https://pypi.org/project/lz4>`__ to read lz4-compressed ROOT files (now ROOT's default compression method)
 - `lzma <https://anaconda.org/conda-forge/backports.lzma>`__ to read lzma-compressed ROOT files in Python 2 (not needed for Python 3 or if your ROOT files aren't lzma-compressed)
 - `futures <https://pypi.python.org/pypi/futures>`__ for parallel processing in Python 2 (not needed for Python 3 or if you don't plan to use parallel processing)
 - `XRootD <https://anaconda.org/nlesc/xrootd>`__ to access remote files; get version 4 or later for pyxrootd to be included in the package (unfortunately, you have to compile it manually with CMake)
@@ -63,6 +63,11 @@ Optional dependencies:
 **Reminder: you do not need C++ ROOT to run uproot.**
 
 .. inclusion-marker-3-do-not-remove
+
+Interactive Tutorials
+=====================
+
+Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Ftutorial.ipynb>`__ on Binder.
 
 Tutorial
 ========
@@ -80,13 +85,6 @@ Tutorial
 * `Caching data <#caching-data>`__
 * `Parallel processing <#parallel-processing>`__
 * `Connectors to other packages <#connectors-to-other-packages>`__
-
-Interactive Tutorials
-=====================
-
-Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Ftutorial.ipynb>`__ on Binder.
-
-**New!** Try the `uproot 3 tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Fversion-3-features.ipynb>`__ to see the new jagged arrays and write support, also on Binder.
 
 Reference documentation
 =======================
@@ -483,11 +481,11 @@ A ``for`` loop over a ``dict`` just iterates over the names. We've read in three
      [ 2  2  2  2  2  2  2  2  2  2]
      [ 3  3  3  3  3  3  3  3  3  3]
 
-The **entrystart** and **entrystop** parameters let you slice an array while reading it, to avoid reading more than you want. See `Reading only part of a TBranch`__ below.
+The **entrystart** and **entrystop** parameters let you slice an array while reading it, to avoid reading more than you want. See `Reading only part of a TBranch <#reading-only-part-of-a-tbranch>`__ below.
 
-The **cache**, **basketcache**, and **keycache** parameters allow you to avoid re-reading data without significantly altering your code. See `Caching data`__ below.
+The **cache**, **basketcache**, and **keycache** parameters allow you to avoid re-reading data without significantly altering your code. See `Caching data <#caching-data>`__ below.
 
-The **executor** and **blocking** parameters allow you to read and possibly decompress the branches in parallel. See `Parallel processing`__ below.
+The **executor** and **blocking** parameters allow you to read and possibly decompress the branches in parallel. See `Parallel processing <#parallel-processing>`__ below.
 
 All of the `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__ and `TBranch <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods>`__ methods that read data into arrays— ``array``, ``lazyarray``, ``arrays``,  ``lazyarrays``, ``iterate``, ``basket``, ``baskets``, and ``iterate_baskets``— all use these parameters consistently. If you understand what they do for one method, you understand them all.
 
@@ -572,7 +570,7 @@ When we ask for the whole array, all eight of the baskets would be read, decompr
     >>> branch.array(entrystart=5, entrystop=15)
     array([ 5,  6,  7,  8,  9, 10, 11, 12, 13, 14], dtype=int32)
 
-We can demonstrate that this is actually happening with a cache (see `Caching data`__ below).
+We can demonstrate that this is actually happening with a cache (see `Caching data <#caching-data>`__ below).
 
 .. code-block:: python
 
@@ -652,7 +650,7 @@ One reason you might want to only part of an array is to get a sense of the data
 
 Whenever a lazy array is indexed or sliced, it loads as little as possible to yield the result. Slicing everything (``[:]``) gives you a normal array.
 
-Since caching in uproot is always explicit (for consistency: see `Caching data`__), repeatedly indexing the same value repeatedly reads from the file unless you specify a cache. You'd probably always want to provide lazy arrays with caches.
+Since caching in uproot is always explicit (for consistency: see `Caching data <#caching-data>`__), repeatedly indexing the same value repeatedly reads from the file unless you specify a cache. You'd probably always want to provide lazy arrays with caches.
 
 Another reason to want to read part of an array is to efficiently iterate over data. `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__ has an ``iterate`` method for that purpose (which, incidentally, also takes **entrystart** and **entrystop** parameters).
 

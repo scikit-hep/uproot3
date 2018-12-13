@@ -55,7 +55,7 @@ class HTTPSource(uproot.source.chunked.ChunkedSource):
     def size(self):
         return self._size
 
-    _contentrange = re.compile("^bytes [0-9]+-[0-9]+/([0-9]+)$")
+    _contentrange = re.compile("^bytes ([0-9]+)-([0-9]+)/([0-9]+)$")
 
     def _read(self, chunkindex):
         request = Request(self.path, headers={"Range": "bytes={0}-{1}".format(chunkindex * self._chunkbytes, (chunkindex + 1) * self._chunkbytes)})
@@ -64,5 +64,7 @@ class HTTPSource(uproot.source.chunked.ChunkedSource):
         if self._size is None:
             m = self._contentrange.match(handle.headers.get("content-range", ""))
             if m is not None:
-                self._size = int(m.group(1))
+                start_inclusive, stop_inclusive, size = int(m.group(1)), int(m.group(2)), int(m.group(3))
+                if size > (stop_inclusive - start_inclusive) + 1:
+                    self._size = size
         return numpy.frombuffer(data, dtype=numpy.uint8)

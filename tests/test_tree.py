@@ -615,7 +615,7 @@ class Test(unittest.TestCase):
                  1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
                  1.0, 0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
                  0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        assert tree.array("fH")[20].values == check
+        assert tree.array("fH")[20].values.tolist() == check
 
     def test_leaflist(self):
         tree = uproot.open("tests/samples/leaflist.root")["tree"]
