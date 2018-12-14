@@ -834,22 +834,11 @@ Non-TTrees\: histograms and more
 
 The uproot implementation is fairly general, to be robust against changes in the ROOT format. ROOT has a wonderful backward-compatibility mechanism called "streamers," which specify how bytes translate into data fields for every type of object contained in the file. Even such basic types as ``TObjArray`` and ``TNamed`` are defined by streamers.
 
-To read a `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__, uproot first consults the streamers in your ROOT file to know how to deserialize your particular version of `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__. This is why the `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__ class contains so many members starting with "f"— they are the C++ class private members, and uproot is literally following the prescription to deserialize the C++ class. Pythonic attributes like ``tree.name`` and ``tree.numentries`` are aliases for ``tree.fName`` and ``tree.fEntries``, etc.
-
-.. code-block:: python
-
-    >>> [x for x in dir(tree) if x.startswith("_f")]
-    ['_fAliases', '_fAutoFlush', '_fAutoSave', '_fBranchRef', '_fBranches', '_fClusterRangeEnd',
-     '_fClusterSize', '_fDefaultEntryOffsetLen', '_fEntries', '_fEstimate', '_fFillColor',
-     '_fFillStyle', '_fFlushedBytes', '_fFriends', '_fIndex', '_fIndexValues', '_fLeaves',
-     '_fLineColor', '_fLineStyle', '_fLineWidth', '_fMarkerColor', '_fMarkerSize',
-     '_fMarkerStyle', '_fMaxEntries', '_fMaxEntryLoop', '_fMaxVirtualSize', '_fNClusterRange',
-     '_fName', '_fSavedBytes', '_fScanField', '_fTimerInterval', '_fTitle', '_fTotBytes',
-     '_fTreeIndex', '_fUpdate', '_fUserInfo', '_fWeight', '_fZipBytes', '_filter']
+To read a `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__, uproot first consults the streamers in your ROOT file to know how to deserialize your particular version of that class. This is why it contains so many members starting with ``"_f"``: they are the C++ class private members, and uproot is literally following the prescription to deserialize the C++ class. Pythonic attributes like ``tree.name`` and ``tree.numentries`` are aliases for ``tree._fName`` and ``tree._fEntries``, etc.
 
 This means that literally any kind of object may be read from a `ROOTDirectory <http://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootdirectory>`__. Even if the uproot authors have never heard of it, the new data type will have a streamer in the file, and uproot will follow that prescription to make an object with the appropriate private fields. What you do with that object is another story: the member functions, written in C++, are *not* serialized into the ROOT file, and thus the Python object will have data but no functionality.
 
-We have to add functionality by writing the equivalent Python. The uproot `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__ implementation is a bundle of functions that expect private members like ``fName``, ``fEntries``, and ``fBranches``. Other ROOT types can be wrapped in similar ways. Histograms are useful, and therefore the ``TH1`` classes are similarly wrapped:
+We have to add functionality by writing the equivalent Python. The uproot `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__ implementation is a bundle of functions that expect private members like ``_fName``, ``_fEntries``, and ``_fBranches``. Other ROOT types can be wrapped in similar ways. Histograms are useful, and therefore the ``TH1`` classes are similarly wrapped:
 
 .. code-block:: bash
 
@@ -881,7 +870,7 @@ We have to add functionality by writing the equivalent Python. The uproot `TTree
     [3, inf]     0    |                                                            |
                       +------------------------------------------------------------+
 
-Code to view histograms in Pythonic plotting packages is in development, but this is a wide-open area for future development. For now, uproot's ability to read histograms is useful for querying bin values in scripts, like so.
+Code to view histograms in Pythonic plotting packages is in development, but this is a wide-open area for the future. For now, uproot's ability to read histograms is useful for querying bin values in scripts, like so.
 
 .. code-block:: python
 
