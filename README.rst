@@ -887,13 +887,15 @@ Code to view histograms in Pythonic plotting packages is in development, but thi
 
     >>> h = file["one"]
     >>> h.edges  # returns a numpy array of bin edges, excluding under/overflow bins
-    [-3.0 -2.4 -1.8 -1.2 -0.6 0.0 0.6 1.2 1.8 2.4 3.0]
+    array([-3. , -2.4, -1.8, -1.2, -0.6,  0. ,  0.6,  1.2,  1.8,  2.4,  3. ])
     >>> h.values  # returns counter values, excluding *flow bins
-    [68 285 755 1580 2296 2286 1570 795 289 76]
-    >>> h.variances  # returns variance estimates, excluding *flow bins
-    [68 285 755 1580 2296 2286 1570 795 289 76]
+    array([  68.,  285.,  755., 1580., 2296., 2286., 1570.,  795.,  289.,
+             76.], dtype=float32)
+    >>> h.variances  # returns counter variances for weighted histogram (*flow bins excluded)
+    h.variances
+    array([], dtype=float64)
 
-There are corresponding fields `alledges`, `allvalues`, and `allvariances`, which include the under/overflow bins.
+There are corresponding fields ``alledges``, ``allvalues``, and ``allvariances``, which include the under/overflow bins.
 
 Caching data
 ------------
