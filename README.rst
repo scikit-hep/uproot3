@@ -890,7 +890,7 @@ Code to view histograms in Pythonic plotting packages is in development, but thi
     array([-3. , -2.4, -1.8, -1.2, -0.6,  0. ,  0.6,  1.2,  1.8,  2.4,  3. ])
     >>> h.values     # returns counter values, excluding *flow bins
     array([  68.,  285.,  755., 1580., 2296., 2286., 1570.,  795.,  289., 76.], dtype=float32)
-    >>> h.variances  # returns counter variances for weighted histogram (*flow bins excluded)
+    >>> h.variances  # returns counter variances for weighted histograms (*flow bins excluded)
     array([], dtype=float64)
 
 There are corresponding fields ``alledges``, ``allvalues``, and ``allvariances``, which include the under/overflow bins.
