@@ -881,15 +881,19 @@ We have to add functionality by writing the equivalent Python. The uproot `TTree
     [3, inf]     0    |                                                            |
                       +------------------------------------------------------------+
 
+Code to view histograms in Pythonic plotting packages is in development, but this is a wide-open area for future development. For now, uproot's ability to read histograms is useful for querying bin values in scripts, like so.
+
 .. code-block:: python
 
-    >>> [x for x in dir(file["one"]) if not x.startswith("_") and not x.startswith("f")]
-    ['allvalues', 'append', 'bokeh', 'classname', 'classversion', 'clear', 'copy', 'count',
-     'extend', 'high', 'holoviews', 'index', 'insert', 'interval', 'low', 'name', 'numbins',
-     'numpy', 'overflows', 'pop', 'read', 'remove', 'reverse', 'show', 'sort', 'title',
-     'underflows', 'values', 'xlabels']
+    >>> h = file["one"]
+    >>> h.edges  # returns a numpy array of bin edges, excluding under/overflow bins
+    [-3.0 -2.4 -1.8 -1.2 -0.6 0.0 0.6 1.2 1.8 2.4 3.0]
+    >>> h.values  # returns counter values, excluding *flow bins
+    [68 285 755 1580 2296 2286 1570 795 289 76]
+    >>> h.variances  # returns variance estimates, excluding *flow bins
+    [68 285 755 1580 2296 2286 1570 795 289 76]
 
-Code to view histograms in Pythonic plotting packages is in development, but this is a wide-open area for future development. For now, uproot's ability to read histograms is useful for querying bin values in scripts.
+There are corresponding fields `alledges`, `allvalues`, and `allvariances`, which include the under/overflow bins.
 
 Caching data
 ------------
