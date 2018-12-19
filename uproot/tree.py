@@ -145,7 +145,11 @@ def _iterate(path, treepath, branches, localsource, xrootdsource, httpsource, **
     outerstart = 0
     globalentrystart = 0
     for path in paths:
-        tree = uproot.rootio.open(path, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)[treepath]
+        file = uproot.rootio.open(path, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)
+        try:
+            tree = file[treepath]
+        except KeyError:
+            continue
         listbranches = list(tree._normalize_branches(branches))
 
         newbranches = OrderedDict((branch.name, interpretation) for branch, interpretation in listbranches)
