@@ -1621,7 +1621,10 @@ def _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, e
             try:
                 source = file._context.source
                 file._context.classes["TTree"] = _TTreeForNumEntries
-                out[i] = file[treepath]._fEntries
+                try:
+                    out[i] = file[treepath]._fEntries
+                except KeyError:
+                    out[i] = 0
                 uuids[i] = file._context.uuid
             except:
                 return sys.exc_info()
