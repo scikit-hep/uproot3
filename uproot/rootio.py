@@ -950,7 +950,7 @@ class TStreamerInfo(ROOTObject):
         start, cnt, self._classversion = _startcheck(source, cursor)
         self._fName = _canonicaltype(_nametitle(source, cursor)[0])
         self._fCheckSum, self._fClassVersion = cursor.fields(source, TStreamerInfo._format)
-        self._fElements = _readobjany(source, cursor, context, parent)
+        self._fElements = _readobjany(source, cursor, context, self)
         assert isinstance(self._fElements, list)
         _endcheck(start, cursor, cnt)
         return self
@@ -998,6 +998,9 @@ class TStreamerElement(ROOTObject):
             # FIXME
             # if (TestBit(kHasRange)) GetRange(GetTitle(),fXmin,fXmax,fFactor)
             pass
+
+        if parent._fName == b"TBranch" and self._fName == b"fBasketSeek" and context.tfile["_fVersion"] >= 1000000 and self._fType == uproot.const.kOffsetP + uproot.const.kInt:
+            self._fType = uproot.const.kOffsetP + uproot.const.kLong
 
         _endcheck(start, cursor, cnt)
         return self
