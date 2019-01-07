@@ -688,7 +688,7 @@ def _defineclasses(streamerinfos, classes):
                     dtypename = "_dtype{0}".format(len(dtypes) + 1)
                     dtypes[dtypename] = _ftype2dtype(fType)
 
-                    code.append("        fBasketSeek_dtype = self.{0}".format(dtypename))
+                    code.append("        fBasketSeek_dtype = cls.{0}".format(dtypename))
                     if streamerinfo._fName == b"TBranch" and element._fName == b"fBasketSeek":
                         code.append("        if getattr(context, \"speedbump\", True):")
                         code.append("            if cursor.bytes(source, 1)[0] == 2:")
