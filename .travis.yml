@@ -85,5 +85,3 @@ jobs:
     script:
     # Use Binder build API to trigger repo2docker to build image
     - python -m webbrowser "https://mybinder.org/build/gh/scikit-hep/uproot/master"
-    - python -m webbrowser "https://mybinder.org/build/gh/scikit-hep/uproot/master?filepath=binder%2Ftutorial.ipynb"
-    - python -m webbrowser "https://mybinder.org/build/gh/scikit-hep/uproot/master?filepath=binder%2Fversion-3-features.ipynb"
