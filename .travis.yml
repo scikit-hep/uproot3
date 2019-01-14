@@ -68,30 +68,17 @@ deploy:
 
 stages:
   - test
-  - name: docs
+  - name: binder
     if: (branch = master) AND (NOT (type IN (pull_request)))
 
 jobs:
   include:
-  - stage: docs
+  - stage: binder
     python: '3.6'
     env: NUMPY="numpy>=1.15"
-    addons:
-      chrome: stable
-      apt:
-        packages:
-          - chromium-chromedriver
-    before_install:
-      - sudo apt-get update
-      - sudo apt-get -qq install pandoc
-      - pip install --upgrade pip setuptools wheel
-      - pip install selenium
-    install:
-      - pip install -U -q .
-    before_script:
-      - ln --symbolic /usr/lib/chromium-browser/chromedriver "${HOME}/bin/chromedriver"
+    addons: skip
+    before_install: skip
+    install: skip
     script:
-    # Open Binder example in browser to trigger repo2docker to build image
-    - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master
-    - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Ftutorial.ipynb
-    - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Fversion-3-features.ipynb
+    # Use Binder build API to trigger repo2docker to build image
+    - curl https://mybinder.org/build/gh/scikit-hep/uproot/master
