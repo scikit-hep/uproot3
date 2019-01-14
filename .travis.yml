@@ -76,12 +76,9 @@ jobs:
   - stage: docs
     python: '3.6'
     env: NUMPY="numpy>=1.15"
-    before_install:
-      - sudo apt-get update
-      - sudo apt-get -qq install pandoc
-      - pip install --upgrade pip setuptools wheel
-    install:
-      - pip install -U -q .
+    addons: skip
+    before_install: skip
+    install: skip
     script:
     # Use Binder build API to trigger repo2docker to build image
     - python -m webbrowser "https://mybinder.org/build/gh/scikit-hep/uproot/master"
