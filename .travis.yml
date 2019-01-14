@@ -68,12 +68,12 @@ deploy:
 
 stages:
   - test
-  - name: docs
+  - name: binder
     if: (branch = master) AND (NOT (type IN (pull_request)))
 
 jobs:
   include:
-  - stage: docs
+  - stage: binder
     python: '3.6'
     env: NUMPY="numpy>=1.15"
     addons: skip
