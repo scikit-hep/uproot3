@@ -81,4 +81,4 @@ jobs:
     install: skip
     script:
     # Use Binder build API to trigger repo2docker to build image
-    - python -m webbrowser "https://mybinder.org/build/gh/scikit-hep/uproot/master"
+    - curl https://mybinder.org/build/gh/scikit-hep/uproot/master
