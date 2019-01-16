@@ -3,3 +3,4 @@ awkward>=0.7.0
 uproot-methods>=0.3.0
 cachetools
 backports.lzma;python_version<"3.3"
+requests

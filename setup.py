@@ -103,7 +103,7 @@ setup(name = "uproot",
       download_url = "https://github.com/scikit-hep/uproot/releases",
       license = "BSD 3-clause",
       test_suite = "tests",
-      install_requires = ["numpy>=1.13.1", "awkward>=0.7.0", "uproot-methods>=0.3.0", "cachetools"],
+      install_requires = ["numpy>=1.13.1", "awkward>=0.7.0", "uproot-methods>=0.3.0", "cachetools", "requests"],
       setup_requires = ["pytest-runner"],
       tests_require = ["pytest", "pkgconfig", "lz4", 'backports.lzma;python_version<"3.3"'],
       classifiers = [
