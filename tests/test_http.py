@@ -1,4 +1,5 @@
 import unittest
+import pytest
 
 import uproot
 
@@ -19,7 +20,7 @@ class Test(unittest.TestCase):
         assert type(f) == uproot.rootio.ROOTDirectory
 
     def test_auth_needed_no_auth(self):
-        with self.assertRaises(HTTPError):
+        with pytest.raises(HTTPError):
             f = uproot.open(self.url_auth)
         assert context_manager.exception.response.status_code == 401
 
@@ -28,6 +29,6 @@ class Test(unittest.TestCase):
         assert type(f) == uproot.rootio.ROOTDirectory
 
     def test_auth_needed_wrong_auth(self):
-        with self.assertRaises(HTTPError):
+        with pytest.raises(HTTPError):
             f = uproot.open(self.url_auth, httpsource={"auth": ("", "")})
         assert context_manager.exception.response.status_code == 401
