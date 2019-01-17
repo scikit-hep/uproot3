@@ -30,7 +30,6 @@
 
 import os.path
 import re
-import requests
 
 import numpy
 
@@ -48,7 +47,10 @@ class HTTPSource(uproot.source.chunked.ChunkedSource):
     defaults = {"chunkbytes": 16*1024, "limitbytes": 16*1024**2}
 
     def _open(self):
-        pass
+        try:
+            import requests
+        except ImportError:
+            raise ImportError("\n\nInstall requests package (for HTTP) with:\n\n    pip install requests\nor\n    conda install -c anaconda requests")
 
     def size(self):
         return self._size
@@ -56,6 +58,7 @@ class HTTPSource(uproot.source.chunked.ChunkedSource):
     _contentrange = re.compile("^bytes ([0-9]+)-([0-9]+)/([0-9]+)$")
 
     def _read(self, chunkindex):
+        import requests
         response = requests.get(
             self.path,
             headers={"Range": "bytes={0}-{1}".format(chunkindex * self._chunkbytes, (chunkindex + 1) * self._chunkbytes)},
