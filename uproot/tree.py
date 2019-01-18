@@ -209,6 +209,12 @@ class TTreeMethods(object):
             elif len(streamer._fElements) == 1 and isinstance(streamer._fElements[0], uproot.rootio.TStreamerSTL) and streamer._fElements[0]._fName == b"This":
                 return self._attachstreamer(branch, streamer._fElements[0], streamerinfosmap, isTClonesArray)
 
+        if isinstance(streamer, uproot.rootio.TStreamerObject):
+            if streamer._fTypeName == b"TClonesArray":
+                return self._attachstreamer(branch, streamerinfosmap.get(branch._fClonesName, None), streamerinfosmap, True)
+            else:
+                return self._attachstreamer(branch, streamerinfosmap.get(streamer._fTypeName, None), streamerinfosmap, True)
+
         branch._streamer = streamer
         branch._isTClonesArray = isTClonesArray
         if isinstance(streamer, uproot.rootio.TStreamerSTL) and streamer._fSTLtype == uproot.const.kSTLvector:
