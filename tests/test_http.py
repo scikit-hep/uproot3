@@ -8,9 +8,9 @@ from requests.exceptions import HTTPError
 
 
 FILE = "foriter"
-LOCAL = f"tests/samples/{FILE}.root"
-URL = f"http://scikit-hep.org/uproot/examples/{FILE}.root"
-URL_AUTH = f"http://scikit-hep.org/uproot/authentication/{FILE}.root"
+LOCAL = "tests/samples/{FILE}.root".format(FILE=FILE)
+URL = "http://scikit-hep.org/uproot/examples/{FILE}.root".format(FILE=FILE)
+URL_AUTH = "http://scikit-hep.org/uproot/authentication/{FILE}.root".format(FILE=FILE)
 AUTH = ("scikit-hep", "uproot")
 
 
