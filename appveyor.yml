@@ -48,5 +48,5 @@ build_script:
   - "pip install awkward>=0.7.0"
   - "pip install uproot-methods>=0.3.0"
   - "pip install -i https://pypi.anaconda.org/carlkl/simple backports.lzma"
-  - "pip install pytest pytest-runner pandas"
+  - "pip install pytest pytest-runner pandas requests"
   - "python setup.py pytest"

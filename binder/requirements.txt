@@ -6,3 +6,4 @@ pkgconfig
 lz4
 backports.lzma;python_version<"3.3"
 pandas
+requests
