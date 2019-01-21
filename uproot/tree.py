@@ -384,25 +384,25 @@ class TTreeMethods(object):
     def clusters(self, branches=None, entrystart=None, entrystop=None, strict=False):
         branches = list(self._normalize_branches(branches))
 
-        if len(branches) == 0:
+        # convenience class; simplifies presentation of the algorithm
+        class BranchCursor(object):
+            def __init__(self, branch):
+                self.branch = branch
+                self.basketstart = 0
+                self.basketstop = 0
+            @property
+            def entrystart(self):
+                return self.branch.basket_entrystart(self.basketstart)
+            @property
+            def entrystop(self):
+                return self.branch.basket_entrystop(self.basketstop)
+
+        cursors = [BranchCursor(branch) for branch, interpretation in branches if branch.numbaskets > 0]
+
+        if len(cursors) == 0:
             yield self._normalize_entrystartstop(entrystart, entrystop)
 
         else:
-            # convenience class; simplifies presentation of the algorithm
-            class BranchCursor(object):
-                def __init__(self, branch):
-                    self.branch = branch
-                    self.basketstart = 0
-                    self.basketstop = 0
-                @property
-                def entrystart(self):
-                    return self.branch.basket_entrystart(self.basketstart)
-                @property
-                def entrystop(self):
-                    return self.branch.basket_entrystop(self.basketstop)
-
-            cursors = [BranchCursor(branch) for branch, interpretation in branches]
-
             # everybody starts at the same entry number; if there is no such place before someone runs out of baskets, there will be an exception
             leadingstart = max(cursor.entrystart for cursor in cursors)
             while not all(cursor.entrystart == leadingstart for cursor in cursors):
