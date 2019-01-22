@@ -302,6 +302,9 @@ class asstring(_variable):
 
     def __repr__(self):
         return "asstring({0})".format("" if self.content.skipbytes == 1 else repr(self.content.skipbytes))
+    @property
+    def identifier(self):
+        return "asstring({0})".format("" if self.content.skipbytes == 1 else repr(self.content.skipbytes))
 
     def compatible(self, other):
         return isinstance(other, asstring)
