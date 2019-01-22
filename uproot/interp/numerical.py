@@ -246,7 +246,10 @@ class asdouble32(_asnumeric):
 
     @property
     def todims(self):
-        return self._todims
+        if self._todims is None:
+            return self.fromdims
+        else:
+            return self._todims
 
     @property
     def itemsize(self):
