@@ -384,25 +384,25 @@ class TTreeMethods(object):
     def clusters(self, branches=None, entrystart=None, entrystop=None, strict=False):
         branches = list(self._normalize_branches(branches))
 
-        if len(branches) == 0:
+        # convenience class; simplifies presentation of the algorithm
+        class BranchCursor(object):
+            def __init__(self, branch):
+                self.branch = branch
+                self.basketstart = 0
+                self.basketstop = 0
+            @property
+            def entrystart(self):
+                return self.branch.basket_entrystart(self.basketstart)
+            @property
+            def entrystop(self):
+                return self.branch.basket_entrystop(self.basketstop)
+
+        cursors = [BranchCursor(branch) for branch, interpretation in branches if branch.numbaskets > 0]
+
+        if len(cursors) == 0:
             yield self._normalize_entrystartstop(entrystart, entrystop)
 
         else:
-            # convenience class; simplifies presentation of the algorithm
-            class BranchCursor(object):
-                def __init__(self, branch):
-                    self.branch = branch
-                    self.basketstart = 0
-                    self.basketstop = 0
-                @property
-                def entrystart(self):
-                    return self.branch.basket_entrystart(self.basketstart)
-                @property
-                def entrystop(self):
-                    return self.branch.basket_entrystop(self.basketstop)
-
-            cursors = [BranchCursor(branch) for branch, interpretation in branches]
-
             # everybody starts at the same entry number; if there is no such place before someone runs out of baskets, there will be an exception
             leadingstart = max(cursor.entrystart for cursor in cursors)
             while not all(cursor.entrystart == leadingstart for cursor in cursors):
@@ -587,18 +587,23 @@ class TTreeMethods(object):
 
             futures = []
             for branch, interpretation in branches:
-                basketstart, basketstop = branch._basketstartstop(start, stop)
-                basket_itemoffset = branch._basket_itemoffset(interpretation, basketstart, basketstop, keycache)
-                basket_entryoffset = branch._basket_entryoffset(basketstart, basketstop)
-
                 cachekey = branch._cachekey(interpretation, start, stop)
-                if cache is not None:
-                    out = cache.get(cachekey, None)
-                    if out is not None:
-                        futures.append((branch, interpretation, None, out, cachekey))
-                        continue
-                future = branch._step_array(interpretation, basket_itemoffset, basket_entryoffset, start, stop, basketcache, keycache, executor, explicit_basketcache)
-                futures.append((branch, interpretation, future, None, cachekey))
+
+                if branch.numbaskets == 0:
+                    futures.append((branch, interpretation, interpretation.empty, None, cachekey))
+
+                else:
+                    basketstart, basketstop = branch._basketstartstop(start, stop)
+                    basket_itemoffset = branch._basket_itemoffset(interpretation, basketstart, basketstop, keycache)
+                    basket_entryoffset = branch._basket_entryoffset(basketstart, basketstop)
+
+                    if cache is not None:
+                        out = cache.get(cachekey, None)
+                        if out is not None:
+                            futures.append((branch, interpretation, None, out, cachekey))
+                            continue
+                    future = branch._step_array(interpretation, basket_itemoffset, basket_entryoffset, start, stop, basketcache, keycache, executor, explicit_basketcache)
+                    futures.append((branch, interpretation, future, None, cachekey))
 
             out = wrap_for_python_scope(futures, start, stop)
 
