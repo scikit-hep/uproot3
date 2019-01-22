@@ -71,9 +71,12 @@ class asjagged(uproot.interp.interp.Interpretation):
             skipbytes = self.skipbytes
         return asjagged(self.content.to(todtype, todims), skipbytes)
 
+    def __repr__(self):
+        return "asjagged({0}{1})".format(repr(self.content), "" if self.skipbytes == 0 else ", {0}".format(self.skipbytes))
+
     @property
     def identifier(self):
-        return "asjagged({0}{1})".format(repr(self.content), "" if self.skipbytes == 0 else ",{0}".format(self.skipbytes))
+        return "asjagged({0}{1})".format(self.content.identifier, "" if self.skipbytes == 0 else ",{0}".format(self.skipbytes))
 
     @property
     def type(self):

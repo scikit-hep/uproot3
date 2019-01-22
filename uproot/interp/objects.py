@@ -118,7 +118,7 @@ class astable(uproot.interp.interp.Interpretation):
     @property
     def identifier(self):
         dtype, shape = uproot.interp.numerical._dtypeshape(self.content.todtype)
-        return "astable({0})".format(self.content.to(awkward.util.numpy.dtype([(n, dtype[n]) for n in dtype.names if not n.startswith(" ")]), shape).identifier)
+        return "astable({0})".format(self.content.identifier)
 
     @property
     def type(self):

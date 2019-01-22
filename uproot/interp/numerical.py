@@ -150,10 +150,20 @@ class asdtype(_asnumeric):
     @property
     def identifier(self):
         _byteorder = {"!": "B", ">": "B", "<": "L", "|": "L", "=": "B" if awkward.util.numpy.dtype(">f8").isnative else "L"}
-        dtype, shape = _dtypeshape(self.fromdtype)
-        fromdtype = "{0}{1}{2}({3})".format(_byteorder[dtype.byteorder], dtype.kind, dtype.itemsize, ",".join(repr(x) for x in shape))
-        dtype, shape = _dtypeshape(self.todtype)
-        todtype = "{0}{1}{2}({3})".format(_byteorder[dtype.byteorder], dtype.kind, dtype.itemsize, ",".join(repr(x) for x in shape))
+        def form(dt, n):
+            dtype, shape = _dtypeshape(dt)
+            return "{0}{1}{2}({3}{4})".format(_byteorder[dtype.byteorder], dtype.kind, dtype.itemsize, ",".join(repr(x) for x in shape), n)
+
+        if self.fromdtype.names is None:
+            fromdtype = form(self.fromdtype, "")
+        else:
+            fromdtype = "[" + ",".join(form(self.fromdtype[n], "," + repr(n)) for n in self.fromdtype.names) + "]"
+
+        if self.todtype.names is None:
+            todtype = form(self.todtype, "")
+        else:
+            todtype = "[" + ",".join(form(self.todtype[n], "," + repr(n)) for n in self.todtype.names) + "]"
+
         return "asdtype({0},{1})".format(fromdtype, todtype)
 
     def compatible(self, other):
