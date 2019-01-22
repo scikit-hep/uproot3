@@ -587,18 +587,23 @@ class TTreeMethods(object):
 
             futures = []
             for branch, interpretation in branches:
-                basketstart, basketstop = branch._basketstartstop(start, stop)
-                basket_itemoffset = branch._basket_itemoffset(interpretation, basketstart, basketstop, keycache)
-                basket_entryoffset = branch._basket_entryoffset(basketstart, basketstop)
-
                 cachekey = branch._cachekey(interpretation, start, stop)
-                if cache is not None:
-                    out = cache.get(cachekey, None)
-                    if out is not None:
-                        futures.append((branch, interpretation, None, out, cachekey))
-                        continue
-                future = branch._step_array(interpretation, basket_itemoffset, basket_entryoffset, start, stop, basketcache, keycache, executor, explicit_basketcache)
-                futures.append((branch, interpretation, future, None, cachekey))
+
+                if branch.numbaskets == 0:
+                    futures.append((branch, interpretation, interpretation.empty, None, cachekey))
+
+                else:
+                    basketstart, basketstop = branch._basketstartstop(start, stop)
+                    basket_itemoffset = branch._basket_itemoffset(interpretation, basketstart, basketstop, keycache)
+                    basket_entryoffset = branch._basket_entryoffset(basketstart, basketstop)
+
+                    if cache is not None:
+                        out = cache.get(cachekey, None)
+                        if out is not None:
+                            futures.append((branch, interpretation, None, out, cachekey))
+                            continue
+                    future = branch._step_array(interpretation, basket_itemoffset, basket_entryoffset, start, stop, basketcache, keycache, executor, explicit_basketcache)
+                    futures.append((branch, interpretation, future, None, cachekey))
 
             out = wrap_for_python_scope(futures, start, stop)
 
