@@ -121,16 +121,23 @@ def _filename_explode(x):
 
 ################################################################ high-level interface
 
-def iterate(path, treepath, branches=None, entrysteps=None, outputtype=dict, namedecode=None, reportentries=False, flatten=False, flatname=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
-    for tree, newbranches, globalentrystart in _iterate(path, treepath, branches, localsource, xrootdsource, httpsource, **options):
+def iterate(path, treepath, branches=None, entrysteps=None, outputtype=dict, namedecode=None, reportpath=False, reportfile=False, reportentries=False, flatten=False, flatname=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
+    for tree, newbranches, globalentrystart, thispath, thisfile in _iterate(path, treepath, branches, localsource, xrootdsource, httpsource, **options):
         for start, stop, arrays in tree.iterate(branches=newbranches, entrysteps=entrysteps, outputtype=outputtype, namedecode=namedecode, reportentries=True, entrystart=0, entrystop=tree.numentries, flatten=flatten, flatname=flatname, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking):
             if getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame":
                 index = awkward.util.numpy.frombuffer(arrays.index.data, dtype=arrays.index.dtype)
                 awkward.util.numpy.add(index, globalentrystart, index)
+            out = (arrays,)
             if reportentries:
-                yield globalentrystart + start, globalentrystart + stop, arrays
+                out = (globalentrystart + start, globalentrystart + stop) + out
+            if reportfile:
+                out = (thisfile,) + out
+            if reportpath:
+                out = (thispath,) + out
+            if len(out) == 1:
+                yield out[0]
             else:
-                yield arrays
+                yield out
 
 def _iterate(path, treepath, branches, localsource, xrootdsource, httpsource, **options):
     if isinstance(path, string_types):
@@ -165,7 +172,7 @@ def _iterate(path, treepath, branches, localsource, xrootdsource, httpsource, **
         oldpath = path
         oldbranches = newbranches
 
-        yield tree, newbranches, globalentrystart
+        yield tree, newbranches, globalentrystart, path, file
         globalentrystart += tree.numentries
 
 ################################################################ methods for TTree

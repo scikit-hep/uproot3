@@ -451,9 +451,17 @@ tree_fragments = {
     "namedecode": u"""namedecode : None or str
         if ``None`` *(default)* return names as uninterpreted byte strings (type ``bytes`` in Python 3); if a string like ``"ascii"`` or ``"utf-8"``, decode bytes to a string using the specified encoding.""",
 
+    # reportpath
+    "reportpath": u"""reportpath : bool
+        if ``True`` *(not default)*, yield the current path (string) before the arrays (and any other reported objects) as a tuple.""",
+
+    # reportfile
+    "reportfile": u"""reportfile : bool
+        if ``True``, *(not default)*, yield the current file (object) before the arrays (and any other reported objects except reportpath) as a tuple.""",
+
     # reportentries
     "reportentries": u"""reportentries : bool
-        if ``False`` *(default)*, yield only arrays (as ``outputtype``); otherwise, yield 3-tuple: *(entry start, entry stop, arrays)*, where *entry start* is inclusive and *entry stop* is exclusive.""",
+        if ``True`` *(not default)*, yield the current entry start and entry stop (integers) before the arrays, where *entry start* is inclusive and *entry stop* is exclusive.""",
 
     # flatten
     "flatten": u"""flatten : None or bool
@@ -520,6 +528,10 @@ u"""Opens a series of ROOT files (local or remote), yielding the same number of 
     {outputtype}
 
     {namedecode}
+
+    {reportpath}
+
+    {reportfile}
 
     {reportentries}
 
