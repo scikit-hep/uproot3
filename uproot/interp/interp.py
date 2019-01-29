@@ -28,9 +28,20 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import awkward
+
 class Interpretation(object):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (type,), {})
+
+    awkward = awkward
+
+    def awkwardlib(self, lib):
+        cls = type(self)
+        out = cls.__new__(cls)
+        out.__dict__.update(self.__dict__)
+        out.awkward = lib
+        return out
 
     @property
     def identifier(self):

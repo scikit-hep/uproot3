@@ -34,6 +34,7 @@ from collections import namedtuple
 
 import numpy
 
+import awkward
 import uproot
 
 def basest(array):
@@ -64,12 +65,12 @@ class Test(unittest.TestCase):
 
     def test_flat_basket(self):
         branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["i8"]
-        interpretation = branch._normalize_interpretation(None)
+        interpretation = branch._normalize_interpretation(None, awkward)
         entrystart, entrystop = branch._normalize_entrystartstop(None, None)
         local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
 
-        one = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None)
-        two = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None)
+        one = branch._basket(0, interpretation, local_entrystart, local_entrystop, awkward, None, None)
+        two = branch._basket(0, interpretation, local_entrystart, local_entrystop, awkward, None, None)
         assert numpy.array_equal(one, numpy.array([-15, -14, -13], dtype=">i8"))
         assert basest(one) is basest(two)
 
@@ -84,12 +85,12 @@ class Test(unittest.TestCase):
 
     def test_regular_basket(self):
         branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["ai8"]
-        interpretation = branch._normalize_interpretation(None)
+        interpretation = branch._normalize_interpretation(None, awkward)
         entrystart, entrystop = branch._normalize_entrystartstop(None, None)
         local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
 
-        one = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None)
-        two = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None)
+        one = branch._basket(0, interpretation, local_entrystart, local_entrystop, awkward, None, None)
+        two = branch._basket(0, interpretation, local_entrystart, local_entrystop, awkward, None, None)
         assert numpy.array_equal(one, numpy.array([[-14, -13, -12]], dtype=">i8"))
         assert basest(one) is basest(two)
 
@@ -110,12 +111,12 @@ class Test(unittest.TestCase):
 
     def test_irregular_basket(self):
         branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["Ai8"]
-        interpretation = branch._normalize_interpretation(None)
+        interpretation = branch._normalize_interpretation(None, awkward)
         entrystart, entrystop = branch._normalize_entrystartstop(None, None)
         local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
 
-        one = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None)
-        two = branch._basket(0, interpretation, local_entrystart, local_entrystop, None, None)
+        one = branch._basket(0, interpretation, local_entrystart, local_entrystop, awkward, None, None)
+        two = branch._basket(0, interpretation, local_entrystart, local_entrystop, awkward, None, None)
         assert numpy.array_equal(one[0], numpy.array([], dtype=">i8"))
         assert numpy.array_equal(one[1], numpy.array([-15], dtype=">i8"))
         assert basest(one.content) is basest(two.content)
@@ -126,7 +127,7 @@ class Test(unittest.TestCase):
 
     def test_strings_basket(self):
         branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["str"]
-        interpretation = branch._normalize_interpretation(None)
+        interpretation = branch._normalize_interpretation(None, awkward)
         entrystart, entrystop = branch._normalize_entrystartstop(None, None)
         local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
 

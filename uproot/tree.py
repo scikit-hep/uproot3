@@ -33,6 +33,7 @@ import codecs
 import glob
 import inspect
 import itertools
+import importlib
 import math
 import numbers
 import os
@@ -41,37 +42,13 @@ import struct
 import sys
 import threading
 from collections import namedtuple
+from collections import OrderedDict
 try:
     from urlparse import urlparse
 except ImportError:
     from urllib.parse import urlparse
-try:
-    from collections import OrderedDict
-except ImportError:
-    # simple OrderedDict implementation for Python 2.6
-    class OrderedDict(dict):
-        def __init__(self, items=(), **kwds):
-            items = list(items)
-            self._order = [k for k, v in items] + [k for k, v in kwds.items()]
-            super(OrderedDict, self).__init__(items)
-        def keys(self):
-            return self._order
-        def values(self):
-            return [self[k] for k in self._order]
-        def items(self):
-            return [(k, self[k]) for k in self._order]
-        def __setitem__(self, name, value):
-            if name not in self._order:
-                self._order.append(name)
-            super(OrderedDict, self).__setitem__(name, value)
-        def __delitem__(self, name):
-            if name in self._order:
-                self._order.remove(name)
-            super(OrderedDict, self).__delitem__(name)
-        def __repr__(self):
-            return "OrderedDict([{0}])".format(", ".join("({0}, {1})".format(repr(k), repr(v)) for k, v in self.items()))
 
-import awkward.util
+import numpy
 
 import uproot.rootio
 from uproot.rootio import _bytesid
@@ -119,14 +96,24 @@ def _filename_explode(x):
     else:
         return [x]
 
+def _normalize_awkwardlib(awkwardlib):
+    if awkwardlib is None:
+        import awkward
+        return awkward
+    elif isinstance(awkwardlib, str):
+        return importlib.import_module(awkwardlib)
+    else:
+        return awkwardlib
+
 ################################################################ high-level interface
 
-def iterate(path, treepath, branches=None, entrysteps=None, outputtype=dict, namedecode=None, reportpath=False, reportfile=False, reportentries=False, flatten=False, flatname=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
-    for tree, newbranches, globalentrystart, thispath, thisfile in _iterate(path, treepath, branches, localsource, xrootdsource, httpsource, **options):
-        for start, stop, arrays in tree.iterate(branches=newbranches, entrysteps=entrysteps, outputtype=outputtype, namedecode=namedecode, reportentries=True, entrystart=0, entrystop=tree.numentries, flatten=flatten, flatname=flatname, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking):
+def iterate(path, treepath, branches=None, entrysteps=None, outputtype=dict, namedecode=None, reportpath=False, reportfile=False, reportentries=False, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
+    awkward = _normalize_awkwardlib(awkwardlib)
+    for tree, newbranches, globalentrystart, thispath, thisfile in _iterate(path, treepath, branches, awkward, localsource, xrootdsource, httpsource, **options):
+        for start, stop, arrays in tree.iterate(branches=newbranches, entrysteps=entrysteps, outputtype=outputtype, namedecode=namedecode, reportentries=True, entrystart=0, entrystop=tree.numentries, flatten=flatten, flatname=flatname, awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking):
             if getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame":
-                index = awkward.util.numpy.frombuffer(arrays.index.data, dtype=arrays.index.dtype)
-                awkward.util.numpy.add(index, globalentrystart, index)
+                index = awkward.numpy.frombuffer(arrays.index.data, dtype=arrays.index.dtype)
+                awkward.numpy.add(index, globalentrystart, index)
             out = (arrays,)
             if reportentries:
                 out = (globalentrystart + start, globalentrystart + stop) + out
@@ -139,7 +126,7 @@ def iterate(path, treepath, branches=None, entrysteps=None, outputtype=dict, nam
             else:
                 yield out
 
-def _iterate(path, treepath, branches, localsource, xrootdsource, httpsource, **options):
+def _iterate(path, treepath, branches, awkward, localsource, xrootdsource, httpsource, **options):
     if isinstance(path, string_types):
         paths = _filename_explode(path)
     else:
@@ -157,7 +144,7 @@ def _iterate(path, treepath, branches, localsource, xrootdsource, httpsource, **
             tree = file[treepath]
         except KeyError:
             continue
-        listbranches = list(tree._normalize_branches(branches))
+        listbranches = list(tree._normalize_branches(branches, awkward))
 
         newbranches = OrderedDict((branch.name, interpretation) for branch, interpretation in listbranches)
         if oldbranches is not None:
@@ -389,7 +376,8 @@ class TTreeMethods(object):
             return True
 
     def clusters(self, branches=None, entrystart=None, entrystop=None, strict=False):
-        branches = list(self._normalize_branches(branches))
+        awkward = _normalize_awkwardlib(None)
+        branches = list(self._normalize_branches(branches, awkward))
 
         # convenience class; simplifies presentation of the algorithm
         class BranchCursor(object):
@@ -449,11 +437,12 @@ class TTreeMethods(object):
                 if leadingstart >= entrystop:
                     break
 
-    def array(self, branch, interpretation=None, entrystart=None, entrystop=None, flatten=False, flatname=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
-        return self.get(branch).array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, flatname=flatname, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
+    def array(self, branch, interpretation=None, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+        return self.get(branch).array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, flatname=flatname, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
 
-    def arrays(self, branches=None, outputtype=dict, namedecode=None, entrystart=None, entrystop=None, flatten=False, flatname=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
-        branches = list(self._normalize_branches(branches))
+    def arrays(self, branches=None, outputtype=dict, namedecode=None, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+        awkward = _normalize_awkwardlib(awkwardlib)
+        branches = list(self._normalize_branches(branches, awkward))
         if flatten is None:
             branches = [(branch, interpretation) for branch, interpretation in branches if not isinstance(interpretation, asjagged)]
             flatten = False
@@ -463,7 +452,7 @@ class TTreeMethods(object):
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
 
         # start the job of filling the arrays
-        futures = [(branch.name if namedecode is None else branch.name.decode(namedecode), interpretation, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=(flatten and not ispandas), flatname=flatname, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=False)) for branch, interpretation in branches]
+        futures = [(branch.name if namedecode is None else branch.name.decode(namedecode), interpretation, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=(flatten and not ispandas), flatname=flatname, awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=False)) for branch, interpretation in branches]
 
         # make functions that wait for the filling job to be done and return the right outputtype
         if outputtype == namedtuple:
@@ -494,18 +483,19 @@ class TTreeMethods(object):
         else:
             return wait
 
-    def lazyarray(self, branch, interpretation=None, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, executor=None):
-        return self.get(branch).lazyarray(interpretation=interpretation, limitbytes=limitbytes, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor)
+    def lazyarray(self, branch, interpretation=None, limitbytes=1024**2, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None):
+        return self.get(branch).lazyarray(interpretation=interpretation, limitbytes=limitbytes, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor)
 
-    def lazyarrays(self, branches=None, outputtype=dict, namedecode=None, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, executor=None):
-        branches = list(self._normalize_branches(branches))
+    def lazyarrays(self, branches=None, outputtype=dict, namedecode=None, limitbytes=1024**2, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None):
+        awkward = _normalize_awkwardlib(awkwardlib)
+        branches = list(self._normalize_branches(branches, awkward))
 
         if basketcache is None:
             basketcache = uproot.cache.ThreadSafeArrayCache(limitbytes)
         if keycache is None:
             keycache = {}
 
-        lazyarrays = [(branch.name if namedecode is None else branch.name.decode(namedecode), branch.lazyarray(interpretation=interpretation, limitbytes=limitbytes, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor)) for branch, interpretation in branches]
+        lazyarrays = [(branch.name if namedecode is None else branch.name.decode(namedecode), branch.lazyarray(interpretation=interpretation, limitbytes=limitbytes, awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor)) for branch, interpretation in branches]
 
         if outputtype == namedtuple:
             outputtype = namedtuple("Arrays", [codecs.ascii_decode(branch.name, "replace")[0] if namedecode is None else branch.name.decode(namedecode) for branch, interpretation in branches])
@@ -519,7 +509,7 @@ class TTreeMethods(object):
         else:
             return outputtype(*[lazyarray for name, lazyarray in lazyarrays])
 
-    def iterate(self, branches=None, entrysteps=None, outputtype=dict, namedecode=None, reportentries=False, entrystart=None, entrystop=None, flatten=False, flatname=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+    def iterate(self, branches=None, entrysteps=None, outputtype=dict, namedecode=None, reportentries=False, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
 
         if entrysteps is None:
@@ -544,7 +534,8 @@ class TTreeMethods(object):
             except TypeError:
                 raise TypeError("entrysteps must be None for cluster iteration, a positive integer for equal steps in number of entries, or an iterable of 2-tuples for explicit entry starts (inclusive) and stops (exclusive)")
 
-        branches = list(self._normalize_branches(branches))
+        awkward = _normalize_awkwardlib(awkwardlib)
+        branches = list(self._normalize_branches(branches, awkward))
 
         if keycache is None:
             keycache = {}
@@ -554,7 +545,7 @@ class TTreeMethods(object):
             explicit_basketcache = False
         else:
             explicit_basketcache = True
-
+            
         def evaluate(branch, interpretation, future, past, cachekey, pythonize):
             if future is None:
                 return past
@@ -575,7 +566,7 @@ class TTreeMethods(object):
                 return lambda: outputtype(*[evaluate(branch, interpretation, future, past, cachekey, False) for branch, interpretation, future, past, cachekey in futures])
         elif getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame":
             def wrap_for_python_scope(futures, start, stop):
-                return lambda: outputtype(data=OrderedDict((branch.name if namedecode is None else branch.name.decode(namedecode), evaluate(branch, interpretation, future, past, cachekey, isinstance(interpretation, asjagged))) for branch, interpretation, future, past, cachekey in futures), index=awkward.util.numpy.arange(start, stop))
+                return lambda: outputtype(data=OrderedDict((branch.name if namedecode is None else branch.name.decode(namedecode), evaluate(branch, interpretation, future, past, cachekey, isinstance(interpretation, asjagged))) for branch, interpretation, future, past, cachekey in futures), index=awkward.numpy.arange(start, stop))
         elif isinstance(outputtype, type) and issubclass(outputtype, dict):
             def wrap_for_python_scope(futures, start, stop):
                 return lambda: outputtype((branch.name if namedecode is None else branch.name.decode(namedecode), evaluate(branch, interpretation, future, past, cachekey, False)) for branch, interpretation, future, past, cachekey in futures)
@@ -609,7 +600,7 @@ class TTreeMethods(object):
                         if out is not None:
                             futures.append((branch, interpretation, None, out, cachekey))
                             continue
-                    future = branch._step_array(interpretation, basket_itemoffset, basket_entryoffset, start, stop, basketcache, keycache, executor, explicit_basketcache)
+                    future = branch._step_array(interpretation, basket_itemoffset, basket_entryoffset, start, stop, awkward, basketcache, keycache, executor, explicit_basketcache)
                     futures.append((branch, interpretation, future, None, cachekey))
 
             out = wrap_for_python_scope(futures, start, stop)
@@ -642,7 +633,8 @@ class TTreeMethods(object):
             branch._recover()
 
     def matches(self, branches):
-        return [b.name for b, i in self._normalize_branches(branches, allownone=False, allowcallable=False, allowdict=False, allowstring=True)]
+        awkward = _normalize_awkwardlib(None)
+        return [b.name for b, i in self._normalize_branches(branches, awkward, allownone=False, allowcallable=False, allowdict=False, allowstring=True)]
 
     _branch_regex = re.compile(b"^/(.*)/([iLmsux]*)$")
 
@@ -664,10 +656,10 @@ class TTreeMethods(object):
                 flagsbyte += re.X
         return flagsbyte
 
-    def _normalize_branches(self, arg, allownone=True, allowcallable=True, allowdict=True, allowstring=True, aliases=True):
+    def _normalize_branches(self, arg, awkward, allownone=True, allowcallable=True, allowdict=True, allowstring=True, aliases=True):
         if allownone and arg is None:                      # no specification; read all branches
             for branch in self.allvalues():                # that have interpretations
-                interpretation = interpret(branch)
+                interpretation = interpret(branch, awkward)
                 if interpretation is not None:
                     yield branch, interpretation
 
@@ -677,11 +669,11 @@ class TTreeMethods(object):
                 if result is None:
                     pass
                 elif result is True:                       # function is a filter
-                    interpretation = interpret(branch)
+                    interpretation = interpret(branch, awkward)
                     if interpretation is not None:
                         yield branch, interpretation
                 else:                                      # function is giving interpretations
-                    yield branch, branch._normalize_dtype(result)
+                    yield branch, branch._normalize_dtype(result, awkward)
 
         elif allowdict and isinstance(arg, dict):
             for word, interpretation in arg.items():
@@ -692,19 +684,19 @@ class TTreeMethods(object):
                     regex, flags = isregex.groups()
                     for name, branch in self.iteritems(recursive=True, aliases=aliases):
                         if re.match(regex, name, self._branch_flags(flags)):
-                            yield branch, branch._normalize_dtype(interpretation)
+                            yield branch, branch._normalize_dtype(interpretation, awkward)
 
                 elif b"*" in word or b"?" in word or b"[" in word:
                     for name, branch in self.iteritems(recursive=True, aliases=aliases):
                         if name == word or glob.fnmatch.fnmatchcase(name, word):
-                            yield branch, branch._normalize_dtype(interpretation)
+                            yield branch, branch._normalize_dtype(interpretation, awkward)
 
                 else:
                     branch = self.get(word, aliases=aliases)
-                    yield branch, branch._normalize_dtype(interpretation)
+                    yield branch, branch._normalize_dtype(interpretation, awkward)
 
         elif allowstring and isinstance(arg, string_types):
-            for x in self._normalize_branches([arg]):
+            for x in self._normalize_branches([arg], awkward):
                 yield x
 
         else:
@@ -721,7 +713,7 @@ class TTreeMethods(object):
                         regex, flags = isregex.groups()
                         for name, branch in self.iteritems(recursive=True, aliases=aliases):
                             if re.match(regex, name, self._branch_flags(flags)):
-                                interpretation = interpret(branch)
+                                interpretation = interpret(branch, awkward)
                                 if interpretation is None:
                                     if name == word:
                                         raise ValueError("cannot interpret branch {0} as a Python type".format(repr(branch.name)))
@@ -731,7 +723,7 @@ class TTreeMethods(object):
                     elif b"*" in word or b"?" in word or b"[" in word:
                         for name, branch in self.iteritems(recursive=True, aliases=aliases):
                             if name == word or glob.fnmatch.fnmatchcase(name, word):
-                                interpretation = interpret(branch)
+                                interpretation = interpret(branch, awkward)
                                 if interpretation is None:
                                     if name == word:
                                         raise ValueError("cannot interpret branch {0} as a Python type".format(repr(branch.name)))
@@ -740,7 +732,7 @@ class TTreeMethods(object):
 
                     else:
                         branch = self.get(word, aliases=aliases)
-                        interpretation = interpret(branch)
+                        interpretation = interpret(branch, awkward)
                         if interpretation is None:
                             raise ValueError("cannot interpret branch {0} as a Python type".format(repr(branch.name)))
                         else:
@@ -826,8 +818,9 @@ class TBranchMethods(object):
 
     @property
     def interpretation(self):
+        awkward = _normalize_awkwardlib(None)
         if self._interpretation is None:
-            self._interpretation = interpret(self)
+            self._interpretation = interpret(self, awkward)
         return self._interpretation
 
     @property
@@ -971,19 +964,19 @@ class TBranchMethods(object):
             denom += key._fNbytes - key._fKeylen
         return float(numer) / float(denom)
 
-    def _normalize_dtype(self, interpretation):
-        if inspect.isclass(interpretation) and issubclass(interpretation, awkward.util.numpy.generic):
-            return self._normalize_dtype(awkward.util.numpy.dtype(interpretation))
+    def _normalize_dtype(self, interpretation, awkward):
+        if inspect.isclass(interpretation) and issubclass(interpretation, awkward.numpy.generic):
+            return self._normalize_dtype(awkward.numpy.dtype(interpretation), awkward)
 
-        elif isinstance(interpretation, awkward.util.numpy.dtype):      # user specified a Numpy dtype
-            default = interpret(self)
+        elif isinstance(interpretation, awkward.numpy.dtype):      # user specified a Numpy dtype
+            default = interpret(self, awkward)
             if isinstance(default, (asdtype, asjagged)):
                 return default.to(interpretation)
             else:
                 raise ValueError("cannot cast branch {0} (default interpretation {1}) as dtype {2}".format(repr(self.name), default, interpretation))
 
-        elif isinstance(interpretation, awkward.util.numpy.ndarray):    # user specified a Numpy array
-            default = interpret(self)
+        elif isinstance(interpretation, awkward.numpy.ndarray):    # user specified a Numpy array
+            default = interpret(self, awkward)
             if isinstance(default, asdtype):
                 return default.toarray(interpretation)
             else:
@@ -995,19 +988,23 @@ class TBranchMethods(object):
         else:
             return interpretation
 
-    def _normalize_interpretation(self, interpretation):
+    def _normalize_interpretation(self, interpretation, awkward):
         if interpretation is None:
-            interpretation = interpret(self)
+            interpretation = interpret(self, awkward)
         else:
-            interpretation = self._normalize_dtype(interpretation)
+            interpretation = self._normalize_dtype(interpretation, awkward)
 
         if interpretation is None:
             raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
 
+        if interpretation.awkward is not awkward:
+            interpretation = interpretation.awkwardlib(awkward)
+
         return interpretation
 
     def numitems(self, interpretation=None, keycache=None):
-        interpretation = self._normalize_interpretation(interpretation)
+        awkward = _normalize_awkwardlib(None)
+        interpretation = self._normalize_interpretation(interpretation, awkward)
         if interpretation is None:
             raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
@@ -1059,7 +1056,8 @@ class TBranchMethods(object):
     def basket_numitems(self, i, interpretation=None, keycache=None):
         if self._recoveredbaskets is None:
             self._tryrecover()
-        interpretation = self._normalize_interpretation(interpretation)
+        awkward = _normalize_awkwardlib(None)
+        interpretation = self._normalize_interpretation(interpretation, awkward)
         key = self._threadsafe_key(i, keycache, True)
         return interpretation.numitems(key.border, self.basket_numentries(i))
 
@@ -1077,7 +1075,7 @@ class TBranchMethods(object):
         local_entrystop  = max(0, min(entrystop - self.basket_entrystart(i), self.basket_entrystop(i) - self.basket_entrystart(i)))
         return local_entrystart, local_entrystop
 
-    def _basket(self, i, interpretation, local_entrystart, local_entrystop, basketcache, keycache):
+    def _basket(self, i, interpretation, local_entrystart, local_entrystop, awkward, basketcache, keycache):
         basketdata = None
         if basketcache is not None:
             basketcachekey = self._basketcachekey(i)
@@ -1094,28 +1092,29 @@ class TBranchMethods(object):
         if key._fObjlen == key.border:
             data, byteoffsets = basketdata, None
 
-            if self._countbranch is not None and awkward.util.numpy.uint8(self._tree_iofeatures) & awkward.util.numpy.uint8(uproot.const.kGenerateOffsetMap) != 0:
+            if self._countbranch is not None and awkward.numpy.uint8(self._tree_iofeatures) & awkward.numpy.uint8(uproot.const.kGenerateOffsetMap) != 0:
                 counts = self._countbranch.array(entrystart=(local_entrystart + self.basket_entrystart(i)),
                                                  entrystop=(local_entrystop + self.basket_entrystart(i)))
                 itemsize = 1
                 if isinstance(interpretation, asjagged):
                     itemsize = interpretation.content.fromdtype.itemsize
-                awkward.util.numpy.multiply(counts, itemsize, counts)
-                byteoffsets = awkward.util.numpy.empty(len(counts) + 1, dtype=awkward.util.numpy.int32)
+                awkward.numpy.multiply(counts, itemsize, counts)
+                byteoffsets = awkward.numpy.empty(len(counts) + 1, dtype=awkward.numpy.int32)
                 byteoffsets[0] = 0
-                awkward.util.numpy.cumsum(counts, out=byteoffsets[1:])
+                awkward.numpy.cumsum(counts, out=byteoffsets[1:])
 
         else:
             data = basketdata[:key.border]
-            byteoffsets = awkward.util.numpy.empty((key._fObjlen - key.border - 4) // 4, dtype=awkward.util.numpy.int32)  # native endian
+            byteoffsets = awkward.numpy.empty((key._fObjlen - key.border - 4) // 4, dtype=awkward.numpy.int32)  # native endian
             byteoffsets[:-1] = basketdata[key.border + 4 : -4].view(">i4")                     # read as big-endian and convert
             byteoffsets[-1] = key._fLast
-            awkward.util.numpy.subtract(byteoffsets, key._fKeylen, byteoffsets)
+            awkward.numpy.subtract(byteoffsets, key._fKeylen, byteoffsets)
 
         return interpretation.fromroot(data, byteoffsets, local_entrystart, local_entrystop)
 
-    def basket(self, i, interpretation=None, entrystart=None, entrystop=None, flatten=False, flatname=None, cache=None, basketcache=None, keycache=None):
-        interpretation = self._normalize_interpretation(interpretation)
+    def basket(self, i, interpretation=None, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None):
+        awkward = _normalize_awkwardlib(awkwardlib)
+        interpretation = self._normalize_interpretation(interpretation, awkward)
         if interpretation is None:
             raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
@@ -1139,7 +1138,7 @@ class TBranchMethods(object):
                 else:
                     return out
 
-        source = self._basket(i, interpretation, local_entrystart, local_entrystop, basketcache, keycache)
+        source = self._basket(i, interpretation, local_entrystart, local_entrystop, awkward, basketcache, keycache)
         numitems = interpretation.source_numitems(source)
 
         destination = interpretation.destination(numitems, numentries)
@@ -1169,8 +1168,9 @@ class TBranchMethods(object):
 
         return basketstart, basketstop
 
-    def baskets(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, flatname=None, cache=None, basketcache=None, keycache=None, reportentries=False, executor=None, blocking=True):
-        interpretation = self._normalize_interpretation(interpretation)
+    def baskets(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, reportentries=False, executor=None, blocking=True):
+        awkward = _normalize_awkwardlib(awkwardlib)
+        interpretation = self._normalize_interpretation(interpretation, awkward)
         if interpretation is None:
             raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
@@ -1191,7 +1191,7 @@ class TBranchMethods(object):
 
         def fill(j):
             try:
-                basket = self.basket(j + basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, flatname=flatname, cache=cache, basketcache=basketcache, keycache=keycache)
+                basket = self.basket(j + basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, flatname=flatname, awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache)
                 if reportentries:
                     local_entrystart, local_entrystop = self._localentries(j + basketstart, entrystart, entrystop)
                     basket = (local_entrystart + self.basket_entrystart(j + basketstart),
@@ -1221,8 +1221,9 @@ class TBranchMethods(object):
                 return out
             return wait
 
-    def iterate_baskets(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, flatname=None, cache=None, basketcache=None, keycache=None, reportentries=False):
-        interpretation = self._normalize_interpretation(interpretation)
+    def iterate_baskets(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, reportentries=False):
+        awkward = _normalize_awkwardlib(awkwardlib)
+        interpretation = self._normalize_interpretation(interpretation, awkward)
         if interpretation is None:
             raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
@@ -1238,9 +1239,9 @@ class TBranchMethods(object):
                     if reportentries:
                         yield (local_entrystart + self.basket_entrystart(i),
                                local_entrystop + self.basket_entrystart(i),
-                               self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, flatname=flatname, cache=cache, basketcache=basketcache, keycache=keycache))
+                               self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, flatname=flatname, awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache))
                     else:
-                        yield self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, flatname=flatname, cache=cache, basketcache=basketcache, keycache=keycache)
+                        yield self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, flatname=flatname, awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache)
 
     def _basket_itemoffset(self, interpretation, basketstart, basketstop, keycache):
         basket_itemoffset = [0]
@@ -1256,8 +1257,9 @@ class TBranchMethods(object):
             basket_entryoffset.append(basket_entryoffset[-1] + self.basket_numentries(i))
         return basket_entryoffset
 
-    def array(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, flatname=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
-        interpretation = self._normalize_interpretation(interpretation)
+    def array(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+        awkward = _normalize_awkwardlib(awkwardlib)
+        interpretation = self._normalize_interpretation(interpretation, awkward)
         if interpretation is None:
             raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
@@ -1297,7 +1299,7 @@ class TBranchMethods(object):
             try:
                 i = j + basketstart
                 local_entrystart, local_entrystop = self._localentries(i, entrystart, entrystop)
-                source = self._basket(i, interpretation, local_entrystart, local_entrystop, basketcache, keycache)
+                source = self._basket(i, interpretation, local_entrystart, local_entrystop, awkward, basketcache, keycache)
 
                 expecteditems = basket_itemoffset[j + 1] - basket_itemoffset[j]
                 source_numitems = interpretation.source_numitems(source)
@@ -1357,7 +1359,7 @@ class TBranchMethods(object):
         else:
             return wait
 
-    def _step_array(self, interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, basketcache, keycache, executor, explicit_basketcache):
+    def _step_array(self, interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, awkward, basketcache, keycache, executor, explicit_basketcache):
         if interpretation is None:
             raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
@@ -1374,7 +1376,7 @@ class TBranchMethods(object):
             try:
                 i = j + basketstart
                 local_entrystart, local_entrystop = self._localentries(i, entrystart, entrystop)
-                source = self._basket(i, interpretation, local_entrystart, local_entrystop, basketcache, keycache)
+                source = self._basket(i, interpretation, local_entrystart, local_entrystop, awkward, basketcache, keycache)
 
                 expecteditems = basket_itemoffset[j + 1] - basket_itemoffset[j]
                 source_numitems = interpretation.source_numitems(source)
@@ -1430,8 +1432,9 @@ class TBranchMethods(object):
 
         return wait
 
-    def lazyarray(self, interpretation=None, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, executor=None):
-        interpretation = self._normalize_interpretation(interpretation)
+    def lazyarray(self, interpretation=None, limitbytes=1024**2, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None):
+        awkward = _normalize_awkwardlib(awkwardlib)
+        interpretation = self._normalize_interpretation(interpretation, awkward)
         if interpretation is None:
             raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
         if self._recoveredbaskets is None:
@@ -1442,7 +1445,7 @@ class TBranchMethods(object):
         if keycache is None:
             keycache = {}
 
-        return LazyArray._frombranch(self, interpretation, cache, basketcache, keycache, executor)
+        return LazyArray._frombranch(self, interpretation, awkward, cache, basketcache, keycache, executor)
 
     class _BasketKey(object):
         def __init__(self, source, cursor, compression, complete):
@@ -1521,7 +1524,7 @@ class TBranchMethods(object):
 
             # put the offsets back in, in the way that we expect it
             if self._fNevBufSize > 8:
-                self.contents = awkward.util.numpy.concatenate((self.contents, byteoffsets))
+                self.contents = numpy.concatenate((self.contents, byteoffsets))
                 size += byteoffsets.nbytes
 
             self._fObjlen = size
@@ -1577,9 +1580,9 @@ class TBranchMethods(object):
             name = name[len(strip) + 1:]
 
         if len(name) > 26:
-            out = [indent + name, indent + "{0:26s} {1:26s} {2}".format("", "(no streamer)" if self._streamer is None else self._streamer.__class__.__name__, interpret(self))]
+            out = [indent + name, indent + "{0:26s} {1:26s} {2}".format("", "(no streamer)" if self._streamer is None else self._streamer.__class__.__name__, self.interpretation)]
         else:
-            out = [indent + "{0:26s} {1:26s} {2}".format(name, "(no streamer)" if self._streamer is None else self._streamer.__class__.__name__, interpret(self))]
+            out = [indent + "{0:26s} {1:26s} {2}".format(name, "(no streamer)" if self._streamer is None else self._streamer.__class__.__name__, self.interpretation)]
 
         for branch in self._fBranches:
             out.extend(branch._format(foldnames, indent + "  " if foldnames else indent, self._fName))
@@ -1671,11 +1674,11 @@ def _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, e
     else:
         return wait
 
-def daskarray(path, treepath, branchname, interpretation=None, chunks=None, name=None, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
-    return lazyarray(path, treepath, branchname, interpretation=interpretation, limitbytes=limitbytes, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor).dask.array(chunks=chunks, name=name)
+def daskarray(path, treepath, branchname, interpretation=None, chunks=None, name=None, limitbytes=1024**2, awkwardlib=None, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
+    return lazyarray(path, treepath, branchname, interpretation=interpretation, limitbytes=limitbytes, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor).dask.array(chunks=chunks, name=name)
 
-def daskarrays(path, treepath, branches=None, chunks=None, outputtype=dict, namedecode=None, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
-    out = lazyarrays(path, treepath, branches=branches, outputtype=OrderedDict, namedecode=namedecode, limitbytes=limitbytes, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor)
+def daskarrays(path, treepath, branches=None, chunks=None, outputtype=dict, namedecode=None, limitbytes=1024**2, awkwardlib=None, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
+    out = lazyarrays(path, treepath, branches=branches, outputtype=OrderedDict, namedecode=namedecode, limitbytes=limitbytes, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor)
     if outputtype == namedtuple:
         outputtype = namedtuple("Arrays", [n.decode("ascii") for n in out])
     if isinstance(outputtype, type) and issubclass(outputtype, dict):
@@ -1685,9 +1688,9 @@ def daskarrays(path, treepath, branches=None, chunks=None, outputtype=dict, name
     else:
         return outputtype(*[x.dask.array(chunks=chunks, name=n) for n, x in out.items()])
 
-def daskframe(path, treepath, branches=None, chunks=None, namedecode="utf-8", limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
+def daskframe(path, treepath, branches=None, chunks=None, namedecode="utf-8", limitbytes=1024**2, awkwardlib=None, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
     import dask.dataframe
-    out = lazyarrays(path, treepath, branches=branches, outputtype=OrderedDict, namedecode=namedecode, limitbytes=limitbytes, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor)
+    out = lazyarrays(path, treepath, branches=branches, outputtype=OrderedDict, namedecode=namedecode, limitbytes=limitbytes, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor)
     series = []
     for n, x in out.items():
         if len(x.shape) == 1:
@@ -1700,14 +1703,14 @@ def daskframe(path, treepath, branches=None, chunks=None, namedecode="utf-8", li
                 series.append(dask.dataframe.from_dask_array(array, columns=name))
     return dask.dataframe.concat(series, axis=1)
 
-def lazyarray(path, treepath, branchname, interpretation=None, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
+def lazyarray(path, treepath, branchname, interpretation=None, limitbytes=1024**2, awkwardlib=None, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
     if interpretation is None:
         branches = branchname
     else:
         branches = {branchname: interpretation}
-    return lazyarrays(path, treepath, branches=branches, outputtype=tuple, namedecode=None, limitbytes=limitbytes, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor)[0]
+    return lazyarrays(path, treepath, branches=branches, outputtype=tuple, namedecode=None, limitbytes=limitbytes, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor)[0]
 
-def lazyarrays(path, treepath, branches=None, outputtype=dict, namedecode=None, limitbytes=1024**2, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
+def lazyarrays(path, treepath, branches=None, outputtype=dict, namedecode=None, limitbytes=1024**2, awkwardlib=None, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
     if isinstance(path, string_types):
         paths = _filename_explode(path)
     else:
@@ -1715,13 +1718,14 @@ def lazyarrays(path, treepath, branches=None, outputtype=dict, namedecode=None, 
 
     uuids = [None] * len(paths)
     path2numentries = _numentries(paths, treepath, False, localsource, xrootdsource, httpsource, executor, True, uuids)
-    globalentryoffset = awkward.util.numpy.empty(len(paths) + 1, dtype=awkward.util.numpy.int64)
+    globalentryoffset = numpy.empty(len(paths) + 1, dtype=numpy.int64)
     globalentryoffset[0] = 0
     for i in range(len(paths)):
         globalentryoffset[i + 1] = globalentryoffset[i] + path2numentries[paths[i]]
 
     tree = uproot.rootio.open(paths[0], localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource)[treepath]
-    branches = list(tree._normalize_branches(branches))
+    awkward = _normalize_awkwardlib(awkwardlib)
+    branches = list(tree._normalize_branches(branches, awkward))
 
     if cache is None:
         cache = uproot.cache.ThreadSafeArrayCache(limitbytes)
@@ -1739,22 +1743,22 @@ def lazyarrays(path, treepath, branches=None, outputtype=dict, namedecode=None, 
 
     if outputtype == namedtuple:
         outputtype = namedtuple("Arrays", [codecs.ascii_decode(branch.name, "replace")[0] if namedecode is None else branch.name.decode(namedecode) for branch, interpretation in branches])
-        return outputtype(*[LazyArray._frompaths(paths, uuids, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
+        return outputtype(*[LazyArray._frompaths(paths, uuids, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, awkward, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
     elif getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame":
         raise TypeError("pandas.DataFrame cannot store lazyarrays")
     elif isinstance(outputtype, type) and issubclass(outputtype, dict):
-        return outputtype((branch.name if namedecode is None else branch.name.decode(namedecode), LazyArray._frompaths(paths, uuids, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor)) for branch, interpretation in branches)
+        return outputtype((branch.name if namedecode is None else branch.name.decode(namedecode), LazyArray._frompaths(paths, uuids, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, awkward, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor)) for branch, interpretation in branches)
     elif isinstance(outputtype, type) and issubclass(outputtype, (list, tuple)):
-        return outputtype(LazyArray._frompaths(paths, uuids, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches)
+        return outputtype(LazyArray._frompaths(paths, uuids, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, awkward, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches)
     else:
-        return outputtype(*[LazyArray._frompaths(paths, uuids, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
+        return outputtype(*[LazyArray._frompaths(paths, uuids, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, awkward, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
 
 class LazyArray(object):
     def __init__(self):
         raise TypeError("LazyArrays should be created with uproot.lazyarrays or TTreeMethods.lazyarrays")
 
     @classmethod
-    def _frombranch(cls, onlybranch, interpretation, cache, basketcache, keycache, executor):
+    def _frombranch(cls, onlybranch, interpretation, awkward, cache, basketcache, keycache, executor):
         self = cls.__new__(cls)
         self._onlybranch = onlybranch
         self._paths = (None,)
@@ -1763,7 +1767,8 @@ class LazyArray(object):
         self._branchname = onlybranch.name
         self._chunksize = max(onlybranch.basket_numentries(i) for i in range(onlybranch.numbaskets)) if onlybranch.numbaskets > 0 else 1
         self._interpretation = interpretation
-        self._globalentryoffset = awkward.util.numpy.array([0, onlybranch.numentries], dtype=awkward.util.numpy.int64)
+        self._globalentryoffset = numpy.array([0, onlybranch.numentries], dtype=numpy.int64)
+        self._awkward = awkward
         self._cache = cache
         self._basketcache = basketcache
         self._keycache = keycache
@@ -1774,7 +1779,7 @@ class LazyArray(object):
         return self
 
     @classmethod
-    def _frompaths(cls, paths, uuids, treepath, branchname, chunksize, interpretation, globalentryoffset, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor):
+    def _frompaths(cls, paths, uuids, treepath, branchname, chunksize, interpretation, globalentryoffset, awkward, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor):
         self = cls.__new__(cls)
         self._onlybranch = None
         self._paths = paths
@@ -1784,6 +1789,7 @@ class LazyArray(object):
         self._chunksize = chunksize
         self._interpretation = interpretation
         self._globalentryoffset = globalentryoffset
+        self._awkward = awkward
         self._cache = cache
         self._basketcache = basketcache
         self._keycache = keycache
@@ -1802,9 +1808,9 @@ class LazyArray(object):
 
     def __str__(self):
         if len(self) > 6:
-            return awkward.util.numpy.array_str(self[:3], max_line_width=awkward.util.numpy.inf).rstrip("]") + " ... " + awkward.util.numpy.array_str(self[-3:], max_line_width=awkward.util.numpy.inf).lstrip("[")
+            return numpy.array_str(self[:3], max_line_width=numpy.inf).rstrip("]") + " ... " + numpy.array_str(self[-3:], max_line_width=numpy.inf).lstrip("[")
         else:
-            return awkward.util.numpy.array_str(str, max_line_width=awkward.util.numpy.inf)
+            return numpy.array_str(str, max_line_width=numpy.inf)
 
     def __len__(self):
         return int(self._globalentryoffset[-1])
@@ -1821,7 +1827,7 @@ class LazyArray(object):
         if isinstance(self._interpretation, asdtype):
             return self._interpretation.todtypeflat
         else:
-            return awkward.util.numpy.dtype(awkward.util.numpy.object_)
+            return numpy.dtype(numpy.object_)
 
     @staticmethod
     def _cachekey(uuid, treepath):
@@ -1848,9 +1854,9 @@ class LazyArray(object):
 
         if self._onlybranch is None:
             tree = self._tree(filenum)
-            array = tree[self._branchname].array(interpretation=self._interpretation, entrystart=entrystart, entrystop=entrystop, flatten=False, flatname=None, cache=None, basketcache=self._basketcache, keycache=self._keycache, executor=self._executor, blocking=True)
+            array = tree[self._branchname].array(interpretation=self._interpretation, entrystart=entrystart, entrystop=entrystop, flatten=False, flatname=None, awkwardlib=self._awkward, cache=None, basketcache=self._basketcache, keycache=self._keycache, executor=self._executor, blocking=True)
         else:
-            array = self._onlybranch.array(interpretation=self._interpretation, entrystart=entrystart, entrystop=entrystop, flatten=False, flatname=None, cache=None, basketcache=self._basketcache, keycache=self._keycache, executor=self._executor, blocking=True)
+            array = self._onlybranch.array(interpretation=self._interpretation, entrystart=entrystart, entrystop=entrystop, flatten=False, flatname=None, awkwardlib=self._awkward, cache=None, basketcache=self._basketcache, keycache=self._keycache, executor=self._executor, blocking=True)
 
         if step < 0:
             array = array[::step]
@@ -1877,7 +1883,7 @@ class LazyArray(object):
             if isinstance(self._interpretation, asdtype):
                 shape = shape + self._interpretation.todims
 
-            out = awkward.util.numpy.empty(shape, dtype=self.dtype)
+            out = self._awkward.numpy.empty(shape, dtype=self.dtype)
             pointer = 0
 
             skip = 0
@@ -1917,7 +1923,7 @@ class LazyArray(object):
 
                     tmp = pointer
 
-                    if isinstance(piece, awkward.util.numpy.ndarray):
+                    if isinstance(piece, self._awkward.numpy.ndarray):
                         out[pointer : pointer + len(piece)] = piece
                         pointer += len(piece)
                     else:
