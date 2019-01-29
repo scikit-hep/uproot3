@@ -147,7 +147,10 @@ def _obj_or_genobj(streamerClass, branch, isjagged, cntvers=False, tobject=True,
                 else:
                     return asobj(astable(asdtype(recarray)), streamerClass._methods)
 
-def interpret(branch, awkward, swapbytes=True, cntvers=False, tobject=True, speedbump=True):
+def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=True, speedbump=True):
+    import uproot.tree
+    awkward = uproot.tree._normalize_awkwardlib(awkwardlib)
+
     dims, isjagged = (), False
     if len(branch._fLeaves) == 1:
         m = interpret._titlehasdims.match(branch._fLeaves[0]._fTitle)

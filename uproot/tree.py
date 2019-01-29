@@ -50,6 +50,8 @@ except ImportError:
 
 import numpy
 
+import awkward
+
 import uproot.rootio
 from uproot.rootio import _bytesid
 from uproot.rootio import nofilter
@@ -98,7 +100,6 @@ def _filename_explode(x):
 
 def _normalize_awkwardlib(awkwardlib):
     if awkwardlib is None:
-        import awkward
         return awkward
     elif isinstance(awkwardlib, str):
         return importlib.import_module(awkwardlib)
