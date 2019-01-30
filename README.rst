@@ -31,7 +31,7 @@ Python does not necessarily mean slow. As long as the data blocks ("baskets") ar
 
     <img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/root-none-muon.png" width="47%" align="left"><img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/rootnumpy-none-muon.png" width="47%" align="right"><br clear="all" />
 
-uproot is maintained by Scikit-HEP, not by the ROOT project team, so post bug reports here as `GitHub issues <https://github.com/scikit-hep/uproot/issues>`__, not on a ROOT forum. Thanks!
+uproot is not maintained by the ROOT project team, so post bug reports here as `GitHub issues <https://github.com/scikit-hep/uproot/issues>`__, not on a ROOT forum. Thanks!
 
 .. inclusion-marker-2-do-not-remove
 
