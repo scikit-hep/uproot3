@@ -7,28 +7,28 @@ os:
   - linux
 
 env:
-  - CONDA_PYTHON_VERION=2.7 NUMPY="numpy==1.13.1"
-  - CONDA_PYTHON_VERION=2.7 NUMPY="numpy==1.14.5"
-  - CONDA_PYTHON_VERION=2.7 NUMPY="numpy>=1.15"
+  - PYVER=2.7 NPY="numpy==1.13.1"
+  - PYVER=2.7 NPY="numpy==1.14.5"
+  - PYVER=2.7 NPY="numpy>=1.15"
 
-  - CONDA_PYTHON_VERION=3.4 NUMPY="numpy==1.13.1"
-  - CONDA_PYTHON_VERION=3.4 NUMPY="numpy==1.14.5"
-  - CONDA_PYTHON_VERION=3.4 NUMPY="numpy>=1.15"
+  - PYVER=3.4 NPY="numpy==1.13.1"
+  - PYVER=3.4 NPY="numpy==1.14.5"
+  - PYVER=3.4 NPY="numpy>=1.15"
 
-  - CONDA_PYTHON_VERION=3.5 NUMPY="numpy==1.13.1"
-  - CONDA_PYTHON_VERION=3.5 NUMPY="numpy==1.14.5"
-  - CONDA_PYTHON_VERION=3.5 NUMPY="numpy>=1.15"
+  - PYVER=3.5 NPY="numpy==1.13.1"
+  - PYVER=3.5 NPY="numpy==1.14.5"
+  - PYVER=3.5 NPY="numpy>=1.15"
 
-  - CONDA_PYTHON_VERION=3.6 NUMPY="numpy==1.13.1"
-  - CONDA_PYTHON_VERION=3.6 NUMPY="numpy==1.14.5"
-  - CONDA_PYTHON_VERION=3.6 NUMPY="numpy>=1.15"
+  - PYVER=3.6 NPY="numpy==1.13.1"
+  - PYVER=3.6 NPY="numpy==1.14.5"
+  - PYVER=3.6 NPY="numpy>=1.15"
 
-  - CONDA_PYTHON_VERION=3.7 NUMPY="numpy==1.14.5"
-  - CONDA_PYTHON_VERION=3.7 NUMPY="numpy>=1.15"
+  - PYVER=3.7 NPY="numpy==1.14.5"
+  - PYVER=3.7 NPY="numpy>=1.15"
 
-  - CONDA_PYTHON_VERION=pypy2.7 NUMPY="numpy>=1.15"
+  - PYVER=pypy2.7 NPY="numpy>=1.15"
 
-  - CONDA_PYTHON_VERION=pypy3.5 NUMPY="numpy>=1.15"
+  - PYVER=pypy3.5 NPY="numpy>=1.15"
 
 install:
   - wget -nv http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
@@ -37,16 +37,16 @@ install:
   - hash -r
   - conda config --add channels conda-forge;
   - conda config --set always_yes yes --set changeps1 no
-  - if [ "${CONDA_PYTHON_VERION}" = "2.7" ] || [ "${CONDA_PYTHON_VERION}" = "3.6" ] || [ "${CONDA_PYTHON_VERION}" = "3.7" ]; then
-      conda create -q -n testenv python=${CONDA_PYTHON_VERION} root;
-    elif [[ "${CONDA_PYTHON_VERION}" = pypy* ]]; then
-      conda create -q -n testenv ${CONDA_PYTHON_VERION};
+  - if [ "${PYVER}" = "2.7" ] || [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" ]; then
+      conda create -q -n testenv python=${PYVER} root;
+    elif [[ "${PYVER}" = pypy* ]]; then
+      conda create -q -n testenv ${PYVER};
     else
-      conda create -q -n testenv python=${CONDA_PYTHON_VERION};
+      conda create -q -n testenv python=${PYVER};
     fi
   - source activate testenv
   - pip install --upgrade setuptools_scm
-  - pip install $NUMPY
+  - pip install $NPY
   - if [[ $TRAVIS_PYTHON_VERSION = pypy* ]] ; then pip install "numpy<1.16.0" ; fi       # FIXME: pypy bug in numpy
   - python -c 'import numpy; print(numpy.__version__)'
   - pip install "awkward>=0.7.0"
@@ -79,7 +79,7 @@ deploy:
   on:
     tags: true
     branch: master
-    condition: '$TRAVIS_PYTHON_VERSION = "3.7" && $NUMPY = "numpy>=1.15"'
+    condition: '$TRAVIS_PYTHON_VERSION = "3.7" && $NPY = "numpy>=1.15"'
 
 stages:
   - test
@@ -90,7 +90,7 @@ jobs:
   include:
   - stage: binder
     python: "3.6"
-    env: NUMPY="numpy>=1.15"
+    env: NPY="numpy>=1.15"
     addons: skip
     before_install: skip
     install: skip
