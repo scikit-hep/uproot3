@@ -23,7 +23,7 @@ source_encoding = "utf-8"
 master_doc = "index"
 
 project = u"uproot"
-copyright = u"2017, DIANA-HEP"
+copyright = u"2019, IRIS-HEP"
 author = u"Jim Pivarski"
 
 def get_version():

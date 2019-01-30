@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2017, DIANA-HEP
+# Copyright (c) 2019, IRIS-HEP
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -423,6 +423,10 @@ tree_fragments = {
     "entrysteps": u"""entrysteps : ``None``, positive int, or iterable of *(int, int)* pairs
         if ``None`` *(default)*, iterate in steps of TTree clusters (number of entries for which all branches' baskets align); if an integer, iterate in steps of equal numbers of entries (except at the end of a file); otherwise, iterate in explicit, user-specified *(start, stop)* intervals ("start" is inclusive and "stop" is exclusive).""",
 
+    # entrysteps_tree
+    "entrysteps_tree": u"""entrysteps : ``None``, positive int, or iterable of *(int, int)* pairs
+        if ``None`` *(default)*, iterate in steps of TTree clusters (number of entries for which all branches' baskets align); if an integer, iterate in steps of equal numbers of entries; otherwise, iterate in explicit, user-specified *(start, stop)* intervals ("start" is inclusive and "stop" is exclusive).""",
+
     # branch
     "branch": u"""branch : str
         name of the branch to read.""",
@@ -447,13 +451,25 @@ tree_fragments = {
     "namedecode": u"""namedecode : None or str
         if ``None`` *(default)* return names as uninterpreted byte strings (type ``bytes`` in Python 3); if a string like ``"ascii"`` or ``"utf-8"``, decode bytes to a string using the specified encoding.""",
 
+    # reportpath
+    "reportpath": u"""reportpath : bool
+        if ``True`` *(not default)*, yield the current path (string) before the arrays (and any other reported objects) as a tuple.""",
+
+    # reportfile
+    "reportfile": u"""reportfile : bool
+        if ``True``, *(not default)*, yield the current file (object) before the arrays (and any other reported objects except reportpath) as a tuple.""",
+
     # reportentries
     "reportentries": u"""reportentries : bool
-        if ``False`` *(default)*, yield only arrays (as ``outputtype``); otherwise, yield 3-tuple: *(entry start, entry stop, arrays)*, where *entry start* is inclusive and *entry stop* is exclusive.""",
+        if ``True`` *(not default)*, yield the current entry start and entry stop (integers) before the arrays, where *entry start* is inclusive and *entry stop* is exclusive.""",
 
     # flatten
     "flatten": u"""flatten : None or bool
         if ``True``, convert JaggedArrays into flat Numpy arrays. If False *(default)*, make JaggedArrays lists. If None, remove JaggedArrays.""",
+
+    # awkwardlib
+    "awkwardlib": u"""awkwardlib : ``None``, str, or module
+        if ``None`` *(default)*, use ``import awkward`` to get awkward-array constructors. Otherwise, parse the module string name or use the provided module.""",
 
     # cache
     "cache": u"""cache : ``None`` or ``dict``-like object
@@ -517,9 +533,15 @@ u"""Opens a series of ROOT files (local or remote), yielding the same number of 
 
     {namedecode}
 
+    {reportpath}
+
+    {reportfile}
+
     {reportentries}
 
     {flatten}
+
+    {awkwardlib}
 
     {cache}
 
@@ -772,6 +794,8 @@ u"""Read one branch into an array (or other object if provided an alternate *int
 
     {flatten}
 
+    {awkwardlib}
+
     {cache}
 
     {basketcache}
@@ -795,6 +819,8 @@ u"""Create a lazy array that would read the branch as needed.
     {branch}
 
     {interpretation}
+
+    {awkwardlib}
 
     {cache}
 
@@ -827,6 +853,8 @@ u"""Read many branches into arrays (or other objects if provided alternate *inte
 
     {flatten}
 
+    {awkwardlib}
+
     {cache}
 
     {basketcache}
@@ -854,6 +882,8 @@ u"""Create many lazy arrays.
 
     {namedecode}
 
+    {awkwardlib}
+
     {cache}
 
     {basketcache}
@@ -877,7 +907,7 @@ u"""Iterate over many arrays at once, yielding the same number of entries from a
     ----------
     {branches}
 
-    {entrysteps}
+    {entrysteps_tree}
 
     {outputtype}
 
@@ -890,6 +920,8 @@ u"""Iterate over many arrays at once, yielding the same number of entries from a
     {entrystop}
 
     {flatten}
+
+    {awkwardlib}
 
     {cache}
 
@@ -1278,6 +1310,8 @@ u"""Read the branch into an array (or other object if provided an alternate *int
 
     {flatten}
 
+    {awkwardlib}
+
     {cache}
 
     {basketcache}
@@ -1300,6 +1334,8 @@ u"""Create a lazy array that would read the branch as needed.
     Parameters
     ----------
     {interpretation}
+
+    {awkwardlib}
 
     {cache}
 
@@ -1330,6 +1366,8 @@ u"""Read a single basket into an array.
 
     {flatten}
 
+    {awkwardlib}
+
     {cache}
 
     {basketcache}
@@ -1354,6 +1392,8 @@ u"""Read baskets into a list of arrays.
     {entrystop}
 
     {flatten}
+
+    {awkwardlib}
 
     {cache}
 
@@ -1385,6 +1425,8 @@ u"""Iterate over baskets.
     {entrystop}
 
     {flatten}
+
+    {awkwardlib}
 
     {cache}
 
@@ -1498,6 +1540,9 @@ u"""Generate a default interpretation of a branch.
     ----------
     branch : :py:class:`TBranchMethods <uproot.tree.TBranchMethods>`
         branch to interpret.
+
+    awkwardlib : ``None``, str, or module
+        if ``None`` *(default)*, use ``import awkward`` to get awkward-array constructors. Otherwise, parse the module string name or use the provided module.
 
     classes : ``None`` or ``dict`` of str \u2192 :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`
         class definitions associated with each class name, usually generated by ROOT file streamers. If ``None`` *(default)*, use the class definitions generated from the file from which this branch was read.

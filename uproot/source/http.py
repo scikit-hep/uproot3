@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2017, DIANA-HEP
+# Copyright (c) 2019, IRIS-HEP
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -30,10 +30,6 @@
 
 import os.path
 import re
-try:
-    from urllib.request import urlopen, Request
-except ImportError:
-    from urllib2 import urlopen, Request
 
 import numpy
 
@@ -43,26 +39,38 @@ class HTTPSource(uproot.source.chunked.ChunkedSource):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (uproot.source.chunked.ChunkedSource.__metaclass__,), {})
 
-    def __init__(self, path, *args, **kwds):
+    def __init__(self, path, auth=None, *args, **kwds):
         super(HTTPSource, self).__init__(path, *args, **kwds)
         self._size = None
+        self.auth = auth
 
     defaults = {"chunkbytes": 16*1024, "limitbytes": 16*1024**2}
 
     def _open(self):
-        pass
+        try:
+            import requests
+        except ImportError:
+            raise ImportError("\n\nInstall requests package (for HTTP) with:\n\n    pip install requests\nor\n    conda install -c anaconda requests")
 
     def size(self):
         return self._size
 
-    _contentrange = re.compile("^bytes [0-9]+-[0-9]+/([0-9]+)$")
+    _contentrange = re.compile("^bytes ([0-9]+)-([0-9]+)/([0-9]+)$")
 
     def _read(self, chunkindex):
-        request = Request(self.path, headers={"Range": "bytes={0}-{1}".format(chunkindex * self._chunkbytes, (chunkindex + 1) * self._chunkbytes)})
-        handle = urlopen(request)
-        data = handle.read()
+        import requests
+        response = requests.get(
+            self.path,
+            headers={"Range": "bytes={0}-{1}".format(chunkindex * self._chunkbytes, (chunkindex + 1) * self._chunkbytes)},
+            auth=self.auth,
+        )
+        response.raise_for_status()
+        data = response.content
+
         if self._size is None:
-            m = self._contentrange.match(handle.headers.get("content-range", ""))
+            m = self._contentrange.match(response.headers.get("Content-Range", ""))
             if m is not None:
-                self._size = int(m.group(1))
+                start_inclusive, stop_inclusive, size = int(m.group(1)), int(m.group(2)), int(m.group(3))
+                if size > (stop_inclusive - start_inclusive) + 1:
+                    self._size = size
         return numpy.frombuffer(data, dtype=numpy.uint8)

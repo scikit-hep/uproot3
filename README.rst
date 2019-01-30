@@ -48,14 +48,14 @@ Strict dependencies:
 The following are installed automatically when you install uproot with pip:
 
 - `Numpy <https://scipy.org/install.html>`__ (1.13.1+)
-- `awkward-array <https://pypi.org/project/awkward>`__ to manipulate data from non-flat TTrees, such as jagged arrays (`part of Scikit-HEP <https://github.com/scikit-hep/awkward-array>`__)
-- `uproot-methods <https://pypi.org/project/uproot-methods>`__ (0.2.0+) for histogram and physics object methods, such as TLorentzVector (`part of Scikit-HEP <https://github.com/scikit-hep/uproot-methods>`__)
+- `awkward-array <https://pypi.org/project/awkward>`__ (0.7.0+) to manipulate data from non-flat TTrees, such as jagged arrays (`part of Scikit-HEP <https://github.com/scikit-hep/awkward-array>`__)
+- `uproot-methods <https://pypi.org/project/uproot-methods>`__ (0.3.0+) for histogram and physics object methods, such as TLorentzVector (`part of Scikit-HEP <https://github.com/scikit-hep/uproot-methods>`__)
 - `cachetools <https://pypi.org/project/cachetools>`__ for dict-like caches (replaces uproot 2's custom caches)
-- `lz4 <https://pypi.org/project/lz4>`__ to read lz4-compressed ROOT files (now ROOT's default compression method)
 
 Optional dependencies:
 ======================
 
+- `lz4 <https://pypi.org/project/lz4>`__ to read lz4-compressed ROOT files (now ROOT's default compression method)
 - `lzma <https://anaconda.org/conda-forge/backports.lzma>`__ to read lzma-compressed ROOT files in Python 2 (not needed for Python 3 or if your ROOT files aren't lzma-compressed)
 - `futures <https://pypi.python.org/pypi/futures>`__ for parallel processing in Python 2 (not needed for Python 3 or if you don't plan to use parallel processing)
 - `XRootD <https://anaconda.org/nlesc/xrootd>`__ to access remote files; get version 4 or later for pyxrootd to be included in the package (unfortunately, you have to compile it manually with CMake)
@@ -63,6 +63,11 @@ Optional dependencies:
 **Reminder: you do not need C++ ROOT to run uproot.**
 
 .. inclusion-marker-3-do-not-remove
+
+Interactive Tutorials
+=====================
+
+Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Ftutorial.ipynb>`__ on Binder.
 
 Tutorial
 ========
@@ -80,13 +85,6 @@ Tutorial
 * `Caching data <#caching-data>`__
 * `Parallel processing <#parallel-processing>`__
 * `Connectors to other packages <#connectors-to-other-packages>`__
-
-Interactive Tutorials
-=====================
-
-Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Ftutorial.ipynb>`__ on Binder.
-
-**New!** Try the `uproot 3 tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Fversion-3-features.ipynb>`__ to see the new jagged arrays and write support, also on Binder.
 
 Reference documentation
 =======================
@@ -483,11 +481,11 @@ A ``for`` loop over a ``dict`` just iterates over the names. We've read in three
      [ 2  2  2  2  2  2  2  2  2  2]
      [ 3  3  3  3  3  3  3  3  3  3]
 
-The **entrystart** and **entrystop** parameters let you slice an array while reading it, to avoid reading more than you want. See `Reading only part of a TBranch`__ below.
+The **entrystart** and **entrystop** parameters let you slice an array while reading it, to avoid reading more than you want. See `Reading only part of a TBranch <#reading-only-part-of-a-tbranch>`__ below.
 
-The **cache**, **basketcache**, and **keycache** parameters allow you to avoid re-reading data without significantly altering your code. See `Caching data`__ below.
+The **cache**, **basketcache**, and **keycache** parameters allow you to avoid re-reading data without significantly altering your code. See `Caching data <#caching-data>`__ below.
 
-The **executor** and **blocking** parameters allow you to read and possibly decompress the branches in parallel. See `Parallel processing`__ below.
+The **executor** and **blocking** parameters allow you to read and possibly decompress the branches in parallel. See `Parallel processing <#parallel-processing>`__ below.
 
 All of the `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__ and `TBranch <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods>`__ methods that read data into arrays— ``array``, ``lazyarray``, ``arrays``,  ``lazyarrays``, ``iterate``, ``basket``, ``baskets``, and ``iterate_baskets``— all use these parameters consistently. If you understand what they do for one method, you understand them all.
 
@@ -572,7 +570,7 @@ When we ask for the whole array, all eight of the baskets would be read, decompr
     >>> branch.array(entrystart=5, entrystop=15)
     array([ 5,  6,  7,  8,  9, 10, 11, 12, 13, 14], dtype=int32)
 
-We can demonstrate that this is actually happening with a cache (see `Caching data`__ below).
+We can demonstrate that this is actually happening with a cache (see `Caching data <#caching-data>`__ below).
 
 .. code-block:: python
 
@@ -652,7 +650,7 @@ One reason you might want to only part of an array is to get a sense of the data
 
 Whenever a lazy array is indexed or sliced, it loads as little as possible to yield the result. Slicing everything (``[:]``) gives you a normal array.
 
-Since caching in uproot is always explicit (for consistency: see `Caching data`__), repeatedly indexing the same value repeatedly reads from the file unless you specify a cache. You'd probably always want to provide lazy arrays with caches.
+Since caching in uproot is always explicit (for consistency: see `Caching data <#caching-data>`__), repeatedly indexing the same value repeatedly reads from the file unless you specify a cache. You'd probably always want to provide lazy arrays with caches.
 
 Another reason to want to read part of an array is to efficiently iterate over data. `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__ has an ``iterate`` method for that purpose (which, incidentally, also takes **entrystart** and **entrystop** parameters).
 
@@ -836,22 +834,11 @@ Non-TTrees\: histograms and more
 
 The uproot implementation is fairly general, to be robust against changes in the ROOT format. ROOT has a wonderful backward-compatibility mechanism called "streamers," which specify how bytes translate into data fields for every type of object contained in the file. Even such basic types as ``TObjArray`` and ``TNamed`` are defined by streamers.
 
-To read a `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__, uproot first consults the streamers in your ROOT file to know how to deserialize your particular version of `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__. This is why the `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__ class contains so many members starting with "f"— they are the C++ class private members, and uproot is literally following the prescription to deserialize the C++ class. Pythonic attributes like ``tree.name`` and ``tree.numentries`` are aliases for ``tree.fName`` and ``tree.fEntries``, etc.
-
-.. code-block:: python
-
-    >>> [x for x in dir(tree) if x.startswith("_f")]
-    ['_fAliases', '_fAutoFlush', '_fAutoSave', '_fBranchRef', '_fBranches', '_fClusterRangeEnd',
-     '_fClusterSize', '_fDefaultEntryOffsetLen', '_fEntries', '_fEstimate', '_fFillColor',
-     '_fFillStyle', '_fFlushedBytes', '_fFriends', '_fIndex', '_fIndexValues', '_fLeaves',
-     '_fLineColor', '_fLineStyle', '_fLineWidth', '_fMarkerColor', '_fMarkerSize',
-     '_fMarkerStyle', '_fMaxEntries', '_fMaxEntryLoop', '_fMaxVirtualSize', '_fNClusterRange',
-     '_fName', '_fSavedBytes', '_fScanField', '_fTimerInterval', '_fTitle', '_fTotBytes',
-     '_fTreeIndex', '_fUpdate', '_fUserInfo', '_fWeight', '_fZipBytes', '_filter']
+To read a `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__, uproot first consults the streamers in your ROOT file to know how to deserialize your particular version of that class. This is why it contains so many members starting with ``"_f"``: they are the C++ class private members, and uproot is literally following the prescription to deserialize the C++ class. Pythonic attributes like ``tree.name`` and ``tree.numentries`` are aliases for ``tree._fName`` and ``tree._fEntries``, etc.
 
 This means that literally any kind of object may be read from a `ROOTDirectory <http://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootdirectory>`__. Even if the uproot authors have never heard of it, the new data type will have a streamer in the file, and uproot will follow that prescription to make an object with the appropriate private fields. What you do with that object is another story: the member functions, written in C++, are *not* serialized into the ROOT file, and thus the Python object will have data but no functionality.
 
-We have to add functionality by writing the equivalent Python. The uproot `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__ implementation is a bundle of functions that expect private members like ``fName``, ``fEntries``, and ``fBranches``. Other ROOT types can be wrapped in similar ways. Histograms are useful, and therefore the ``TH1`` classes are similarly wrapped:
+We have to add functionality by writing the equivalent Python. The uproot `TTree <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__ implementation is a bundle of functions that expect private members like ``_fName``, ``_fEntries``, and ``_fBranches``. Other ROOT types can be wrapped in similar ways. Histograms are useful, and therefore the ``TH1`` classes are similarly wrapped:
 
 .. code-block:: bash
 
@@ -883,15 +870,19 @@ We have to add functionality by writing the equivalent Python. The uproot `TTree
     [3, inf]     0    |                                                            |
                       +------------------------------------------------------------+
 
+Code to view histograms in Pythonic plotting packages is in development, but this is a wide-open area for the future. For now, uproot's ability to read histograms is useful for querying bin values in scripts, like so.
+
 .. code-block:: python
 
-    >>> [x for x in dir(file["one"]) if not x.startswith("_") and not x.startswith("f")]
-    ['allvalues', 'append', 'bokeh', 'classname', 'classversion', 'clear', 'copy', 'count',
-     'extend', 'high', 'holoviews', 'index', 'insert', 'interval', 'low', 'name', 'numbins',
-     'numpy', 'overflows', 'pop', 'read', 'remove', 'reverse', 'show', 'sort', 'title',
-     'underflows', 'values', 'xlabels']
+    >>> h = file["one"]
+    >>> h.edges      # returns a numpy array of bin edges, excluding under/overflow bins
+    array([-3. , -2.4, -1.8, -1.2, -0.6,  0. ,  0.6,  1.2,  1.8,  2.4,  3. ])
+    >>> h.values     # returns counter values, excluding *flow bins
+    array([  68.,  285.,  755., 1580., 2296., 2286., 1570.,  795.,  289., 76.], dtype=float32)
+    >>> h.variances  # returns counter variances for weighted histograms (*flow bins excluded)
+    array([], dtype=float64)
 
-Code to view histograms in Pythonic plotting packages is in development, but this is a wide-open area for future development. For now, uproot's ability to read histograms is useful for querying bin values in scripts.
+There are corresponding fields ``alledges``, ``allvalues``, and ``allvariances``, which include the under/overflow bins.
 
 Caching data
 ------------

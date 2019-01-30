@@ -1,4 +1,5 @@
 language: python
+dist: xenial
 
 cache: pip
 
@@ -49,13 +50,17 @@ install:
   - source activate testenv
   - pip install --upgrade setuptools_scm
   - pip install $NUMPY
+  - if [[ $TRAVIS_PYTHON_VERSION = pypy* ]] ; then pip install "numpy<1.16.0" ; fi       # FIXME: pypy bug in numpy
   - python -c 'import numpy; print(numpy.__version__)'
-  - pip install awkward
+  - pip install "awkward>=0.7.0"
   - python -c 'import awkward; print(awkward.__version__)'
-  - pip install "uproot-methods>=0.2.0"
+  - pip install "uproot-methods>=0.3.0"
   - python -c 'import uproot_methods; print(uproot_methods.__version__)'
   - pip install "pytest>=3.9" pytest-runner
+  - pip install lz4 requests
+  - if [[ $TRAVIS_PYTHON_VERSION = "2.7" ]] ; then pip install backports.lzma ; fi
   - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install pandas ; fi
+  - pip install --upgrade pyOpenSSL     # for deployment
 
 addons:
   apt:
@@ -77,34 +82,21 @@ deploy:
   on:
     tags: true
     branch: master
-    condition: '$TRAVIS_PYTHON_VERSION = "3.6" && $NUMPY = "numpy>=1.15"'
+    condition: '$TRAVIS_PYTHON_VERSION = "3.7" && $NUMPY = "numpy>=1.15"'
 
 stages:
   - test
-  - name: docs
+  - name: binder
     if: (branch = master) AND (NOT (type IN (pull_request)))
 
 jobs:
   include:
-  - stage: docs
-    python: '3.6'
+  - stage: binder
+    python: "3.6"
     env: NUMPY="numpy>=1.15"
-    addons:
-      chrome: stable
-      apt:
-        packages:
-          - chromium-chromedriver
-    before_install:
-      - sudo apt-get update
-      - sudo apt-get -qq install pandoc
-      - pip install --upgrade pip setuptools wheel
-      - pip install selenium
-    install:
-      - pip install -U -q .
-    before_script:
-      - ln --symbolic /usr/lib/chromium-browser/chromedriver "${HOME}/bin/chromedriver"
+    addons: skip
+    before_install: skip
+    install: skip
     script:
-    # Open Binder example in browser to trigger repo2docker to build image
-    - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master
-    - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Ftutorial.ipynb
-    - python binder/trigger_binder.py --url https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Fversion-3-features.ipynb
+    # Use Binder build API to trigger repo2docker to build image
+    - curl https://mybinder.org/build/gh/scikit-hep/uproot/master

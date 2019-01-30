@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2017, DIANA-HEP
+# Copyright (c) 2019, IRIS-HEP
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -92,20 +92,19 @@ setup(name = "uproot",
       version = get_version(),
       packages = find_packages(exclude = ["tests"]),
       scripts = [],
-      data_files = ["README.rst"],
       description = "ROOT I/O in pure Python and Numpy.",
       long_description = get_description(),
-      author = "Jim Pivarski (DIANA-HEP)",
-      author_email = "pivarski@fnal.gov",
-      maintainer = "Jim Pivarski (DIANA-HEP)",
-      maintainer_email = "pivarski@fnal.gov",
+      author = "Jim Pivarski (IRIS-HEP)",
+      author_email = "pivarski@princeton.edu",
+      maintainer = "Jim Pivarski (IRIS-HEP)",
+      maintainer_email = "pivarski@princeton.edu",
       url = "https://github.com/scikit-hep/uproot",
       download_url = "https://github.com/scikit-hep/uproot/releases",
       license = "BSD 3-clause",
       test_suite = "tests",
-      install_requires = ["numpy>=1.13.1", "awkward", "uproot-methods>=0.2.0", "cachetools", "lz4"],
+      install_requires = ["numpy>=1.13.1", "awkward>=0.8.0", "uproot-methods>=0.4.0", "cachetools"],
       setup_requires = ["pytest-runner"],
-      tests_require = ["pytest>=3.9", 'backports.lzma;python_version<"3.3"'],
+      tests_require = ["pytest>=3.9", "pkgconfig", "lz4", 'backports.lzma;python_version<"3.3"', "mock", "requests"],
       classifiers = [
           "Development Status :: 5 - Production/Stable",
           "Intended Audience :: Developers",

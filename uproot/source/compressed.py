@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2017, DIANA-HEP
+# Copyright (c) 2019, IRIS-HEP
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -87,7 +87,7 @@ class Compression(object):
                 try:
                     from backports.lzma import decompress as lzma_decompress
                 except ImportError:
-                    raise ImportError("\n\nInstall lzma package with:\n\n    pip install backports.lzma --user\nor\n    conda install -c conda-forge backports.lzma\n\n(or just use Python >= 3.3).")
+                    raise ImportError("\n\nInstall lzma package with:\n\n    pip install backports.lzma\nor\n    conda install -c conda-forge backports.lzma\n\n(or just use Python >= 3.3).")
             return lzma_decompress(cursor.bytes(source, compressedbytes))
 
         elif self.algo == uproot.const.kOldCompressionAlgo:
@@ -97,7 +97,7 @@ class Compression(object):
             try:
                 from lz4.block import decompress as lz4_decompress
             except ImportError:
-                raise ImportError("\n\nInstall lz4 package with:\n\n    pip install lz4 --user\nor\n    conda install -c anaconda lz4")
+                raise ImportError("\n\nInstall lz4 package with:\n\n    pip install lz4\nor\n    conda install -c anaconda lz4")
 
             if uncompressedbytes is None:
                 raise ValueError("lz4 needs to know the uncompressed number of bytes")
