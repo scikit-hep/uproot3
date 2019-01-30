@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2017, DIANA-HEP
+# Copyright (c) 2019, IRIS-HEP
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -30,7 +30,7 @@
 
 import re
 
-__version__ = "3.3.6"
+__version__ = "3.4.0"
 version = __version__
 version_info = tuple(re.split(r"[-\.]", __version__))
 

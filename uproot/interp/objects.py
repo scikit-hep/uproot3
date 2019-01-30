@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2017, DIANA-HEP
+# Copyright (c) 2019, IRIS-HEP
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -30,10 +30,6 @@
 
 import copy
 import struct
-
-import awkward
-import awkward.type
-import awkward.util
 
 import uproot.interp.interp
 import uproot.interp.numerical
@@ -83,8 +79,10 @@ class STLVector(object):
             return out
 
 class STLString(object):
-    def __init__(self):
-        pass
+    def __init__(self, awkward=None):
+        if awkward is None:
+            awkward = uproot.interp.interp.Interpretation.awkward
+        self.awkward = awkward
 
     def __repr__(self):
         return "STLString()"
@@ -93,7 +91,7 @@ class STLString(object):
 
     def read(self, source, cursor, context, parent):
         numitems = cursor.field(source, self._format1)
-        return cursor.array(source, numitems, awkward.ObjectArray.CHARTYPE).tostring()
+        return cursor.array(source, numitems, self.awkward.ObjectArray.CHARTYPE).tostring()
 
 class astable(uproot.interp.interp.Interpretation):
     # makes __doc__ attribute mutable before Python 3.3
@@ -110,7 +108,7 @@ class astable(uproot.interp.interp.Interpretation):
 
     def __repr__(self):
         dtype, shape = uproot.interp.numerical._dtypeshape(self.content.todtype)
-        return "astable({0})".format(repr(self.content.to(awkward.util.numpy.dtype([(n, dtype[n]) for n in dtype.names if not n.startswith(" ")]), shape)))
+        return "astable({0})".format(repr(self.content.to(self.awkward.util.numpy.dtype([(n, dtype[n]) for n in dtype.names if not n.startswith(" ")]), shape)))
 
     def tonumpy(self):
         return self.content
@@ -126,16 +124,16 @@ class astable(uproot.interp.interp.Interpretation):
         fields = None
         for n in dtype.names:
             if fields is None:
-                fields = awkward.type.ArrayType(n, dtype[n])
+                fields = self.awkward.type.ArrayType(n, dtype[n])
             else:
-                fields = fields & awkward.type.ArrayType(n, dtype[n])
+                fields = fields & self.awkward.type.ArrayType(n, dtype[n])
         if shape == ():
             return fields
         else:
-            return awkward.type.ArrayType(*(shape + (fields,)))
+            return self.awkward.type.ArrayType(*(shape + (fields,)))
 
     def empty(self):
-        return awkward.Table.fromrec(self.content.empty())
+        return self.awkward.Table.fromrec(self.content.empty())
 
     def compatible(self, other):
         return isinstance(other, astable) and self.content.compatible(other.content)
@@ -159,7 +157,7 @@ class astable(uproot.interp.interp.Interpretation):
         return self.content.clip(destination, itemstart, itemstop, entrystart, entrystop)
 
     def finalize(self, destination, branch):
-        return awkward.Table.fromrec(self.content.finalize(destination, branch))
+        return self.awkward.Table.fromrec(self.content.finalize(destination, branch))
 
 class asobj(uproot.interp.interp.Interpretation):
     # makes __doc__ attribute mutable before Python 3.3
@@ -210,9 +208,9 @@ class asobj(uproot.interp.interp.Interpretation):
 
     def finalize(self, destination, branch):
         if self.cls._arraymethods is None:
-            return awkward.ObjectArray(self.content.finalize(destination, branch), self.cls._fromrow)
+            return self.awkward.ObjectArray(self.content.finalize(destination, branch), self.cls._fromrow)
         else:
-            cls = awkward.Methods.mixin(self.cls._arraymethods, awkward.ObjectArray)
+            cls = self.awkward.Methods.mixin(self.cls._arraymethods, self.awkward.ObjectArray)
             out = cls.__new__(cls)
             out._initObjectArray(self.content.finalize(destination, branch))
             return out
@@ -236,7 +234,7 @@ class _variable(uproot.interp.interp.Interpretation):
         return self.generator
 
     def empty(self):
-        return awkward.ObjectArray(self.content.empty(), self.generator, *self.args, **self.kwargs)
+        return self.awkward.ObjectArray(self.content.empty(), self.generator, *self.args, **self.kwargs)
 
     def compatible(self, other):
         return isinstance(other, _variable) and self.content.compatible(other) and self.generator == other.generator and self.args == other.args and self.kwargs == other.kwargs
@@ -260,7 +258,7 @@ class _variable(uproot.interp.interp.Interpretation):
         return self.content.clip(destination, itemstart, itemstop, entrystart, entrystop)
 
     def finalize(self, destination, branch):
-        return awkward.ObjectArray(self.content.finalize(destination, branch), self.generator, *self.args, **self.kwargs)
+        return self.awkward.ObjectArray(self.content.finalize(destination, branch), self.generator, *self.args, **self.kwargs)
 
 class asgenobj(_variable):
     # makes __doc__ attribute mutable before Python 3.3
@@ -281,7 +279,7 @@ class asgenobj(_variable):
                 return repr(self.cls)
 
     def __init__(self, cls, context, skipbytes):
-        super(asgenobj, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(awkward.ObjectArray.CHARTYPE), skipbytes=skipbytes), asgenobj._Wrapper(cls, context))
+        super(asgenobj, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(self.awkward.ObjectArray.CHARTYPE), skipbytes=skipbytes), asgenobj._Wrapper(cls, context))
 
     def speedbump(self, value):
         out = copy.copy(self)
@@ -298,7 +296,7 @@ class asstring(_variable):
     __metaclass__ = type.__new__(type, "type", (_variable.__metaclass__,), {})
 
     def __init__(self, skipbytes=1):
-        super(asstring, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(awkward.ObjectArray.CHARTYPE), skipbytes=skipbytes), lambda array: array.tostring())
+        super(asstring, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(self.awkward.ObjectArray.CHARTYPE), skipbytes=skipbytes), lambda array: array.tostring())
 
     def __repr__(self):
         return "asstring({0})".format("" if self.content.skipbytes == 1 else repr(self.content.skipbytes))

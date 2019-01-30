@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2017, DIANA-HEP
+# Copyright (c) 2019, IRIS-HEP
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -30,10 +30,6 @@
 
 import math
 
-import awkward
-import awkward.type
-import awkward.util
-
 import uproot.interp.interp
 import uproot.interp.numerical
 
@@ -42,17 +38,17 @@ class _JaggedArrayPrep(object):
         self.counts = counts
         self.content = content
 
-def _destructive_divide(array, divisor):
+def _destructive_divide(array, divisor, awkward):
     if divisor == 1:
         pass
     elif divisor == 2:
-        awkward.util.numpy.right_shift(array, 1, out=array)
+        awkward.numpy.right_shift(array, 1, out=array)
     elif divisor == 4:
-        awkward.util.numpy.right_shift(array, 2, out=array)
+        awkward.numpy.right_shift(array, 2, out=array)
     elif divisor == 8:
-        awkward.util.numpy.right_shift(array, 3, out=array)
+        awkward.numpy.right_shift(array, 3, out=array)
     else:
-        awkward.util.numpy.floor_divide(array, divisor, out=array)
+        awkward.numpy.floor_divide(array, divisor, out=array)
     return array
 
 class asjagged(uproot.interp.interp.Interpretation):
@@ -80,10 +76,10 @@ class asjagged(uproot.interp.interp.Interpretation):
 
     @property
     def type(self):
-        return awkward.type.ArrayType(awkward.util.numpy.inf, self.content.type)
+        return self.awkward.type.ArrayType(self.awkward.numpy.inf, self.content.type)
 
     def empty(self):
-        return awkward.JaggedArray(awkward.util.numpy.empty(0, dtype=awkward.JaggedArray.INDEXTYPE), awkward.util.numpy.empty(0, dtype=awkward.JaggedArray.INDEXTYPE), self.content.empty())
+        return self.awkward.JaggedArray(self.awkward.numpy.empty(0, dtype=self.awkward.JaggedArray.INDEXTYPE), self.awkward.numpy.empty(0, dtype=self.awkward.JaggedArray.INDEXTYPE), self.content.empty())
 
     def compatible(self, other):
         return isinstance(other, asjagged) and self.content.compatible(other.content)
@@ -96,24 +92,24 @@ class asjagged(uproot.interp.interp.Interpretation):
 
     def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop):
         if local_entrystart == local_entrystop:
-            return awkward.JaggedArray.fromoffsets([0], self.content.fromroot(data, None, local_entrystart, local_entrystop))
+            return self.awkward.JaggedArray.fromoffsets([0], self.content.fromroot(data, None, local_entrystart, local_entrystop))
         else:
             if self.skipbytes == 0:
-                offsets = _destructive_divide(byteoffsets, self.content.itemsize)
+                offsets = _destructive_divide(byteoffsets, self.content.itemsize, self.awkward)
                 starts  = offsets[local_entrystart     : local_entrystop    ]
                 stops   = offsets[local_entrystart + 1 : local_entrystop + 1]
                 content = self.content.fromroot(data, None, starts[0], stops[-1])
-                return awkward.JaggedArray(starts, stops, content)
+                return self.awkward.JaggedArray(starts, stops, content)
 
             else:
                 bytestarts = byteoffsets[local_entrystart     : local_entrystop    ] + self.skipbytes
                 bytestops  = byteoffsets[local_entrystart + 1 : local_entrystop + 1]
 
-                mask = awkward.util.numpy.zeros(len(data), dtype=awkward.util.numpy.int8)
+                mask = self.awkward.numpy.zeros(len(data), dtype=self.awkward.numpy.int8)
                 mask[bytestarts[bytestarts < len(data)]] = 1
-                awkward.util.numpy.add.at(mask, bytestops[bytestops < len(data)], -1)
-                awkward.util.numpy.cumsum(mask, out=mask)
-                data = data[mask.view(awkward.util.numpy.bool_)]
+                self.awkward.numpy.add.at(mask, bytestops[bytestops < len(data)], -1)
+                self.awkward.numpy.cumsum(mask, out=mask)
+                data = data[mask.view(self.awkward.numpy.bool_)]
 
                 content = self.content.fromroot(data, None, 0, bytestops[-1])
 
@@ -129,19 +125,19 @@ class asjagged(uproot.interp.interp.Interpretation):
                 counts = bytestops - bytestarts
                 shift = math.log(itemsize, 2)
                 if shift == round(shift):
-                    awkward.util.numpy.right_shift(counts, int(shift), out=counts)
+                    self.awkward.numpy.right_shift(counts, int(shift), out=counts)
                 else:
-                    awkward.util.numpy.floor_divide(counts, itemsize, out=counts)
+                    self.awkward.numpy.floor_divide(counts, itemsize, out=counts)
 
-                offsets = awkward.util.numpy.empty(len(counts) + 1, awkward.JaggedArray.INDEXTYPE)
+                offsets = self.awkward.numpy.empty(len(counts) + 1, self.awkward.JaggedArray.INDEXTYPE)
                 offsets[0] = 0
-                awkward.util.numpy.cumsum(counts, out=offsets[1:])
+                self.awkward.numpy.cumsum(counts, out=offsets[1:])
 
-                return awkward.JaggedArray(offsets[:-1], offsets[1:], content)
+                return self.awkward.JaggedArray(offsets[:-1], offsets[1:], content)
 
     def destination(self, numitems, numentries):
         content = self.content.destination(numitems, numentries)
-        counts = awkward.util.numpy.empty(numentries, dtype=awkward.JaggedArray.INDEXTYPE)
+        counts = self.awkward.numpy.empty(numentries, dtype=self.awkward.JaggedArray.INDEXTYPE)
         return _JaggedArrayPrep(counts, content)
 
     def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
@@ -159,6 +155,6 @@ class asjagged(uproot.interp.interp.Interpretation):
         if len(branch._fLeaves) == 1:
             leafcount = branch._fLeaves[0]._fLeafCount
 
-        out = awkward.Methods.maybemixin(type(content), awkward.JaggedArray).fromcounts(destination.counts, content)
+        out = self.awkward.Methods.maybemixin(type(content), self.awkward.JaggedArray).fromcounts(destination.counts, content)
         out.leafcount = leafcount
         return out
