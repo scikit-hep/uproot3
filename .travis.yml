@@ -6,44 +6,54 @@ cache: pip
 os:
   - linux
 
-python:
-  - 2.7
-  - 3.5
-  - 3.6
-  - 3.7
-  - pypy2.7-5.10.0
-  - pypy3.5
-
 env:
-  - NUMPY="numpy==1.13.1"
-  - NUMPY="numpy==1.14.5"
-  - NUMPY="numpy>=1.15"
+  - PYVER=2.7 NPY="numpy==1.13.1"
+  - PYVER=2.7 NPY="numpy==1.14.5"
+  - PYVER=2.7 NPY="numpy>=1.15"
 
-matrix:
-  exclude:
-    - python: 3.7
-      env: NUMPY="numpy==1.13.1"
-    - python: pypy2.7-5.10.0
-      env: NUMPY="numpy==1.14.5"
-    - python: pypy3.5
-      env: NUMPY="numpy==1.14.5"
-    - python: pypy2.7-5.10.0
-      env: NUMPY="numpy==1.13.1"
-    - python: pypy3.5
-      env: NUMPY="numpy==1.13.1"
+  - PYVER=3.4 NPY="numpy==1.13.1"
+  - PYVER=3.4 NPY="numpy==1.14.5"
+  - PYVER=3.4 NPY="numpy>=1.15"
+
+  - PYVER=3.5 NPY="numpy==1.13.1"
+  - PYVER=3.5 NPY="numpy==1.14.5"
+  - PYVER=3.5 NPY="numpy>=1.15"
+
+  - PYVER=3.6 NPY="numpy==1.13.1"
+  - PYVER=3.6 NPY="numpy==1.14.5"
+  - PYVER=3.6 NPY="numpy>=1.15"
+
+  - PYVER=3.7 NPY="numpy==1.14.5"
+  - PYVER=3.7 NPY="numpy>=1.15"
+
+  - PYVER=pypy2.7 NPY="numpy>=1.15"
+
+  - PYVER=pypy3.5 NPY="numpy>=1.15"
 
 install:
-  - env
-  - echo $TRAVIS_PYTHON_VERSION
+  - wget -nv http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --add channels conda-forge;
+  - conda config --set always_yes yes --set changeps1 no
+  - if [ "${PYVER}" = "2.7" ] || [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" ]; then
+      conda create -q -n testenv python=${PYVER} root;
+    elif [[ "${PYVER}" = pypy* ]]; then
+      conda create -q -n testenv ${PYVER};
+    else
+      conda create -q -n testenv python=${PYVER};
+    fi
+  - source activate testenv
   - pip install --upgrade setuptools_scm
-  - pip install $NUMPY
+  - pip install $NPY
   - if [[ $TRAVIS_PYTHON_VERSION = pypy* ]] ; then pip install "numpy<1.16.0" ; fi       # FIXME: pypy bug in numpy
   - python -c 'import numpy; print(numpy.__version__)'
   - pip install "awkward>=0.7.0"
   - python -c 'import awkward; print(awkward.__version__)'
   - pip install "uproot-methods>=0.3.0"
   - python -c 'import uproot_methods; print(uproot_methods.__version__)'
-  - pip install pytest pytest-runner
+  - pip install "pytest>=3.9" pytest-runner
   - pip install lz4 requests
   - if [[ $TRAVIS_PYTHON_VERSION = "2.7" ]] ; then pip install backports.lzma ; fi
   - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install pandas ; fi
@@ -69,7 +79,7 @@ deploy:
   on:
     tags: true
     branch: master
-    condition: '$TRAVIS_PYTHON_VERSION = "3.7" && $NUMPY = "numpy>=1.15"'
+    condition: '$TRAVIS_PYTHON_VERSION = "3.7" && $NPY = "numpy>=1.15"'
 
 stages:
   - test
@@ -80,7 +90,7 @@ jobs:
   include:
   - stage: binder
     python: "3.6"
-    env: NUMPY="numpy>=1.15"
+    env: NPY="numpy>=1.15"
     addons: skip
     before_install: skip
     install: skip
