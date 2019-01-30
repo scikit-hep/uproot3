@@ -23,9 +23,15 @@ ROOT I/O in pure Python and Numpy.
 
 .. inclusion-marker-1-5-do-not-remove
 
-uproot (originally μproot, for "micro-Python ROOT") is a reader and a writer of the `ROOT file format <https://root.cern/>`__ using only Python and Numpy. Unlike the standard C++ ROOT implementation, uproot is only an I/O library, primarily intended to stream data into machine learning libraries in Python. Unlike PyROOT and root_numpy, uproot does not depend on C++ ROOT. Instead, it uses Numpy calls to rapidly cast data blocks in the ROOT file as Numpy arrays.
+uproot (originally μproot, for "micro-Python ROOT") is a reader and a writer of the `ROOT file format <https://root.cern/>`__ using only Python and Numpy. Unlike the standard C++ ROOT implementation, uproot is only an I/O library, primarily intended to stream data into machine learning libraries in Python. Unlike PyROOT and root_numpy, uproot does not depend on C++ ROOT. Instead, it uses Numpy to cast blocks of data from the ROOT file as Numpy arrays.
 
-It is important to note that uproot is *not* maintained by the ROOT project team, so post bug reports as `uproot GitHub issues <https://github.com/scikit-hep/uproot/issues>`__, not on any ROOT forum.
+Python does not necessarily mean slow. As long as the data blocks ("baskets") are large, this "array at a time" approach can even be faster than "event at a time" C++. Below, the rate of reading data into arrays with uproot is shown to be faster than C++ ROOT and root_numpy, as long as the baskets are tens of kilobytes or larger (for a variable number of muons per event in an ensemble of different physics samples).
+
+.. raw:: html
+
+    <img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/root-none-muon.png" width="47%" align="left"><img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/rootnumpy-none-muon.png" width="47%" align="right"><br clear="all" />
+
+uproot is maintained by Scikit-HEP, not by the ROOT project team, so post bug reports here as `GitHub issues <https://github.com/scikit-hep/uproot/issues>`__, not on a ROOT forum. Thanks!
 
 .. inclusion-marker-2-do-not-remove
 
