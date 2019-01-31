@@ -28,12 +28,15 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import collections
 import threading
+try:
+    from collections.abc import MutableMapping
+except ImportError:
+    from collections import MutableMapping
 
 import cachetools
 
-class ArrayCache(collections.MutableMapping):
+class ArrayCache(MutableMapping):
     @staticmethod
     def getsizeof(obj):
         return getattr(obj, "nbytes", 1)

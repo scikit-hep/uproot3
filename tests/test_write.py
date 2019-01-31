@@ -27,23 +27,22 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 from os.path import join
 
 import pytest
 import uproot
 
-
 def test_strings(tmp_path):
     ROOT = pytest.importorskip("ROOT")
-    filename = join(str(tmp_path), 'example.root')
+    filename = join(str(tmp_path), "example.root")
 
     with uproot.recreate(filename) as f:
-        f['hello'] = 'world'
+        f["hello"] = "world"
 
     f = ROOT.TFile.Open(filename)
-    assert f.Get('hello') == 'world'
+    assert f.Get("hello") == "world"
     f.Close()
-
 
 def test_th1():
     pass
