@@ -79,7 +79,7 @@ deploy:
   on:
     tags: true
     branch: master
-    condition: '$TRAVIS_PYTHON_VERSION = "3.7" && $NPY = "numpy>=1.15"'
+    condition: '$PYVER = "3.7" && $NPY = "numpy>=1.15"'
 
 stages:
   - test
