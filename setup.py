@@ -56,9 +56,9 @@ def get_description():
     stop_replaceplots = middle.index(".. inclusion-marker-replaceplots-stop") + len(".. inclusion-marker-replaceplots-stop")
     middle = middle[:start_replaceplots] + """
 .. image:: https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/root-none-muon.png
-    :width: 47%
+   :width: 47 %
 .. image:: https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/rootnumpy-none-muon.png
-    :width: 47%
+   :width: 47 %
 """ + middle[stop_replaceplots:]
 
     after = """
