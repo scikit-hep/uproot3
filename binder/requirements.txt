@@ -1,6 +1,6 @@
 numpy>=1.13.1
-awkward>=0.7.0
-uproot-methods>=0.3.0
+awkward>=0.8.0
+uproot-methods>=0.4.0
 cachetools
 pkgconfig
 lz4
