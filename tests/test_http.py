@@ -47,7 +47,8 @@ def mock_get_local_instead_of_http(url="", headers={}, auth=None, **kwargs):
         def __init__(self, status_code):
             self.status_code = status_code
             if self.status_code == 200:
-                self.content = open(LOCAL, "rb").read()
+                with open(LOCAL, "rb") as f:
+                    self.content = f.read()
                 self.headers = {"Content-Range": str(len(self.content))}
 
         def raise_for_status(self):

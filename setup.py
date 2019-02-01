@@ -42,13 +42,24 @@ def get_version():
 
 def get_description():
     description = open("README.rst", "rb").read().decode("utf8", "ignore")
-    start = description.index(".. inclusion-marker-1-5-do-not-remove")
-    stop = description.index(".. inclusion-marker-3-do-not-remove")
+
     before = """.. image:: https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/source/logo-300px.png
    :alt: uproot
    :target: https://github.com/scikit-hep/uproot
 
 """
+
+    start = description.index(".. inclusion-marker-1-5-do-not-remove")
+    stop = description.index(".. inclusion-marker-3-do-not-remove")
+    middle = description[start:stop].strip()
+    start_replaceplots = middle.index(".. inclusion-marker-replaceplots-start")
+    stop_replaceplots = middle.index(".. inclusion-marker-replaceplots-stop") + len(".. inclusion-marker-replaceplots-stop")
+    middle = middle[:start_replaceplots] + """
+.. image:: https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/root-none-muon.png
+    :width: 47%
+.. image:: https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/rootnumpy-none-muon.png
+    :width: 47%
+""" + middle[stop_replaceplots:]
 
     after = """
 
@@ -86,7 +97,7 @@ Reference documentation
 * `Caches <http://uproot.readthedocs.io/en/latest/caches.html>`__
 * `Parallel I/O <http://uproot.readthedocs.io/en/latest/parallel-io.html>`__
 """
-    return before + description[start:stop].strip() + after
+    return before + middle + after
 
 setup(name = "uproot",
       version = get_version(),

@@ -27,9 +27,13 @@ uproot (originally μproot, for "micro-Python ROOT") is a reader and a writer of
 
 Python does not necessarily mean slow. As long as the data blocks ("baskets") are large, this "array at a time" approach can even be faster than "event at a time" C++. Below, the rate of reading data into arrays with uproot is shown to be faster than C++ ROOT and root_numpy, as long as the baskets are tens of kilobytes or larger (for a variable number of muons per event in an ensemble of different physics samples).
 
+.. inclusion-marker-replaceplots-start
+
 .. raw:: html
 
     <img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/root-none-muon.png" width="47%" align="left"><img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/rootnumpy-none-muon.png" width="47%" align="right"><br clear="all" />
+
+.. inclusion-marker-replaceplots-stop
 
 uproot is not maintained by the ROOT project team, so post bug reports here as `GitHub issues <https://github.com/scikit-hep/uproot/issues>`__, not on a ROOT forum. Thanks!
 
