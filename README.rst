@@ -55,7 +55,9 @@ or install with `conda <https://conda.io/en/latest/miniconda.html>`__:
     conda config --add channels conda-forge   # if you haven't already
     conda install uproot
 
-The pip installer automatically installs strict dependencies; the conda installer installs optional dependencies, too. **Reminder: you do not need C++ ROOT to run uproot.**
+The pip installer automatically installs strict dependencies; the conda installer installs optional dependencies, too.
+
+**Reminder: you do not need C++ ROOT to run uproot.**
 
 Strict dependencies:
 ====================
