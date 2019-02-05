@@ -56,6 +56,7 @@ def default_flatname(branchname, fieldname, index):
     return out
 
 def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname):
+    import awkward
     import pandas
 
     if flatname is None:
@@ -104,12 +105,15 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname):
         return outputtype(columns=columns, data=data)
 
     else:
-        index = pandas.MultiIndex.from_arrays([numpy.arange(entrystart, entrystop, dtype=numpy.int64), numpy.zeros(entrystop - entrystart, dtype=numpy.int64)], names=["entry", "subentry"])
-        out = outputtype(index=index)
         scalars = []
 
-        for name, interpretation, future in futures:
-            array = future()
+        length = None
+        starts, stops = None, None
+
+        unpacked_tuple = []
+
+        for future_tuple in futures:
+            name, interpretation, future = future_tuple
 
             if isinstance(interpretation, asobj) and isinstance(interpretation.content, astable):
                 interpretation = interpretation.content
@@ -117,17 +121,36 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname):
                 interpretation = interpretation.content
 
             if isinstance(interpretation, asjagged):
-                entries = numpy.empty(len(array.content), dtype=numpy.int64)
-                subentries = numpy.empty(len(array.content), dtype=numpy.int64)
-                starts, stops = array.starts, array.stops
-                i = 0
-                numentries = entrystop - entrystart
-                while i < numentries:
-                    entries[starts[i]:stops[i]] = i + entrystart
-                    subentries[starts[i]:stops[i]] = numpy.arange(stops[i] - starts[i])
-                    i += 1
+                array = future()
+                if starts is None:
+                    starts = array.starts
+                    stops = array.stops
+                array = array.flatten()
 
-                df = outputtype(index=pandas.MultiIndex.from_arrays([entries, subentries], names=["entry", "subentry"]))
+                if length is None:
+                    length = len(array)
+
+            else:
+                array = future()
+
+            unpacked_tuple.append((name, interpretation, array))
+
+        index = pandas.Index(numpy.arange(length))
+        out = outputtype(index=index)
+
+        def align_by_broadcast(array):
+            # Invoke jagged broadcasting to align arrays
+            content = awkward.numpy.zeros(stops.max(), dtype=array.dtype)
+            return (awkward.JaggedArray(starts, stops, content) + array).flatten()
+
+
+        names, interpretations, arrays = zip(*unpacked_tuple)
+
+        for name, interpretation, array in zip(names, interpretations, arrays):
+
+            if isinstance(interpretation, asjagged):
+
+                df = outputtype(index=index)
 
                 interpretation = interpretation.content
                 if isinstance(interpretation, asobj) and isinstance(interpretation.content, astable):
@@ -139,51 +162,51 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname):
                     if interpretation.todims == ():
                         if interpretation.todtype.names is None:
                             fn = flatname(name, None, ())
-                            df[fn] = array.flatten()
+                            df[fn] = array
                         else:
                             for nn in interpretation.todtype.names:
                                 if not nn.startswith(" "):
                                     fn = flatname(name, nn, ())
-                                    df[fn] = array[nn].flatten()
+                                    df[fn] = array[nn]
                     else:
                         for tup in itertools.product(*[range(x) for x in interpretation.todims]):
                             if interpretation.todtype.names is None:
                                 fn = flatname(name, None, tup)
-                                df[fn] = array[(slice(None),) + tup].flatten()
+                                df[fn] = array[(slice(None),) + tup]
                             else:
                                 for nn in interpretation.todtype.names:
                                     if not nn.startswith(" "):
                                         fn = flatname(name, nn, tup)
-                                        df[fn] = array[nn][(slice(None),) + tup].flatten()
+                                        df[fn] = array[nn][(slice(None),) + tup]
 
                 else:
                     fn = flatname(name, None, ())
-                    df[fn] = list(array.flatten())
+                    df[fn] = list(array)
 
             elif isinstance(interpretation, asdtype):
                 df = outputtype(index=index)
                 if interpretation.todims == ():
                     if interpretation.todtype.names is None:
                         fn = flatname(name, None, ())
-                        df[fn] = array
+                        df[fn] = align_by_broadcast(array)
                         scalars.append(fn)
                     else:
                         for nn in interpretation.todtype.names:
                             if not nn.startswith(" "):
                                 fn = flatname(name, nn, ())
-                                df[fn] = array[nn]
+                                df[fn] = align_by_broadcast(array[nn])
                                 scalars.append(fn)
                 else:
                     for tup in itertools.product(*[range(x) for x in interpretation.todims]):
                         if interpretation.todtype.names is None:
                             fn = flatname(name, None, tup)
-                            df[fn] = array[(slice(None),) + tup]
+                            df[fn] = align_by_broadcast(array[(slice(None),) + tup])
                             scalars.append(fn)
                         else:
                             for nn in interpretation.todtype.names:
                                 if not nn.startswith(" "):
                                     fn = flatname(name, nn, tup)
-                                    df[fn] = array[nn][(slice(None),) + tup]
+                                    df[fn] = align_by_broadcast(array[nn][(slice(None),) + tup])
                                     scalars.append(fn)
 
             else:
