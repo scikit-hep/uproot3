@@ -50,7 +50,7 @@ class HTTPSource(uproot.source.chunked.ChunkedSource):
         try:
             import requests
         except ImportError:
-            raise ImportError("\n\nInstall requests package (for HTTP) with:\n\n    pip install requests\nor\n    conda install -c anaconda requests")
+            raise ImportError("Install requests package (for HTTP) with:\n    pip install requests\nor\n    conda install -c anaconda requests")
 
     def size(self):
         return self._size

@@ -47,7 +47,7 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
         try:
             import pyxrootd.client
         except ImportError:
-            raise ImportError("\n\nInstall pyxrootd package from source and configure PYTHONPATH and LD_LIBRARY_PATH:\n\n    http://xrootd.org/dload.html\n\nAlternatively, try a conda package:\n\n    https://anaconda.org/search?q=xrootd")
+            raise ImportError("Install pyxrootd package with:\n    conda install -c conda-forge xrootd\n(or download from http://xrootd.org/dload.html and manually compile with cmake; setting PYTHONPATH and LD_LIBRARY_PATH appropriately).")
 
         if self._source is None or not self._source.is_open():
             self._source = pyxrootd.client.File()

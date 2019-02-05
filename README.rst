@@ -46,41 +46,38 @@ Install uproot like any other Python package:
 
 .. code-block:: bash
 
-    pip install uproot
+    pip install uproot                        # maybe with sudo or --user
 
-or similar (use ``sudo``, ``--user``, ``virtualenv``, or pip-in-conda if you wish).
+or install with `conda <https://conda.io/en/latest/miniconda.html>`__:
+
+.. code-block:: bash
+
+    conda config --add channels conda-forge   # if you haven't already
+    conda install uproot
+
+The pip installer automatically installs strict dependencies; the conda installer installs optional dependencies, too. **Reminder: you do not need C++ ROOT to run uproot.**
 
 Strict dependencies:
 ====================
 
-- `Python <http://docs.python-guide.org/en/latest/starting/installation/>`__ (2.7+, 3.4+)
-
-The following are installed automatically when you install uproot with pip:
-
-- `Numpy <https://scipy.org/install.html>`__ (1.13.1+)
-- `awkward-array <https://pypi.org/project/awkward>`__ (0.7.0+) to manipulate data from non-flat TTrees, such as jagged arrays (`part of Scikit-HEP <https://github.com/scikit-hep/awkward-array>`__)
-- `uproot-methods <https://pypi.org/project/uproot-methods>`__ (0.3.0+) for histogram and physics object methods, such as TLorentzVector (`part of Scikit-HEP <https://github.com/scikit-hep/uproot-methods>`__)
-- `cachetools <https://pypi.org/project/cachetools>`__ for dict-like caches (replaces uproot 2's custom caches)
+- `numpy <https://scipy.org/install.html>`__ (1.13.1+)
+- `awkward-array <https://pypi.org/project/awkward>`__ (0.7.0+)
+- `uproot-methods <https://pypi.org/project/uproot-methods>`__ (0.3.0+)
+- `cachetools <https://pypi.org/project/cachetools>`__
 
 Optional dependencies:
 ======================
 
 - `lz4 <https://pypi.org/project/lz4>`__ to read lz4-compressed ROOT files (now ROOT's default compression method)
 - `lzma <https://anaconda.org/conda-forge/backports.lzma>`__ to read lzma-compressed ROOT files in Python 2 (not needed for Python 3 or if your ROOT files aren't lzma-compressed)
-- `futures <https://pypi.python.org/pypi/futures>`__ for parallel processing in Python 2 (not needed for Python 3 or if you don't plan to use parallel processing)
-- `XRootD <https://anaconda.org/nlesc/xrootd>`__ to access remote files; get version 4 or later for pyxrootd to be included in the package (unfortunately, you have to compile it manually with CMake)
-
-**Reminder: you do not need C++ ROOT to run uproot.**
+- `xrootd <https://anaconda.org/conda-forge/xrootd>`__ to access remote files; get version 4 or later for pyxrootd to be included in the package (unfortunately, you have to compile it manually with CMake)
 
 .. inclusion-marker-3-do-not-remove
 
-Interactive Tutorials
-=====================
-
-Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Ftutorial.ipynb>`__ on Binder.
-
 Tutorial
 ========
+
+Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Ftutorial.ipynb>`__ on Binder.
 
 **Table of contents:**
 
@@ -98,6 +95,8 @@ Tutorial
 
 Reference documentation
 =======================
+
+For a list of all functions, classes, methods, and their parameters, click below.
 
 * `Opening files <http://uproot.readthedocs.io/en/latest/opening-files.html>`__
 
