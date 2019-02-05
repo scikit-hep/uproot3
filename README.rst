@@ -46,13 +46,13 @@ Install uproot like any other Python package:
 
 .. code-block:: bash
 
-    pip install uproot                        # maybe with sudo or --user
+    pip install uproot                        # maybe with sudo or --user, or in virtualenv
 
 or install with `conda <https://conda.io/en/latest/miniconda.html>`__:
 
 .. code-block:: bash
 
-    conda config --add channels conda-forge   # if you haven't already
+    conda config --add channels conda-forge   # if you haven't added conda-forge already
     conda install uproot
 
 The pip installer automatically installs strict dependencies; the conda installer installs optional dependencies, too.
