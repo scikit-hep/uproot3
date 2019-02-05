@@ -61,16 +61,17 @@ Strict dependencies:
 ====================
 
 - `numpy <https://scipy.org/install.html>`__ (1.13.1+)
-- `awkward-array <https://pypi.org/project/awkward>`__ (0.8.0+)
-- `uproot-methods <https://pypi.org/project/uproot-methods>`__ (0.4.0+)
+- `awkward-array <https://github.com/scikit-hep/awkward-array>`__ (0.8.0+)
+- `uproot-methods <https://github.com/scikit-hep/uproot-methods>`__ (0.4.0+)
 - `cachetools <https://pypi.org/project/cachetools>`__
 
 Optional dependencies:
 ======================
 
-- `lz4 <https://pypi.org/project/lz4>`__ to read lz4-compressed ROOT files (now ROOT's default compression method)
-- `lzma <https://anaconda.org/conda-forge/backports.lzma>`__ to read lzma-compressed ROOT files in Python 2 (not needed for Python 3 or if your ROOT files aren't lzma-compressed)
-- `xrootd <https://anaconda.org/conda-forge/xrootd>`__ to access remote files; get version 4 or later for pyxrootd to be included in the package (unfortunately, you have to compile it manually with CMake)
+- `lz4 <https://pypi.org/project/lz4>`__ to read lz4-compressed ROOT files
+- `lzma <https://pypi.org/project/backports.lzma>`__ to read lzma-compressed ROOT files in Python 2
+- `xrootd <https://anaconda.org/conda-forge/xrootd>`__ to access remote files through XRootD
+- `requests <https://pypi.org/project/requests>`__ to access remote files through HTTP
 
 **Reminder: you do not need C++ ROOT to run uproot.**
 
