@@ -58,7 +58,7 @@ or install with `conda <https://conda.io/en/latest/miniconda.html>`__:
 The pip installer automatically installs strict dependencies; the conda installer installs optional dependencies, too.
 
 Strict dependencies:
-====================
+--------------------
 
 - `numpy <https://scipy.org/install.html>`__ (1.13.1+)
 - `awkward-array <https://github.com/scikit-hep/awkward-array>`__ (0.8.0+)
@@ -66,7 +66,7 @@ Strict dependencies:
 - `cachetools <https://pypi.org/project/cachetools>`__
 
 Optional dependencies:
-======================
+----------------------
 
 - `lz4 <https://pypi.org/project/lz4>`__ to read lz4-compressed ROOT files
 - `lzma <https://pypi.org/project/backports.lzma>`__ to read lzma-compressed ROOT files in Python 2
