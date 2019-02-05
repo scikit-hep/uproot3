@@ -57,8 +57,6 @@ or install with `conda <https://conda.io/en/latest/miniconda.html>`__:
 
 The pip installer automatically installs strict dependencies; the conda installer installs optional dependencies, too.
 
-**Reminder: you do not need C++ ROOT to run uproot.**
-
 Strict dependencies:
 ====================
 
@@ -73,6 +71,8 @@ Optional dependencies:
 - `lz4 <https://pypi.org/project/lz4>`__ to read lz4-compressed ROOT files (now ROOT's default compression method)
 - `lzma <https://anaconda.org/conda-forge/backports.lzma>`__ to read lzma-compressed ROOT files in Python 2 (not needed for Python 3 or if your ROOT files aren't lzma-compressed)
 - `xrootd <https://anaconda.org/conda-forge/xrootd>`__ to access remote files; get version 4 or later for pyxrootd to be included in the package (unfortunately, you have to compile it manually with CMake)
+
+**Reminder: you do not need C++ ROOT to run uproot.**
 
 .. inclusion-marker-3-do-not-remove
 
