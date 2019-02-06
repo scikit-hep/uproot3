@@ -29,6 +29,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import itertools
+import functools
+import operator
 
 import numpy
 
@@ -156,8 +158,13 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname):
 
                 if len(array) < length:
                     # Invoke jagged broadcasting to align arrays
-                    content = awkward.numpy.zeros(stops.max(), dtype=array.dtype)
-                    array = (awkward.JaggedArray(starts, stops, content) + array).flatten()
+                    originaldtype = array.dtype
+                    originaldims = array.shape[1:]
+                    if len(originaldims) != 0:
+                        array = array.view(numpy.dtype([(str(i), array.dtype) for i in range(functools.reduce(operator.mul, array.shape[1:]))])).reshape(array.shape[0])
+                    array = awkward.JaggedArray(starts, stops, numpy.zeros(stops[-1], dtype=array.dtype))._broadcast(array).content
+                    if len(originaldims) != 0:
+                        array = array.view(originaldtype).reshape((-1,) + originaldims)
 
                 if interpretation.todims == ():
                     if interpretation.todtype.names is None:
@@ -181,6 +188,8 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname):
 
             else:
                 fn = flatname(name, None, ())
-                df[df] = array
+                array = numpy.array(array, dtype=object)
+                array = awkward.JaggedArray(starts, stops, numpy.zeros(stops[-1], dtype=object))._broadcast(array).content
+                df[fn] = array
 
         return df
