@@ -57,8 +57,7 @@ def default_flatname(branchname, fieldname, index):
         out += "[" + "][".join(str(x) for x in index) + "]"
     return out
 
-def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname):
-    import awkward
+def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, awkward):
     import pandas
 
     if flatname is None:
@@ -107,13 +106,11 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname):
         return outputtype(columns=columns, data=data)
 
     else:
-
         starts, stops = None, None
 
         names = []
         interpretations = []
         arrays = []
-
         for future_tuple in futures:
             name, interpretation, future = future_tuple
 
@@ -123,7 +120,6 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname):
                 interpretation = interpretation.content
 
             if isinstance(interpretation, asjagged):
-
                 interpretation = interpretation.content
                 if isinstance(interpretation, asobj) and isinstance(interpretation.content, astable):
                     interpretation = interpretation.content
@@ -135,7 +131,8 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname):
                 if starts is None:
                     starts = array.starts
                     stops = array.stops
-                array = array.flatten()
+                    index = array.index
+                array = array.content
 
                 length = len(array)
 
@@ -149,22 +146,20 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname):
         if length is None:
             length = len(arrays[0])
 
-        index = pandas.Index(numpy.arange(length))
+        index = pandas.MultiIndex.from_arrays([index._broadcast(numpy.arange(entrystart, entrystop, dtype=numpy.int64)).content, index.content], names=["entry", "subentry"])
+
         df = outputtype(index=index)
 
         for name, interpretation, array in zip(names, interpretations, arrays):
-
             if isinstance(interpretation, asdtype):
-
-                if len(array) < length:
-                    # Invoke jagged broadcasting to align arrays
-                    originaldtype = array.dtype
-                    originaldims = array.shape[1:]
-                    if len(originaldims) != 0:
-                        array = array.view(numpy.dtype([(str(i), array.dtype) for i in range(functools.reduce(operator.mul, array.shape[1:]))])).reshape(array.shape[0])
-                    array = awkward.JaggedArray(starts, stops, numpy.zeros(stops[-1], dtype=array.dtype))._broadcast(array).content
-                    if len(originaldims) != 0:
-                        array = array.view(originaldtype).reshape((-1,) + originaldims)
+                # Invoke jagged broadcasting to align arrays
+                originaldtype = array.dtype
+                originaldims = array.shape[1:]
+                if len(originaldims) != 0:
+                    array = array.view(awkward.numpy.dtype([(str(i), array.dtype) for i in range(functools.reduce(operator.mul, array.shape[1:]))])).reshape(array.shape[0])
+                array = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=array.dtype))._broadcast(array).content
+                if len(originaldims) != 0:
+                    array = array.view(originaldtype).reshape((-1,) + originaldims)
 
                 if interpretation.todims == ():
                     if interpretation.todtype.names is None:
@@ -188,8 +183,8 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname):
 
             else:
                 fn = flatname(name, None, ())
-                array = numpy.array(array, dtype=object)
-                array = awkward.JaggedArray(starts, stops, numpy.zeros(stops[-1], dtype=object))._broadcast(array).content
+                array = awkward.numpy.array(array, dtype=object)
+                array = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=object))._broadcast(array).content
                 df[fn] = array
 
         return df
