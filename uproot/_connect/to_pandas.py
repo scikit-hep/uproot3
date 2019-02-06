@@ -140,7 +140,6 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
                         raise ValueError("cannot use flatten=True on branches with different jagged structure; explicitly select compatible branches (and pandas.merge if you want to combine different jagged structure)")
 
                 array = array.content
-                length = len(array)
                 needbroadcasts.append(False)
 
             else:
