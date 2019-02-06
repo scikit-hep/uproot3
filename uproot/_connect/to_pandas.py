@@ -34,6 +34,8 @@ import operator
 
 import numpy
 
+import awkward as awkwardbase
+
 from uproot.interp.jagged import asjagged
 from uproot.interp.numerical import asdtype
 from uproot.interp.objects import asobj
@@ -128,10 +130,17 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
 
                 array = future()
 
+                # justifies the assumption that array.content == array.flatten() and array.stops.max() == array.stops[-1]
+                assert array._canuseoffset() and len(array.starts) > 0 and array.starts[0] == 0
+
                 if starts is None:
                     starts = array.starts
                     stops = array.stops
                     index = array.index
+                else:
+                    if starts is not array.starts and not awkward.numpy.array_equal(starts, array.starts):
+                        raise ValueError("cannot use flatten=True on branches with different jagged structure; explicitly select compatible branches (and pandas.merge if you want to combine different jagged structure)")
+
                 array = array.content
 
                 length = len(array)
@@ -152,14 +161,23 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
 
         for name, interpretation, array in zip(names, interpretations, arrays):
             if isinstance(interpretation, asdtype):
+                if isinstance(array, awkwardbase.ObjectArray):
+                    array = array.content
+
                 # Invoke jagged broadcasting to align arrays
                 originaldtype = array.dtype
                 originaldims = array.shape[1:]
-                if len(originaldims) != 0:
-                    array = array.view(awkward.numpy.dtype([(str(i), array.dtype) for i in range(functools.reduce(operator.mul, array.shape[1:]))])).reshape(array.shape[0])
-                array = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=array.dtype))._broadcast(array).content
-                if len(originaldims) != 0:
-                    array = array.view(originaldtype).reshape((-1,) + originaldims)
+
+                if isinstance(array, awkwardbase.Table):
+                    for nn in array.columns:
+                        array[nn] = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=array[nn].dtype))._broadcast(array[nn]).content
+
+                else:
+                    if len(originaldims) != 0:
+                        array = array.view(awkward.numpy.dtype([(str(i), array.dtype) for i in range(functools.reduce(operator.mul, array.shape[1:]))])).reshape(array.shape[0])
+                    array = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=array.dtype))._broadcast(array).content
+                    if len(originaldims) != 0:
+                        array = array.view(originaldtype).reshape((-1,) + originaldims)
 
                 if interpretation.todims == ():
                     if interpretation.todtype.names is None:
