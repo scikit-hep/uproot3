@@ -105,12 +105,11 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname):
         return outputtype(columns=columns, data=data)
 
     else:
-        scalars = []
 
         length = None
         starts, stops = None, None
 
-        unpacked_tuple = []
+        presents = []
 
         for future_tuple in futures:
             name, interpretation, future = future_tuple
@@ -133,24 +132,24 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname):
             else:
                 array = future()
 
-            unpacked_tuple.append((name, interpretation, array))
+            presents.append((name, interpretation, array))
+
+        names, interpretations, arrays = zip(*presents)
+        arrays = list(arrays)
+        lengths = [len(a) for a in arrays]
 
         index = pandas.Index(numpy.arange(length))
-        out = outputtype(index=index)
+        df = outputtype(index=index)
 
-        def align_by_broadcast(array):
-            # Invoke jagged broadcasting to align arrays
-            content = awkward.numpy.zeros(stops.max(), dtype=array.dtype)
-            return (awkward.JaggedArray(starts, stops, content) + array).flatten()
-
-
-        names, interpretations, arrays = zip(*unpacked_tuple)
+        for i in range(len(arrays)):
+            if len(arrays[i]) < max(lengths):
+                # Invoke jagged broadcasting to align arrays
+                content = awkward.numpy.zeros(stops.max(), dtype=arrays[i].dtype)
+                arrays[i] = (awkward.JaggedArray(starts, stops, content) + arrays[i]).flatten()
 
         for name, interpretation, array in zip(names, interpretations, arrays):
 
             if isinstance(interpretation, asjagged):
-
-                df = outputtype(index=index)
 
                 interpretation = interpretation.content
                 if isinstance(interpretation, asobj) and isinstance(interpretation.content, astable):
@@ -181,41 +180,31 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname):
 
                 else:
                     fn = flatname(name, None, ())
-                    df[fn] = list(array)
+                    df[fn] = array
 
             elif isinstance(interpretation, asdtype):
-                df = outputtype(index=index)
                 if interpretation.todims == ():
                     if interpretation.todtype.names is None:
                         fn = flatname(name, None, ())
-                        df[fn] = align_by_broadcast(array)
-                        scalars.append(fn)
+                        df[fn] = array
                     else:
                         for nn in interpretation.todtype.names:
                             if not nn.startswith(" "):
                                 fn = flatname(name, nn, ())
-                                df[fn] = align_by_broadcast(array[nn])
-                                scalars.append(fn)
+                                df[fn] = array[nn]
                 else:
                     for tup in itertools.product(*[range(x) for x in interpretation.todims]):
                         if interpretation.todtype.names is None:
                             fn = flatname(name, None, tup)
-                            df[fn] = align_by_broadcast(array[(slice(None),) + tup])
-                            scalars.append(fn)
+                            df[fn] = array[(slice(None),) + tup]
                         else:
                             for nn in interpretation.todtype.names:
                                 if not nn.startswith(" "):
                                     fn = flatname(name, nn, tup)
-                                    df[fn] = align_by_broadcast(array[nn][(slice(None),) + tup])
-                                    scalars.append(fn)
+                                    df[fn] = array[nn][(slice(None),) + tup]
 
             else:
                 fn = flatname(name, None, ())
-                df = outputtype(index=index, columns=[fn], data={fn: list(array)})
-                scalars.append(fn)
+                df[df] = array
 
-            out = pandas.merge(out, df, how="outer", left_index=True, right_index=True)
-
-        for n in scalars:
-            out[n].fillna(method="ffill", inplace=True)
-        return out
+        return df
