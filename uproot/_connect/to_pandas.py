@@ -106,10 +106,11 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname):
 
     else:
 
-        length = None
         starts, stops = None, None
 
-        presents = []
+        names = []
+        interpretations = []
+        arrays = []
 
         for future_tuple in futures:
             name, interpretation, future = future_tuple
@@ -120,36 +121,6 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname):
                 interpretation = interpretation.content
 
             if isinstance(interpretation, asjagged):
-                array = future()
-                if starts is None:
-                    starts = array.starts
-                    stops = array.stops
-                array = array.flatten()
-
-                if length is None:
-                    length = len(array)
-
-            else:
-                array = future()
-
-            presents.append((name, interpretation, array))
-
-        names, interpretations, arrays = zip(*presents)
-        arrays = list(arrays)
-        lengths = [len(a) for a in arrays]
-
-        index = pandas.Index(numpy.arange(length))
-        df = outputtype(index=index)
-
-        for i in range(len(arrays)):
-            if len(arrays[i]) < max(lengths):
-                # Invoke jagged broadcasting to align arrays
-                content = awkward.numpy.zeros(stops.max(), dtype=arrays[i].dtype)
-                arrays[i] = (awkward.JaggedArray(starts, stops, content) + arrays[i]).flatten()
-
-        for name, interpretation, array in zip(names, interpretations, arrays):
-
-            if isinstance(interpretation, asjagged):
 
                 interpretation = interpretation.content
                 if isinstance(interpretation, asobj) and isinstance(interpretation.content, astable):
@@ -157,32 +128,37 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname):
                 if isinstance(interpretation, astable) and isinstance(interpretation.content, asdtype):
                     interpretation = interpretation.content
 
-                if isinstance(interpretation, asdtype):
-                    if interpretation.todims == ():
-                        if interpretation.todtype.names is None:
-                            fn = flatname(name, None, ())
-                            df[fn] = array
-                        else:
-                            for nn in interpretation.todtype.names:
-                                if not nn.startswith(" "):
-                                    fn = flatname(name, nn, ())
-                                    df[fn] = array[nn]
-                    else:
-                        for tup in itertools.product(*[range(x) for x in interpretation.todims]):
-                            if interpretation.todtype.names is None:
-                                fn = flatname(name, None, tup)
-                                df[fn] = array[(slice(None),) + tup]
-                            else:
-                                for nn in interpretation.todtype.names:
-                                    if not nn.startswith(" "):
-                                        fn = flatname(name, nn, tup)
-                                        df[fn] = array[nn][(slice(None),) + tup]
+                array = future()
 
-                else:
-                    fn = flatname(name, None, ())
-                    df[fn] = array
+                if starts is None:
+                    starts = array.starts
+                    stops = array.stops
+                array = array.flatten()
 
-            elif isinstance(interpretation, asdtype):
+                length = len(array)
+
+            else:
+                array = future()
+
+            names.append(name)
+            interpretations.append(interpretation)
+            arrays.append(array)
+
+        if length is None:
+            length = len(arrays[0])
+
+        index = pandas.Index(numpy.arange(length))
+        df = outputtype(index=index)
+
+        for name, interpretation, array in zip(names, interpretations, arrays):
+
+            if isinstance(interpretation, asdtype):
+
+                if len(array) < length:
+                    # Invoke jagged broadcasting to align arrays
+                    content = awkward.numpy.zeros(stops.max(), dtype=array.dtype)
+                    array = (awkward.JaggedArray(starts, stops, content) + array).flatten()
+
                 if interpretation.todims == ():
                     if interpretation.todtype.names is None:
                         fn = flatname(name, None, ())
