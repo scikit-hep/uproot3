@@ -110,25 +110,23 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
     else:
         starts, stops = None, None
 
+        needbroadcasts = []
         names = []
         interpretations = []
         arrays = []
-        for future_tuple in futures:
-            name, interpretation, future = future_tuple
-
+        for name, interpretation, future in futures:
             if isinstance(interpretation, asobj) and isinstance(interpretation.content, astable):
                 interpretation = interpretation.content
             if isinstance(interpretation, astable) and isinstance(interpretation.content, asdtype):
                 interpretation = interpretation.content
 
+            array = future()
             if isinstance(interpretation, asjagged):
                 interpretation = interpretation.content
                 if isinstance(interpretation, asobj) and isinstance(interpretation.content, astable):
                     interpretation = interpretation.content
                 if isinstance(interpretation, astable) and isinstance(interpretation.content, asdtype):
                     interpretation = interpretation.content
-
-                array = future()
 
                 # justifies the assumption that array.content == array.flatten() and array.stops.max() == array.stops[-1]
                 assert array._canuseoffset() and len(array.starts) > 0 and array.starts[0] == 0
@@ -142,11 +140,11 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
                         raise ValueError("cannot use flatten=True on branches with different jagged structure; explicitly select compatible branches (and pandas.merge if you want to combine different jagged structure)")
 
                 array = array.content
-
                 length = len(array)
+                needbroadcasts.append(False)
 
             else:
-                array = future()
+                needbroadcasts.append(True)
 
             names.append(name)
             interpretations.append(interpretation)
@@ -159,25 +157,29 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
 
         df = outputtype(index=index)
 
-        for name, interpretation, array in zip(names, interpretations, arrays):
+        for name, interpretation, array, needbroadcast in zip(names, interpretations, arrays, needbroadcasts):
             if isinstance(interpretation, asdtype):
                 if isinstance(array, awkwardbase.ObjectArray):
                     array = array.content
 
-                # Invoke jagged broadcasting to align arrays
-                originaldtype = array.dtype
-                originaldims = array.shape[1:]
+                if needbroadcast:
+                    # Invoke jagged broadcasting to align arrays
+                    originaldtype = array.dtype
+                    originaldims = array.shape[1:]
 
-                if isinstance(array, awkwardbase.Table):
-                    for nn in array.columns:
-                        array[nn] = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=array[nn].dtype))._broadcast(array[nn]).content
+                    if isinstance(array, awkwardbase.Table):
+                        for nn in array.columns:
+                            array[nn] = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=array[nn].dtype))._broadcast(array[nn]).content
 
-                else:
-                    if len(originaldims) != 0:
-                        array = array.view(awkward.numpy.dtype([(str(i), array.dtype) for i in range(functools.reduce(operator.mul, array.shape[1:]))])).reshape(array.shape[0])
-                    array = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=array.dtype))._broadcast(array).content
-                    if len(originaldims) != 0:
-                        array = array.view(originaldtype).reshape((-1,) + originaldims)
+                    else:
+                        if len(originaldims) != 0:
+                            array = array.view(awkward.numpy.dtype([(str(i), array.dtype) for i in range(functools.reduce(operator.mul, array.shape[1:]))])).reshape(array.shape[0])
+
+                        print(name, starts, array)
+
+                        array = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=array.dtype))._broadcast(array).content
+                        if len(originaldims) != 0:
+                            array = array.view(originaldtype).reshape((-1,) + originaldims)
 
                 if interpretation.todims == ():
                     if interpretation.todtype.names is None:
