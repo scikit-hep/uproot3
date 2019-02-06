@@ -150,9 +150,6 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
             interpretations.append(interpretation)
             arrays.append(array)
 
-        if length is None:
-            length = len(arrays[0])
-
         index = pandas.MultiIndex.from_arrays([index._broadcast(numpy.arange(entrystart, entrystop, dtype=numpy.int64)).content, index.content], names=["entry", "subentry"])
 
         df = outputtype(index=index)
@@ -174,8 +171,6 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
                     else:
                         if len(originaldims) != 0:
                             array = array.view(awkward.numpy.dtype([(str(i), array.dtype) for i in range(functools.reduce(operator.mul, array.shape[1:]))])).reshape(array.shape[0])
-
-                        print(name, starts, array)
 
                         array = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=array.dtype))._broadcast(array).content
                         if len(originaldims) != 0:
