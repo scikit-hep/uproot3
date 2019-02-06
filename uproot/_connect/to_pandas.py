@@ -29,8 +29,12 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import itertools
+import functools
+import operator
 
 import numpy
+
+import awkward as awkwardbase
 
 from uproot.interp.jagged import asjagged
 from uproot.interp.numerical import asdtype
@@ -55,7 +59,7 @@ def default_flatname(branchname, fieldname, index):
         out += "[" + "][".join(str(x) for x in index) + "]"
     return out
 
-def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname):
+def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, awkward):
     import pandas
 
     if flatname is None:
@@ -104,95 +108,97 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname):
         return outputtype(columns=columns, data=data)
 
     else:
-        index = pandas.MultiIndex.from_arrays([numpy.arange(entrystart, entrystop, dtype=numpy.int64), numpy.zeros(entrystop - entrystart, dtype=numpy.int64)], names=["entry", "subentry"])
-        out = outputtype(index=index)
-        scalars = []
+        starts, stops = None, None
 
+        needbroadcasts = []
+        names = []
+        interpretations = []
+        arrays = []
         for name, interpretation, future in futures:
-            array = future()
-
             if isinstance(interpretation, asobj) and isinstance(interpretation.content, astable):
                 interpretation = interpretation.content
             if isinstance(interpretation, astable) and isinstance(interpretation.content, asdtype):
                 interpretation = interpretation.content
 
+            array = future()
             if isinstance(interpretation, asjagged):
-                entries = numpy.empty(len(array.content), dtype=numpy.int64)
-                subentries = numpy.empty(len(array.content), dtype=numpy.int64)
-                starts, stops = array.starts, array.stops
-                i = 0
-                numentries = entrystop - entrystart
-                while i < numentries:
-                    entries[starts[i]:stops[i]] = i + entrystart
-                    subentries[starts[i]:stops[i]] = numpy.arange(stops[i] - starts[i])
-                    i += 1
-
-                df = outputtype(index=pandas.MultiIndex.from_arrays([entries, subentries], names=["entry", "subentry"]))
-
                 interpretation = interpretation.content
                 if isinstance(interpretation, asobj) and isinstance(interpretation.content, astable):
                     interpretation = interpretation.content
                 if isinstance(interpretation, astable) and isinstance(interpretation.content, asdtype):
                     interpretation = interpretation.content
 
-                if isinstance(interpretation, asdtype):
-                    if interpretation.todims == ():
-                        if interpretation.todtype.names is None:
-                            fn = flatname(name, None, ())
-                            df[fn] = array.flatten()
-                        else:
-                            for nn in interpretation.todtype.names:
-                                if not nn.startswith(" "):
-                                    fn = flatname(name, nn, ())
-                                    df[fn] = array[nn].flatten()
-                    else:
-                        for tup in itertools.product(*[range(x) for x in interpretation.todims]):
-                            if interpretation.todtype.names is None:
-                                fn = flatname(name, None, tup)
-                                df[fn] = array[(slice(None),) + tup].flatten()
-                            else:
-                                for nn in interpretation.todtype.names:
-                                    if not nn.startswith(" "):
-                                        fn = flatname(name, nn, tup)
-                                        df[fn] = array[nn][(slice(None),) + tup].flatten()
+                # justifies the assumption that array.content == array.flatten() and array.stops.max() == array.stops[-1]
+                assert array._canuseoffset() and len(array.starts) > 0 and array.starts[0] == 0
 
+                if starts is None:
+                    starts = array.starts
+                    stops = array.stops
+                    index = array.index
                 else:
-                    fn = flatname(name, None, ())
-                    df[fn] = list(array.flatten())
+                    if starts is not array.starts and not awkward.numpy.array_equal(starts, array.starts):
+                        raise ValueError("cannot use flatten=True on branches with different jagged structure; explicitly select compatible branches (and pandas.merge if you want to combine different jagged structure)")
 
-            elif isinstance(interpretation, asdtype):
-                df = outputtype(index=index)
+                array = array.content
+                needbroadcasts.append(False)
+
+            else:
+                needbroadcasts.append(True)
+
+            names.append(name)
+            interpretations.append(interpretation)
+            arrays.append(array)
+
+        index = pandas.MultiIndex.from_arrays([index._broadcast(numpy.arange(entrystart, entrystop, dtype=numpy.int64)).content, index.content], names=["entry", "subentry"])
+
+        df = outputtype(index=index)
+
+        for name, interpretation, array, needbroadcast in zip(names, interpretations, arrays, needbroadcasts):
+            if isinstance(interpretation, asdtype):
+                if isinstance(array, awkwardbase.ObjectArray):
+                    array = array.content
+
+                if needbroadcast:
+                    # Invoke jagged broadcasting to align arrays
+                    originaldtype = array.dtype
+                    originaldims = array.shape[1:]
+
+                    if isinstance(array, awkwardbase.Table):
+                        for nn in array.columns:
+                            array[nn] = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=array[nn].dtype))._broadcast(array[nn]).content
+
+                    else:
+                        if len(originaldims) != 0:
+                            array = array.view(awkward.numpy.dtype([(str(i), array.dtype) for i in range(functools.reduce(operator.mul, array.shape[1:]))])).reshape(array.shape[0])
+
+                        array = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=array.dtype))._broadcast(array).content
+                        if len(originaldims) != 0:
+                            array = array.view(originaldtype).reshape((-1,) + originaldims)
+
                 if interpretation.todims == ():
                     if interpretation.todtype.names is None:
                         fn = flatname(name, None, ())
                         df[fn] = array
-                        scalars.append(fn)
                     else:
                         for nn in interpretation.todtype.names:
                             if not nn.startswith(" "):
                                 fn = flatname(name, nn, ())
                                 df[fn] = array[nn]
-                                scalars.append(fn)
                 else:
                     for tup in itertools.product(*[range(x) for x in interpretation.todims]):
                         if interpretation.todtype.names is None:
                             fn = flatname(name, None, tup)
                             df[fn] = array[(slice(None),) + tup]
-                            scalars.append(fn)
                         else:
                             for nn in interpretation.todtype.names:
                                 if not nn.startswith(" "):
                                     fn = flatname(name, nn, tup)
                                     df[fn] = array[nn][(slice(None),) + tup]
-                                    scalars.append(fn)
 
             else:
                 fn = flatname(name, None, ())
-                df = outputtype(index=index, columns=[fn], data={fn: list(array)})
-                scalars.append(fn)
+                array = awkward.numpy.array(array, dtype=object)
+                array = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=object))._broadcast(array).content
+                df[fn] = array
 
-            out = pandas.merge(out, df, how="outer", left_index=True, right_index=True)
-
-        for n in scalars:
-            out[n].fillna(method="ffill", inplace=True)
-        return out
+        return df

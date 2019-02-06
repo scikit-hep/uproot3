@@ -464,7 +464,7 @@ class TTreeMethods(object):
         elif ispandas:
             import uproot._connect.to_pandas
             def wait():
-                return uproot._connect.to_pandas.futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname)
+                return uproot._connect.to_pandas.futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, awkward)
 
         elif isinstance(outputtype, type) and issubclass(outputtype, dict):
             def wait():
