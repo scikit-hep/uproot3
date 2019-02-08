@@ -197,8 +197,17 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
 
             else:
                 fn = flatname(name, None, ())
+
                 array = awkward.numpy.array(array, dtype=object)
-                array = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=object))._broadcast(array).content
-                df[fn] = array
+                indexes = numpy.arange(len(array))
+
+                indexes = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=object))._broadcast(indexes).content
+
+                array = array[indexes]
+
+                if len(array) != 0 and isinstance(array[0], awkward.numpy.ndarray):
+                    df[fn] = list(array)
+                else:
+                    df[fn] = array
 
         return df
