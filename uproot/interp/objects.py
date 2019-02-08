@@ -186,7 +186,7 @@ class asobj(uproot.interp.interp.Interpretation):
         return self.content.empty()
 
     def compatible(self, other):
-        return self.content.compatible(other)
+        return isinstance(other, asobj) and self.cls.__name__ == other.cls.__name__
 
     def numitems(self, numbytes, numentries):
         return self.content.numitems(numbytes, numentries)
@@ -287,6 +287,9 @@ class asgenobj(_variable):
         out.generator.context = copy.copy(out.generator.context)
         out.generator.context.speedbump = value
         return out
+
+    def compatible(self, other):
+        return isinstance(other, asgenobj) and self.cls.__name__ == other.cls.__name__
 
     def __repr__(self):
         return "asgenobj({0})".format(self.generator)
