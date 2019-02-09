@@ -227,9 +227,8 @@ class asdouble32(_asnumeric):
     def __init__(self, low, high, numbits, fromdims=(), todims=None):
         if not isinstance(numbits, numbers.Integral) or not 2 <= numbits <= 32:
             raise TypeError("numbits must be an integer between 2 and 32 (inclusive)")
-        if low == 0.0 and high == 0.0:
-            raise NotImplementedError("Double32_t with dropped mantissa bits not yet implemented")
-        if high <= low:
+        self.truncated = low == 0.0 and high == 0.0
+        if high <= low and not self.truncated:
             raise ValueError("high ({0}) must be strictly greater than low ({1})".format(high, low))
 
         self.low = low
@@ -260,7 +259,7 @@ class asdouble32(_asnumeric):
 
     @property
     def itemsize(self):
-        return 4
+        return 3 if self.truncated else 4
 
     def __repr__(self):
         args = [repr(self.low), repr(self.high), repr(self.numbits)]
@@ -283,22 +282,42 @@ class asdouble32(_asnumeric):
         return isinstance(other, asdouble32) and self.low == other.low and self.high == other.high and self.numbits == other.numbits and self.todtype == other.dtype
 
     def numitems(self, numbytes, numentries):
-        quotient, remainder = divmod(numbytes, 4)
+        quotient, remainder = divmod(numbytes, self.itemsize)
         assert remainder == 0
         return quotient
 
     def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop):
-        array = data.view(">u4")
-        if self.fromdims != ():
-            product = int(self.awkward.numpy.prod(self.fromdims))
-            quotient, remainder = divmod(len(array), product)
-            assert remainder == 0, "{0} % {1} == {2} != 0".format(len(array), product, len(array) % product)
-            array = array.reshape((quotient,) + self.fromdims)
+        if self.truncated:
+            array = data.view(dtype={'exponent': ('>u1',0), 'mantissa': ('>u2',1)})
+            if self.fromdims != ():
+                product = int(self.awkward.numpy.prod(self.fromdims))
+                quotient, remainder = divmod(len(array), product)
+                assert remainder == 0, "{0} % {1} == {2} != 0".format(len(array), product, len(array) % product)
+                array = array.reshape((quotient,) + self.fromdims)
 
-        array = array[local_entrystart:local_entrystop].astype(self.todtype)
-        self.awkward.numpy.multiply(array, float(self.high - self.low) / (1 << self.numbits), out=array)
-        self.awkward.numpy.add(array, self.low, out=array)
-        return array
+            # We have to make copies to work with contiguous arrays
+            unpacked = array['exponent'].astype('int32')
+            mantissa = array['mantissa'].astype('int32')
+
+            unpacked <<= 23
+            unpacked |= (mantissa & ((1 << (self.numbits + 1)) - 1)) << (23 - self.numbits)
+            sign = ((1 << (self.numbits + 1)) & mantissa != 0) * -2 + 1
+
+            array = unpacked.view(dtype='float32') * sign
+            return array.astype(self.todtype)
+
+        else:
+            array = data.view(">u4")
+            if self.fromdims != ():
+                product = int(self.awkward.numpy.prod(self.fromdims))
+                quotient, remainder = divmod(len(array), product)
+                assert remainder == 0, "{0} % {1} == {2} != 0".format(len(array), product, len(array) % product)
+                array = array.reshape((quotient,) + self.fromdims)
+
+            array = array[local_entrystart:local_entrystop].astype(self.todtype)
+            self.awkward.numpy.multiply(array, float(self.high - self.low) / (1 << self.numbits), out=array)
+            self.awkward.numpy.add(array, self.low, out=array)
+            return array
 
 class asstlbitset(uproot.interp.interp.Interpretation):
     # makes __doc__ attribute mutable before Python 3.3
