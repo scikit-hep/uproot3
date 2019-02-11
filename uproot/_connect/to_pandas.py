@@ -137,7 +137,7 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
                     index = array.index
                 else:
                     if starts is not array.starts and not awkward.numpy.array_equal(starts, array.starts):
-                        raise ValueError("cannot use flatten=True on branches with different jagged structure; explicitly select compatible branches (and pandas.merge if you want to combine different jagged structure)")
+                        raise ValueError("cannot use flatten=True on branches with different jagged structure, such as electrons and muons (different, variable number of each per event); either explicitly select compatible branches, such as [\"MET_*\", \"Muon_*\"] (scalar and variable per event is okay), or set flatten=False")
 
                 array = array.content
                 needbroadcasts.append(False)
@@ -197,8 +197,17 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
 
             else:
                 fn = flatname(name, None, ())
+
                 array = awkward.numpy.array(array, dtype=object)
-                array = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=object))._broadcast(array).content
-                df[fn] = array
+                indexes = numpy.arange(len(array))
+
+                indexes = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=object))._broadcast(indexes).content
+
+                array = array[indexes]
+
+                if len(array) != 0 and isinstance(array[0], awkward.numpy.ndarray):
+                    df[fn] = list(array)
+                else:
+                    df[fn] = array
 
         return df
