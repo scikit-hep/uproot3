@@ -14,7 +14,7 @@ uproot
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.1173083.svg
    :target: https://doi.org/10.5281/zenodo.1173083
 
-.. image:: https://mybinder.org/badge.svg
+.. image:: https://mybinder.org/badge_logo.svg
    :target: https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Ftutorial.ipynb
 
 .. inclusion-marker-1-do-not-remove

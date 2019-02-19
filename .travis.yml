@@ -96,4 +96,4 @@ jobs:
     install: skip
     script:
     # Use Binder build API to trigger repo2docker to build image
-    - curl https://mybinder.org/build/gh/scikit-hep/uproot/master
+    - bash binder/trigger_binder.sh https://mybinder.org/build/gh/scikit-hep/uproot/"${TRAVIS_BRANCH}"
