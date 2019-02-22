@@ -1373,6 +1373,9 @@ class Undefined(ROOTStreamedObject):
     def _readinto(cls, self, source, cursor, context, parent):
         self._cursor = cursor.copied()
         start, cnt, self._classversion = _startcheck(source, cursor)
+        if cnt is None:
+            raise TypeError("cannot read objects of type {0} and cannot even skip over this one (returning Undefined) because its size is not known".format("???" if self._classname is None else self._classname.decode("ascii")))
+
         cursor.skip(cnt - 6)
         _endcheck(start, cursor, cnt)
         return self
