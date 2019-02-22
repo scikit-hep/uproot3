@@ -36,6 +36,7 @@ import numpy
 
 import awkward as awkwardbase
 
+import uproot.interp.numerical
 from uproot.interp.jagged import asjagged
 from uproot.interp.numerical import asdtype
 from uproot.interp.objects import asobj
@@ -154,7 +155,7 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
         df = outputtype(index=index)
 
         for name, interpretation, array, needbroadcast in zip(names, interpretations, arrays, needbroadcasts):
-            if isinstance(interpretation, asdtype):
+            if isinstance(interpretation, uproot.interp.numerical._asnumeric):
                 if isinstance(array, awkwardbase.ObjectArray):
                     array = array.content
 
