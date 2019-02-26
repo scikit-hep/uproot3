@@ -875,7 +875,7 @@ using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-int MainEvent(int nevent=400, int comp=1, int split=1, int mode=1, int ntracks=600, int enable_imt=0, int compAlg=-1)
+int MainEvent(std::string outfile="Event.root", int nevent=400, int comp=1, int split=1, int mode=1, int ntracks=600, int enable_imt=0, int compAlg=-1)
 {
    Int_t write  = 1;       // by default the tree is filled
    Int_t hfill  = 0;       // by default histograms are not filled
@@ -940,7 +940,7 @@ int MainEvent(int nevent=400, int comp=1, int split=1, int mode=1, int ntracks=6
       if (netf) {
          hfile = new TNetFile("root://localhost/root/test/EventNet.root");
       } else
-         hfile = new TFile("Event.root");
+         hfile = new TFile(outfile.c_str());
       tree = (TTree*)hfile->Get("T");
       TBranch *branch = tree->GetBranch("event");
       branch->SetAddress(&event);
@@ -984,7 +984,7 @@ int MainEvent(int nevent=400, int comp=1, int split=1, int mode=1, int ntracks=6
       if (netf) {
          hfile = new TNetFile("root://localhost/root/test/EventNet.root","RECREATE","TTree benchmark ROOT file");
       } else
-         hfile = new TFile("Event.root","RECREATE","TTree benchmark ROOT file");
+         hfile = new TFile(outfile.c_str(),"RECREATE","TTree benchmark ROOT file");
       hfile->SetCompressionLevel(comp);
       hfile->SetCompressionAlgorithm(compAlg);
 
