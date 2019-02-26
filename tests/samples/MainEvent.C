@@ -875,7 +875,7 @@ using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-int MainEvent(std::string outfile="Event.root", int nevent=400, int comp=1, int split=1, int mode=1, int ntracks=600, int enable_imt=0, int compAlg=-1)
+int MainEvent(std::string outfile="Event.root", int nevent=10, int comp=1, int split=99, int mode=1, int ntracks=30, int enable_imt=0, int compAlg=-1)
 {
    Int_t write  = 1;       // by default the tree is filled
    Int_t hfill  = 0;       // by default histograms are not filled
