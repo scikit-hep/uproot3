@@ -42,6 +42,7 @@ private:
    Int_t        fNsp;          //Number of points for this track with a special value
    Double32_t*  fPointValue;   //[fNsp][0,3] a special quantity for some point.
    TBits        fTriggerBits;  //Bits triggered by this track.
+   Float_t      fTArray[3];
 
 public:
    Track() : fTriggerBits(64) { fNsp = 0; fPointValue = 0; }
@@ -501,6 +502,8 @@ Track::Track(const Track &orig) : TObject(orig),fTriggerBits(orig.fTriggerBits)
       fPointValue = 0;
    }
    fValid  = orig.fValid;
+
+   std::copy(std::begin(orig.fTArray), std::end(orig.fTArray), std::begin(fTArray));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -553,6 +556,10 @@ Track::Track(Float_t random) : TObject(),fTriggerBits(64)
       fPointValue = 0;
    }
    fValid  = Int_t(0.6+gRandom->Rndm());
+
+   fTArray[0] = gRandom->Gaus(10, 1);
+   fTArray[1] = gRandom->Gaus(20, 2);
+   fTArray[2] = gRandom->Gaus(30, 3);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -608,6 +615,8 @@ Track &Track::operator=(const Track &orig)
    fValid  = orig.fValid;
 
    fTriggerBits = orig.fTriggerBits;
+
+   std::copy(std::begin(orig.fTArray), std::end(orig.fTArray), std::begin(fTArray));
 
    return *this;
 }
@@ -688,6 +697,10 @@ void Track::Set(Float_t random)
       }
    }
    fValid  = Int_t(0.6+gRandom->Rndm());
+
+   fTArray[0] = gRandom->Gaus(10, 1);
+   fTArray[1] = gRandom->Gaus(20, 2);
+   fTArray[2] = gRandom->Gaus(30, 3);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
