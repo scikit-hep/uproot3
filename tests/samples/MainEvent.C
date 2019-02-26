@@ -1,5 +1,3 @@
-#ifndef ROOT_Event
-#define ROOT_Event
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
@@ -204,7 +202,6 @@ public:
    ClassDef(HistogramManager,1)  //Manages all histograms
 };
 
-#endif
 // @(#)root/test:$Id$
 // Author: Rene Brun   19/08/96
 
@@ -290,7 +287,6 @@ public:
 #include "TDirectory.h"
 #include "TProcessID.h"
 
-#include "Event.h"
 
 
 ClassImp(EventHeader);
@@ -874,38 +870,26 @@ void HistogramManager::Hfill(Event *event)
 #include "TClonesArray.h"
 #include "TStopwatch.h"
 
-#include "Event.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-int main(int argc, char **argv)
+int MainEvent(int nevent=400, int comp=1, int split=1, int mode=1, int ntracks=600, int enable_imt=0, int compAlg=-1)
 {
-   Int_t nevent = 400;     // by default create 400 events
-   Int_t comp   = 1;       // by default file is compressed
-   Int_t split  = 1;       // by default, split Event in sub branches
    Int_t write  = 1;       // by default the tree is filled
    Int_t hfill  = 0;       // by default histograms are not filled
    Int_t read   = 0;
-   Int_t arg4   = 1;
-   Int_t arg5   = 600;     //default number of tracks per event
-   Int_t enable_imt = 0;   // Whether to enable IMT mode.
+   Int_t arg4   = mode;
+   Int_t arg5   = ntracks; //default number of tracks per event
 #ifdef R__HAS_DEFAULT_LZ4
-   Int_t compAlg = 4; // Allow user to specify underlying compression algorithm.
+   compAlg = compAlg == -1 ? 4 : compAlg; // Allow user to specify underlying compression algorithm.
 #else
-   Int_t compAlg = 1;
+   compAlg = compAlg == -1 ? 1: compAlg;
 #endif
    Int_t netf   = 0;
    Int_t punzip = 0;
 
-   if (argc > 1)  nevent = atoi(argv[1]);
-   if (argc > 2)  comp   = atoi(argv[2]);
-   if (argc > 3)  split  = atoi(argv[3]);
-   if (argc > 4)  arg4   = atoi(argv[4]);
-   if (argc > 5)  arg5   = atoi(argv[5]);
-   if (argc > 6)  enable_imt = atoi(argv[6]);
-   if (argc > 7) compAlg = atoi(argv[7]);
    if (arg4 ==  0) { write = 0; hfill = 0; read = 1;}
    if (arg4 ==  1) { write = 1; hfill = 0;}
    if (arg4 ==  2) { write = 0; hfill = 0;}
