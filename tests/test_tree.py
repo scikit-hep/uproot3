@@ -609,14 +609,44 @@ class Test(unittest.TestCase):
 
     def test_hist_in_tree(self):
         tree = uproot.open("tests/samples/Event.root")["T"]
-        check = [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
-                 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-                 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
-                 1.0, 0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-                 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        check = [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
+                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0,
+                 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0,
+                 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 1.0,
+                 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0,
+                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0]
+
         assert tree.array("fH")[20].values.tolist() == check
+
+    def test_branch_auto_interpretation(self):
+        # The aim is to reduce this list in a controlled manner
+        known_branches_without_interp = [
+            b'event',
+            b'TObject',
+            b'fMatrix[4][4]',
+            b'fClosestDistance',
+            b'fEvtHdr',
+            b'fTracks',
+            b'fTracks.fMass2',
+            b'fTracks.fBx',
+            b'fTracks.fBy',
+            b'fTracks.fXfirst',
+            b'fTracks.fXlast',
+            b'fTracks.fYfirst',
+            b'fTracks.fYlast',
+            b'fTracks.fZfirst',
+            b'fTracks.fZlast',
+            b'fTracks.fVertex[3]',
+            b'fTracks.fPointValue',
+            b'fTracks.fTriggerBits.fAllBits',
+            b'fTracks.fTArray[3]',
+            b'fTriggerBits',
+            b'fTriggerBits.TObject'
+        ]
+        tree = uproot.open("tests/samples/Event.root")["T"]
+        branches_without_interp = [ b.name for b in tree.allvalues() if b.interpretation is None]
+        assert branches_without_interp == known_branches_without_interp
 
     def test_leaflist(self):
         tree = uproot.open("tests/samples/leaflist.root")["tree"]
