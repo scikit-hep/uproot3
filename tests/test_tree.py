@@ -608,7 +608,7 @@ class Test(unittest.TestCase):
                 assert normalize(lazy[i - 1 : i + 3]) == strict[i - 1 : i + 3].tolist()
 
     def test_hist_in_tree(self):
-        tree = uproot.open("tests/samples/Event.root")["T"]
+        tree = uproot.open("http://scikit-hep.org/uproot/examples/Event.root")["T"]
         check = [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
                  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0,
                  1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -644,7 +644,7 @@ class Test(unittest.TestCase):
             b'fTriggerBits',
             b'fTriggerBits.TObject'
         ]
-        tree = uproot.open("tests/samples/Event.root")["T"]
+        tree = uproot.open("http://scikit-hep.org/uproot/examples/Event.root")["T"]
         branches_without_interp = [ b.name for b in tree.allvalues() if b.interpretation is None]
         assert branches_without_interp == known_branches_without_interp
 
