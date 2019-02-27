@@ -112,7 +112,7 @@ setup(name = "uproot",
       test_suite = "tests",
       install_requires = ["numpy>=1.13.1", "awkward>=0.8.0", "uproot-methods>=0.4.0", "cachetools"],
       setup_requires = ["pytest-runner"],
-      tests_require = ["pytest>=3.9", "scikit-hep-testdata", "pkgconfig", "lz4", 'backports.lzma;python_version<"3.3"', "mock", "requests"],
+      tests_require = ["pytest>=3.9", "scikit-hep-testdata>=0.1.1", "pkgconfig", "lz4", 'backports.lzma;python_version<"3.3"', "mock", "requests"],
       classifiers = [
           "Development Status :: 5 - Production/Stable",
           "Intended Audience :: Developers",
