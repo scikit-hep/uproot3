@@ -34,6 +34,7 @@ from collections import namedtuple
 
 import numpy
 
+import skhep_testdata
 import awkward
 import uproot
 
@@ -46,7 +47,7 @@ class Test(unittest.TestCase):
     ###################################################### double32
 
     def test_double32(self):
-        t = uproot.open("tests/samples/demo-double32.root")["T"]
+        t = uproot.open(skhep_testdata.data_path("uproot-demo-double32.root"))["T"]
         fD64 = t.array("fD64")
         fF32 = t.array("fF32")
         fI32 = t.array("fI32")
@@ -64,7 +65,7 @@ class Test(unittest.TestCase):
     ###################################################### basket
 
     def test_flat_basket(self):
-        branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["i8"]
+        branch = uproot.open(skhep_testdata.data_path("uproot-sample-6.10.05-uncompressed.root"))["sample"]["i8"]
         interpretation = branch._normalize_interpretation(None, awkward)
         entrystart, entrystop = branch._normalize_entrystartstop(None, None)
         local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
@@ -84,7 +85,7 @@ class Test(unittest.TestCase):
         assert basest(four) is buf
 
     def test_regular_basket(self):
-        branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["ai8"]
+        branch = uproot.open(skhep_testdata.data_path("uproot-sample-6.10.05-uncompressed.root"))["sample"]["ai8"]
         interpretation = branch._normalize_interpretation(None, awkward)
         entrystart, entrystop = branch._normalize_entrystartstop(None, None)
         local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
@@ -110,7 +111,7 @@ class Test(unittest.TestCase):
         assert basest(four) is buf
 
     def test_irregular_basket(self):
-        branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["Ai8"]
+        branch = uproot.open(skhep_testdata.data_path("uproot-sample-6.10.05-uncompressed.root"))["sample"]["Ai8"]
         interpretation = branch._normalize_interpretation(None, awkward)
         entrystart, entrystop = branch._normalize_entrystartstop(None, None)
         local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
@@ -126,7 +127,7 @@ class Test(unittest.TestCase):
         assert numpy.array_equal(three[1], numpy.array([-15], dtype=">i8"))
 
     def test_strings_basket(self):
-        branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["str"]
+        branch = uproot.open(skhep_testdata.data_path("uproot-sample-6.10.05-uncompressed.root"))["sample"]["str"]
         interpretation = branch._normalize_interpretation(None, awkward)
         entrystart, entrystop = branch._normalize_entrystartstop(None, None)
         local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
@@ -143,26 +144,26 @@ class Test(unittest.TestCase):
     ###################################################### baskets
 
     def test_flat_baskets(self):
-        branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["i8"]
+        branch = uproot.open(skhep_testdata.data_path("uproot-sample-6.10.05-uncompressed.root"))["sample"]["i8"]
         expectation = [[-15, -14, -13], [-12, -11, -10], [-9, -8, -7], [-6, -5, -4], [-3, -2, -1], [0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14]]
         assert [x.tolist() for x in branch.baskets()] == expectation
         assert [x.tolist() for x in branch.iterate_baskets()] == expectation
 
     def test_regular_baskets(self):
-        branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["ai8"]
+        branch = uproot.open(skhep_testdata.data_path("uproot-sample-6.10.05-uncompressed.root"))["sample"]["ai8"]
         expectation = [[[-14, -13, -12]], [[-13, -12, -11]], [[-12, -11, -10]], [[-11, -10, -9]], [[-10, -9, -8]], [[-9, -8, -7]], [[-8, -7, -6]], [[-7, -6, -5]], [[-6, -5, -4]], [[-5, -4, -3]], [[-4, -3, -2]], [[-3, -2, -1]], [[-2, -1, 0]], [[-1, 0, 1]], [[0, 1, 2]], [[1, 2, 3]], [[2, 3, 4]], [[3, 4, 5]], [[4, 5, 6]], [[5, 6, 7]], [[6, 7, 8]], [[7, 8, 9]], [[8, 9, 10]], [[9, 10, 11]], [[10, 11, 12]], [[11, 12, 13]], [[12, 13, 14]], [[13, 14, 15]], [[14, 15, 16]], [[15, 16, 17]]]
         assert [x.tolist() for x in branch.baskets()] == expectation
         assert [x.tolist() for x in branch.iterate_baskets()] == expectation
 
     def test_irregular_baskets(self):
-        branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["Ai8"]
+        branch = uproot.open(skhep_testdata.data_path("uproot-sample-6.10.05-uncompressed.root"))["sample"]["Ai8"]
         expectation = [[[], [-15]], [[-15, -13]], [[-15, -13, -11]], [[-15, -13, -11, -9]], [[], [-10]], [[-10, -8]], [[-10, -8, -6]], [[-10, -8, -6, -4]], [[], [-5]], [[-5, -3]], [[-5, -3, -1]], [[-5, -3, -1, 1]], [[], [0]], [[0, 2]], [[0, 2, 4]], [[0, 2, 4, 6]], [[], [5]], [[5, 7]], [[5, 7, 9]], [[5, 7, 9, 11]], [[], [10]], [[10, 12]], [[10, 12, 14]], [[10, 12, 14, 16]]]
         assert [len(y) for x in expectation for y in x] == [0, 1, 2, 3, 4] * 6
         assert [x.tolist() for x in branch.baskets()] == expectation
         assert [x.tolist() for x in branch.iterate_baskets()] == expectation
 
     def test_strings_baskets(self):
-        branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["str"]
+        branch = uproot.open(skhep_testdata.data_path("uproot-sample-6.10.05-uncompressed.root"))["sample"]["str"]
         expectation = [[b"hey-0", b"hey-1", b"hey-2", b"hey-3", b"hey-4", b"hey-5"], [b"hey-6", b"hey-7", b"hey-8", b"hey-9", b"hey-10"], [b"hey-11", b"hey-12", b"hey-13", b"hey-14", b"hey-15"], [b"hey-16", b"hey-17", b"hey-18", b"hey-19", b"hey-20"], [b"hey-21", b"hey-22", b"hey-23", b"hey-24", b"hey-25"], [b"hey-26", b"hey-27", b"hey-28", b"hey-29"]]
         assert [x.tolist() for x in branch.baskets()] == expectation
         assert [x.tolist() for x in branch.iterate_baskets()] == expectation
@@ -170,26 +171,26 @@ class Test(unittest.TestCase):
     ###################################################### array
 
     def test_flat_array(self):
-        branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["i8"]
+        branch = uproot.open(skhep_testdata.data_path("uproot-sample-6.10.05-uncompressed.root"))["sample"]["i8"]
         expectation = [-15, -14, -13, -12, -11, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
         for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
             assert branch.array(entrystart=entrystart, entrystop=entrystop).tolist() == expectation[entrystart:entrystop]
 
     def test_regular_array(self):
-        branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["ai8"]
+        branch = uproot.open(skhep_testdata.data_path("uproot-sample-6.10.05-uncompressed.root"))["sample"]["ai8"]
         expectation = [[-14, -13, -12], [-13, -12, -11], [-12, -11, -10], [-11, -10, -9], [-10, -9, -8], [-9, -8, -7], [-8, -7, -6], [-7, -6, -5], [-6, -5, -4], [-5, -4, -3], [-4, -3, -2], [-3, -2, -1], [-2, -1, 0], [-1, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, 4], [3, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, 8], [7, 8, 9], [8, 9, 10], [9, 10, 11], [10, 11, 12], [11, 12, 13], [12, 13, 14], [13, 14, 15], [14, 15, 16], [15, 16, 17]]
         for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
             assert branch.array(entrystart=entrystart, entrystop=entrystop).tolist() == expectation[entrystart:entrystop]
 
     def test_irregular_array(self):
-        branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["Ai8"]
+        branch = uproot.open(skhep_testdata.data_path("uproot-sample-6.10.05-uncompressed.root"))["sample"]["Ai8"]
         expectation = [[], [-15], [-15, -13], [-15, -13, -11], [-15, -13, -11, -9], [], [-10], [-10, -8], [-10, -8, -6], [-10, -8, -6, -4], [], [-5], [-5, -3], [-5, -3, -1], [-5, -3, -1, 1], [], [0], [0, 2], [0, 2, 4], [0, 2, 4, 6], [], [5], [5, 7], [5, 7, 9], [5, 7, 9, 11], [], [10], [10, 12], [10, 12, 14], [10, 12, 14, 16]]
         assert [len(x) for x in expectation] == [0, 1, 2, 3, 4] * 6
         for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
             assert branch.array(entrystart=entrystart, entrystop=entrystop).tolist() == expectation[entrystart:entrystop]
 
     def test_strings_array(self):
-        branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["str"]
+        branch = uproot.open(skhep_testdata.data_path("uproot-sample-6.10.05-uncompressed.root"))["sample"]["str"]
         expectation = [b"hey-0", b"hey-1", b"hey-2", b"hey-3", b"hey-4", b"hey-5", b"hey-6", b"hey-7", b"hey-8", b"hey-9", b"hey-10", b"hey-11", b"hey-12", b"hey-13", b"hey-14", b"hey-15", b"hey-16", b"hey-17", b"hey-18", b"hey-19", b"hey-20", b"hey-21", b"hey-22", b"hey-23", b"hey-24", b"hey-25", b"hey-26", b"hey-27", b"hey-28", b"hey-29"]
         for entrystart, entrystop in [(None, None), (1, None), (1, 2), (1, 10), (10, 11), (10, 20), (6, 12), (6, 13)]:
             assert branch.array(entrystart=entrystart, entrystop=entrystop).tolist() == expectation[entrystart:entrystop]
@@ -197,25 +198,25 @@ class Test(unittest.TestCase):
     ###################################################### iterate
 
     def test_flat_iterate(self):
-        tree = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]
+        tree = uproot.open(skhep_testdata.data_path("uproot-sample-6.10.05-uncompressed.root"))["sample"]
         expectation = [-15, -14, -13, -12, -11, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
         for n in 1000, 5, 6, 7:
             assert [x.tolist() for (x,) in tree.iterate("i8", n, outputtype=tuple)] == [expectation[x : x + n] for x in range(0, len(expectation), n)]
 
     def test_regular_iterate(self):
-        tree = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]
+        tree = uproot.open(skhep_testdata.data_path("uproot-sample-6.10.05-uncompressed.root"))["sample"]
         expectation = [[-14, -13, -12], [-13, -12, -11], [-12, -11, -10], [-11, -10, -9], [-10, -9, -8], [-9, -8, -7], [-8, -7, -6], [-7, -6, -5], [-6, -5, -4], [-5, -4, -3], [-4, -3, -2], [-3, -2, -1], [-2, -1, 0], [-1, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, 4], [3, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, 8], [7, 8, 9], [8, 9, 10], [9, 10, 11], [10, 11, 12], [11, 12, 13], [12, 13, 14], [13, 14, 15], [14, 15, 16], [15, 16, 17]]
         for n in 1000, 5, 6, 7:
             assert [x.tolist() for (x,) in tree.iterate("ai8", n, outputtype=tuple)] == [expectation[x : x + n] for x in range(0, len(expectation), n)]
 
     def test_irregular_iterate(self):
-        tree = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]
+        tree = uproot.open(skhep_testdata.data_path("uproot-sample-6.10.05-uncompressed.root"))["sample"]
         expectation = [[], [-15], [-15, -13], [-15, -13, -11], [-15, -13, -11, -9], [], [-10], [-10, -8], [-10, -8, -6], [-10, -8, -6, -4], [], [-5], [-5, -3], [-5, -3, -1], [-5, -3, -1, 1], [], [0], [0, 2], [0, 2, 4], [0, 2, 4, 6], [], [5], [5, 7], [5, 7, 9], [5, 7, 9, 11], [], [10], [10, 12], [10, 12, 14], [10, 12, 14, 16]]
         for n in 1000, 5, 6, 7:
             assert [x.tolist() for (x,) in tree.iterate("Ai8", n, outputtype=tuple)] == [expectation[x : x + n] for x in range(0, len(expectation), n)]
 
     def test_strings_iterate(self):
-        tree = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]
+        tree = uproot.open(skhep_testdata.data_path("uproot-sample-6.10.05-uncompressed.root"))["sample"]
         expectation = [b"hey-0", b"hey-1", b"hey-2", b"hey-3", b"hey-4", b"hey-5", b"hey-6", b"hey-7", b"hey-8", b"hey-9", b"hey-10", b"hey-11", b"hey-12", b"hey-13", b"hey-14", b"hey-15", b"hey-16", b"hey-17", b"hey-18", b"hey-19", b"hey-20", b"hey-21", b"hey-22", b"hey-23", b"hey-24", b"hey-25", b"hey-26", b"hey-27", b"hey-28", b"hey-29"]
         for n in 1000, 5, 6, 7:
             assert [x.tolist() for (x,) in tree.iterate("str", n, outputtype=tuple)] == [expectation[x : x + n] for x in range(0, len(expectation), n)]
@@ -223,7 +224,7 @@ class Test(unittest.TestCase):
     ###################################################### old tests
 
     def test_branch_array(self):
-        file = uproot.open("tests/samples/simple.root")
+        file = uproot.open(skhep_testdata.data_path("uproot-simple.root"))
         repr(file)
 
         tree = file["tree"]
@@ -244,7 +245,7 @@ class Test(unittest.TestCase):
         assert tree["three"].array().tolist() == [b"uno", b"dos", b"tres", b"quatro"]
 
     def test_tree_arrays(self):
-        file = uproot.open("tests/samples/simple.root")
+        file = uproot.open(skhep_testdata.data_path("uproot-simple.root"))
 
         tree = file["tree"]
         arrays = tree.arrays()
@@ -266,7 +267,7 @@ class Test(unittest.TestCase):
         assert arrays[b"three"].tolist() == [b"uno", b"dos", b"tres", b"quatro"]
 
     def test_tree_arrays_namedecode(self):
-        file = uproot.open("tests/samples/simple.root")
+        file = uproot.open(skhep_testdata.data_path("uproot-simple.root"))
 
         tree = file["tree"]
         arrays = tree.arrays(namedecode="utf-8")
@@ -276,38 +277,38 @@ class Test(unittest.TestCase):
 
     def test_tree_iterator1(self):
         # one big array
-        for arrays in uproot.open("tests/samples/foriter.root")["foriter"].iterate(entrysteps=1000):
+        for arrays in uproot.open(skhep_testdata.data_path("uproot-foriter.root"))["foriter"].iterate(entrysteps=1000):
             assert arrays[b"data"].tolist() == list(range(46))
 
         # size is equal to basket size (for most baskets)
         i = 0
-        for arrays in uproot.open("tests/samples/foriter.root")["foriter"].iterate(entrysteps=6):
+        for arrays in uproot.open(skhep_testdata.data_path("uproot-foriter.root"))["foriter"].iterate(entrysteps=6):
             assert arrays[b"data"].tolist() == list(range(i, min(i + 6, 46)))
             i += 6
 
         # size is smaller
         i = 0
-        for arrays in uproot.open("tests/samples/foriter.root")["foriter"].iterate(entrysteps=3):
+        for arrays in uproot.open(skhep_testdata.data_path("uproot-foriter.root"))["foriter"].iterate(entrysteps=3):
             assert arrays[b"data"].tolist() == list(range(i, min(i + 3, 46)))
             i += 3
         i = 0
-        for arrays in uproot.open("tests/samples/foriter.root")["foriter"].iterate(entrysteps=4):
+        for arrays in uproot.open(skhep_testdata.data_path("uproot-foriter.root"))["foriter"].iterate(entrysteps=4):
             assert arrays[b"data"].tolist() == list(range(i, min(i + 4, 46)))
             i += 4
 
         # size is larger
         i = 0
-        for arrays in uproot.open("tests/samples/foriter.root")["foriter"].iterate(entrysteps=12):
+        for arrays in uproot.open(skhep_testdata.data_path("uproot-foriter.root"))["foriter"].iterate(entrysteps=12):
             assert arrays[b"data"].tolist() == list(range(i, min(i + 12, 46)))
             i += 12
         i = 0
-        for arrays in uproot.open("tests/samples/foriter.root")["foriter"].iterate(entrysteps=10):
+        for arrays in uproot.open(skhep_testdata.data_path("uproot-foriter.root"))["foriter"].iterate(entrysteps=10):
             assert arrays[b"data"].tolist() == list(range(i, min(i + 10, 46)))
             i += 10
 
         # singleton case
         i = 0
-        for arrays in uproot.open("tests/samples/foriter.root")["foriter"].iterate(entrysteps=1):
+        for arrays in uproot.open(skhep_testdata.data_path("uproot-foriter.root"))["foriter"].iterate(entrysteps=1):
             assert arrays[b"data"].tolist() == list(range(i, min(i + 1, 46)))
             i += 1
 
@@ -315,38 +316,38 @@ class Test(unittest.TestCase):
         words = [b"zero", b"one", b"two", b"three", b"four", b"five", b"six", b"seven", b"eight", b"nine", b"ten", b"eleven", b"twelve", b"thirteen", b"fourteen", b"fifteen", b"sixteen", b"seventeen", b"eighteen", b"ninteen", b"twenty", b"twenty-one", b"twenty-two", b"twenty-three", b"twenty-four", b"twenty-five", b"twenty-six", b"twenty-seven", b"twenty-eight", b"twenty-nine", b"thirty"]
 
         # one big array
-        for arrays in uproot.open("tests/samples/foriter2.root")["foriter2"].iterate(entrysteps=1000):
+        for arrays in uproot.open(skhep_testdata.data_path("uproot-foriter2.root"))["foriter2"].iterate(entrysteps=1000):
             assert arrays[b"data"].tolist() == words
 
         # size is equal to basket size (for most baskets)
         i = 0
-        for arrays in uproot.open("tests/samples/foriter2.root")["foriter2"].iterate(entrysteps=6):
+        for arrays in uproot.open(skhep_testdata.data_path("uproot-foriter2.root"))["foriter2"].iterate(entrysteps=6):
             assert arrays[b"data"].tolist() == words[i:i + 6]
             i += 6
 
         # size is smaller
         i = 0
-        for arrays in uproot.open("tests/samples/foriter2.root")["foriter2"].iterate(entrysteps=3):
+        for arrays in uproot.open(skhep_testdata.data_path("uproot-foriter2.root"))["foriter2"].iterate(entrysteps=3):
             assert arrays[b"data"].tolist() == words[i:i + 3]
             i += 3
         i = 0
-        for arrays in uproot.open("tests/samples/foriter2.root")["foriter2"].iterate(entrysteps=4):
+        for arrays in uproot.open(skhep_testdata.data_path("uproot-foriter2.root"))["foriter2"].iterate(entrysteps=4):
             assert arrays[b"data"].tolist() == words[i:i + 4]
             i += 4
 
         # size is larger
         i = 0
-        for arrays in uproot.open("tests/samples/foriter2.root")["foriter2"].iterate(entrysteps=12):
+        for arrays in uproot.open(skhep_testdata.data_path("uproot-foriter2.root"))["foriter2"].iterate(entrysteps=12):
             assert arrays[b"data"].tolist() == words[i:i + 12]
             i += 12
         i = 0
-        for arrays in uproot.open("tests/samples/foriter2.root")["foriter2"].iterate(entrysteps=10):
+        for arrays in uproot.open(skhep_testdata.data_path("uproot-foriter2.root"))["foriter2"].iterate(entrysteps=10):
             assert arrays[b"data"].tolist() == words[i:i + 10]
             i += 10
 
         # singleton case
         i = 0
-        for arrays in uproot.open("tests/samples/foriter2.root")["foriter2"].iterate(entrysteps=1):
+        for arrays in uproot.open(skhep_testdata.data_path("uproot-foriter2.root"))["foriter2"].iterate(entrysteps=1):
             assert arrays[b"data"].tolist() == words[i:i + 1]
             i += 1
 
@@ -354,43 +355,43 @@ class Test(unittest.TestCase):
         source = list(range(46))
 
         # one big array
-        for arrays in uproot.iterate(["tests/samples/foriter.root", "tests/samples/foriter.root"], "foriter", entrysteps=1000):
+        for arrays in uproot.iterate([skhep_testdata.data_path("uproot-foriter.root"), skhep_testdata.data_path("uproot-foriter.root")], "foriter", entrysteps=1000):
             assert arrays[b"data"].tolist() == source
 
         # size is equal to basket size (for most baskets)
         i = 0
-        for arrays in uproot.iterate(["tests/samples/foriter.root", "tests/samples/foriter.root"], "foriter", entrysteps=6):
+        for arrays in uproot.iterate([skhep_testdata.data_path("uproot-foriter.root"), skhep_testdata.data_path("uproot-foriter.root")], "foriter", entrysteps=6):
             assert arrays[b"data"].tolist() == source[i : i + 6]
             i += 6
             if i > 45: i = 0
 
         # size is smaller
         i = 0
-        for arrays in uproot.iterate(["tests/samples/foriter.root", "tests/samples/foriter.root"], "foriter", entrysteps=3):
+        for arrays in uproot.iterate([skhep_testdata.data_path("uproot-foriter.root"), skhep_testdata.data_path("uproot-foriter.root")], "foriter", entrysteps=3):
             assert arrays[b"data"].tolist() == source[i : i + 3]
             i += 3
             if i > 45: i = 0
         i = 0
-        for arrays in uproot.iterate(["tests/samples/foriter.root", "tests/samples/foriter.root"], "foriter", entrysteps=4):
+        for arrays in uproot.iterate([skhep_testdata.data_path("uproot-foriter.root"), skhep_testdata.data_path("uproot-foriter.root")], "foriter", entrysteps=4):
             assert arrays[b"data"].tolist() == source[i : i + 4]
             i += 4
             if i > 45: i = 0
 
         # size is larger
         i = 0
-        for arrays in uproot.iterate(["tests/samples/foriter.root", "tests/samples/foriter.root"], "foriter", entrysteps=12):
+        for arrays in uproot.iterate([skhep_testdata.data_path("uproot-foriter.root"), skhep_testdata.data_path("uproot-foriter.root")], "foriter", entrysteps=12):
             assert arrays[b"data"].tolist() == source[i : i + 12]
             i += 12
             if i > 45: i = 0
         i = 0
-        for arrays in uproot.iterate(["tests/samples/foriter.root", "tests/samples/foriter.root"], "foriter", entrysteps=10):
+        for arrays in uproot.iterate([skhep_testdata.data_path("uproot-foriter.root"), skhep_testdata.data_path("uproot-foriter.root")], "foriter", entrysteps=10):
             assert arrays[b"data"].tolist() == source[i : i + 10]
             i += 10
             if i > 45: i = 0
 
         # singleton case
         i = 0
-        for arrays in uproot.iterate(["tests/samples/foriter.root", "tests/samples/foriter.root"], "foriter", entrysteps=1):
+        for arrays in uproot.iterate([skhep_testdata.data_path("uproot-foriter.root"), skhep_testdata.data_path("uproot-foriter.root")], "foriter", entrysteps=1):
             assert arrays[b"data"].tolist() == source[i : i + 1]
             i += 1
             if i > 45: i = 0
@@ -399,49 +400,49 @@ class Test(unittest.TestCase):
         words2 = [b"zero", b"one", b"two", b"three", b"four", b"five", b"six", b"seven", b"eight", b"nine", b"ten", b"eleven", b"twelve", b"thirteen", b"fourteen", b"fifteen", b"sixteen", b"seventeen", b"eighteen", b"ninteen", b"twenty", b"twenty-one", b"twenty-two", b"twenty-three", b"twenty-four", b"twenty-five", b"twenty-six", b"twenty-seven", b"twenty-eight", b"twenty-nine", b"thirty"]
 
         # one big array
-        for arrays in uproot.iterate(["tests/samples/foriter2.root", "tests/samples/foriter2.root"], "foriter2", entrysteps=1000):
+        for arrays in uproot.iterate([skhep_testdata.data_path("uproot-foriter2.root"), skhep_testdata.data_path("uproot-foriter2.root")], "foriter2", entrysteps=1000):
             assert arrays[b"data"].tolist() == words2
 
         # size is equal to basket size (for most baskets)
         i = 0
-        for arrays in uproot.iterate(["tests/samples/foriter2.root", "tests/samples/foriter2.root"], "foriter2", entrysteps=6):
+        for arrays in uproot.iterate([skhep_testdata.data_path("uproot-foriter2.root"), skhep_testdata.data_path("uproot-foriter2.root")], "foriter2", entrysteps=6):
             assert arrays[b"data"].tolist() == words2[i : i + 6]
             i += 6
             if i > 30: i = 0
 
         # size is smaller
         i = 0
-        for arrays in uproot.iterate(["tests/samples/foriter2.root", "tests/samples/foriter2.root"], "foriter2", entrysteps=3):
+        for arrays in uproot.iterate([skhep_testdata.data_path("uproot-foriter2.root"), skhep_testdata.data_path("uproot-foriter2.root")], "foriter2", entrysteps=3):
             assert arrays[b"data"].tolist() == words2[i : i + 3]
             i += 3
             if i > 30: i = 0
         i = 0
-        for arrays in uproot.iterate(["tests/samples/foriter2.root", "tests/samples/foriter2.root"], "foriter2", entrysteps=4):
+        for arrays in uproot.iterate([skhep_testdata.data_path("uproot-foriter2.root"), skhep_testdata.data_path("uproot-foriter2.root")], "foriter2", entrysteps=4):
             assert arrays[b"data"].tolist() == words2[i : i + 4]
             i += 4
             if i > 30: i = 0
 
         # size is larger
         i = 0
-        for arrays in uproot.iterate(["tests/samples/foriter2.root", "tests/samples/foriter2.root"], "foriter2", entrysteps=12):
+        for arrays in uproot.iterate([skhep_testdata.data_path("uproot-foriter2.root"), skhep_testdata.data_path("uproot-foriter2.root")], "foriter2", entrysteps=12):
             assert arrays[b"data"].tolist() == words2[i : i + 12]
             i += 12
             if i > 30: i = 0
         i = 0
-        for arrays in uproot.iterate(["tests/samples/foriter2.root", "tests/samples/foriter2.root"], "foriter2", entrysteps=10):
+        for arrays in uproot.iterate([skhep_testdata.data_path("uproot-foriter2.root"), skhep_testdata.data_path("uproot-foriter2.root")], "foriter2", entrysteps=10):
             assert arrays[b"data"].tolist() == words2[i : i + 10]
             i += 10
             if i > 30: i = 0
 
         # singleton case
         i = 0
-        for arrays in uproot.iterate(["tests/samples/foriter2.root", "tests/samples/foriter2.root"], "foriter2", entrysteps=1):
+        for arrays in uproot.iterate([skhep_testdata.data_path("uproot-foriter2.root"), skhep_testdata.data_path("uproot-foriter2.root")], "foriter2", entrysteps=1):
             assert arrays[b"data"].tolist() == words2[i : i + 1]
             i += 1
             if i > 30: i = 0
 
     def test_directories(self):
-        file = uproot.open("tests/samples/nesteddirs.root")
+        file = uproot.open(skhep_testdata.data_path("uproot-nesteddirs.root"))
 
         assert [(n, cls._classname) for n, cls in file.classes()] == [(b"one;1", b"TDirectory"), (b"three;1", b"TDirectory")]
         assert [(n, cls._classname) for n, cls in file.allclasses()] == [(b"one;1", b"TDirectory"), (b"one/two;1", b"TDirectory"), (b"one/two/tree;1", b"TTree"), (b"one/tree;1", b"TTree"), (b"three;1", b"TDirectory"), (b"three/tree;1", b"TTree")]
@@ -456,7 +457,7 @@ class Test(unittest.TestCase):
         assert file["one/two/tree"].array("Int32").shape == (100,)
         assert file["three/tree"].array("I32").shape == (100,)
 
-        file = uproot.open("tests/samples/nesteddirs.root")
+        file = uproot.open(skhep_testdata.data_path("uproot-nesteddirs.root"))
 
         assert list(file["one/tree"].keys()) == [b"one", b"two", b"three"]
         assert list(file["one/two/tree"].keys()) == [b"Int32", b"Int64", b"UInt32", b"UInt64", b"Float32", b"Float64", b"Str", b"ArrayInt32", b"ArrayInt64", b"ArrayUInt32", b"ArrayUInt64", b"ArrayFloat32", b"ArrayFloat64", b"N", b"SliceInt32", b"SliceInt64", b"SliceUInt32", b"SliceUInt64", b"SliceFloat32", b"SliceFloat64"]
@@ -467,7 +468,7 @@ class Test(unittest.TestCase):
         assert file["three/tree;1"].array("I32").shape == (100,)
 
     def test_cast(self):
-        tree = uproot.open("tests/samples/Zmumu.root")["events"]
+        tree = uproot.open(skhep_testdata.data_path("uproot-Zmumu.root"))["events"]
         one = numpy.cast[numpy.int32](numpy.floor(tree.array("M")))
         two = tree.array("M", numpy.int32)
         assert one.dtype == two.dtype
@@ -483,7 +484,7 @@ class Test(unittest.TestCase):
         assert numpy.array_equal(one, two)
 
     def test_pass_array(self):
-        tree = uproot.open("tests/samples/Zmumu.root")["events"]
+        tree = uproot.open(skhep_testdata.data_path("uproot-Zmumu.root"))["events"]
         one = numpy.cast[numpy.int32](numpy.floor(tree.array("M")))
         two = numpy.zeros(one.shape, dtype=one.dtype)
         tree.array("M", two)
@@ -496,7 +497,7 @@ class Test(unittest.TestCase):
                 assert numpy.array_equal(one, two)
 
     def test_outputtype(self):
-        tree = uproot.open("tests/samples/simple.root")["tree"]
+        tree = uproot.open(skhep_testdata.data_path("uproot-simple.root"))["tree"]
 
         arrays = tree.arrays(["three", "two", "one"], outputtype=dict)
         assert isinstance(arrays, dict)
@@ -549,7 +550,7 @@ class Test(unittest.TestCase):
         assert isinstance(arrays, MyTuple)
 
     def test_tree_lazy(self):
-        tree = uproot.open("tests/samples/sample-5.30.00-uncompressed.root")["sample"]
+        tree = uproot.open(skhep_testdata.data_path("uproot-sample-5.30.00-uncompressed.root"))["sample"]
 
         def normalize(x):
             if isinstance(x, numpy.ndarray):
@@ -577,7 +578,7 @@ class Test(unittest.TestCase):
                 assert normalize(lazy[i - 1 : i + 3]) == strict[i - 1 : i + 3].tolist()
 
     def test_tree_lazy_cached(self):
-        tree = uproot.open("tests/samples/sample-5.30.00-uncompressed.root")["sample"]
+        tree = uproot.open(skhep_testdata.data_path("uproot-sample-5.30.00-uncompressed.root"))["sample"]
 
         def normalize(x):
             if isinstance(x, numpy.ndarray):
@@ -649,7 +650,7 @@ class Test(unittest.TestCase):
         assert branches_without_interp == known_branches_without_interp
 
     def test_leaflist(self):
-        tree = uproot.open("tests/samples/leaflist.root")["tree"]
+        tree = uproot.open(skhep_testdata.data_path("uproot-leaflist.root"))["tree"]
         a = tree.array("leaflist")
         assert a["x"].tolist() == [1.1, 2.2, 3.3, 4.0, 5.5]   # yeah, I goofed up when making it
         assert a["y"].tolist() == [1, 2, 3, 4, 5]
@@ -662,6 +663,6 @@ class Test(unittest.TestCase):
         else:
             assert tree.pandas.df()["leaflist.x"].tolist() == [1.1, 2.2, 3.3, 4.0, 5.5]
 
-            tree = uproot.open("tests/samples/HZZ-objects.root")["events"]
+            tree = uproot.open(skhep_testdata.data_path("uproot-HZZ-objects.root"))["events"]
             tree.pandas.df("muonp4")
             tree.pandas.df("muonp4", flatten=False)

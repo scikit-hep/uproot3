@@ -36,6 +36,7 @@ except ImportError:
     from backports import lzma
 import lz4
 
+import skhep_testdata
 import uproot
 
 class Test(unittest.TestCase):
@@ -97,54 +98,54 @@ class Test(unittest.TestCase):
     def test_5_23_02(self):
         # 2009-02-26, TTree version 16
         for compression in "uncompressed", "zlib":
-            self.compare(uproot.open("tests/samples/sample-5.23.02-{0}.root".format(compression))["sample"].arrays())
+            self.compare(uproot.open(skhep_testdata.data_path("uproot-sample-5.23.02-{0}.root".format(compression)))["sample"].arrays())
 
     def test_5_24_00(self):
         # 2009-06-30, TTree version 16
         for compression in "uncompressed", "zlib":
-            self.compare(uproot.open("tests/samples/sample-5.24.00-{0}.root".format(compression))["sample"].arrays())
+            self.compare(uproot.open(skhep_testdata.data_path("uproot-sample-5.24.00-{0}.root".format(compression)))["sample"].arrays())
 
     def test_5_25_02(self):
         # 2009-10-01, TTree version 17
         for compression in "uncompressed", "zlib":
-            self.compare(uproot.open("tests/samples/sample-5.25.02-{0}.root".format(compression))["sample"].arrays())
+            self.compare(uproot.open(skhep_testdata.data_path("uproot-sample-5.25.02-{0}.root".format(compression)))["sample"].arrays())
 
     def test_5_26_00(self):
         # 2009-12-14, TTree version 18
         for compression in "uncompressed", "zlib":
-            self.compare(uproot.open("tests/samples/sample-5.26.00-{0}.root".format(compression))["sample"].arrays())
+            self.compare(uproot.open(skhep_testdata.data_path("uproot-sample-5.26.00-{0}.root".format(compression)))["sample"].arrays())
 
     def test_5_27_02(self):
         # 2010-04-27, TTree version 18
         for compression in "uncompressed", "zlib":
-            self.compare(uproot.open("tests/samples/sample-5.27.02-{0}.root".format(compression))["sample"].arrays())
+            self.compare(uproot.open(skhep_testdata.data_path("uproot-sample-5.27.02-{0}.root".format(compression)))["sample"].arrays())
 
     def test_5_28_00(self):
         # 2010-12-15, TTree version 18
         for compression in "uncompressed", "zlib":
-            self.compare(uproot.open("tests/samples/sample-5.28.00-{0}.root".format(compression))["sample"].arrays())
+            self.compare(uproot.open(skhep_testdata.data_path("uproot-sample-5.28.00-{0}.root".format(compression)))["sample"].arrays())
 
     def test_5_29_02(self):
         # 2011-04-21, TTree version 18
         for compression in "uncompressed", "zlib":
-            self.compare(uproot.open("tests/samples/sample-5.29.02-{0}.root".format(compression))["sample"].arrays())
+            self.compare(uproot.open(skhep_testdata.data_path("uproot-sample-5.29.02-{0}.root".format(compression)))["sample"].arrays())
 
     def test_5_30_00(self):
         # 2011-06-28, TTree version 19
         for compression in "uncompressed", "zlib", "lzma":
-            self.compare(uproot.open("tests/samples/sample-5.30.00-{0}.root".format(compression))["sample"].arrays())
+            self.compare(uproot.open(skhep_testdata.data_path("uproot-sample-5.30.00-{0}.root".format(compression)))["sample"].arrays())
 
     def test_6_08_04(self):
         # 2017-01-13, TTree version 19
         for compression in "uncompressed", "zlib", "lzma":
-            self.compare(uproot.open("tests/samples/sample-6.08.04-{0}.root".format(compression))["sample"].arrays())
+            self.compare(uproot.open(skhep_testdata.data_path("uproot-sample-6.08.04-{0}.root".format(compression)))["sample"].arrays())
 
     def test_6_10_05(self):
         # 2017-07-28, TTree version 19
         for compression in "uncompressed", "zlib", "lzma", "lz4":
-            self.compare(uproot.open("tests/samples/sample-6.10.05-{0}.root".format(compression))["sample"].arrays())
+            self.compare(uproot.open(skhep_testdata.data_path("uproot-sample-6.10.05-{0}.root".format(compression)))["sample"].arrays())
 
     def test_6_14_00(self):
         # 2018-06-20, TTree version 20
         for compression in "uncompressed", "zlib", "lzma", "lz4":
-            self.compare(uproot.open("tests/samples/sample-6.14.00-{0}.root".format(compression))["sample"].arrays())
+            self.compare(uproot.open(skhep_testdata.data_path("uproot-sample-6.14.00-{0}.root".format(compression)))["sample"].arrays())

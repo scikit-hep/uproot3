@@ -34,10 +34,11 @@ import pytest
 import mock
 from requests.exceptions import HTTPError
 
+import skhep_testdata
 import uproot
 
 FILE = "foriter"
-LOCAL = "tests/samples/{FILE}.root".format(FILE=FILE)
+LOCAL = skhep_testdata.data_path("uproot-{FILE}.root".format(FILE=FILE))
 URL = "http://scikit-hep.org/uproot/examples/{FILE}.root".format(FILE=FILE)
 URL_AUTH = "http://scikit-hep.org/uproot/authentication/{FILE}.root".format(FILE=FILE)
 AUTH = ("scikit-hep", "uproot")

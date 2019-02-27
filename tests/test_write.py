@@ -31,6 +31,8 @@
 from os.path import join
 
 import pytest
+
+import skhep_testdata
 import uproot
 
 def test_strings(tmp_path):

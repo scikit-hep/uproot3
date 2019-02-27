@@ -30,6 +30,7 @@
 
 import unittest
 
+import skhep_testdata
 import uproot
 try:
     import pandas
@@ -38,7 +39,7 @@ except ImportError:
 
 class Test(unittest.TestCase):
     if pandas is not None:
-        sample = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]
+        sample = uproot.open(skhep_testdata.data_path("uproot-sample-6.10.05-uncompressed.root"))["sample"]
 
     def test_flatten_False(self):
         if pandas is not None:
