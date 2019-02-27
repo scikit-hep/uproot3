@@ -31,7 +31,7 @@ Python does not necessarily mean slow. As long as the data blocks ("baskets") ar
 
 .. raw:: html
 
-    <img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/root-none-muon.png" width="47%" align="left"><br clear="all" /><img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/rootnumpy-none-muon.png" width="47%" align="right"><br clear="all" />
+    <table><tr><td><img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/root-none-muon.png" width="47%"></td><td><img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/rootnumpy-none-muon.png" width="47%"></td></tr></table>
 
 .. inclusion-marker-replaceplots-stop
 
