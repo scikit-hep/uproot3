@@ -186,12 +186,12 @@ class Test(unittest.TestCase):
     #     assert a2[0]._fArray.shape == (1084,)
 
     def test_issue187(self):
-        t = uproot.open("http://scikit-hep.org/uproot/examples/issue187.root")["fTreeV0"]
+        t = uproot.open(skhep_testdata.data_path("uproot-issue187.root"))["fTreeV0"]
         assert (t.array("fMultiplicity") == -1).all()
         assert t.array("V0s.fEtaPos")[-3].tolist() == [-0.390625, 0.046875]
 
     def test_issue213(self):
-        t = uproot.open("http://scikit-hep.org/uproot/examples/issue213.root")["T"]
+        t = uproot.open(skhep_testdata.data_path("uproot-issue213.root"))["T"]
         assert t["fMCHits.fPosition"].array().x.tolist() == [[], [], [], [], [], [], [], [42.17024612426758, 50.63192367553711], [], [], [], [43.292755126953125], [], [], [], [], [], [], [], [], [42.15415954589844], [41.60139083862305], [42.95103454589844], [], [41.55511474609375], [], [], [], [], [], [], [42.549156188964844], [], [], [], [42.80044174194336, 46.136253356933594], [], [], [], [], [41.58171081542969], [], [], [42.741485595703125], [41.228477478027344], [], [], [], [], [], [], [], [], [], [42.518882751464844], [43.34626388549805], [], [], [43.214759826660156], [], [], [], [], [], [], [42.78463363647461], [], [], [], [], [], [], [], [41.927093505859375], [42.65863037109375], [], [42.66266632080078], [], [], [], [], [], [], [], [], [], [], [41.91042709350586, 41.807674407958984], [], [42.79293441772461], [], [], [], [], [], [], [41.72440719604492], [], [], [41.609615325927734]]
 
     def test_issue232(self):
@@ -200,5 +200,5 @@ class Test(unittest.TestCase):
         except ImportError:
             pass
         else:
-            t = uproot.open("http://scikit-hep.org/uproot/examples/issue232.root")["fTreeV0"]
+            t = uproot.open(skhep_testdata.data_path("uproot-issue232.root"))["fTreeV0"]
             t.pandas.df(["V0Hyper.fNsigmaHe3Pos", "V0Hyper.fDcaPos2PrimaryVertex"], flatten=True)
