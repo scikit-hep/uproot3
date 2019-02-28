@@ -86,7 +86,7 @@ def _filename_explode(x):
         if isinstance(x, pathlib.Path):
              x = str(x)
     parsed = urlparse(x)
-    if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0:
+    if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0 or (os.name == "nt" and _filename_explode._windows_absolute.match(path) is not None):
         pattern = os.path.expanduser(parsed.netloc + parsed.path)
         if "*" in pattern or "?" in pattern or "[" in pattern:
             out = sorted(glob.glob(pattern))
@@ -97,6 +97,8 @@ def _filename_explode(x):
         return out
     else:
         return [x]
+
+_filename_explode._windows_absolute = re.compile(r"^[A-Za-z]:\\")
 
 def _normalize_awkwardlib(awkwardlib):
     if awkwardlib is None:
