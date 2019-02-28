@@ -54,6 +54,8 @@ install:
   - pip install "uproot-methods>=0.3.0"
   - python -c 'import uproot_methods; print(uproot_methods.__version__)'
   - pip install "pytest>=3.9" pytest-runner
+  - pip install scikit-hep-testdata
+  - python -c 'import skhep_testdata; print(skhep_testdata.__version__)'
   - pip install lz4 requests
   - if [[ $TRAVIS_PYTHON_VERSION = "2.7" ]] ; then pip install backports.lzma ; fi
   - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install pandas ; fi
