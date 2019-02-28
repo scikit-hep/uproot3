@@ -63,7 +63,7 @@ def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defa
              path = str(path)
 
     parsed = urlparse(path)
-    if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0:
+    if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0 or (os.name == "nt" and open._windows_absolute.match(path) is not None):
         path = parsed.netloc + parsed.path
         if isinstance(localsource, dict):
             kwargs = dict(MemmapSource.defaults)
@@ -81,6 +81,8 @@ def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defa
 
     else:
         raise ValueError("URI scheme not recognized: {0}".format(path))
+
+open._windows_absolute = re.compile(r"^[A-Za-z]:\\")
 
 def xrootd(path, xrootdsource=XRootDSource.defaults, **options):
     if isinstance(xrootdsource, dict):

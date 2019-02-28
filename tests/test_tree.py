@@ -645,7 +645,7 @@ class Test(unittest.TestCase):
             b'fTriggerBits.TObject'
         ]
         tree = uproot.open("http://scikit-hep.org/uproot/examples/Event.root")["T"]
-        branches_without_interp = [ b.name for b in tree.allvalues() if b.interpretation is None]
+        branches_without_interp = [b.name for b in tree.allvalues() if b.interpretation is None]
         assert branches_without_interp == known_branches_without_interp
 
     def test_leaflist(self):
