@@ -48,6 +48,10 @@ open_fragments = {
     "xrootdsource": u"""xrootdsource : function: path \u21d2 :py:class:`Source <uproot.source.source.Source> or ``dict`` of keyword arguments`
         function that will be applied to the path to produce an uproot :py:class:`Source <uproot.source.source.Source>` object if the path is an XRootD URL. Default is :py:meth:`XRootDSource.defaults <uproot.source.xrootd.XRootDSource.defaults>` for XRootD with default chunk size/caching. (See :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>` constructor for details.) If a ``dict``, the ``dict`` is passed as keyword arguments to :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>` constructor.""",
 
+    # httpsource
+    "httpsource": u"""httpsource : function: path \u21d2 :py:class:`Source <uproot.source.source.Source> or ``dict`` of keyword arguments`
+        function that will be applied to the path to produce an uproot :py:class:`Source <uproot.source.source.Source>` object if the path is an HTTP URL. Default is :py:meth:`HTTPSource.defaults <uproot.source.http.HTTPSource.defaults>` for HTTP with default chunk size/caching. (See :py:class:`HTTPSource <uproot.source.http.HTTPSource>` constructor for details.) If a ``dict``, the ``dict`` is passed as keyword arguments to :py:class:`HTTPSource <uproot.source.http.HTTPSource>` constructor.""",
+
     # options
     "options": u"""**options
         passed to :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` constructor.""",
@@ -75,11 +79,14 @@ u"""Opens a ROOT file (local or remote), specified by file path.
     Parameters
     ----------
     path : str
-        local file path or URL specifying the location of a file (note: not a Python file object!). If the URL schema is "root://", :py:func:`xrootd <uproot.xrootd>` will be called.
+        local file path or URL specifying the location of a file (note: not a Python file object!). If the URL schema is "root://", :py:func:`xrootd <uproot.xrootd>` will be called; if "http://", :py:func:`http <uproot.http>` will be called.
+
 
     {localsource}
 
     {xrootdsource}
+
+    {httpsource}
 
     {options}
 
@@ -104,6 +111,26 @@ u"""Opens a remote ROOT file with XRootD (if installed).
         URL specifying the location of a file.
 
     {xrootdsource}
+
+    {options}
+
+    Returns
+    -------
+    :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>`
+        top-level directory of the ROOT file.
+    """.format(**open_fragments)
+
+################################################################ uproot.rootio.http
+
+uproot.rootio.http.__doc__ = \
+u"""Opens a remote ROOT file with HTTP (if ``requests`` is installed).
+
+    Parameters
+    ----------
+    path : str
+        URL specifying the location of a file.
+
+    {httpsource}
 
     {options}
 
@@ -556,6 +583,8 @@ u"""Opens a series of ROOT files (local or remote), yielding the same number of 
     {localsource}
 
     {xrootdsource}
+
+    {httpsource}
 
     {options}
 
@@ -1474,6 +1503,37 @@ u"""Create a Pandas DataFrame from some branches.
     Pandas DataFrame
         data frame (`see docs <http://pandas.pydata.org/pandas-docs/stable/api.html#dataframe>`_).
 """.format(**tree_fragments)
+
+################################################################ uproot.tree.numentries
+
+uproot.tree.numentries.__doc__ = \
+u"""Get the number of entries in a TTree without fully opening the file.
+
+    ``uproot.numentries("file.root", "tree")`` is a shortcut for ``uproot.open("file.root")["tree"].numentries`` that should be faster, particularly for files with many streamers and/or TTrees with many branches because it skips those steps in getting to the number of entries.
+
+    If a requested file is not found, this raises the appropriate exception. If a requested file does not have the requested TTree, the number of entries is taken to be zero, raising no error.
+
+    Parameters
+    ----------
+    path : str or list of str
+        glob pattern(s) for local file paths (POSIX wildcards like "``*``") or URLs specifying the locations of the files. A list of filenames are processed in the given order, but glob patterns get pre-sorted to ensure a predictable order.
+
+    treepath : str
+        path within each ROOT file to find the TTree (may include "``/``" for subdirectories or "``;``" for cycle numbers).
+
+    total : bool
+        if ``True`` *(default)*, return an integer: the total number of entries for all files; otherwise, return an ``OrderedDict`` of path (str) \u2192 number of entries.
+
+    {localsource}
+
+    {xrootdsource}
+
+    {httpsource}
+
+    {executor}
+
+    {blocking}
+""".format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
 
 ################################################################ uproot.interp.interp.Interpretation
 

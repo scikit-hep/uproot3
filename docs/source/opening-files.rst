@@ -25,3 +25,10 @@ With a :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>`, you can dig into
 The :py:func:`iterate <uproot.iterate>` function gives you an iterator over groups of arrays just like :py:meth:`TreeMethods.iterate <uproot.tree.TreeMethods.iterate>`, except that it iterates over a large set of files (and verifies that the selected TTree branches are compatible). This serves essentially the same function as ROOT's TChain, allowing you to use TTrees in a set of files the same way you would use a single TTree.
 
 .. autofunction:: uproot.tree.iterate
+
+uproot.tree.numentries
+----------------------
+
+If you need to know the total number of entries of a set of files before processing them (e.g. for normalization or setting weights), you could open each file and TTree individually, but the function below is faster because it skips some steps that aren't needed when you only want the number of files.
+
+.. autofunction:: uproot.tree.numentries
