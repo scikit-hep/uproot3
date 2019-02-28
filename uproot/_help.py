@@ -1533,6 +1533,11 @@ u"""Get the number of entries in a TTree without fully opening the file.
     {executor}
 
     {blocking}
+
+    Returns
+    -------
+    int or ``OrderedDict``
+        total number of entries or number of entries for each file, depending on *total*.
 """.format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
 
 ################################################################ uproot.interp.interp.Interpretation
