@@ -59,12 +59,17 @@ class HTTPSource(uproot.source.chunked.ChunkedSource):
 
     def _read(self, chunkindex):
         import requests
-        response = requests.get(
-            self.path,
-            headers={"Range": "bytes={0}-{1}".format(chunkindex * self._chunkbytes, (chunkindex + 1) * self._chunkbytes)},
-            auth=self.auth,
-        )
-        response.raise_for_status()
+        while True:
+            response = requests.get(
+                self.path,
+                headers={"Range": "bytes={0}-{1}".format(chunkindex * self._chunkbytes, (chunkindex + 1) * self._chunkbytes)},
+                auth=self.auth,
+            )
+            if response.status_code == 504:   # timeout, try it again
+                pass
+            else:
+                response.raise_for_status()   # if it's an error, raise exception
+                break                         # otherwise, break out of the loop
         data = response.content
 
         if self._size is None:
