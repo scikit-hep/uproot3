@@ -163,6 +163,8 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
         m = interpret._titlehasdims.match(branch._fLeaves[0]._fTitle)
         if m is not None:
             dims = tuple(int(x) for x in re.findall(interpret._itemdimpattern, branch._fLeaves[0]._fTitle))
+            if dims == ():
+                dims = (branch._fLeaves[0]._fLen, ) if branch._fLeaves[0]._fLen > 1 else ()
             if any(interpret._itemdimpattern.match(x) is None for x in re.findall(interpret._itemanypattern, branch._fLeaves[0]._fTitle)):
                 isjagged = True
     else:
