@@ -50,7 +50,14 @@ from uproot.interp.objects import STLString
 
 class _NotNumerical(Exception): pass
 
+def _normalize_ftype(fType):
+    if uproot.const.kOffsetL < fType < uproot.const.kOffsetP:
+        return fType - uproot.const.kOffsetL
+    else:
+        return fType
+
 def _ftype2dtype(fType, awkward):
+    fType = _normalize_ftype(fType)
     if fType == uproot.const.kBool:
         return awkward.numpy.dtype(awkward.numpy.bool_)
     elif fType == uproot.const.kChar:
