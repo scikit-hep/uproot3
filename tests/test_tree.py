@@ -640,7 +640,6 @@ class Test(unittest.TestCase):
             b'fTracks.fVertex[3]',
             b'fTracks.fPointValue',
             b'fTracks.fTriggerBits.fAllBits',
-            b'fTracks.fTArray[3]',
             b'fTriggerBits',
             b'fTriggerBits.TObject'
         ]
