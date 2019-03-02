@@ -646,6 +646,7 @@ class Test(unittest.TestCase):
         tree = uproot.open("tests/samples/Event.root")["T"]
         branches_without_interp = [ b.name for b in tree.allvalues() if b.interpretation is None]
         assert branches_without_interp == known_branches_without_interp
+        assert tree.array("fTracks.fTArray[3]", entrystop=10)[5][10].tolist() == [11.03951644897461, 19.40645980834961, 34.54059982299805]
 
     def test_leaflist(self):
         tree = uproot.open("tests/samples/leaflist.root")["tree"]
