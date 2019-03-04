@@ -72,7 +72,7 @@ class ChunkedSource(uproot.source.source.Source):
                 import concurrent.futures
             except ImportError:
                 raise ImportError("Install futures package (for threads > 1) with:\n    pip install futures\nor\n    conda install -c conda-forge futures")
-            self._executor = concurrent.futures.ThreadPoolExecutor()
+            self._executor = concurrent.futures.ThreadPoolExecutor(threads)
             self._futures = {}
         else:
             self._executor = None

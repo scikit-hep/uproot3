@@ -46,7 +46,7 @@ class HTTPSource(uproot.source.chunked.ChunkedSource):
         self._size = None
         self.auth = auth
 
-    defaults = {"chunkbytes": 32*1024, "limitbytes": 32*1024**2, "threads": 4*multiprocessing.cpu_count() if sys.version_info[0] > 2 else 1}
+    defaults = {"chunkbytes": 32*1024, "limitbytes": 32*1024**2, "threads": 8*multiprocessing.cpu_count() if sys.version_info[0] > 2 else 1}
 
     def _open(self):
         try:
