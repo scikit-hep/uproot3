@@ -28,8 +28,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import multiprocessing
-import sys
+import threading
 
 import numpy
 
@@ -44,7 +43,7 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
         self.timeout = timeout
         super(XRootDSource, self).__init__(path, *args, **kwds)
 
-    defaults = {"timeout": None, "chunkbytes": 32*1024, "limitbytes": 32*1024**2, "numthreads": 4*multiprocessing.cpu_count() if sys.version_info[0] > 2 else 1}
+    defaults = {"timeout": None, "chunkbytes": 32*1024, "limitbytes": 32*1024**2, "threads": True}
 
     def _open(self):
         try:
@@ -84,9 +83,40 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
             raise OSError(status["message"])
         return numpy.frombuffer(data, dtype=numpy.uint8)
 
+    def _setup_futures(self, threads):
+        self._threads = threads
+        self._executor = None
+        self._futures = {}
+
+    class _preload(object):
+        def __init__(self, timeout):
+            self.timeout = timeout
+            self.out = None
+            self.hold = threading.Event()
+
+        def __call__(self, status, data, hostlist):
+            if not status.get("error", None):
+                self.out = numpy.frombuffer(data, dtype=numpy.uint8)
+            self.hold.set()
+
+        def result(self):
+            if self.hold.wait(self.timeout):
+                return out
+
+    def preload(self, starts):
+        self._open()
+        limitnum = self._limitbytes // self._chunkbytes
+        timeout = 0 if self.timeout is None else self.timeout
+        for start in starts:
+            if len(self._futures) > limitnum:
+                break
+            chunkindex = start // self._chunkbytes
+            if self.cache[chunkindex] is None:
+                self.futures[chunkindex] = self._source.read(chunkindex * self._chunkbytes, self._chunkbytes, timeout=timeout, callback=self._preload(timeout))
+
     def __del__(self):
         if self._source is not None:
             self._source.close(timeout=(0 if self.timeout is None else self.timeout))
 
     def dismiss(self):
-        pass
+        self._futures = {}

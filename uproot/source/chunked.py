@@ -37,7 +37,7 @@ class ChunkedSource(uproot.source.source.Source):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (uproot.source.source.Source.__metaclass__,), {})
 
-    def __init__(self, path, chunkbytes, limitbytes, numthreads):
+    def __init__(self, path, chunkbytes, limitbytes, threads):
         self.path = path
         self._chunkbytes = chunkbytes
         self._limitbytes = limitbytes
@@ -46,16 +46,7 @@ class ChunkedSource(uproot.source.source.Source):
         else:
             self.cache = uproot.cache.ThreadSafeArrayCache(limitbytes)
         self._source = None
-        if numthreads is not None and numthreads > 1:
-            try:
-                import concurrent.futures
-            except ImportError:
-                raise ImportError("Install futures package (for numthreads > 1) with:\n    pip install futures\nor\n    conda install -c conda-forge futures")
-            self._executor = concurrent.futures.ThreadPoolExecutor()
-            self._futures = {}
-        else:
-            self._executor = None
-            self._futures = None
+        self._setup_futures(threads)
 
     def parent(self):
         return self
@@ -74,6 +65,18 @@ class ChunkedSource(uproot.source.source.Source):
             for future in self._futures.values():
                 future.cancel()
             self._futures = {}
+
+    def _setup_futures(self, threads):
+        if threads is not None and threads > 1:
+            try:
+                import concurrent.futures
+            except ImportError:
+                raise ImportError("Install futures package (for threads > 1) with:\n    pip install futures\nor\n    conda install -c conda-forge futures")
+            self._executor = concurrent.futures.ThreadPoolExecutor()
+            self._futures = {}
+        else:
+            self._executor = None
+            self._futures = None
 
     def _preload(self, chunkindex):
         try:
