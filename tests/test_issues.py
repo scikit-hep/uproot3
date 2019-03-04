@@ -32,6 +32,7 @@ import unittest
 
 from collections import namedtuple
 
+import pytest
 import numpy
 
 import uproot
@@ -201,3 +202,12 @@ class Test(unittest.TestCase):
         else:
             t = uproot.open("tests/samples/issue232.root")["fTreeV0"]
             t.pandas.df(["V0Hyper.fNsigmaHe3Pos", "V0Hyper.fDcaPos2PrimaryVertex"], flatten=True)
+
+    def test_issue240(self):
+        try:
+            import pyxrootd
+        except ImportError:
+            pytest.skip("unable to import pyxrootd")
+        else:
+            t = uproot.open("root://eospublic.cern.ch//eos/root-eos/cms_opendata_2012_nanoaod/Run2012B_DoubleMuParked.root")["Events"]
+            assert (abs(t.array("nMuon")) < 50).all()
