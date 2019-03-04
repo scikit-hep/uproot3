@@ -104,15 +104,16 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
                 return out
 
     def preload(self, starts):
-        self._open()
-        limitnum = self._limitbytes // self._chunkbytes
-        timeout = 0 if self.timeout is None else self.timeout
-        for start in starts:
-            if len(self._futures) > limitnum:
-                break
-            chunkindex = start // self._chunkbytes
-            if self.cache[chunkindex] is None:
-                self.futures[chunkindex] = self._source.read(chunkindex * self._chunkbytes, self._chunkbytes, timeout=timeout, callback=self._preload(timeout))
+        if self._threads:
+            self._open()
+            limitnum = self._limitbytes // self._chunkbytes
+            timeout = 0 if self.timeout is None else self.timeout
+            for start in starts:
+                if len(self._futures) > limitnum:
+                    break
+                chunkindex = start // self._chunkbytes
+                if self.cache[chunkindex] is None:
+                    self.futures[chunkindex] = self._source.read(chunkindex * self._chunkbytes, self._chunkbytes, timeout=timeout, callback=self._preload(timeout))
 
     def __del__(self):
         if self._source is not None:
