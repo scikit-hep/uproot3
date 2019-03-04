@@ -74,6 +74,9 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
         out._source = None             # XRootD connections are *not shared* among threads
         out._size = self._size
         out.timeout = self.timeout
+        out._threads = self._threads
+        out._executor = None
+        out._futures = {}
         return out
 
     def _read(self, chunkindex):
