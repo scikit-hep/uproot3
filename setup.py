@@ -96,8 +96,6 @@ Reference documentation
 """
     return before + middle + after
 
-dependencies = ["numpy>=1.13.1", "awkward>=0.8.0", "uproot-methods>=0.4.0", "cachetools"]
-
 setup(name = "uproot",
       version = get_version(),
       packages = find_packages(exclude = ["tests"]),
@@ -112,9 +110,9 @@ setup(name = "uproot",
       download_url = "https://github.com/scikit-hep/uproot/releases",
       license = "BSD 3-clause",
       test_suite = "tests",
-      install_requires = dependencies,
+      install_requires = ["numpy>=1.13.1", "awkward>=0.8.0", "uproot-methods>=0.4.0", "cachetools"],
       setup_requires = ["pytest-runner"],
-      tests_require = dependencies + ["pytest>=3.9", "pkgconfig", "lz4", 'backports.lzma;python_version<"3.3"', "mock", "requests"],
+      tests_require = ["pytest>=3.9", "pkgconfig", "lz4", 'backports.lzma;python_version<"3.3"', "mock", "requests"],
       classifiers = [
           "Development Status :: 5 - Production/Stable",
           "Intended Audience :: Developers",
