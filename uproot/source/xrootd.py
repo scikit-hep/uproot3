@@ -28,6 +28,9 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import multiprocessing
+import sys
+
 import numpy
 
 import uproot.source.chunked
@@ -41,7 +44,7 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
         self.timeout = timeout
         super(XRootDSource, self).__init__(path, *args, **kwds)
 
-    defaults = {"timeout": None, "chunkbytes": 16*1024, "limitbytes": 16*1024**2}
+    defaults = {"timeout": None, "chunkbytes": 32*1024, "limitbytes": 32*1024**2, "numthreads": 4*multiprocessing.cpu_count() if sys.version_info[0] > 2 else 1}
 
     def _open(self):
         try:

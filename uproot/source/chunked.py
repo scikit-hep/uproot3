@@ -37,14 +37,25 @@ class ChunkedSource(uproot.source.source.Source):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (uproot.source.source.Source.__metaclass__,), {})
 
-    def __init__(self, path, chunkbytes, limitbytes):
+    def __init__(self, path, chunkbytes, limitbytes, numthreads):
         self.path = path
         self._chunkbytes = chunkbytes
+        self._limitbytes = limitbytes
         if limitbytes is None:
             self.cache = {}
         else:
             self.cache = uproot.cache.ThreadSafeArrayCache(limitbytes)
         self._source = None
+        if numthreads is not None and numthreads > 1:
+            try:
+                import concurrent.futures
+            except ImportError:
+                raise ImportError("Install futures package (for numthreads > 1) with:\n    pip install futures\nor\n    conda install -c conda-forge futures")
+            self._executor = concurrent.futures.ThreadPoolExecutor()
+            self._futures = {}
+        else:
+            self._executor = None
+            self._futures = None
 
     def parent(self):
         return self
@@ -59,7 +70,29 @@ class ChunkedSource(uproot.source.source.Source):
         raise NotImplementedError
 
     def dismiss(self):
-        pass
+        if self._futures is not None:
+            for future in self._futures.values():
+                future.cancel()
+            self._futures = {}
+
+    def _preload(self, chunkindex):
+        try:
+            chunk = self.cache[chunkindex]
+        except KeyError:
+            return self._read(chunkindex)
+        else:
+            return chunk
+
+    def preload(self, starts):
+        self._open()
+        limitnum = self._limitbytes // self._chunkbytes
+        if self._executor is not None:
+            for start in starts:
+                if len(self._futures) > limitnum:
+                    break
+                chunkindex = start // self._chunkbytes
+                if chunkindex not in self._futures:
+                    self._futures[chunkindex] = self._executor.submit(self._preload, chunkindex)
 
     def data(self, start, stop, dtype=None):
         if dtype is None:
@@ -80,11 +113,18 @@ class ChunkedSource(uproot.source.source.Source):
         out = numpy.empty((stop - start) // thedtype.itemsize, dtype=thedtype)
 
         for chunkindex in range(chunkstart, chunkstop):
-            try:
-                chunk = self.cache[chunkindex]
-            except KeyError:
-                self._open()
-                chunk = self.cache[chunkindex] = self._read(chunkindex)
+            chunk = None
+            if self._futures is not None:
+                future = self._futures.pop(chunkindex, None)
+                if future is not None:
+                    chunk = self.cache[chunkindex] = future.result()
+
+            if chunk is None:
+                try:
+                    chunk = self.cache[chunkindex]
+                except KeyError:
+                    self._open()
+                    chunk = self.cache[chunkindex] = self._read(chunkindex)
 
             cstart = 0
             cstop = self._chunkbytes

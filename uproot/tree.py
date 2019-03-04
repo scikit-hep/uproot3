@@ -1271,6 +1271,9 @@ class TBranchMethods(object):
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
         basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
 
+        if self._source.parent() is not None:
+            self._source.parent().preload([self._fBasketSeek[i] for i in range(basketstart, basketstop)])
+
         if cache is not None:
             cachekey = self._cachekey(interpretation, entrystart, entrystop)
             out = cache.get(cachekey, None)
