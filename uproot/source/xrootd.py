@@ -118,7 +118,10 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
                 try:
                     self.cache[chunkindex]
                 except KeyError:
-                    self._futures[chunkindex] = self._source.read(chunkindex * self._chunkbytes, self._chunkbytes, timeout=timeout, callback=self._preload(timeout))
+                    callback = self._preload(timeout)
+                    status = self._source.read(chunkindex * self._chunkbytes, self._chunkbytes, timeout=timeout, callback=callback)
+                    if status["ok"]:
+                        self._futures[chunkindex] = callback
 
     def __del__(self):
         if self._source is not None:
