@@ -115,7 +115,9 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
                 if len(self._futures) > limitnum:
                     break
                 chunkindex = start // self._chunkbytes
-                if self.cache[chunkindex] is None:
+                try:
+                    self.cache[chunkindex]
+                except KeyError:
                     self.futures[chunkindex] = self._source.read(chunkindex * self._chunkbytes, self._chunkbytes, timeout=timeout, callback=self._preload(timeout))
 
     def __del__(self):
