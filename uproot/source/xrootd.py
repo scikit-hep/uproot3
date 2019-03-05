@@ -43,7 +43,7 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
         self.timeout = timeout
         super(XRootDSource, self).__init__(path, *args, **kwds)
 
-    defaults = {"timeout": None, "chunkbytes": 32*1024, "limitbytes": 32*1024**2, "threads": True}
+    defaults = {"timeout": None, "chunkbytes": 32*1024, "limitbytes": 32*1024**2, "parallel": True}
 
     def _open(self):
         try:
@@ -74,20 +74,20 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
         out._source = None             # XRootD connections are *not shared* among threads
         out._size = self._size
         out.timeout = self.timeout
-        out._threads = self._threads
+        out._parallel = self._parallel
         out._executor = None
         out._futures = {}
         return out
 
     def _read(self, chunkindex):
         self._open()
-        status, data = self._source.read(chunkindex * self._chunkbytes, self._chunkbytes, timeout=(0 if self.timeout is None else self.timeout))
+        status, data = self._source.read(int(chunkindex * self._chunkbytes), int(self._chunkbytes), timeout=int(0 if self.timeout is None else self.timeout))
         if status.get("error", None):
             raise OSError(status["message"])
         return numpy.frombuffer(data, dtype=numpy.uint8)
 
-    def _setup_futures(self, threads):
-        self._threads = threads
+    def _setup_futures(self, parallel):
+        self._parallel = parallel
         self._executor = None
         self._futures = {}
 
@@ -107,10 +107,10 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
                 return self.out
 
     def preload(self, starts):
-        if self._threads:
+        if self._parallel:
             self._open()
             limitnum = self._limitbytes // self._chunkbytes
-            timeout = 0 if self.timeout is None else self.timeout
+            timeout = int(0 if self.timeout is None else self.timeout)
             for start in starts:
                 if len(self._futures) > limitnum:
                     break
@@ -119,7 +119,7 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
                     self.cache[chunkindex]
                 except KeyError:
                     callback = self._preload(timeout)
-                    status = self._source.read(chunkindex * self._chunkbytes, self._chunkbytes, timeout=timeout, callback=callback)
+                    status = self._source.read(int(chunkindex * self._chunkbytes), int(self._chunkbytes), timeout=timeout, callback=callback)
                     if status["ok"]:
                         self._futures[chunkindex] = callback
 
