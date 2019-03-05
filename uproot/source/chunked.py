@@ -120,7 +120,9 @@ class ChunkedSource(uproot.source.source.Source):
             if self._futures is not None:
                 future = self._futures.pop(chunkindex, None)
                 if future is not None:
-                    chunk = self.cache[chunkindex] = future.result()
+                    chunk = future.result()
+                    if chunk is not None:
+                        self.cache[chunkindex] = chunk
 
             if chunk is None:
                 try:
