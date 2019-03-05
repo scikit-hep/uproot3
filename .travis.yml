@@ -38,7 +38,7 @@ install:
   - conda config --add channels conda-forge;
   - conda config --set always_yes yes --set changeps1 no
   - if [ "${PYVER}" = "2.7" ] || [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" ]; then
-      conda create -q -n testenv python=${PYVER} root;   # xrootd (to enable XRootD test in issue240)
+      conda create -q -n testenv python=${PYVER} root;
     elif [[ "${PYVER}" = pypy* ]]; then
       conda create -q -n testenv ${PYVER};
     else
