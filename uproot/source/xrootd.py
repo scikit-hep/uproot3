@@ -104,7 +104,7 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
 
         def result(self):
             if self.hold.wait(self.timeout):
-                return out
+                return self.out
 
     def preload(self, starts):
         if self._threads:
