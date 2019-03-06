@@ -254,6 +254,10 @@ class asdouble32(_asnumeric):
             return self.awkward.numpy.dtype(('>u4', self.fromdims))
 
     @property
+    def fromdtypeflat(self):
+        return _dtypeshape(self.fromdtype)[0]
+
+    @property
     def todims(self):
         if self._todims is None:
             return self.fromdims
@@ -285,7 +289,7 @@ class asdouble32(_asnumeric):
         return isinstance(other, asdouble32) and self.low == other.low and self.high == other.high and self.numbits == other.numbits and self.fromdtype == other.fromdtype and self.todtype == other.todtype
 
     def numitems(self, numbytes, numentries):
-        quotient, remainder = divmod(numbytes, self.itemsize)
+        quotient, remainder = divmod(numbytes, self.fromdtypeflat.itemsize)
         assert remainder == 0
         return quotient
 
@@ -299,7 +303,7 @@ class asdouble32(_asnumeric):
             return array
 
         if self.truncated:
-            array = data.view(dtype={'exponent': ('>u1',0), 'mantissa': ('>u2',1)})
+            array = data.view(dtype=self.fromdtypeflat)
             array = reshape(array) if self.fromdims != () else array
 
             # We have to make copies to work with contiguous arrays
@@ -314,7 +318,7 @@ class asdouble32(_asnumeric):
             return array.astype(self.todtype)
 
         else:
-            array = data.view(">u4")
+            array = data.view(dtype=self.fromdtypeflat)
             array = reshape(array) if self.fromdims != () else array
 
             array = array[local_entrystart:local_entrystop].astype(self.todtype)
