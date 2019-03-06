@@ -78,6 +78,43 @@ class STLVector(object):
                 out[i] = self.cls.read(source, cursor, context, parent)
             return out
 
+class STLMap(object):
+    def __init__(self, keycls, valcls):
+        self.keycls = keycls
+        self.valcls = valcls
+
+    def __repr__(self):
+        key = self.keycls.__name__ if isinstance(self.keycls, type) else repr(self.keycls)
+        val = self.valcls.__name__ if isinstance(self.valcls, type) else repr(self.valcls)
+        return "STLMap({0}, {1})".format(key, val)
+
+    _format1 = struct.Struct(">i")
+
+    def read(self, source, cursor, context, parent):
+        numitems = cursor.field(source, self._format1)
+
+        out = {}
+        for i in range(numitems):
+            if isinstance(self.keycls, uproot.interp.numerical.asdtype):
+                key = cursor.array(source, 1, self.keycls.fromdtype)
+                if key.dtype != self.keycls.todtype:
+                    key = key.astype(self.keycls.todtype)
+                key = key[0]
+            else:
+                key = self.keycls.read(source, cursor, context, parent)
+
+            if isinstance(self.valcls, uproot.interp.numerical.asdtype):
+                val = cursor.array(source, 1, self.valcls.fromdtype)
+                if val.dtype != self.valcls.todtype:
+                    val = val.astype(self.valcls.todtype)
+                val = val[0]
+            else:
+                val = self.valcls.read(source, cursor, context, parent)
+
+            out[key] = val
+
+        return out
+
 class STLString(object):
     def __init__(self, awkward=None):
         if awkward is None:
@@ -88,9 +125,12 @@ class STLString(object):
         return "STLString()"
 
     _format1 = struct.Struct("B")
+    _format2 = struct.Struct(">i")
 
     def read(self, source, cursor, context, parent):
         numitems = cursor.field(source, self._format1)
+        if numitems == 255:
+            numitems = cursor.field(source, self._format2)
         return cursor.array(source, numitems, self.awkward.ObjectArray.CHARTYPE).tostring()
 
 class astable(uproot.interp.interp.Interpretation):

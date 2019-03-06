@@ -46,6 +46,7 @@ from uproot.interp.objects import asgenobj
 from uproot.interp.objects import asstring
 from uproot.interp.objects import SimpleArray
 from uproot.interp.objects import STLVector
+from uproot.interp.objects import STLMap
 from uproot.interp.objects import STLString
 
 class _NotNumerical(Exception): pass
@@ -378,6 +379,31 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
                     return asjagged(asdtype("f8"), skipbytes=10)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<string>":
                     return asgenobj(STLVector(STLString(awkward)), branch._context, 6)
+
+                if getattr(branch._streamer, "_fTypeName", None) == b"map<string,bool>":
+                    return asgenobj(STLMap(STLString(awkward), asdtype(awkward.numpy.bool_)), branch._context, 6)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,char>":
+                    return asgenobj(STLMap(STLString(awkward), asdtype("i1")), branch._context, 6)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,unsigned char>":
+                    return asgenobj(STLMap(STLString(awkward), asdtype("u1")), branch._context, 6)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,short>":
+                    return asgenobj(STLMap(STLString(awkward), asdtype("i2")), branch._context, 6)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,unsigned short>":
+                    return asgenobj(STLMap(STLString(awkward), asdtype("u2")), branch._context, 6)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,int>":
+                    return asgenobj(STLMap(STLString(awkward), asdtype("i4")), branch._context, 6)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,unsigned int>":
+                    return asgenobj(STLMap(STLString(awkward), asdtype("u4")), branch._context, 6)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,long>":
+                    return asgenobj(STLMap(STLString(awkward), asdtype("i8")), branch._context, 6)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,unsigned long>":
+                    return asgenobj(STLMap(STLString(awkward), asdtype("u8")), branch._context, 6)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,float>":
+                    return asgenobj(STLMap(STLString(awkward), asdtype("f4")), branch._context, 6)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,double>":
+                    return asgenobj(STLMap(STLString(awkward), asdtype("f8")), branch._context, 6)
+                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,string>":
+                    return asgenobj(STLMap(STLString(awkward), STLString(awkward)), branch._context, 6)
 
                 if getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<bool> >":
                     return asgenobj(STLVector(STLVector(asdtype(awkward.numpy.bool_))), branch._context, 6)
