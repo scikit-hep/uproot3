@@ -246,6 +246,12 @@ class asdouble32(_asnumeric):
     def todtype(self):
         return self.awkward.numpy.dtype((self.awkward.numpy.float64, self.todims))
 
+    @property
+    def fromdtype(self):
+        if self.truncated:
+            return self.awkward.numpy.dtype(({'exponent': ('>u1', 0), 'mantissa': ('>u2', 1)}, self.fromdims))
+        else:
+            return self.awkward.numpy.dtype(('>u4', self.fromdims))
 
     @property
     def todims(self):
@@ -256,7 +262,7 @@ class asdouble32(_asnumeric):
 
     @property
     def itemsize(self):
-        return 3 if self.truncated else 4
+        return self.fromdtype.itemsize
 
     def __repr__(self):
         args = [repr(self.low), repr(self.high), repr(self.numbits)]
@@ -276,7 +282,7 @@ class asdouble32(_asnumeric):
         return "asdouble32({0},{1},{2},{3},{4})".format(self.low, self.high, self.numbits, fromdims, todims)
 
     def compatible(self, other):
-        return isinstance(other, asdouble32) and self.low == other.low and self.high == other.high and self.numbits == other.numbits and self.todtype == other.dtype
+        return isinstance(other, asdouble32) and self.low == other.low and self.high == other.high and self.numbits == other.numbits and self.fromdtype == other.fromdtype and self.todtype == other.todtype
 
     def numitems(self, numbytes, numentries):
         quotient, remainder = divmod(numbytes, self.itemsize)
