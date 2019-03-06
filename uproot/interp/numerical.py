@@ -269,14 +269,7 @@ class asdouble32(_asnumeric):
         return self.fromdtype.itemsize
 
     def __repr__(self):
-        args = [repr(self.low), repr(self.high), repr(self.numbits)]
-
-        if self.fromdims != ():
-            args.append(repr(self.fromdims))
-
-        if self.todims != self.fromdims:
-            args.append(repr(self.todims))
-
+        args = [repr(self.low), repr(self.high), repr(self.numbits), repr(self.fromdtype), repr(self.todtype)]
         return "asdouble32(" + ", ".join(args) + ")"
 
     @property
