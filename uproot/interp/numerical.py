@@ -246,9 +246,6 @@ class asdouble32(_asnumeric):
     def todtype(self):
         return self.awkward.numpy.dtype((self.awkward.numpy.float64, self.todims))
 
-    @property
-    def todtypeflat(self):
-        return self.awkward.numpy.dtype(self.awkward.numpy.float64)
 
     @property
     def todims(self):
