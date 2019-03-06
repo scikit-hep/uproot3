@@ -15,7 +15,7 @@ uproot
    :target: https://doi.org/10.5281/zenodo.1173083
 
 .. image:: https://mybinder.org/badge_logo.svg
-   :target: https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Ftutorial.ipynb
+   :target: https://mybinder.org/v2/gh/scikit-hep/uproot/master?urlpath=lab/tree/binder%2Ftutorial.ipynb
 
 .. inclusion-marker-1-do-not-remove
 
@@ -25,7 +25,7 @@ ROOT I/O in pure Python and Numpy.
 
 uproot (originally μproot, for "micro-Python ROOT") is a reader and a writer of the `ROOT file format <https://root.cern/>`__ using only Python and Numpy. Unlike the standard C++ ROOT implementation, uproot is only an I/O library, primarily intended to stream data into machine learning libraries in Python. Unlike PyROOT and root_numpy, uproot does not depend on C++ ROOT. Instead, it uses Numpy to cast blocks of data from the ROOT file as Numpy arrays.
 
-Python does not necessarily mean slow. As long as the data blocks ("baskets") are large, this "array at a time" approach can even be faster than "event at a time" C++. Below, the rate of reading data into arrays with uproot is shown to be faster than C++ ROOT and root_numpy, as long as the baskets are tens of kilobytes or larger (for a variable number of muons per event in an ensemble of different physics samples).
+Python does not necessarily mean slow. As long as the data blocks ("baskets") are large, this "array at a time" approach can even be faster than "event at a time" C++. Below, the rate of reading data into arrays with uproot is shown to be faster than C++ ROOT (left) and root_numpy (right), as long as the baskets are tens of kilobytes or larger (for a variable number of muons per event in an ensemble of different physics samples; higher is better).
 
 .. inclusion-marker-replaceplots-start
 
@@ -80,7 +80,7 @@ Optional dependencies:
 Tutorial
 ========
 
-Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?filepath=binder%2Ftutorial.ipynb>`__ on Binder.
+Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?urlpath=lab/tree/binder%2Ftutorial.ipynb>`__ on Binder.
 
 **Table of contents:**
 
