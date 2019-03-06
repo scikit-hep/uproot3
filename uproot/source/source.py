@@ -53,6 +53,9 @@ class Source(object):
     def close(self):
         self.dismiss()
 
+    def preload(self, starts):
+        pass
+
     def data(self, start, stop, dtype=None):
         # assert start >= 0
         # assert stop >= 0

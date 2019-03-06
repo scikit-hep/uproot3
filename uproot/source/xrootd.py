@@ -28,6 +28,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import threading
+
 import numpy
 
 import uproot.source.chunked
@@ -41,7 +43,7 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
         self.timeout = timeout
         super(XRootDSource, self).__init__(path, *args, **kwds)
 
-    defaults = {"timeout": None, "chunkbytes": 16*1024, "limitbytes": 16*1024**2}
+    defaults = {"timeout": None, "chunkbytes": 32*1024, "limitbytes": 32*1024**2, "parallel": True}
 
     def _open(self):
         try:
@@ -72,18 +74,58 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
         out._source = None             # XRootD connections are *not shared* among threads
         out._size = self._size
         out.timeout = self.timeout
+        out._parallel = self._parallel
+        out._executor = None
+        out._futures = {}
         return out
 
     def _read(self, chunkindex):
         self._open()
-        status, data = self._source.read(chunkindex * self._chunkbytes, self._chunkbytes, timeout=(0 if self.timeout is None else self.timeout))
+        status, data = self._source.read(int(chunkindex * self._chunkbytes), int(self._chunkbytes), timeout=int(0 if self.timeout is None else self.timeout))
         if status.get("error", None):
             raise OSError(status["message"])
         return numpy.frombuffer(data, dtype=numpy.uint8)
+
+    def _setup_futures(self, parallel):
+        self._parallel = parallel
+        self._executor = None
+        self._futures = {}
+
+    class _preload(object):
+        def __init__(self, timeout):
+            self.timeout = timeout
+            self.out = None
+            self.hold = threading.Event()
+
+        def __call__(self, status, data, hostlist):
+            if not status.get("error", None):
+                self.out = numpy.frombuffer(data, dtype=numpy.uint8)
+            self.hold.set()
+
+        def result(self):
+            if self.hold.wait(self.timeout):
+                return self.out
+
+    def preload(self, starts):
+        if self._parallel:
+            self._open()
+            limitnum = self._limitbytes // self._chunkbytes
+            timeout = int(0 if self.timeout is None else self.timeout)
+            for start in starts:
+                if len(self._futures) > limitnum:
+                    break
+                chunkindex = start // self._chunkbytes
+                try:
+                    self.cache[chunkindex]
+                except KeyError:
+                    callback = self._preload(timeout)
+                    status = self._source.read(int(chunkindex * self._chunkbytes), int(self._chunkbytes), timeout=timeout, callback=callback)
+                    if status["ok"]:
+                        self._futures[chunkindex] = callback
 
     def __del__(self):
         if self._source is not None:
             self._source.close(timeout=(0 if self.timeout is None else self.timeout))
 
     def dismiss(self):
-        pass
+        self._futures = {}
