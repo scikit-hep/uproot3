@@ -368,7 +368,7 @@ class TTreeMethods(object):
                 if n == name:
                     self._branchlookup[name] = b
                     return b
-            raise KeyError("not found: {0}".format(repr(name)))
+            raise uproot.rootio._KeyError("not found: {0}\n in file: {1}".format(repr(name), self._context.sourcepath))
 
     def __contains__(self, name):
         try:
@@ -719,7 +719,7 @@ class TTreeMethods(object):
                                 interpretation = interpret(branch, awkward)
                                 if interpretation is None:
                                     if name == word:
-                                        raise ValueError("cannot interpret branch {0} as a Python type".format(repr(branch.name)))
+                                        raise ValueError("cannot interpret branch {0} as a Python type\n   in file: {1}".format(repr(branch.name), self._context.sourcepath))
                                 else:
                                     yield branch, interpretation
 
@@ -729,7 +729,7 @@ class TTreeMethods(object):
                                 interpretation = interpret(branch, awkward)
                                 if interpretation is None:
                                     if name == word:
-                                        raise ValueError("cannot interpret branch {0} as a Python type".format(repr(branch.name)))
+                                        raise ValueError("cannot interpret branch {0} as a Python type\n   in file: {1}".format(repr(branch.name), self._context.sourcepath))
                                 else:
                                     yield branch, interpretation
 
@@ -737,7 +737,7 @@ class TTreeMethods(object):
                         branch = self.get(word, aliases=aliases)
                         interpretation = interpret(branch, awkward)
                         if interpretation is None:
-                            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(branch.name)))
+                            raise ValueError("cannot interpret branch {0} as a Python type\n   in file: {1}".format(repr(branch.name), self._context.sourcepath))
                         else:
                             yield branch, interpretation
 
@@ -892,7 +892,7 @@ class TBranchMethods(object):
         for n, b in self.iteritems(recursive=recursive, filtername=filtername, filtertitle=filtertitle):
             if n == name:
                 return b
-        raise KeyError("not found: {0}".format(repr(name)))
+        raise uproot.rootio._KeyError("not found: {0}\n in file: {1}".format(repr(name), self._context.sourcepath))
 
     @property
     def numbaskets(self):
@@ -998,7 +998,7 @@ class TBranchMethods(object):
             interpretation = self._normalize_dtype(interpretation, awkward)
 
         if interpretation is None:
-            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
+            raise ValueError("cannot interpret branch {0} as a Python type\n   in file: {1}".format(repr(self.name), self._context.sourcepath))
 
         if interpretation.awkward is not awkward:
             interpretation = interpretation.awkwardlib(awkward)
@@ -1009,7 +1009,7 @@ class TBranchMethods(object):
         awkward = _normalize_awkwardlib(None)
         interpretation = self._normalize_interpretation(interpretation, awkward)
         if interpretation is None:
-            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
+            raise ValueError("cannot interpret branch {0} as a Python type\n   in file: {1}".format(repr(self.name), self._context.sourcepath))
         if self._recoveredbaskets is None:
             self._tryrecover()
         return sum(interpretation.numitems(key.border, self.basket_numentries(i)) for i, key in enumerate(self._threadsafe_iterate_keys(keycache, True)))
@@ -1119,7 +1119,7 @@ class TBranchMethods(object):
         awkward = _normalize_awkwardlib(awkwardlib)
         interpretation = self._normalize_interpretation(interpretation, awkward)
         if interpretation is None:
-            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
+            raise ValueError("cannot interpret branch {0} as a Python type\n   in file: {1}".format(repr(self.name), self._context.sourcepath))
         if self._recoveredbaskets is None:
             self._tryrecover()
 
@@ -1175,7 +1175,7 @@ class TBranchMethods(object):
         awkward = _normalize_awkwardlib(awkwardlib)
         interpretation = self._normalize_interpretation(interpretation, awkward)
         if interpretation is None:
-            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
+            raise ValueError("cannot interpret branch {0} as a Python type\n   in file: {1}".format(repr(self.name), self._context.sourcepath))
         if self._recoveredbaskets is None:
             self._tryrecover()
 
@@ -1228,7 +1228,7 @@ class TBranchMethods(object):
         awkward = _normalize_awkwardlib(awkwardlib)
         interpretation = self._normalize_interpretation(interpretation, awkward)
         if interpretation is None:
-            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
+            raise ValueError("cannot interpret branch {0} as a Python type\n   in file: {1}".format(repr(self.name), self._context.sourcepath))
         if self._recoveredbaskets is None:
             self._tryrecover()
 
@@ -1264,7 +1264,7 @@ class TBranchMethods(object):
         awkward = _normalize_awkwardlib(awkwardlib)
         interpretation = self._normalize_interpretation(interpretation, awkward)
         if interpretation is None:
-            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
+            raise ValueError("cannot interpret branch {0} as a Python type\n   in file: {1}".format(repr(self.name), self._context.sourcepath))
         if self._recoveredbaskets is None:
             self._tryrecover()
 
@@ -1367,7 +1367,7 @@ class TBranchMethods(object):
 
     def _step_array(self, interpretation, basket_itemoffset, basket_entryoffset, entrystart, entrystop, awkward, basketcache, keycache, executor, explicit_basketcache):
         if interpretation is None:
-            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
+            raise ValueError("cannot interpret branch {0} as a Python type\n   in file: {1}".format(repr(self.name), self._context.sourcepath))
         if self._recoveredbaskets is None:
             self._tryrecover()
 
@@ -1442,7 +1442,7 @@ class TBranchMethods(object):
         awkward = _normalize_awkwardlib(awkwardlib)
         interpretation = self._normalize_interpretation(interpretation, awkward)
         if interpretation is None:
-            raise ValueError("cannot interpret branch {0} as a Python type".format(repr(self.name)))
+            raise ValueError("cannot interpret branch {0} as a Python type\n   in file: {1}".format(repr(self.name), self._context.sourcepath))
         if self._recoveredbaskets is None:
             self._tryrecover()
 
@@ -1470,7 +1470,10 @@ class TBranchMethods(object):
 
                 if source.size() is not None:
                     if source.size() - self._fSeekKey < self._fNbytes:
-                        raise ValueError("TKey declares that object {0} has {1} bytes but only {2} remain in the file".format(repr(self._fName), self._fNbytes, source.size() - self._fSeekKey))
+                        s = source
+                        while s.parent() is not None and s.parent() is not s:
+                            s = s.parent()
+                        raise ValueError("TKey declares that object has {0} bytes but only {1} remain in the file\n   in file: {2}".format(self._fNbytes, source.size() - self._fSeekKey, s.path))
 
                 if self._fObjlen != self._fNbytes - self._fKeylen:
                     self.source = uproot.source.compressed.CompressedSource(compression, source, Cursor(self._fSeekKey + self._fKeylen), self._fNbytes - self._fKeylen, self._fObjlen)
@@ -1564,7 +1567,7 @@ class TBranchMethods(object):
                 self._recoveredbaskets = recoveredbaskets
                 self._entryoffsets = entryoffsets
         else:
-            raise ValueError("entries in recovered baskets (offsets {0}) don't add up to total number of entries ({1})".format(entryoffsets, self.numentries))
+            raise ValueError("entries in recovered baskets (offsets {0}) don't add up to total number of entries ({1})\n   in file: {2}".format(entryoffsets, self.numentries, self._context.sourcepath))
 
     def _tryrecover(self):
         if self._recoveredbaskets is None:
