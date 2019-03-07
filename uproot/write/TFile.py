@@ -32,6 +32,9 @@ import os
 import sys
 import struct
 import uuid
+import lzma
+import lz4
+import zlib
 
 import uproot_methods.convert
 
@@ -204,9 +207,18 @@ class TFileRecreate(TFileUpdate):
 
     _format1           = struct.Struct(">4sii")
     _format_end        = struct.Struct(">qqii")
-    _format2           = struct.Struct(">iBi")
+    _format2           = struct.Struct(">iB")
+    _format3           = struct.Struct(">i")
     _format_seekinfo   = struct.Struct(">q")
     _format_nbytesinfo = struct.Struct(">i")
+
+    def compression(self, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=0): # Replace with 1 when compression works
+        return (compressionAlgorithm * 100) + compressionLevel
+
+    def updateCompression(self, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=0): # Replace with 1 when compression works
+        self.fCompress = self.compression(compressionAlgorithm=compressionAlgorithm, compressionLevel=compressionLevel)
+        cursor = uproot.write.sink.cursor.Cursor(self.compresspos)
+        cursor.update_fields(self._sink, self._format3, self.fCompress)
 
     def _writeheader(self):
         cursor = uproot.write.sink.cursor.Cursor(0)
@@ -222,9 +234,12 @@ class TFileRecreate(TFileUpdate):
         cursor.write_fields(self._sink, self._format_end, self._fEND, self._fSeekFree, self._fNbytesFree, self._nfree)
 
         self._fNbytesName = 2*len(self._filename) + 36 + 8   # + 8 because two fields in TKey are 'q' rather than 'i'
-        fCompress = uproot.const.kZLIB * 100  # FIXME!
         fUnits = 4
-        cursor.write_fields(self._sink, self._format2, self._fNbytesName, fUnits, fCompress)
+        cursor.write_fields(self._sink, self._format2, self._fNbytesName, fUnits)
+
+        self.compresspos = cursor.index
+        self.fCompress = self.compression()
+        cursor.write_fields(self._sink, self._format3, self.fCompress)
 
         self._fSeekInfo = 0
         self._seekcursor = uproot.write.sink.cursor.Cursor(cursor.index)
