@@ -160,6 +160,7 @@ from uproot.interp.objects import asgenobj
 from uproot.interp.objects import asstring
 from uproot.interp.objects import SimpleArray
 from uproot.interp.objects import STLVector
+from uproot.interp.objects import STLMap
 from uproot.interp.objects import STLString
 asdebug = asjagged(asdtype("u1"))
 
@@ -174,4 +175,4 @@ from uproot.version import __version__
 # don't expose uproot.uproot; it's ugly
 del uproot
 
-__all__ = ["open", "xrootd", "http", "iterate", "numentries", "lazyarray", "lazyarrays", "daskarray", "daskarrays", "daskframe", "create", "recreate", "update", "MemmapSource", "FileSource", "XRootDSource", "HTTPSource", "interpret", "asdtype", "asarray", "asdouble32", "asstlbitset", "asjagged", "astable", "asobj", "asgenobj", "asstring", "asdebug", "SimpleArray", "STLVector", "STLString", "__version__"]
+__all__ = ["open", "xrootd", "http", "iterate", "numentries", "lazyarray", "lazyarrays", "daskarray", "daskarrays", "daskframe", "create", "recreate", "update", "MemmapSource", "FileSource", "XRootDSource", "HTTPSource", "interpret", "asdtype", "asarray", "asdouble32", "asstlbitset", "asjagged", "astable", "asobj", "asgenobj", "asstring", "asdebug", "SimpleArray", "STLVector", "STLMap", "STLString", "__version__"]

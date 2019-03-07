@@ -211,3 +211,8 @@ class Test(unittest.TestCase):
         else:
             t = uproot.open("root://eospublic.cern.ch//eos/root-eos/cms_opendata_2012_nanoaod/Run2012B_DoubleMuParked.root")["Events"]
             assert (abs(t.array("nMuon")) < 50).all()
+
+    def test_issue243(self):
+        t = uproot.open("tests/samples/issue243.root")["triggerList"]
+        for x in t.array("triggerMap", entrystop=100):
+            assert all(y == 1.0 for y in x.values())
