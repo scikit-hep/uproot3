@@ -306,14 +306,14 @@ class asdouble32(_asnumeric):
         if self.truncated:
             array = array[local_entrystart:local_entrystop]
             # We have to make copies to work with contiguous arrays
-            unpacked = array['exponent'].astype('int32')
-            mantissa = array['mantissa'].astype('int32')
+            unpacked = array['exponent'].astype(self.awkward.numpy.int32)
+            mantissa = array['mantissa'].astype(self.awkward.numpy.int32)
 
             unpacked <<= 23
             unpacked |= (mantissa & ((1 << (self.numbits + 1)) - 1)) << (23 - self.numbits)
             sign = ((1 << (self.numbits + 1)) & mantissa != 0) * -2 + 1
 
-            array = unpacked.view(dtype='float32') * sign
+            array = unpacked.view(dtype=self.awkward.numpy.float32) * sign
             array = array.astype(self.todtypeflat)
         else:
             array = array[local_entrystart:local_entrystop].astype(self.todtypeflat)
