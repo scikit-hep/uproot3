@@ -38,6 +38,7 @@ import uproot.rootio
 from uproot.interp.numerical import asdtype
 from uproot.interp.numerical import asarray
 from uproot.interp.numerical import asdouble32
+from uproot.interp.numerical import asfloat16
 from uproot.interp.numerical import asstlbitset
 from uproot.interp.jagged import asjagged
 from uproot.interp.objects import astable
@@ -183,7 +184,15 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
                 if obj in branch._context.classes:
                     return _obj_or_genobj(branch._context.classes.get(obj), branch, isjagged, cntvers=cntvers, tobject=tobject, speedbump=speedbump)
 
-            if branch._fLeaves[0].__class__.__name__ == "TLeafElement" and branch._fLeaves[0]._fType == uproot.const.kDouble32:
+            # Process Double32_t and Float16_t types possibly packed in TLeafElement
+            leaftype = uproot.const.kBase
+            if branch._fLeaves[0].__class__.__name__ == "TLeafElement":
+                leaftype = _normalize_ftype(branch._fLeaves[0]._fType)
+
+            iskDouble32 = leaftype == uproot.const.kDouble32
+            iskFloat16  = leaftype == uproot.const.kFloat16
+
+            if iskDouble32 or iskFloat16:
                 def transform(node, tofloat=True):
                     if isinstance(node, ast.AST):
                         if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load) and node.id == "pi":
@@ -208,18 +217,32 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
                 try:
                     left, right = branch._streamer._fTitle.index(b"["), branch._streamer._fTitle.index(b"]")
                 except (ValueError, AttributeError):
-                    out = asdtype(awkward.numpy.dtype((">f4", dims)), awkward.numpy.dtype(("f8", dims)))
+                    low, high, numbits = 0, 0, 0
                 else:
                     try:
                         spec = eval(compile(ast.Expression(transform(ast.parse(branch._streamer._fTitle[left : right + 1]).body[0].value)), repr(branch._streamer._fTitle), "eval"))
                         if len(spec) == 2:
                             low, high = spec
-                            numbits = 32
+                            numbits = None
                         else:
                             low, high, numbits = spec
-                        out = asdouble32(low, high, numbits, dims, dims)
                     except:
                         return None
+
+                if iskDouble32 and numbits == 0:
+                    out = asdtype(awkward.numpy.dtype((">f4", dims)), awkward.numpy.dtype(("f8", dims)))
+                elif iskDouble32 and numbits is None:
+                    out = asdouble32(low, high, 32, dims)
+                elif iskDouble32:
+                    out = asdouble32(low, high, numbits, dims)
+                elif iskFloat16 and numbits == 0:
+                    out = asfloat16(low, high, 12, dims)
+                elif iskFloat16 and numbits is None:
+                    out = asfloat16(low, high, 32, dims)
+                elif iskFloat16:
+                    out = asfloat16(low, high, numbits, dims)
+                else:
+                    return None
 
             else:
                 fromdtype = _leaf2dtype(branch._fLeaves[0], awkward).newbyteorder(">")
