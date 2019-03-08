@@ -294,17 +294,16 @@ class asdouble32(_asnumeric):
         return quotient
 
     def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop):
-        # Make sure the shape of the interpreted data conforms to the shape of the input data
-        def reshape(array):
+        # Interpret input data using proper type
+        array = data.view(dtype=self.fromdtypeflat)
+        # Make sure the interpreted data has correct shape
+        if self.fromdims != ():
             product = int(self.awkward.numpy.prod(self.fromdims))
             quotient, remainder = divmod(len(array), product)
             assert remainder == 0, "{0} % {1} == {2} != 0".format(len(array), product, len(array) % product)
             array = array.reshape((quotient,) + self.fromdims)
-            return array
 
         if self.truncated:
-            array = data.view(dtype=self.fromdtypeflat)
-            array = reshape(array) if self.fromdims != () else array
             array = array[local_entrystart:local_entrystop]
             # We have to make copies to work with contiguous arrays
             unpacked = array['exponent'].astype('int32')
@@ -315,16 +314,13 @@ class asdouble32(_asnumeric):
             sign = ((1 << (self.numbits + 1)) & mantissa != 0) * -2 + 1
 
             array = unpacked.view(dtype='float32') * sign
-            return array.astype(self.todtypeflat)
-
+            array = array.astype(self.todtypeflat)
         else:
-            array = data.view(dtype=self.fromdtypeflat)
-            array = reshape(array) if self.fromdims != () else array
-
             array = array[local_entrystart:local_entrystop].astype(self.todtypeflat)
             self.awkward.numpy.multiply(array, float(self.high - self.low) / (1 << self.numbits), out=array)
             self.awkward.numpy.add(array, self.low, out=array)
-            return array
+
+        return array
 
 class asstlbitset(uproot.interp.interp.Interpretation):
     # makes __doc__ attribute mutable before Python 3.3
