@@ -322,6 +322,32 @@ class asdouble32(_asnumeric):
 
         return array
 
+class asfloat16(asdouble32):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (asdouble32.__metaclass__,), {})
+
+    def __init__(self, low, high, numbits, fromdims=(), todims=None):
+        super().__init__(low, high, numbits, fromdims, todims)
+        if self.truncated and not 2 <= numbits <= 16:
+            raise TypeError("numbits must be an integer between 2 and 16 (inclusive).")
+
+    @property
+    def todtype(self):
+        return self.awkward.numpy.dtype((self.awkward.numpy.float32, self.todims))
+
+    def __repr__(self):
+        args = [repr(self.low), repr(self.high), repr(self.numbits), repr(self.fromdtype), repr(self.todtype)]
+        return "asfloat16(" + ", ".join(args) + ")"
+
+    @property
+    def identifier(self):
+        fromdims = "(" + ",".join(repr(x) for x in self.fromdims) + ")"
+        todims = "(" + ",".join(repr(x) for x in self.todims) + ")"
+        return "asfloat16({0},{1},{2},{3},{4})".format(self.low, self.high, self.numbits, fromdims, todims)
+
+    def compatible(self, other):
+        return isinstance(other, asfloat16) and self.low == other.low and self.high == other.high and self.numbits == other.numbits and self.fromdtype == other.fromdtype and self.todtype == other.todtype
+
 class asstlbitset(uproot.interp.interp.Interpretation):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (uproot.interp.interp.Interpretation.__metaclass__,), {})
