@@ -315,13 +315,13 @@ class asdouble32(_asnumeric):
             sign = ((1 << (self.numbits + 1)) & mantissa != 0) * -2 + 1
 
             array = unpacked.view(dtype='float32') * sign
-            return array.astype(self.todtype)
+            return array.astype(self.todtypeflat)
 
         else:
             array = data.view(dtype=self.fromdtypeflat)
             array = reshape(array) if self.fromdims != () else array
 
-            array = array[local_entrystart:local_entrystop].astype(self.todtype)
+            array = array[local_entrystart:local_entrystop].astype(self.todtypeflat)
             self.awkward.numpy.multiply(array, float(self.high - self.low) / (1 << self.numbits), out=array)
             self.awkward.numpy.add(array, self.low, out=array)
             return array
