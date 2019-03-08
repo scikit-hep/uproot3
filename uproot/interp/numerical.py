@@ -305,7 +305,7 @@ class asdouble32(_asnumeric):
         if self.truncated:
             array = data.view(dtype=self.fromdtypeflat)
             array = reshape(array) if self.fromdims != () else array
-
+            array = array[local_entrystart:local_entrystop]
             # We have to make copies to work with contiguous arrays
             unpacked = array['exponent'].astype('int32')
             mantissa = array['mantissa'].astype('int32')
