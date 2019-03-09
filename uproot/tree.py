@@ -174,6 +174,7 @@ class TTreeMethods(object):
     _copycontext = True
 
     _vector_regex = re.compile(b"^vector<(.+)>$")
+    _objectpointer_regex = re.compile(b"\((.*)\)")
 
     def _attachstreamer(self, branch, streamer, streamerinfosmap, isTClonesArray):
         if streamer is None:
@@ -227,6 +228,9 @@ class TTreeMethods(object):
         elif isinstance(streamer, digDeeperTypes):
             typename = streamer._fTypeName.rstrip(b"*")
             if typename in streamerinfosmap:
+                m = self._objectpointer_regex.search(streamer._fTitle)
+                if typename == b'TClonesArray' and m is not None:
+                    typename = m.group(1)
                 members = streamerinfosmap[typename].members
         elif isinstance(streamer, uproot.rootio.TStreamerSTL):
             try:

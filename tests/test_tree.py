@@ -639,7 +639,6 @@ class Test(unittest.TestCase):
             b'fTracks.fZlast',
             b'fTracks.fVertex[3]',
             b'fTracks.fPointValue',
-            b'fTracks.fTriggerBits.fAllBits',
             b'fTriggerBits',
             b'fTriggerBits.TObject'
         ]
@@ -647,6 +646,7 @@ class Test(unittest.TestCase):
         branches_without_interp = [b.name for b in tree.allvalues() if b.interpretation is None]
         assert branches_without_interp == known_branches_without_interp
         assert tree.array("fTracks.fTArray[3]", entrystop=10)[5][10].tolist() == [11.03951644897461, 19.40645980834961, 34.54059982299805]
+        assert tree.array("fTracks.fCharge", entrystop=10)[0][0:10].tolist() == [1.0, 1.0, 1.0, 1.0,-1.0, 0.0, 1.0, 0.0, 0.0, 0.0]
 
     def test_leaflist(self):
         tree = uproot.open("tests/samples/leaflist.root")["tree"]
