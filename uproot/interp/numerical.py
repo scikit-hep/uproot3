@@ -206,7 +206,7 @@ class asarray(asdtype):
             raise ValueError("cannot reshape {0} items as {1} (i.e. groups of {2})".format(numitems, self.todtype.shape, _flatlen(self.todtype, self.awkward)))
         if _flatlen(self.toarray, self.awkward) < numitems:
             raise ValueError("cannot put {0} items into an array of {1} items".format(numitems, _flatlen(self.toarray, self.awkward)))
-        return self.toarray, quotient
+        return self.toarray
 
     def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
         array, stop = destination
