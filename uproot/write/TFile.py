@@ -32,9 +32,6 @@ import os
 import sys
 import struct
 import uuid
-import lzma
-import lz4
-import zlib
 
 import uproot_methods.convert
 
@@ -223,6 +220,7 @@ class TFileRecreate(TFileUpdate):
     def updateCompression(self, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=0): # Replace with 1 when compression works
         self.fCompress = self.compression(compressionAlgorithm=compressionAlgorithm, compressionLevel=compressionLevel)
         self.compresscursor.update_fields(self._sink, self._format3, self.fCompress)
+        self._writestreamers()
 
     def _writeheader(self):
         cursor = uproot.write.sink.cursor.Cursor(0)
@@ -296,21 +294,43 @@ class TFileRecreate(TFileUpdate):
                                                fSeekPdir  = self._fBEGIN)
         streamerkey.write(cursor, self._sink)
 
+        _header = struct.Struct("2sBBBBBBB")
         algo, level = self.getcompression()
+        uncompressedbytes = len(uproot.write.streamers.streamers)
+        u1 = (uncompressedbytes >> 0) & 0xff
+        u2 = (uncompressedbytes >> 8) & 0xff
+        u3 = (uncompressedbytes >> 16) & 0xff
         if level > 0:
             if algo == uproot.const.kZLIB:
+                print ("Hi")
                 import zlib
-                # Compress header
-                cursor.write_data(self._sink, zlib.compress(uproot.write.streamers.streamers, level=level))
+                compressedbytes = len(zlib.compress(uproot.write.streamers.streamers, level=level))
+                if compressedbytes <= uncompressedbytes:
+                    c1 = (compressedbytes >> 0) & 0xff
+                    c2 = (compressedbytes >> 8) & 0xff
+                    c3 = (compressedbytes >> 16) & 0xff
+                    cursor.write_fields(self._sink, _header, algo, level, c1, c2, c3, u1, u2, u3)
+                    cursor.write_data(self._sink, zlib.compress(uproot.write.streamers.streamers, level=level))
             elif algo == uproot.const.kLZ4:
                 import lz4.frame
-                # Compress header
                 lz4.frame.COMPRESSIONLEVEL_MIN = level
-                cursor.write_data(self._sink, lz4.frame.compress(uproot.write.streamers.streamers))
+                compressedbytes = len(lz4.frame.compress(uproot.write.streamers.streamers))
+                if compressedbytes <= uncompressedbytes:
+                    c1 = (compressedbytes >> 0) & 0xff
+                    c2 = (compressedbytes >> 8) & 0xff
+                    c3 = (compressedbytes >> 16) & 0xff
+                    cursor.write_fields(self._sink, _header, algo, level, c1, c2, c3, u1, u2, u3)
+                    cursor.write_data(self._sink, lz4.frame.compress(uproot.write.streamers.streamers))
             elif algo == uproot.const.kLZMA:
                 import lzma
-                # Compress header
-                cursor.write_data(self._sink, lzma.compress(uproot.write.streamers.streamers, preset=level))
+                compressedbytes = len(lzma.compress(uproot.write.streamers.streamers, preset=level))
+                if compressedbytes <= uncompressedbytes:
+                    c1 = (compressedbytes >> 0) & 0xff
+                    c2 = (compressedbytes >> 8) & 0xff
+                    c3 = (compressedbytes >> 16) & 0xff
+                    # Add LZ4 checksum bytes - 8 bytes
+                    cursor.write_fields(self._sink, _header, algo, level, c1, c2, c3, u1, u2, u3)
+                    cursor.write_data(self._sink, lzma.compress(uproot.write.streamers.streamers, preset=level))
         cursor.write_data(self._sink, uproot.write.streamers.streamers)
 
         self._fNbytesInfo = streamerkey.fNbytes
