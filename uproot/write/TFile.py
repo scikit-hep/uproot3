@@ -212,13 +212,17 @@ class TFileRecreate(TFileUpdate):
     _format_seekinfo   = struct.Struct(">q")
     _format_nbytesinfo = struct.Struct(">i")
 
+    def getcompression(self):
+        algo = max(self.fCompress // 100, uproot.const.kZLIB)
+        level = self.fCompress % 100
+        return algo, level
+
     def compression(self, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=0): # Replace with 1 when compression works
         return (compressionAlgorithm * 100) + compressionLevel
 
     def updateCompression(self, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=0): # Replace with 1 when compression works
         self.fCompress = self.compression(compressionAlgorithm=compressionAlgorithm, compressionLevel=compressionLevel)
-        cursor = uproot.write.sink.cursor.Cursor(self.compresspos)
-        cursor.update_fields(self._sink, self._format3, self.fCompress)
+        self.compresscursor.update_fields(self._sink, self._format3, self.fCompress)
 
     def _writeheader(self):
         cursor = uproot.write.sink.cursor.Cursor(0)
@@ -237,7 +241,7 @@ class TFileRecreate(TFileUpdate):
         fUnits = 4
         cursor.write_fields(self._sink, self._format2, self._fNbytesName, fUnits)
 
-        self.compresspos = cursor.index
+        self.compresscursor = uproot.write.sink.cursor.Cursor(cursor.index)
         self.fCompress = self.compression()
         cursor.write_fields(self._sink, self._format3, self.fCompress)
 
@@ -282,6 +286,7 @@ class TFileRecreate(TFileUpdate):
         self._fSeekInfo = self._fSeekFree
         self._seekcursor.update_fields(self._sink, self._format_seekinfo, self._fSeekInfo)
 
+        print (self._fSeekInfo)
         cursor = uproot.write.sink.cursor.Cursor(self._fSeekInfo)
         streamerkey = uproot.write.TKey.TKey32(fClassName = b"TList",
                                                fName      = b"StreamerInfo",
@@ -290,6 +295,22 @@ class TFileRecreate(TFileUpdate):
                                                fSeekKey   = self._fSeekInfo,
                                                fSeekPdir  = self._fBEGIN)
         streamerkey.write(cursor, self._sink)
+
+        algo, level = self.getcompression()
+        if level > 0:
+            if algo == uproot.const.kZLIB:
+                import zlib
+                # Compress header
+                cursor.write_data(self._sink, zlib.compress(uproot.write.streamers.streamers, level=level))
+            elif algo == uproot.const.kLZ4:
+                import lz4.frame
+                # Compress header
+                lz4.frame.COMPRESSIONLEVEL_MIN = level
+                cursor.write_data(self._sink, lz4.frame.compress(uproot.write.streamers.streamers))
+            elif algo == uproot.const.kLZMA:
+                import lzma
+                # Compress header
+                cursor.write_data(self._sink, lzma.compress(uproot.write.streamers.streamers, preset=level))
         cursor.write_data(self._sink, uproot.write.streamers.streamers)
 
         self._fNbytesInfo = streamerkey.fNbytes
