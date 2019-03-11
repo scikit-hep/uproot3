@@ -134,7 +134,7 @@ class ROOTDirectory(object):
                 cursor = Cursor(0)
                 magic, fVersion = cursor.fields(source, ROOTDirectory._format1)
                 if magic != b"root":
-                    raise ValueError("not a ROOT file (starts with {0} instead of 'root')".format(repr(magic)))
+                    raise ValueError("not a ROOT file (starts with {0} instead of 'root')\n   in file: {1}".format(repr(magic), source.path))
                 if fVersion < 1000000:
                     fBEGIN, fEND, fSeekFree, fNbytesFree, nfree, fNbytesName, fUnits, fCompress, fSeekInfo, fNbytesInfo, fUUID = cursor.fields(source, ROOTDirectory._format2_small)
                 else:
@@ -355,9 +355,9 @@ class ROOTDirectory(object):
             if last is not None:
                 return last.get()
             elif cycle is None:
-                raise KeyError("not found: {0}".format(repr(name)))
+                raise _KeyError("not found: {0}\n in file: {1}".format(repr(name), self._context.sourcepath))
             else:
-                raise KeyError("not found: {0} with cycle {1}".format(repr(name), cycle))
+                raise _KeyError("not found: {0} with cycle {1}\n in file: {2}".format(repr(name), cycle, self._context.sourcepath))
 
     def __contains__(self, name):
         try:
@@ -372,6 +372,13 @@ class ROOTDirectory(object):
 
     def __exit__(self, *args, **kwds):
         pass
+
+class _KeyError(KeyError):
+    def __str__(self):
+        return self.args[0]
+
+_KeyError.__name__ = "KeyError"
+_KeyError.__module__ = "builtins" if sys.version_info[0] > 2 else None
 
 ################################################################ helper functions for common tasks
 
@@ -490,12 +497,12 @@ def _readobjany(source, cursor, context, parent, asclass=None):
 
         if asclass is None:
             if ref not in cursor.refs:
-                raise IOError("invalid class-tag reference")
+                raise IOError("invalid class-tag reference\nin file: {0}".format(context.sourcepath))
 
             fct = cursor.refs[ref]                              # reference class
 
             if fct not in context.classes.values():
-                raise IOError("invalid class-tag reference (not a recognized class: {0})".format(fct))
+                raise IOError("invalid class-tag reference (not a recognized class: {0})\nin file: {1}".format(fct, context.sourcepath))
 
             obj = fct.read(source, cursor, context, parent)     # new object
 
@@ -537,7 +544,7 @@ def _readstreamers(source, cursor, context, parent):
             streamerrules.append(obj)
 
         else:
-            raise ValueError("expected TStreamerInfo or TList of TObjString in streamer info array")
+            raise ValueError("expected TStreamerInfo or TList of TObjString in streamer info array\n   in file: {0}".format(context.sourcepath))
 
     # https://stackoverflow.com/a/11564769/1623645
     def topological_sort(items):
@@ -1376,7 +1383,7 @@ class Undefined(ROOTStreamedObject):
         self._cursor = cursor.copied()
         start, cnt, self._classversion = _startcheck(source, cursor)
         if cnt is None:
-            raise TypeError("cannot read objects of type {0} and cannot even skip over this one (returning Undefined) because its size is not known".format("???" if self._classname is None else self._classname.decode("ascii")))
+            raise TypeError("cannot read objects of type {0} and cannot even skip over this one (returning Undefined) because its size is not known\n  in file: {1}".format("???" if self._classname is None else self._classname.decode("ascii"), context.sourcepath))
 
         cursor.skip(cnt - 6)
         _endcheck(start, cursor, cnt)
