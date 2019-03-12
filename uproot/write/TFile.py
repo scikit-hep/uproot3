@@ -309,11 +309,11 @@ class TFileRecreate(TFileUpdate):
                     c1 = (compressedbytes >> 0) & 0xff
                     c2 = (compressedbytes >> 8) & 0xff
                     c3 = (compressedbytes >> 16) & 0xff
-                    method = 8
+                    # method = ?
                     cursor.write_fields(self._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
                     cursor.write_data(self._sink, zlib.compress(uproot.write.streamers.streamers, level=level))
             elif algo == uproot.const.kLZ4:
-                algo = b"XZ"
+                algo = b"L4"
                 try:
                     import lz4.frame
                 except ImportError:
@@ -324,15 +324,17 @@ class TFileRecreate(TFileUpdate):
                     c1 = (compressedbytes >> 0) & 0xff
                     c2 = (compressedbytes >> 8) & 0xff
                     c3 = (compressedbytes >> 16) & 0xff
+                    # method = ?
+                    # Add LZ4 checksum bytes - 8 bytes
                     cursor.write_fields(self._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
                     cursor.write_data(self._sink, lz4.frame.compress(uproot.write.streamers.streamers))
             elif algo == uproot.const.kLZMA:
-                algo = b"L4"
+                algo = b"XZ"
                 try:
                     import lzma
                 except ImportError:
                     try:
-                        import lzma
+                        from backports import lzma
                     except ImportError:
                         raise ImportError("Install lzma package with:\n    pip install backports.lzma\nor\n    conda install -c conda-forge backports.lzma\n(or just use Python >= 3.3).")
                 compressedbytes = len(lzma.compress(uproot.write.streamers.streamers, preset=level))
@@ -340,7 +342,7 @@ class TFileRecreate(TFileUpdate):
                     c1 = (compressedbytes >> 0) & 0xff
                     c2 = (compressedbytes >> 8) & 0xff
                     c3 = (compressedbytes >> 16) & 0xff
-                    # Add LZ4 checksum bytes - 8 bytes
+                    method = 0
                     cursor.write_fields(self._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
                     cursor.write_data(self._sink, lzma.compress(uproot.write.streamers.streamers, preset=level))
         else:
