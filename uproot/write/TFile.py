@@ -214,10 +214,10 @@ class TFileRecreate(TFileUpdate):
         level = self.fCompress % 100
         return algo, level
 
-    def compression(self, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=0): # Replace with 1 when compression works
+    def compression(self, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=1): # Replace with 1 when compression works
         return (compressionAlgorithm * 100) + compressionLevel
 
-    def updateCompression(self, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=0): # Replace with 1 when compression works
+    def updateCompression(self, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=1): # Replace with 1 when compression works
         self.fCompress = self.compression(compressionAlgorithm=compressionAlgorithm, compressionLevel=compressionLevel)
         self.compresscursor.update_fields(self._sink, self._format3, self.fCompress)
         self._writestreamers()
@@ -302,36 +302,49 @@ class TFileRecreate(TFileUpdate):
         u3 = (uncompressedbytes >> 16) & 0xff
         if level > 0:
             if algo == uproot.const.kZLIB:
-                print ("Hi")
+                algo = b"ZL"
                 import zlib
                 compressedbytes = len(zlib.compress(uproot.write.streamers.streamers, level=level))
                 if compressedbytes <= uncompressedbytes:
                     c1 = (compressedbytes >> 0) & 0xff
                     c2 = (compressedbytes >> 8) & 0xff
                     c3 = (compressedbytes >> 16) & 0xff
-                    cursor.write_fields(self._sink, _header, algo, level, c1, c2, c3, u1, u2, u3)
+                    method = 8
+                    cursor.write_fields(self._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
                     cursor.write_data(self._sink, zlib.compress(uproot.write.streamers.streamers, level=level))
             elif algo == uproot.const.kLZ4:
-                import lz4.frame
+                algo = b"XZ"
+                try:
+                    import lz4.frame
+                except ImportError:
+                    raise ImportError("Install lz4 package with:\n    pip install lz4\nor\n    conda install -c anaconda lz4")
                 lz4.frame.COMPRESSIONLEVEL_MIN = level
                 compressedbytes = len(lz4.frame.compress(uproot.write.streamers.streamers))
                 if compressedbytes <= uncompressedbytes:
                     c1 = (compressedbytes >> 0) & 0xff
                     c2 = (compressedbytes >> 8) & 0xff
                     c3 = (compressedbytes >> 16) & 0xff
-                    cursor.write_fields(self._sink, _header, algo, level, c1, c2, c3, u1, u2, u3)
+                    cursor.write_fields(self._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
                     cursor.write_data(self._sink, lz4.frame.compress(uproot.write.streamers.streamers))
             elif algo == uproot.const.kLZMA:
-                import lzma
+                algo = b"L4"
+                try:
+                    import lzma
+                except ImportError:
+                    try:
+                        import lzma
+                    except ImportError:
+                        raise ImportError("Install lzma package with:\n    pip install backports.lzma\nor\n    conda install -c conda-forge backports.lzma\n(or just use Python >= 3.3).")
                 compressedbytes = len(lzma.compress(uproot.write.streamers.streamers, preset=level))
                 if compressedbytes <= uncompressedbytes:
                     c1 = (compressedbytes >> 0) & 0xff
                     c2 = (compressedbytes >> 8) & 0xff
                     c3 = (compressedbytes >> 16) & 0xff
                     # Add LZ4 checksum bytes - 8 bytes
-                    cursor.write_fields(self._sink, _header, algo, level, c1, c2, c3, u1, u2, u3)
+                    cursor.write_fields(self._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
                     cursor.write_data(self._sink, lzma.compress(uproot.write.streamers.streamers, preset=level))
-        cursor.write_data(self._sink, uproot.write.streamers.streamers)
+        else:
+            cursor.write_data(self._sink, uproot.write.streamers.streamers)
 
         self._fNbytesInfo = streamerkey.fNbytes
         self._nbytescursor.update_fields(self._sink, self._format_nbytesinfo, self._fNbytesInfo)
