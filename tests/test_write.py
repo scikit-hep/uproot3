@@ -33,15 +33,39 @@ from os.path import join
 import pytest
 import uproot
 
+ROOT = pytest.importorskip("ROOT")
+
 def test_strings(tmp_path):
-    ROOT = pytest.importorskip("ROOT")
     filename = join(str(tmp_path), "example.root")
 
     with uproot.recreate(filename) as f:
         f["hello"] = "world"
 
     f = ROOT.TFile.Open(filename)
-    assert f.Get("hello") == "world"
+    assert str(f.Get("hello")) == "world"
+    f.Close()
+
+def test_readorder(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    with uproot.recreate(filename) as f:
+        f["hello"] = "world"
+        f["hello"] = "uproot"
+
+    f = ROOT.TFile.Open(filename)
+    assert str(f.Get("hello")) == "uproot"
+    f.Close()
+
+def test_cycle(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    with uproot.recreate(filename) as f:
+        f["hello"] = "world"
+        f["hello"] = "uproot"
+
+    f = ROOT.TFile.Open(filename)
+    assert str(f.Get("hello;1")) == "world"
+    assert str(f.Get("hello;2")) == "uproot"
     f.Close()
 
 def test_th1():
