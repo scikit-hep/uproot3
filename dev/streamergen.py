@@ -48,7 +48,7 @@ for x in f._context.streamerinfos:
     if data[x._fName.decode("ascii")] != x._fClassVersion:
         print("Old {0} version = {1}. New {0} version = {2}".format(x._fName, data[x._fName.decode("ascii")], x._fClassVersion))
 
-tkey = uproot.rootio.TKey.read(f._context.source, uproot.source.cursor.Cursor(f._context.tfile["_fSeekInfo"]), None, None)
+tkey = uproot.rootio.TKey.read(f._context.source, uproot.source.cursor.Cursor(f._context.tfile["_fSeekInfo"]), f._context, None)
 start = f._context.tfile["_fSeekInfo"] + tkey._fKeylen
 streamerlen = tkey._fObjlen
 
