@@ -28,9 +28,11 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# Execute script from root directory of project.
+
 import sys
 import os
-sys.path.insert(0, os.path.abspath('../..'))
+sys.path.insert(0, os.path.abspath(""))
 
 import uproot
 
