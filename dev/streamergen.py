@@ -51,7 +51,12 @@ for x in f._context.streamerinfos:
         print("Old {0} version = {1}. New {0} version = {2}".format(x._fName, data[x._fName.decode("ascii")], x._fClassVersion))
 
 tkey = uproot.rootio.TKey.read(f._context.source, uproot.source.cursor.Cursor(f._context.tfile["_fSeekInfo"]), f._context, None)
-start = f._context.tfile["_fSeekInfo"] + tkey._fKeylen
+if f._context.compression.algoname == "zlib" or f._context.compression.algoname == "lzma":
+    start = f._context.tfile["_fSeekInfo"] + tkey._fKeylen + 9
+elif f._context.compression.algoname == "lz4":
+    start = f._context.tfile["_fSeekInfo"] + tkey._fKeylen + 17
+else:
+    start = f._context.tfile["_fSeekInfo"] + tkey._fKeylen
 streamerlen = tkey._fObjlen
 
 with open("dev/allstreamers.root", "rb") as binary_file:
