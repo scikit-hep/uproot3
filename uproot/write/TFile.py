@@ -328,7 +328,7 @@ class TFileRecreate(TFileUpdate):
                     c1 = (compressedbytes >> 0) & 0xff
                     c2 = (compressedbytes >> 8) & 0xff
                     c3 = (compressedbytes >> 16) & 0xff
-                    # method = ?
+                    method = lz4.library_version_number()//(100 * 100)
                     # Add LZ4 checksum bytes - 8 bytes
                     cursor.write_fields(self._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
                     cursor.write_data(self._sink, lz4.frame.compress(uproot.write.streamers.streamers))
