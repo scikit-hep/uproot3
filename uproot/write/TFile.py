@@ -50,7 +50,7 @@ class TFileUpdate(object):
         self._openfile(path)
         raise NotImplementedError
 
-    def _openfile(self, path):
+    def _openfile(self, path, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=1):
         if isinstance(path, getattr(os, "PathLike", ())):
             path = os.fspath(path)
         elif hasattr(path, "__fspath__"):
@@ -59,6 +59,9 @@ class TFileUpdate(object):
             import pathlib
             if isinstance(path, pathlib.Path):
                  path = str(path)
+
+        self.compressionAlgorithm = compressionAlgorithm
+        self.compressionLevel = compressionLevel
 
         self._sink = uproot.write.sink.file.FileSink(path)
         self._path = path
@@ -240,7 +243,7 @@ class TFileRecreate(TFileUpdate):
         cursor.write_fields(self._sink, self._format2, self._fNbytesName, fUnits)
 
         self.compresscursor = uproot.write.sink.cursor.Cursor(cursor.index)
-        self.fCompress = self.compression()
+        self.fCompress = self.compression(compressionAlgorithm=self.compressionAlgorithm, compressionLevel=self.compressionLevel)
         cursor.write_fields(self._sink, self._format3, self.fCompress)
 
         self._fSeekInfo = 0
@@ -284,7 +287,6 @@ class TFileRecreate(TFileUpdate):
         self._fSeekInfo = self._fSeekFree
         self._seekcursor.update_fields(self._sink, self._format_seekinfo, self._fSeekInfo)
 
-        print (self._fSeekInfo)
         cursor = uproot.write.sink.cursor.Cursor(self._fSeekInfo)
         streamerkey = uproot.write.TKey.TKey32(fClassName = b"TList",
                                                fName      = b"StreamerInfo",
@@ -309,7 +311,7 @@ class TFileRecreate(TFileUpdate):
                     c1 = (compressedbytes >> 0) & 0xff
                     c2 = (compressedbytes >> 8) & 0xff
                     c3 = (compressedbytes >> 16) & 0xff
-                    # method = ?
+                    method = 8
                     cursor.write_fields(self._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
                     cursor.write_data(self._sink, zlib.compress(uproot.write.streamers.streamers, level=level))
             elif algo == uproot.const.kLZ4:
