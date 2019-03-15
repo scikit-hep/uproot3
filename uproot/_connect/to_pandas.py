@@ -106,7 +106,8 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
                 columns.append(fn)
                 data[fn] = list(array)     # must be serialized as a Python list for Pandas to accept it
 
-        return outputtype(columns=columns, data=data)
+        index = pandas.RangeIndex(entrystart, entrystop, name="entry")
+        return outputtype(columns=columns, data=data, index=index)
 
     else:
         starts, stops = None, None

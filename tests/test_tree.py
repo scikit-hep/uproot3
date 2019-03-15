@@ -665,3 +665,11 @@ class Test(unittest.TestCase):
             tree = uproot.open("tests/samples/HZZ-objects.root")["events"]
             tree.pandas.df("muonp4")
             tree.pandas.df("muonp4", flatten=False)
+            df = tree.pandas.df("eventweight", entrystart=100, entrystop=200)
+            index = df.index.tolist()
+            assert min(index) == 100
+            assert max(index) == 199
+            df = tree.pandas.df("muonp4", entrystart=100, entrystop=200)
+            index = df.index.get_level_values("entry").tolist()
+            assert min(index) == 100
+            assert max(index) == 199
