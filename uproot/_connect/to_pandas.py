@@ -60,7 +60,7 @@ def default_flatname(branchname, fieldname, index):
         out += "[" + "][".join(str(x) for x in index) + "]"
     return out
 
-def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, awkward):
+def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, awkward, indexbyentry=True):
     import pandas
 
     if flatname is None:
@@ -106,7 +106,12 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
                 columns.append(fn)
                 data[fn] = list(array)     # must be serialized as a Python list for Pandas to accept it
 
-        return outputtype(columns=columns, data=data)
+        index = None
+        if indexbyentry and entrystart:
+            if not entrystop:
+                entrystop = entrystop + len(columns[0])
+            index = pandas.RangeIndex(entrystart, entrystop, name="entry")
+        return outputtype(columns=columns, data=data, index=index)
 
     else:
         starts, stops = None, None
