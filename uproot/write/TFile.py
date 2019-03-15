@@ -314,6 +314,8 @@ class TFileRecreate(TFileUpdate):
                     method = 8
                     cursor.write_fields(self._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
                     cursor.write_data(self._sink, zlib.compress(uproot.write.streamers.streamers, level=level))
+                    fNbytes = compressedbytes + streamerkey.fKeylen + method
+                    streamerkey.update(fNbytes)
             elif algo == uproot.const.kLZ4:
                 algo = b"L4"
                 try:
@@ -330,6 +332,8 @@ class TFileRecreate(TFileUpdate):
                     # Add LZ4 checksum bytes - 8 bytes
                     cursor.write_fields(self._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
                     cursor.write_data(self._sink, lz4.frame.compress(uproot.write.streamers.streamers))
+                    fNbytes = compressedbytes + streamerkey.fKeylen + method
+                    streamerkey.update(fNbytes)
             elif algo == uproot.const.kLZMA:
                 algo = b"XZ"
                 try:
@@ -347,6 +351,8 @@ class TFileRecreate(TFileUpdate):
                     method = 0
                     cursor.write_fields(self._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
                     cursor.write_data(self._sink, lzma.compress(uproot.write.streamers.streamers, preset=level))
+                    fNbytes = compressedbytes + streamerkey.fKeylen + method
+                    streamerkey.update(fNbytes)
         else:
             cursor.write_data(self._sink, uproot.write.streamers.streamers)
 
