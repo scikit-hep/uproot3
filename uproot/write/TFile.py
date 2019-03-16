@@ -50,7 +50,7 @@ class TFileUpdate(object):
         self._openfile(path)
         raise NotImplementedError
 
-    def _openfile(self, path, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=1):
+    def _openfile(self, path, compressionAlgorithm, compressionLevel):
         if isinstance(path, getattr(os, "PathLike", ())):
             path = os.fspath(path)
         elif hasattr(path, "__fspath__"):
@@ -197,8 +197,8 @@ class TFileUpdate(object):
         self.close()
 
 class TFileRecreate(TFileUpdate):
-    def __init__(self, path):
-        self._openfile(path)
+    def __init__(self, path, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=1):
+        self._openfile(path, compressionAlgorithm, compressionLevel)
         self._writeheader()
         self._writerootdir()
         self._writestreamers()
@@ -297,13 +297,13 @@ class TFileRecreate(TFileUpdate):
         streamerkey.write(cursor, self._sink)
 
         _header = struct.Struct("2sBBBBBBB")
-        algo, level = self.getcompression()
+        algorithm, level = self.getcompression()
         uncompressedbytes = len(uproot.write.streamers.streamers)
         u1 = (uncompressedbytes >> 0) & 0xff
         u2 = (uncompressedbytes >> 8) & 0xff
         u3 = (uncompressedbytes >> 16) & 0xff
         if level > 0:
-            if algo == uproot.const.kZLIB:
+            if algorithm == uproot.const.kZLIB:
                 algo = b"ZL"
                 import zlib
                 compressedbytes = len(zlib.compress(uproot.write.streamers.streamers, level=level))
@@ -314,9 +314,7 @@ class TFileRecreate(TFileUpdate):
                     method = 8
                     cursor.write_fields(self._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
                     cursor.write_data(self._sink, zlib.compress(uproot.write.streamers.streamers, level=level))
-                    fNbytes = compressedbytes + streamerkey.fKeylen + method
-                    streamerkey.update(fNbytes)
-            elif algo == uproot.const.kLZ4:
+            elif algorithm == uproot.const.kLZ4:
                 algo = b"L4"
                 try:
                     import lz4.frame
@@ -332,9 +330,7 @@ class TFileRecreate(TFileUpdate):
                     # Add LZ4 checksum bytes - 8 bytes
                     cursor.write_fields(self._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
                     cursor.write_data(self._sink, lz4.frame.compress(uproot.write.streamers.streamers))
-                    fNbytes = compressedbytes + streamerkey.fKeylen + method
-                    streamerkey.update(fNbytes)
-            elif algo == uproot.const.kLZMA:
+            elif algorithm == uproot.const.kLZMA:
                 algo = b"XZ"
                 try:
                     import lzma
@@ -351,8 +347,10 @@ class TFileRecreate(TFileUpdate):
                     method = 0
                     cursor.write_fields(self._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
                     cursor.write_data(self._sink, lzma.compress(uproot.write.streamers.streamers, preset=level))
-                    fNbytes = compressedbytes + streamerkey.fKeylen + method
-                    streamerkey.update(fNbytes)
+            else:
+                raise ValueError("Unrecognized compression algorithm: {0}".format(algorithm))
+            fNbytes = compressedbytes + streamerkey.fKeylen + method
+            streamerkey.update(fNbytes)
         else:
             cursor.write_data(self._sink, uproot.write.streamers.streamers)
 
