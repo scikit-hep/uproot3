@@ -53,17 +53,17 @@ class TKey(object):
     def fNbytes(self):
         return self.fObjlen + self.fKeylen
 
-    def update(self, bytes=None):
-        if bytes is None:
+    def update(self, Nbytes):
+        if Nbytes is None:
             self.cursor.update_fields(self.sink, self._format1, self.fNbytes, self._version, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
         else:
-            self.cursor.update_fields(self.sink, self._format1, bytes, self._version, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
+            self.cursor.update_fields(self.sink, self._format1, Nbytes, self._version, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
 
-    def write(self, cursor, sink):
+    def write(self, cursor, sink, Nbytes=None):
         self.cursor = uproot.write.sink.cursor.Cursor(cursor.index)
         self.sink = sink
 
-        self.update()
+        self.update(Nbytes)
 
         cursor.skip(self._format1.size)
         cursor.write_string(sink, self.fClassName)

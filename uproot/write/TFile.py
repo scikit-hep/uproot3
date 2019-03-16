@@ -294,6 +294,7 @@ class TFileRecreate(TFileUpdate):
                                                fObjlen    = len(uproot.write.streamers.streamers),
                                                fSeekKey   = self._fSeekInfo,
                                                fSeekPdir  = self._fBEGIN)
+        streamerkeycursor = uproot.write.sink.cursor.Cursor(self._fSeekInfo)
         streamerkey.write(cursor, self._sink)
 
         _header = struct.Struct("2sBBBBBBB")
@@ -314,6 +315,8 @@ class TFileRecreate(TFileUpdate):
                     method = 8
                     cursor.write_fields(self._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
                     cursor.write_data(self._sink, zlib.compress(uproot.write.streamers.streamers, level=level))
+                    fNbytes = compressedbytes + streamerkey.fKeylen + 9
+                    streamerkey.write(streamerkeycursor, self._sink, fNbytes)
             elif algorithm == uproot.const.kLZ4:
                 algo = b"L4"
                 try:
@@ -326,10 +329,12 @@ class TFileRecreate(TFileUpdate):
                     c1 = (compressedbytes >> 0) & 0xff
                     c2 = (compressedbytes >> 8) & 0xff
                     c3 = (compressedbytes >> 16) & 0xff
-                    method = lz4.library_version_number()//(100 * 100)
+                    method = lz4.library_version_number() // (100 * 100)
                     # Add LZ4 checksum bytes - 8 bytes
                     cursor.write_fields(self._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
                     cursor.write_data(self._sink, lz4.frame.compress(uproot.write.streamers.streamers))
+                fNbytes = compressedbytes + streamerkey.fKeylen + 17
+                streamerkey.write(streamerkeycursor, self._sink, fNbytes)
             elif algorithm == uproot.const.kLZMA:
                 algo = b"XZ"
                 try:
@@ -347,10 +352,10 @@ class TFileRecreate(TFileUpdate):
                     method = 0
                     cursor.write_fields(self._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
                     cursor.write_data(self._sink, lzma.compress(uproot.write.streamers.streamers, preset=level))
+                    fNbytes = compressedbytes + streamerkey.fKeylen + 9
+                    streamerkey.write(streamerkeycursor, self._sink, fNbytes)
             else:
                 raise ValueError("Unrecognized compression algorithm: {0}".format(algorithm))
-            fNbytes = compressedbytes + streamerkey.fKeylen + method
-            streamerkey.update(fNbytes)
         else:
             cursor.write_data(self._sink, uproot.write.streamers.streamers)
 
