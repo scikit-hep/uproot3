@@ -55,7 +55,7 @@ install:
   - python -c 'import uproot_methods; print(uproot_methods.__version__)'
   - pip install cachetools pkgconfig lz4 mock requests "pytest>=3.9" pytest-runner
   - pip install lz4 requests
-  - pip install physt
+  - if [[ $TRAVIS_PYTHON_VERSION >= "3.5" ]] ; then pip install physt ; fi
   - if [[ $TRAVIS_PYTHON_VERSION = "2.7" ]] ; then pip install backports.lzma ; fi
   - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install pandas ; fi
   - conda install -c anaconda pyopenssl     # for deployment
