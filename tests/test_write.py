@@ -57,5 +57,31 @@ def test_cycle(tmp_path):
     assert str(f.Get("hello;2")) == "uproot"
     f.Close()
 
-def test_th1():
-    pass
+def test_th1_numpy(tmp_path):
+    import numpy
+    filename = join(str(tmp_path), "example.root")
+
+    with uproot.recreate(filename) as f:
+        f["test"] = numpy.histogram([1, 2, 3, 4, 5], bins=10)
+
+    f = ROOT.TFile.Open(filename)
+    h = f.Get("test")
+    assert h.GetNbinsX() == 10
+    assert type(h).__name__ == "TH1I"
+    assert h.GetEntries() == 5.0
+
+def test_th1_physt(tmp_path):
+    import physt
+    filename = join(str(tmp_path), "example.root")
+
+    with uproot.recreate(filename) as f:
+        f["test"] = physt.h1([1, 2, 3, 4, 5], bins=10)
+
+    f = ROOT.TFile.Open(filename)
+    h = f.Get("test")
+    assert h.GetNbinsX() == 10
+    assert type(h).__name__ == "TH1I"
+    assert h.GetEntries() == 5.0
+
+
+

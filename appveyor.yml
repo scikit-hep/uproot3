@@ -49,4 +49,5 @@ build_script:
   - "pip install uproot-methods>=0.3.0"
   - "pip install -i https://pypi.anaconda.org/carlkl/simple backports.lzma"
   - "pip install pytest pytest-runner pandas requests"
+  - "pip install physt"
   - "python setup.py pytest"
