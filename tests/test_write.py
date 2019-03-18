@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from os.path import join
+import sys
 
 import pytest
 import uproot
@@ -71,7 +72,10 @@ def test_th1_numpy(tmp_path):
     assert h.GetEntries() == 5.0
 
 def test_th1_physt(tmp_path):
-    import physt
+    if sys.version_info[0] == 3 and sys.version_info[1] >= 5:
+        import physt
+    else:
+        pytest.skip("Unsupported python version")
     filename = join(str(tmp_path), "example.root")
 
     with uproot.recreate(filename) as f:
