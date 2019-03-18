@@ -320,7 +320,7 @@ class asfloat16(asdouble32):
     __metaclass__ = type.__new__(type, "type", (asdouble32.__metaclass__,), {})
 
     def __init__(self, low, high, numbits, fromdims=(), todims=None):
-        super().__init__(low, high, numbits, fromdims, todims)
+        super(asfloat16, self).__init__(low, high, numbits, fromdims, todims)
         if self.truncated and not 2 <= numbits <= 16:
             raise TypeError("numbits must be an integer between 2 and 16 (inclusive).")
 
