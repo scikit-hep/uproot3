@@ -29,7 +29,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from os.path import join
-import sys
 
 import pytest
 import uproot
@@ -58,32 +57,18 @@ def test_cycle(tmp_path):
     assert str(f.Get("hello;2")) == "uproot"
     f.Close()
 
-def test_th1_numpy(tmp_path):
+def test_th1(tmp_path):
     import numpy
     filename = join(str(tmp_path), "example.root")
 
     with uproot.recreate(filename) as f:
-        f["test"] = numpy.histogram([1, 2, 3, 4, 5], bins=10)
+        f["test"] = numpy.histogram([1, 2, 3, 4, 5], bins=[0, 2, 3, 5, 10])
 
     f = ROOT.TFile.Open(filename)
     h = f.Get("test")
-    assert h.GetNbinsX() == 10
-    assert type(h).__name__ == "TH1I"
-    assert h.GetEntries() == 5.0
-
-def test_th1_physt(tmp_path):
-    if sys.version_info[0] == 3 and sys.version_info[1] >= 5:
-        import physt
-    else:
-        pytest.skip("Unsupported python version")
-    filename = join(str(tmp_path), "example.root")
-
-    with uproot.recreate(filename) as f:
-        f["test"] = physt.h1([1, 2, 3, 4, 5], bins=10)
-
-    f = ROOT.TFile.Open(filename)
-    h = f.Get("test")
-    assert h.GetNbinsX() == 10
+    assert h.GetNbinsX() == 4
+    assert h.FindBin(5) == 4
+    assert h.GetBinWidth(4) == 5.0
     assert type(h).__name__ == "TH1I"
     assert h.GetEntries() == 5.0
 
