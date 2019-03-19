@@ -247,8 +247,15 @@ class asdouble32(_asnumeric):
         return self.awkward.numpy.dtype((self.awkward.numpy.float64, self.todims))
 
     @property
-    def todtypeflat(self):
-        return self.awkward.numpy.dtype(self.awkward.numpy.float64)
+    def fromdtype(self):
+        if self.truncated:
+            return self.awkward.numpy.dtype(({'exponent': ('>u1', 0), 'mantissa': ('>u2', 1)}, self.fromdims))
+        else:
+            return self.awkward.numpy.dtype(('>u4', self.fromdims))
+
+    @property
+    def fromdtypeflat(self):
+        return _dtypeshape(self.fromdtype)[0]
 
     @property
     def todims(self):
@@ -259,17 +266,10 @@ class asdouble32(_asnumeric):
 
     @property
     def itemsize(self):
-        return 3 if self.truncated else 4
+        return self.fromdtype.itemsize
 
     def __repr__(self):
-        args = [repr(self.low), repr(self.high), repr(self.numbits)]
-
-        if self.fromdims != ():
-            args.append(repr(self.fromdims))
-
-        if self.todims != self.fromdims:
-            args.append(repr(self.todims))
-
+        args = [repr(self.low), repr(self.high), repr(self.numbits), repr(self.fromdtype), repr(self.todtype)]
         return "asdouble32(" + ", ".join(args) + ")"
 
     @property
@@ -279,45 +279,67 @@ class asdouble32(_asnumeric):
         return "asdouble32({0},{1},{2},{3},{4})".format(self.low, self.high, self.numbits, fromdims, todims)
 
     def compatible(self, other):
-        return isinstance(other, asdouble32) and self.low == other.low and self.high == other.high and self.numbits == other.numbits and self.todtype == other.dtype
+        return isinstance(other, asdouble32) and self.low == other.low and self.high == other.high and self.numbits == other.numbits and self.fromdtype == other.fromdtype and self.todtype == other.todtype
 
     def numitems(self, numbytes, numentries):
-        quotient, remainder = divmod(numbytes, self.itemsize)
+        quotient, remainder = divmod(numbytes, self.fromdtypeflat.itemsize)
         assert remainder == 0
         return quotient
 
     def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop):
-        # Make sure the shape of the interpreted data conforms to the shape of the input data
-        def reshape(array):
+        # Interpret input data using proper type
+        array = data.view(dtype=self.fromdtypeflat)
+        # Make sure the interpreted data has correct shape
+        if self.fromdims != ():
             product = int(self.awkward.numpy.prod(self.fromdims))
             quotient, remainder = divmod(len(array), product)
             assert remainder == 0, "{0} % {1} == {2} != 0".format(len(array), product, len(array) % product)
             array = array.reshape((quotient,) + self.fromdims)
-            return array
 
         if self.truncated:
-            array = data.view(dtype={'exponent': ('>u1',0), 'mantissa': ('>u2',1)})
-            array = reshape(array) if self.fromdims != () else array
-
+            array = array[local_entrystart:local_entrystop]
             # We have to make copies to work with contiguous arrays
-            unpacked = array['exponent'].astype('int32')
-            mantissa = array['mantissa'].astype('int32')
+            unpacked = array['exponent'].astype(self.awkward.numpy.int32)
+            mantissa = array['mantissa'].astype(self.awkward.numpy.int32)
 
             unpacked <<= 23
             unpacked |= (mantissa & ((1 << (self.numbits + 1)) - 1)) << (23 - self.numbits)
             sign = ((1 << (self.numbits + 1)) & mantissa != 0) * -2 + 1
 
-            array = unpacked.view(dtype='float32') * sign
-            return array.astype(self.todtype)
-
+            array = unpacked.view(dtype=self.awkward.numpy.float32) * sign
+            array = array.astype(self.todtypeflat)
         else:
-            array = data.view(">u4")
-            array = reshape(array) if self.fromdims != () else array
-
-            array = array[local_entrystart:local_entrystop].astype(self.todtype)
+            array = array[local_entrystart:local_entrystop].astype(self.todtypeflat)
             self.awkward.numpy.multiply(array, float(self.high - self.low) / (1 << self.numbits), out=array)
             self.awkward.numpy.add(array, self.low, out=array)
-            return array
+
+        return array
+
+class asfloat16(asdouble32):
+    # makes __doc__ attribute mutable before Python 3.3
+    __metaclass__ = type.__new__(type, "type", (asdouble32.__metaclass__,), {})
+
+    def __init__(self, low, high, numbits, fromdims=(), todims=None):
+        super(asfloat16, self).__init__(low, high, numbits, fromdims, todims)
+        if self.truncated and not 2 <= numbits <= 16:
+            raise TypeError("numbits must be an integer between 2 and 16 (inclusive).")
+
+    @property
+    def todtype(self):
+        return self.awkward.numpy.dtype((self.awkward.numpy.float32, self.todims))
+
+    def __repr__(self):
+        args = [repr(self.low), repr(self.high), repr(self.numbits), repr(self.fromdtype), repr(self.todtype)]
+        return "asfloat16(" + ", ".join(args) + ")"
+
+    @property
+    def identifier(self):
+        fromdims = "(" + ",".join(repr(x) for x in self.fromdims) + ")"
+        todims = "(" + ",".join(repr(x) for x in self.todims) + ")"
+        return "asfloat16({0},{1},{2},{3},{4})".format(self.low, self.high, self.numbits, fromdims, todims)
+
+    def compatible(self, other):
+        return isinstance(other, asfloat16) and self.low == other.low and self.high == other.high and self.numbits == other.numbits and self.fromdtype == other.fromdtype and self.todtype == other.todtype
 
 class asstlbitset(uproot.interp.interp.Interpretation):
     # makes __doc__ attribute mutable before Python 3.3
