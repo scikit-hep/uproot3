@@ -318,22 +318,23 @@ class TFileRecreate(TFileUpdate):
                     fNbytes = compressedbytes + streamerkey.fKeylen + 9
                     streamerkey.write(streamerkeycursor, self._sink, fNbytes)
             elif algorithm == uproot.const.kLZ4:
+                import xxhash
                 algo = b"L4"
                 try:
                     import lz4.frame
                 except ImportError:
                     raise ImportError("Install lz4 package with:\n    pip install lz4\nor\n    conda install -c anaconda lz4")
-                lz4.frame.COMPRESSIONLEVEL_MIN = level
-                compressedbytes = len(lz4.frame.compress(uproot.write.streamers.streamers))
+                compressedbytes = len(lz4.frame.compress(uproot.write.streamers.streamers)) + 8
                 if compressedbytes <= uncompressedbytes:
                     c1 = (compressedbytes >> 0) & 0xff
                     c2 = (compressedbytes >> 8) & 0xff
                     c3 = (compressedbytes >> 16) & 0xff
                     method = lz4.library_version_number() // (100 * 100)
-                    # Add LZ4 checksum bytes - 8 bytes
+                    checksum = xxhash.xxh64(uproot.write.streamers.streamers).digest()
                     cursor.write_fields(self._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
-                    cursor.write_data(self._sink, lz4.frame.compress(uproot.write.streamers.streamers))
-                fNbytes = compressedbytes + streamerkey.fKeylen + 17
+                    cursor.write_data(self._sink, checksum)
+                    cursor.write_data(self._sink, lz4.frame.compress(uproot.write.streamers.streamers, compression_level=level))
+                fNbytes = compressedbytes + streamerkey.fKeylen + 9
                 streamerkey.write(streamerkeycursor, self._sink, fNbytes)
             elif algorithm == uproot.const.kLZMA:
                 algo = b"XZ"
