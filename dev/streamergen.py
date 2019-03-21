@@ -28,9 +28,11 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# Run this script from the root directory of the project.
+
 import sys
 import os
-sys.path.insert(0, os.path.abspath('../..'))
+sys.path.insert(0, os.path.abspath(""))
 
 import uproot
 
@@ -54,7 +56,7 @@ streamerlen = tkey._fObjlen
 
 with open("dev/allstreamers.root", "rb") as binary_file:
     binary_file.seek(start)
-    couple_bytes = binary_file.read(streamerlen + 1)
+    couple_bytes = binary_file.read(streamerlen)
 streamers = "streamers = {0}".format(repr(couple_bytes))
 
 lines = []
