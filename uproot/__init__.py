@@ -143,6 +143,10 @@ from uproot.write.TFile import TFileCreate as create
 from uproot.write.TFile import TFileRecreate as recreate
 from uproot.write.TFile import TFileUpdate as update
 
+# import uproot._connect.to_pandas
+# pandas = uproot._connect.to_pandas.Pandas
+# del uproot._connect.to_pandas
+
 from uproot.source.memmap import MemmapSource
 from uproot.source.file import FileSource
 from uproot.source.xrootd import XRootDSource
