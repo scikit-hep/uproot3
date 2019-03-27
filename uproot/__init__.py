@@ -143,10 +143,6 @@ from uproot.write.TFile import TFileCreate as create
 from uproot.write.TFile import TFileRecreate as recreate
 from uproot.write.TFile import TFileUpdate as update
 
-# import uproot._connect.to_pandas
-# pandas = uproot._connect.to_pandas.Pandas
-# del uproot._connect.to_pandas
-
 from uproot.source.memmap import MemmapSource
 from uproot.source.file import FileSource
 from uproot.source.xrootd import XRootDSource
@@ -168,6 +164,23 @@ from uproot.interp.objects import STLMap
 from uproot.interp.objects import STLString
 asdebug = asjagged(asdtype("u1"))
 
+from uproot.source.memmap import MemmapSource
+from uproot.source.xrootd import XRootDSource
+from uproot.source.http import HTTPSource
+def iterate(path, treepath, branches=None, entrysteps=None, namedecode="utf-8", reportpath=False, reportfile=False, flatten=True, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
+    import pandas
+    import uproot.tree
+    return uproot.tree.iterate(path, treepath, branches=branches, entrysteps=entrysteps, outputtype=pandas.DataFrame, namedecode=namedecode, reportpath=reportpath, reportfile=reportfile, reportentries=False, flatten=flatten, flatname=flatname, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)
+
+from types import ModuleType
+pandas = ModuleType("uproot.pandas")
+pandas.iterate = iterate
+del ModuleType
+del iterate
+del MemmapSource
+del XRootDSource
+del HTTPSource
+
 # put help strings on everything (they're long, too disruptive to intersperse
 # in the code, and are built programmatically to avoid duplication; Python's
 # inline docstring method doesn't accept non-literals)
@@ -176,7 +189,6 @@ import uproot._help
 # convenient access to the version number
 from uproot.version import __version__
 
-# don't expose uproot.uproot; it's ugly
 del uproot
 
-__all__ = ["open", "xrootd", "http", "iterate", "numentries", "lazyarray", "lazyarrays", "daskarray", "daskarrays", "daskframe", "create", "recreate", "update", "MemmapSource", "FileSource", "XRootDSource", "HTTPSource", "interpret", "asdtype", "asarray", "asdouble32", "asstlbitset", "asjagged", "astable", "asobj", "asgenobj", "asstring", "asdebug", "SimpleArray", "STLVector", "STLMap", "STLString", "__version__"]
+__all__ = ["open", "xrootd", "http", "iterate", "numentries", "lazyarray", "lazyarrays", "daskarray", "daskarrays", "daskframe", "create", "recreate", "update", "MemmapSource", "FileSource", "XRootDSource", "HTTPSource", "interpret", "asdtype", "asarray", "asdouble32", "asstlbitset", "asjagged", "astable", "asobj", "asgenobj", "asstring", "asdebug", "SimpleArray", "STLVector", "STLMap", "STLString", "pandas", "__version__"]

@@ -47,12 +47,6 @@ from uproot.source.memmap import MemmapSource
 from uproot.source.xrootd import XRootDSource
 from uproot.source.http import HTTPSource
 
-class Pandas(object):
-    @staticmethod
-    def iterate(path, treepath, branches=None, entrysteps=None, namedecode="utf-8", reportpath=False, reportfile=False, flatten=True, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
-        import pandas
-        return uproot.tree.iterate(path, treepath, branches=branches, entrysteps=entrysteps, outputtype=pandas.DataFrame, namedecode=namedecode, reportpath=reportpath, reportfile=reportfile, reportentries=False, flatten=flatten, flatname=flatname, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)
-
 class TTreeMethods_pandas(object):
     def __init__(self, tree):
         self._tree = tree
@@ -146,7 +140,7 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
                     interpretation = interpretation.content
 
                 # justifies the assumption that array.content == array.flatten() and array.stops.max() == array.stops[-1]
-                assert array._canuseoffset() and len(array.starts) > 0 and array.starts[0] == 0
+                assert array._canuseoffset() and (len(array.starts) == 0 or array.starts[0] == 0)
 
                 if starts is None:
                     starts = array.starts
@@ -156,7 +150,10 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
                     if starts is not array.starts and not awkward.numpy.array_equal(starts, array.starts):
                         raise ValueError("cannot use flatten=True on branches with different jagged structure, such as electrons and muons (different, variable number of each per event); either explicitly select compatible branches, such as [\"MET_*\", \"Muon_*\"] (scalar and variable per event is okay), or set flatten=False")
 
-                array = array.content
+                if len(array.starts) == 0:
+                    array = array.content[0:0]
+                else:
+                    array = array.content
                 needbroadcasts.append(False)
 
             else:

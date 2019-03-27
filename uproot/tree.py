@@ -578,7 +578,9 @@ class TTreeMethods(object):
         elif ispandas:
             import uproot._connect.to_pandas
             def wrap_for_python_scope(futures, start, stop):
-                return lambda: uproot._connect.to_pandas.futures2df([(branch.name, interpretation, lambda: interpretation.finalize(future(), branch)) for branch, interpretation, future, past, cachekey in futures], outputtype, start, stop, flatten, flatname, awkward)
+                def wrap_again(branch, interpretation, future):
+                    return lambda: interpretation.finalize(future(), branch)
+                return lambda: uproot._connect.to_pandas.futures2df([(branch.name, interpretation, wrap_again(branch, interpretation, future)) for branch, interpretation, future, past, cachekey in futures], outputtype, start, stop, flatten, flatname, awkward)
 
         elif isinstance(outputtype, type) and issubclass(outputtype, dict):
             def wrap_for_python_scope(futures, start, stop):
