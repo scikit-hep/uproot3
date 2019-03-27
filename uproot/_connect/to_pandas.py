@@ -36,19 +36,28 @@ import numpy
 
 import awkward as awkwardbase
 
+import uproot.tree
 import uproot.interp.numerical
 from uproot.interp.jagged import asjagged
 from uproot.interp.numerical import asdtype
 from uproot.interp.objects import asobj
 from uproot.interp.objects import astable
 
+from uproot.source.memmap import MemmapSource
+from uproot.source.xrootd import XRootDSource
+from uproot.source.http import HTTPSource
+
 class TTreeMethods_pandas(object):
     def __init__(self, tree):
         self._tree = tree
 
-    def df(self, branches=None, namedecode="utf-8", entrystart=None, entrystop=None, flatten=True, flatname=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+    def df(self, branches=None, namedecode="utf-8", entrystart=None, entrystop=None, flatten=True, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         import pandas
-        return self._tree.arrays(branches=branches, outputtype=pandas.DataFrame, namedecode=namedecode, entrystart=entrystart, entrystop=entrystop, flatten=flatten, flatname=flatname, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
+        return self._tree.arrays(branches=branches, outputtype=pandas.DataFrame, namedecode=namedecode, entrystart=entrystart, entrystop=entrystop, flatten=flatten, flatname=flatname, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
+
+    def iterate(self, branches=None, entrysteps=None, namedecode="utf-8", entrystart=None, entrystop=None, flatten=True, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+        import pandas
+        return self._tree.iterate(branches=branches, entrysteps=entrysteps, outputtype=pandas.DataFrame, namedecode=namedecode, reportentries=False, entrystart=entrystart, entrystop=entrystop, flatten=flatten, flatname=flatname, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
 
 def default_flatname(branchname, fieldname, index):
     out = branchname
@@ -131,7 +140,7 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
                     interpretation = interpretation.content
 
                 # justifies the assumption that array.content == array.flatten() and array.stops.max() == array.stops[-1]
-                assert array._canuseoffset() and len(array.starts) > 0 and array.starts[0] == 0
+                assert array._canuseoffset() and (len(array.starts) == 0 or array.starts[0] == 0)
 
                 if starts is None:
                     starts = array.starts
@@ -141,7 +150,10 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
                     if starts is not array.starts and not awkward.numpy.array_equal(starts, array.starts):
                         raise ValueError("cannot use flatten=True on branches with different jagged structure, such as electrons and muons (different, variable number of each per event); either explicitly select compatible branches, such as [\"MET_*\", \"Muon_*\"] (scalar and variable per event is okay), or set flatten=False")
 
-                array = array.content
+                if len(array.starts) == 0:
+                    array = array.content[0:0]
+                else:
+                    array = array.content
                 needbroadcasts.append(False)
 
             else:
