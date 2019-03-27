@@ -115,8 +115,15 @@ def iterate(path, treepath, branches=None, entrysteps=None, outputtype=dict, nam
     for tree, newbranches, globalentrystart, thispath, thisfile in _iterate(path, treepath, branches, awkward, localsource, xrootdsource, httpsource, **options):
         for start, stop, arrays in tree.iterate(branches=newbranches, entrysteps=entrysteps, outputtype=outputtype, namedecode=namedecode, reportentries=True, entrystart=0, entrystop=tree.numentries, flatten=flatten, flatname=flatname, awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking):
             if getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame":
-                index = awkward.numpy.frombuffer(arrays.index.data, dtype=arrays.index.dtype)
-                awkward.numpy.add(index, globalentrystart, index)
+                if type(arrays.index).__name__ == "MultiIndex":
+                    index = arrays.index.levels[0].to_numpy()
+                    awkward.numpy.add(index, globalentrystart, out=index)
+                elif type(arrays.index).__name__ == "RangeIndex":
+                    arrays.index._start += globalentrystart
+                    arrays.index._stop += globalentrystart
+                else:
+                    index = arrays.index.to_numpy()
+                    awkward.numpy.add(index, globalentrystart, out=index)
             out = (arrays,)
             if reportentries:
                 out = (globalentrystart + start, globalentrystart + stop) + out
