@@ -1356,7 +1356,9 @@ class TArrayI(TArray):
 class TArrayL(TArray):
     _dtype = numpy.dtype(numpy.int_).newbyteorder(">")
 
-    # Need to add nbytes
+    @property
+    def nbytes(self):
+        return len(self) * self._dtype.itemsize
 
     def tostring(self):
         return numpy.asarray(self, dtype=">i8").tostring()
