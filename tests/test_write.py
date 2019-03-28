@@ -57,20 +57,23 @@ def test_cycle(tmp_path):
     assert str(f.Get("hello;2")) == "uproot"
     f.Close()
 
-def test_th1(tmp_path):
-    import numpy
+def test_th1_varbin(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
+    import numpy as np
+    bins = np.array([1.0, 3.0, 4.0, 10.0, 11.0, 12.0], dtype="float64")
+    f = ROOT.TFile.Open("test.root", "RECREATE")
+    h = ROOT.TH1F("hvar", "title", 5, bins)
+    f.Write()
+    f.Close()
+
+    t = uproot.open("test.root")
+    hist = t["hvar"]
     with uproot.recreate(filename) as f:
-        f["test"] = numpy.histogram([1, 2, 3, 4, 5], bins=[0, 2, 3, 5, 10])
+        f["test"] = hist
 
     f = ROOT.TFile.Open(filename)
     h = f.Get("test")
-    assert h.GetNbinsX() == 4
-    assert h.FindBin(5) == 4
-    assert h.GetBinWidth(4) == 5.0
-    assert type(h).__name__ == "TH1I"
-    assert h.GetEntries() == 5.0
-
-
+    assert h.GetNbinsX() == 5
+    assert h.GetBinWidth(3) == 6.0
 
