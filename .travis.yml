@@ -37,7 +37,9 @@ install:
   - hash -r
   - conda config --add channels conda-forge;
   - conda config --set always_yes yes --set changeps1 no
-  - if [ "${PYVER}" = "2.7" ] || [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" ]; then
+  - if [ "${PYVER}" = "2.7" ]; then
+      conda create -q -n testenv python=${PYVER} root=6.16.00;
+    elif [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" ]; then
       conda create -q -n testenv python=${PYVER} root;
     elif [[ "${PYVER}" = pypy* ]]; then
       conda create -q -n testenv ${PYVER};
