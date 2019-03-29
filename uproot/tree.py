@@ -114,16 +114,26 @@ def iterate(path, treepath, branches=None, entrysteps=None, outputtype=dict, nam
     awkward = _normalize_awkwardlib(awkwardlib)
     for tree, newbranches, globalentrystart, thispath, thisfile in _iterate(path, treepath, branches, awkward, localsource, xrootdsource, httpsource, **options):
         for start, stop, arrays in tree.iterate(branches=newbranches, entrysteps=entrysteps, outputtype=outputtype, namedecode=namedecode, reportentries=True, entrystart=0, entrystop=tree.numentries, flatten=flatten, flatname=flatname, awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking):
+
             if getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame":
                 if type(arrays.index).__name__ == "MultiIndex":
-                    index = arrays.index.levels[0].to_numpy()
+                    if hasattr(arrays.index.levels[0], "array"):
+                        index = arrays.index.levels[0].array   # pandas>=0.24.0
+                    else:
+                        index = arrays.index.levels[0].values  # pandas<0.24.0
                     awkward.numpy.add(index, globalentrystart, out=index)
+
                 elif type(arrays.index).__name__ == "RangeIndex":
                     arrays.index._start += globalentrystart
                     arrays.index._stop += globalentrystart
+
                 else:
-                    index = arrays.index.to_numpy()
+                    if hasattr(arrays.index, "array"):
+                        index = arrays.index.array             # pandas>=0.24.0
+                    else:
+                        index = arrays.index.values            # pandas<0.24.0
                     awkward.numpy.add(index, globalentrystart, out=index)
+
             out = (arrays,)
             if reportentries:
                 out = (globalentrystart + start, globalentrystart + stop) + out
