@@ -37,16 +37,15 @@ install:
   - hash -r
   - conda config --add channels conda-forge;
   - conda config --set always_yes yes --set changeps1 no
-  - if [ "${PYVER}" = "2.7" ]; then
-      conda create -q -n testenv python=${PYVER} root=6.16.00;
-    elif [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" ]; then
-      conda create -q -n testenv python=${PYVER} root;
-    elif [[ "${PYVER}" = pypy* ]]; then
+  - if [[ "${PYVER}" = pypy* ]]; then
       conda create -q -n testenv ${PYVER};
     else
       conda create -q -n testenv python=${PYVER};
     fi
   - source activate testenv
+  - if [ "${PYVER}" = "2.7" ] || [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" ]; then
+      conda install root;
+    fi
   - pip install --upgrade setuptools_scm
   - pip install $NPY
   - if [[ $TRAVIS_PYTHON_VERSION = pypy* ]] ; then pip install "numpy<1.16.0" ; fi       # FIXME: pypy bug in numpy
