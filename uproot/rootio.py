@@ -1323,6 +1323,13 @@ class TArray(list, ROOTStreamedObject):
         return self
     _format = struct.Struct(">i")
 
+    @property
+    def nbytes(self):
+        return len(self) * self._dtype.itemsize
+
+    def tostring(self):
+        return numpy.asarray(self, dtype=self._dtype).tostring()
+
 class TArrayC(TArray):
     _dtype = numpy.dtype(">i1")
 
