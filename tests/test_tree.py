@@ -624,20 +624,9 @@ class Test(unittest.TestCase):
         known_branches_without_interp = [
             b'event',
             b'TObject',
-            b'fMatrix[4][4]',
             b'fClosestDistance',
             b'fEvtHdr',
             b'fTracks',
-            b'fTracks.fMass2',
-            b'fTracks.fBx',
-            b'fTracks.fBy',
-            b'fTracks.fXfirst',
-            b'fTracks.fXlast',
-            b'fTracks.fYfirst',
-            b'fTracks.fYlast',
-            b'fTracks.fZfirst',
-            b'fTracks.fZlast',
-            b'fTracks.fVertex[3]',
             b'fTracks.fPointValue',
             b'fTriggerBits',
             b'fTriggerBits.TObject'
@@ -645,8 +634,19 @@ class Test(unittest.TestCase):
         tree = uproot.open("http://scikit-hep.org/uproot/examples/Event.root")["T"]
         branches_without_interp = [b.name for b in tree.allvalues() if b.interpretation is None]
         assert branches_without_interp == known_branches_without_interp
-        assert tree.array("fTracks.fTArray[3]", entrystop=10)[5][10].tolist() == [11.03951644897461, 19.40645980834961, 34.54059982299805]
-        assert tree.array("fTracks.fCharge", entrystop=10)[0][0:10].tolist() == [1.0, 1.0, 1.0, 1.0,-1.0, 0.0, 1.0, 0.0, 0.0, 0.0]
+        assert tree.array("fTracks.fTArray[3]", entrystop=10)[5][10].tolist()  == [11.03951644897461, 19.40645980834961, 34.54059982299805]
+        assert tree.array("fTracks.fCharge", entrystop=10)[0][0:10].tolist()   == [1.0, 1.0, 1.0, 1.0,-1.0, 0.0, 1.0, 0.0, 0.0, 0.0]
+        assert tree.array("fMatrix[4][4]", entrystop=10)[0][1].tolist()        == [-0.13630907237529755, 0.8007842898368835, 1.706235647201538, 0.0]
+        assert tree.array("fTracks.fMass2", entrystop=10)[3][330:333].tolist() == [8.90625, 8.90625, 8.90625]
+        assert tree.array("fTracks.fBx", entrystop=10)[9][10:13].tolist()      == [0.12298583984375, -0.2489013671875, -0.189697265625]
+        assert tree.array("fTracks.fBy", entrystop=10)[9][10:13].tolist()      == [0.1998291015625, -0.0301513671875, 0.0736083984375]
+        assert tree.array("fTracks.fXfirst", entrystop=10)[1][11:16].tolist()  == [-8.650390625, -2.8203125, -1.949951171875, 0.4859619140625, 3.0146484375]
+        assert tree.array("fTracks.fXlast", entrystop=10)[1][11:16].tolist()   == [-2.18994140625, -2.64697265625, -8.4375, 1.594970703125, 6.40234375]
+        assert tree.array("fTracks.fYfirst", entrystop=10)[2][22:26].tolist()  == [4.9921875, 8.46875, 1.679443359375, -6.927734375]
+        assert tree.array("fTracks.fYlast", entrystop=10)[2][22:26].tolist()   == [-5.76171875, 13.7109375, 2.98583984375, -9.466796875]
+        assert tree.array("fTracks.fZfirst", entrystop=10)[3][33:36].tolist()  == [53.84375, 52.3125, 48.296875]
+        assert tree.array("fTracks.fZlast", entrystop=10)[3][33:36].tolist()   == [193.96875, 208.25, 228.40625]
+        assert tree.array("fTracks.fVertex[3]", entrystop=10)[1][2].tolist()   == [0.245361328125, 0.029296875,-16.171875]
 
     def test_leaflist(self):
         tree = uproot.open("tests/samples/leaflist.root")["tree"]
@@ -665,3 +665,11 @@ class Test(unittest.TestCase):
             tree = uproot.open("tests/samples/HZZ-objects.root")["events"]
             tree.pandas.df("muonp4")
             tree.pandas.df("muonp4", flatten=False)
+            df = tree.pandas.df("eventweight", entrystart=100, entrystop=200)
+            index = df.index.tolist()
+            assert min(index) == 100
+            assert max(index) == 199
+            df = tree.pandas.df("muonp4", entrystart=100, entrystop=200)
+            index = df.index.get_level_values("entry").tolist()
+            assert min(index) == 100
+            assert max(index) == 199

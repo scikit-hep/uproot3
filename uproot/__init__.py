@@ -164,6 +164,8 @@ from uproot.interp.objects import STLMap
 from uproot.interp.objects import STLString
 asdebug = asjagged(asdtype("u1"))
 
+from uproot import pandas
+
 # put help strings on everything (they're long, too disruptive to intersperse
 # in the code, and are built programmatically to avoid duplication; Python's
 # inline docstring method doesn't accept non-literals)
@@ -175,4 +177,4 @@ from uproot.version import __version__
 # don't expose uproot.uproot; it's ugly
 del uproot
 
-__all__ = ["open", "xrootd", "http", "iterate", "numentries", "lazyarray", "lazyarrays", "daskarray", "daskarrays", "daskframe", "create", "recreate", "update", "MemmapSource", "FileSource", "XRootDSource", "HTTPSource", "interpret", "asdtype", "asarray", "asdouble32", "asstlbitset", "asjagged", "astable", "asobj", "asgenobj", "asstring", "asdebug", "SimpleArray", "STLVector", "STLMap", "STLString", "__version__"]
+__all__ = ["open", "xrootd", "http", "iterate", "numentries", "lazyarray", "lazyarrays", "daskarray", "daskarrays", "daskframe", "create", "recreate", "update", "MemmapSource", "FileSource", "XRootDSource", "HTTPSource", "interpret", "asdtype", "asarray", "asdouble32", "asstlbitset", "asjagged", "astable", "asobj", "asgenobj", "asstring", "asdebug", "SimpleArray", "STLVector", "STLMap", "STLString", "pandas", "__version__"]

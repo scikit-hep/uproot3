@@ -114,9 +114,26 @@ def iterate(path, treepath, branches=None, entrysteps=None, outputtype=dict, nam
     awkward = _normalize_awkwardlib(awkwardlib)
     for tree, newbranches, globalentrystart, thispath, thisfile in _iterate(path, treepath, branches, awkward, localsource, xrootdsource, httpsource, **options):
         for start, stop, arrays in tree.iterate(branches=newbranches, entrysteps=entrysteps, outputtype=outputtype, namedecode=namedecode, reportentries=True, entrystart=0, entrystop=tree.numentries, flatten=flatten, flatname=flatname, awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking):
+
             if getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame":
-                index = awkward.numpy.frombuffer(arrays.index.data, dtype=arrays.index.dtype)
-                awkward.numpy.add(index, globalentrystart, index)
+                if type(arrays.index).__name__ == "MultiIndex":
+                    if hasattr(arrays.index.levels[0], "array"):
+                        index = arrays.index.levels[0].array   # pandas>=0.24.0
+                    else:
+                        index = arrays.index.levels[0].values  # pandas<0.24.0
+                    awkward.numpy.add(index, globalentrystart, out=index)
+
+                elif type(arrays.index).__name__ == "RangeIndex":
+                    arrays.index._start += globalentrystart
+                    arrays.index._stop += globalentrystart
+
+                else:
+                    if hasattr(arrays.index, "array"):
+                        index = arrays.index.array             # pandas>=0.24.0
+                    else:
+                        index = arrays.index.values            # pandas<0.24.0
+                    awkward.numpy.add(index, globalentrystart, out=index)
+
             out = (arrays,)
             if reportentries:
                 out = (globalentrystart + start, globalentrystart + stop) + out
@@ -519,6 +536,9 @@ class TTreeMethods(object):
     def iterate(self, branches=None, entrysteps=None, outputtype=dict, namedecode=None, reportentries=False, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
 
+        # for the case of outputtype == pandas.DataFrame, do some preparation to fill DataFrames efficiently
+        ispandas = getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame"
+
         if entrysteps is None:
             entrysteps = self.clusters(branches, entrystart=entrystart, entrystop=entrystop, strict=False)
 
@@ -561,7 +581,7 @@ class TTreeMethods(object):
                 if cache is not None:
                     cache[cachekey] = out
                 if flatten and isinstance(interpretation, asjagged):
-                    return out.content
+                    return out.flatten()
                 elif pythonize:
                     return list(out)
                 else:
@@ -571,15 +591,22 @@ class TTreeMethods(object):
             outputtype = namedtuple("Arrays", [codecs.ascii_decode(branch.name, "replace")[0] if namedecode is None else branch.name.decode(namedecode) for branch, interpretation in branches])
             def wrap_for_python_scope(futures, start, stop):
                 return lambda: outputtype(*[evaluate(branch, interpretation, future, past, cachekey, False) for branch, interpretation, future, past, cachekey in futures])
-        elif getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame":
+
+        elif ispandas:
+            import uproot._connect.to_pandas
             def wrap_for_python_scope(futures, start, stop):
-                return lambda: outputtype(data=OrderedDict((branch.name if namedecode is None else branch.name.decode(namedecode), evaluate(branch, interpretation, future, past, cachekey, isinstance(interpretation, asjagged))) for branch, interpretation, future, past, cachekey in futures), index=awkward.numpy.arange(start, stop))
+                def wrap_again(branch, interpretation, future):
+                    return lambda: interpretation.finalize(future(), branch)
+                return lambda: uproot._connect.to_pandas.futures2df([(branch.name, interpretation, wrap_again(branch, interpretation, future)) for branch, interpretation, future, past, cachekey in futures], outputtype, start, stop, flatten, flatname, awkward)
+
         elif isinstance(outputtype, type) and issubclass(outputtype, dict):
             def wrap_for_python_scope(futures, start, stop):
                 return lambda: outputtype((branch.name if namedecode is None else branch.name.decode(namedecode), evaluate(branch, interpretation, future, past, cachekey, False)) for branch, interpretation, future, past, cachekey in futures)
+
         elif isinstance(outputtype, type) and issubclass(outputtype, (list, tuple)):
             def wrap_for_python_scope(futures, start, stop):
                 return lambda: outputtype(evaluate(branch, interpretation, future, past, cachekey, False) for branch, interpretation, future, past, cachekey in futures)
+
         else:
             def wrap_for_python_scope(futures, start, stop):
                 return lambda: outputtype(*[evaluate(branch, interpretation, future, past, cachekey, False) for branch, interpretation, future, past, cachekey in futures])
