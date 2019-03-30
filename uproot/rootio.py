@@ -1323,75 +1323,33 @@ class TArray(list, ROOTStreamedObject):
         return self
     _format = struct.Struct(">i")
 
-class TArrayC(TArray):
-    _dtype = numpy.dtype(">i1")
-
     @property
     def nbytes(self):
         return len(self) * self._dtype.itemsize
 
     def tostring(self):
-        return numpy.asarray(self, dtype=">i1").tostring()
+        return numpy.asarray(self, dtype=self._dtype).tostring()
+
+class TArrayC(TArray):
+    _dtype = numpy.dtype(">i1")
 
 class TArrayS(TArray):
     _dtype = numpy.dtype(">i2")
 
-    @property
-    def nbytes(self):
-        return len(self) * self._dtype.itemsize
-
-    def tostring(self):
-        return numpy.asarray(self, dtype=">i2").tostring()
-
 class TArrayI(TArray):
     _dtype = numpy.dtype(">i4")
-
-    @property
-    def nbytes(self):
-        return len(self) * self._dtype.itemsize
-
-    def tostring(self):
-        return numpy.asarray(self, dtype=">i4").tostring()
 
 class TArrayL(TArray):
     _dtype = numpy.dtype(numpy.int_).newbyteorder(">")
 
-    @property
-    def nbytes(self):
-        return len(self) * self._dtype.itemsize
-
-    def tostring(self):
-        return numpy.asarray(self, dtype=">i8").tostring()
-
 class TArrayL64(TArray):
     _dtype = numpy.dtype(">i8")
-
-    @property
-    def nbytes(self):
-        return len(self) * self._dtype.itemsize
-
-    def tostring(self):
-        return numpy.asarray(self, dtype=">i8").tostring()
 
 class TArrayF(TArray):
     _dtype = numpy.dtype(">f4")
 
-    @property
-    def nbytes(self):
-        return len(self) * self._dtype.itemsize
-
-    def tostring(self):
-        return numpy.asarray(self, dtype=">f4").tostring()
-
 class TArrayD(TArray):
     _dtype = numpy.dtype(">f8")
-
-    @property
-    def nbytes(self):
-        return len(self) * self._dtype.itemsize
-
-    def tostring(self):
-        return numpy.asarray(self, dtype=">f8").tostring()
 
 # FIXME: I want to generalize this. It's the first example of a class that doesn't
 # follow the usual pattern. The full 11 bytes are
