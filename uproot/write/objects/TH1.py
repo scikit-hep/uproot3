@@ -75,19 +75,14 @@ class TH1(object):
             raise NotImplementedError(self.fClassName)
         elif self.fClassName == b"TH2C":
             self.valuesarray = numpy.array(self.values, dtype=">i1")
-            raise NotImplementedError(self.fClassName)
         elif self.fClassName == b"TH2S":
             self.valuesarray = numpy.array(self.values, dtype=">i2")
-            raise NotImplementedError(self.fClassName)
         elif self.fClassName == b"TH2I":
             self.valuesarray = numpy.array(self.values, dtype=">i4")
-            raise NotImplementedError(self.fClassName)
         elif self.fClassName == b"TH2F":
             self.valuesarray = numpy.array(self.values, dtype=">f4")
-            raise NotImplementedError(self.fClassName)
         elif self.fClassName == b"TH2D":
             self.valuesarray = numpy.array(self.values, dtype=">f8")
-            raise NotImplementedError(self.fClassName)
         elif self.fClassName == b"TProfile2D":
             raise NotImplementedError(self.fClassName)
         elif self.fClassName == b"TH3C":
@@ -110,7 +105,12 @@ class TH1(object):
         else:
             raise ValueError("unrecognized histogram class name {0}".format(self.fClassName))
 
-        self.fields["_fNcells"] = len(self.valuesarray)
+        if self.fClassName.decode("utf-8").find("TH2") != -1:
+            self.fields["_fScalefactor"] = 1.0
+            self.fields["_fTsumwy"] = 0.0
+            self.fields["_fTsumwy2"] = 0.0
+            self.fields["_fTsumwxy"] = 0.0
+        self.fields["_fNcells"] = self.valuesarray.size
         self.fields["_fContour"] = numpy.array(self.fields["_fContour"], dtype=">f8", copy=False)
         self.fields["_fSumw2"] = numpy.array(self.fields["_fSumw2"], dtype=">f8", copy=False)
 
@@ -319,6 +319,7 @@ class TH1(object):
     _format_th1_1 = struct.Struct(">i")
     _format_th1_2 = struct.Struct(">hhdddddddd")
     _format_th1_3 = struct.Struct(">iBii")
+    _format_th1_4 = struct.Struct(">dddd")
     def write_th1(self, cursor, sink, name):
         cnt = numpy.int64(self.length_th1(name) - 4) | uproot.const.kByteCountMask
         vers = 8
@@ -353,6 +354,11 @@ class TH1(object):
                             0,     # FIXME: empty fBuffer
                             self.fields["_fBinStatErrOpt"],
                             self.fields["_fStatOverflows"])
+        cursor.write_fields(sink, self._format_th1_4,
+                            self.fields["_fScalefactor"],
+                            self.fields["_fTsumwy"],
+                            self.fields["_fTsumwy2"],
+                            self.fields["_fTsumwxy"])
     def length_th1(self, name):
         return (self.length_tnamed(name, self.fTitle) +
                 self.length_tattline() +
@@ -367,7 +373,7 @@ class TH1(object):
                 self.length_tarray(self.fields["_fSumw2"]) +
                 uproot.write.sink.cursor.Cursor.length_string(self.fields["_fOption"]) +
                 self.length_tlist(self.fields["_fFunctions"]) +
-                self._format_th1_3.size +
+                self._format_th1_3.size + self._format_th1_4.size +
                 6)
 
     def write(self, cursor, sink, name):
