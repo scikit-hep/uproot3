@@ -53,7 +53,7 @@ from uproot.interp.objects import STLString
 class _NotNumerical(Exception): pass
 
 def _normalize_ftype(fType):
-    if uproot.const.kOffsetL < fType < uproot.const.kOffsetP:
+    if fType is not None and uproot.const.kOffsetL < fType < uproot.const.kOffsetP:
         return fType - uproot.const.kOffsetL
     else:
         return fType
