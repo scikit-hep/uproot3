@@ -319,7 +319,7 @@ class TH1(object):
     _format_th1_1 = struct.Struct(">i")
     _format_th1_2 = struct.Struct(">hhdddddddd")
     _format_th1_3 = struct.Struct(">iBii")
-    _format_th1_4 = struct.Struct(">dddd")
+
     def write_th1(self, cursor, sink, name):
         cnt = numpy.int64(self.length_th1(name) - 4) | uproot.const.kByteCountMask
         vers = 8
@@ -354,11 +354,18 @@ class TH1(object):
                             0,     # FIXME: empty fBuffer
                             self.fields["_fBinStatErrOpt"],
                             self.fields["_fStatOverflows"])
-        cursor.write_fields(sink, self._format_th1_4,
-                            self.fields["_fScalefactor"],
+
+    _format_th2_1 = struct.Struct(">dddd")
+    def write_th2(self, cursor, sink, name):
+        cnt = numpy.int64(self.length_th2(name) - 4) | uproot.const.kByteCountMask
+        vers = 4
+        cursor.write_fields(sink, self._format_cntvers, cnt, vers)
+        self.write_th1(cursor, sink, name)
+        cursor.write_fields(sink, self._format_th2_1, self.fields["_fScalefactor"],
                             self.fields["_fTsumwy"],
                             self.fields["_fTsumwy2"],
                             self.fields["_fTsumwxy"])
+
     def length_th1(self, name):
         return (self.length_tnamed(name, self.fTitle) +
                 self.length_tattline() +
@@ -373,14 +380,21 @@ class TH1(object):
                 self.length_tarray(self.fields["_fSumw2"]) +
                 uproot.write.sink.cursor.Cursor.length_string(self.fields["_fOption"]) +
                 self.length_tlist(self.fields["_fFunctions"]) +
-                self._format_th1_3.size + self._format_th1_4.size +
-                6)
+                self._format_th1_3.size + 6)
+
+    def length_th2(self, name):
+        return self.length_th1(name) + self._format_th2_1.size
 
     def write(self, cursor, sink, name):
         cnt = numpy.int64(self.length(name) - 4) | uproot.const.kByteCountMask
-        vers = 2
-        cursor.write_fields(sink, self._format_cntvers, cnt, vers)
-        self.write_th1(cursor, sink, name)
+        if self.fClassName.decode("utf-8").find("TH1") != -1:
+            vers = 2
+            cursor.write_fields(sink, self._format_cntvers, cnt, vers)
+            self.write_th1(cursor, sink, name)
+        elif self.fClassName.decode("utf-8").find("TH2") != -1:
+            vers = 3
+            cursor.write_fields(sink, self._format_cntvers, cnt, vers)
+            self.write_th2(cursor, sink, name)
         self.write_tarray(cursor, sink, self.valuesarray)
 
     def length(self, name):
