@@ -90,7 +90,7 @@ def test_th2(tmp_path):
     binsx = np.array([1.0, 3.0, 4.0, 10.0, 11.0, 12.0], dtype="float64")
     binsy = np.array([1.0, 3.0, 4.0, 10.0, 11.0, 12.0, 20.0], dtype="float64")
     f = ROOT.TFile.Open(testfile, "RECREATE")
-    h = ROOT.TH1F("hvar", "title", 5, binsx, 6, binsy)
+    h = ROOT.TH2F("hvar", "title", 5, binsx, 6, binsy)
     f.Write()
     f.Close()
 
