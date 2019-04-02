@@ -51,7 +51,7 @@ class TH1(object):
 
         self.fZaxis = self.emptyaxis("zaxis", 1.0)
         if hasattr(histogram, "_fZaxis"):
-            self.fYaxis.update(histogram._fZaxis.__dict__)
+            self.fZaxis.update(histogram._fZaxis.__dict__)
         self.fixaxis(self.fZaxis)
 
         self.values = histogram.allvalues
