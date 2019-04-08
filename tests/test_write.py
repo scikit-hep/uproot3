@@ -86,6 +86,35 @@ def test_th2(tmp_path):
     filename = join(str(tmp_path), "example.root")
     testfile = join(str(tmp_path), "test.root")
 
+    f = ROOT.TFile.Open(testfile, "RECREATE")
+    h = ROOT.TH2F("hvar", "title", 5, 1, 10, 6, 1, 20)
+    h.Sumw2()
+    h.Fill(1.0, 5.0, 3)
+    h.Fill(2.0, 10.0, 4)
+    h.Write()
+    f.Close()
+
+    t = uproot.open(testfile)
+    hist = t["hvar"]
+    with uproot.recreate(filename) as f:
+        f["test"] = hist
+
+    f = ROOT.TFile.Open(filename)
+    h = f.Get("test")
+    sums = [0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 9.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 16.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0]
+    count = 0
+    for sum in h.GetSumw2():
+        assert sum == sums[count]
+        count += 1
+    assert h.GetMean() == 1.5714285714285714
+    assert h.GetRMS() == 0.4948716593053938
+    assert h.GetNbinsX() == 5
+    assert h.GetNbinsY() == 6
+
+def test_th2_varbin(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+    testfile = join(str(tmp_path), "test.root")
+
     import numpy as np
     binsx = np.array([1.0, 3.0, 4.0, 10.0, 11.0, 12.0], dtype="float64")
     binsy = np.array([1.0, 3.0, 4.0, 10.0, 11.0, 12.0, 20.0], dtype="float64")
