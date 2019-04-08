@@ -383,19 +383,22 @@ class TH1(object):
                 self._format_th1_3.size + 6)
 
     def length_th2(self, name):
-        return self.length_th1(name) + self._format_th2_1.size
+        return self.length_th1(name) + self._format_th2_1.size + 6
 
     def write(self, cursor, sink, name):
         cnt = numpy.int64(self.length(name) - 4) | uproot.const.kByteCountMask
-        if self.fClassName.decode("utf-8").find("TH1") != -1:
+        if "TH1" in self.fClassName.decode("utf-8"):
             vers = 2
             cursor.write_fields(sink, self._format_cntvers, cnt, vers)
             self.write_th1(cursor, sink, name)
-        elif self.fClassName.decode("utf-8").find("TH2") != -1:
+        elif "TH2" in self.fClassName.decode("utf-8"):
             vers = 3
             cursor.write_fields(sink, self._format_cntvers, cnt, vers)
             self.write_th2(cursor, sink, name)
         self.write_tarray(cursor, sink, self.valuesarray)
 
     def length(self, name):
-        return self.length_th1(name) + self.length_tarray(self.valuesarray) + 6
+        if "TH1" in self.fClassName.decode("utf-8"):
+            return self.length_th1(name) + self.length_tarray(self.valuesarray) + 6
+        elif "TH2" in self.fClassName.decode("utf-8"):
+            return self.length_th2(name) + self.length_tarray(self.valuesarray) + 6
