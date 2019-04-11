@@ -114,7 +114,7 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
                     interpretation = interpretation.content
 
                 # justifies the assumption that array.content == array.flatten() and array.stops.max() == array.stops[-1]
-                assert array._canuseoffset() and (len(array.starts) == 0 or array.starts[0] == 0)
+                assert len(array.starts) == 0 or ((array.offsetsaliased(array.starts, array.stops) or (len(array.starts.shape) == 1 and array.numpy.array_equal(array.starts[1:], array.stops[:-1]))) and array.starts[0] == 0)
 
                 if starts is None:
                     starts = array.starts
@@ -137,7 +137,7 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
             interpretations.append(interpretation)
             arrays.append(array)
 
-        index = pandas.MultiIndex.from_arrays([index._broadcast(numpy.arange(entrystart, entrystop, dtype=numpy.int64)).content, index.content], names=["entry", "subentry"])
+        index = pandas.MultiIndex.from_arrays([index.tojagged(numpy.arange(entrystart, entrystop, dtype=numpy.int64)).content, index.content], names=["entry", "subentry"])
 
         df = outputtype(index=index)
 
@@ -153,13 +153,13 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
 
                     if isinstance(array, awkwardbase.Table):
                         for nn in array.columns:
-                            array[nn] = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=array[nn].dtype))._broadcast(array[nn]).content
+                            array[nn] = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=array[nn].dtype)).tojagged(array[nn]).content
 
                     else:
                         if len(originaldims) != 0:
                             array = array.view(awkward.numpy.dtype([(str(i), array.dtype) for i in range(functools.reduce(operator.mul, array.shape[1:]))])).reshape(array.shape[0])
 
-                        array = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=array.dtype))._broadcast(array).content
+                        array = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=array.dtype)).tojagged(array).content
                         if len(originaldims) != 0:
                             array = array.view(originaldtype).reshape((-1,) + originaldims)
 
@@ -189,7 +189,7 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
                 array = awkward.numpy.array(array, dtype=object)
                 indexes = numpy.arange(len(array))
 
-                indexes = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=object))._broadcast(indexes).content
+                indexes = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=object)).tojagged(indexes).content
 
                 array = array[indexes]
 

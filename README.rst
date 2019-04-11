@@ -61,8 +61,8 @@ Strict dependencies:
 --------------------
 
 - `numpy <https://scipy.org/install.html>`__ (1.13.1+)
-- `awkward-array <https://github.com/scikit-hep/awkward-array>`__ (0.8.0+)
-- `uproot-methods <https://github.com/scikit-hep/uproot-methods>`__ (0.4.0+)
+- `awkward-array <https://github.com/scikit-hep/awkward-array>`__ (0.9.0+)
+- `uproot-methods <https://github.com/scikit-hep/uproot-methods>`__ (0.5.0+)
 - `cachetools <https://pypi.org/project/cachetools>`__
 
 Optional dependencies:
