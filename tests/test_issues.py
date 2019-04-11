@@ -177,6 +177,7 @@ class Test(unittest.TestCase):
             t = uproot.open("tests/samples/issue232.root")["fTreeV0"]
             t.pandas.df(["V0Hyper.fNsigmaHe3Pos", "V0Hyper.fDcaPos2PrimaryVertex"], flatten=True)
 
+    @pytest.mark.skip(reason="This one takes way too long (eospublic?).")
     def test_issue240(self):
         try:
             import pyxrootd
