@@ -319,7 +319,6 @@ class TH1(object):
     _format_th1_1 = struct.Struct(">i")
     _format_th1_2 = struct.Struct(">hhdddddddd")
     _format_th1_3 = struct.Struct(">iBii")
-
     def write_th1(self, cursor, sink, name):
         cnt = numpy.int64(self.length_th1(name) - 4) | uproot.const.kByteCountMask
         vers = 8
@@ -380,7 +379,8 @@ class TH1(object):
                 self.length_tarray(self.fields["_fSumw2"]) +
                 uproot.write.sink.cursor.Cursor.length_string(self.fields["_fOption"]) +
                 self.length_tlist(self.fields["_fFunctions"]) +
-                self._format_th1_3.size + 6)
+                self._format_th1_3.size +
+                6)
 
     def length_th2(self, name):
         return self.length_th1(name) + self._format_th2_1.size + 6
