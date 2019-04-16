@@ -12,7 +12,7 @@ ROOT = pytest.importorskip("ROOT")
 def test_strings(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    with uproot.recreate(filename) as f:
+    with uproot.recreate(filename, compressionAlgorithm=0, compressionLevel=0) as f:
         f["hello"] = "world"
 
     f = ROOT.TFile.Open(filename)
@@ -22,7 +22,7 @@ def test_strings(tmp_path):
 def test_cycle(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    with uproot.recreate(filename) as f:
+    with uproot.recreate(filename, compressionAlgorithm=0, compressionLevel=0) as f:
         f["hello"] = "world"
         f["hello"] = "uproot"
 
@@ -44,7 +44,7 @@ def test_th1_varbin(tmp_path):
 
     t = uproot.open(testfile)
     hist = t["hvar"]
-    with uproot.recreate(filename) as f:
+    with uproot.recreate(filename, compressionAlgorithm=0, compressionLevel=0) as f:
         f["test"] = hist
 
     f = ROOT.TFile.Open(filename)
@@ -55,3 +55,23 @@ def test_th1_varbin(tmp_path):
     assert h.GetBinWidth(3) == 6.0
     assert h.GetBinWidth(4) == 1.0
     assert h.GetBinWidth(5) == 1.0
+
+def test_zlib(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    with uproot.recreate(filename, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=1) as f:
+        f["hello"] = "world"
+
+    f = ROOT.TFile.Open(filename)
+    assert str(f.Get("hello")) == "world"
+    f.Close()
+
+def test_lzma(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    with uproot.recreate(filename, compressionAlgorithm=uproot.const.kLZMA, compressionLevel=1) as f:
+        f["hello"] = "world"
+
+    f = ROOT.TFile.Open(filename)
+    assert str(f.Get("hello")) == "world"
+    f.Close()
