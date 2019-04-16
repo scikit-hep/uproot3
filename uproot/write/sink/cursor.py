@@ -67,6 +67,9 @@ class Cursor(object):
         self.update_data(sink, data)
         self.index += len(data)
 
+    def return_array(self, data):
+        return data.tostring()
+
     def update_array(self, sink, data):
         sink.write(data.tostring(), self.index)
 

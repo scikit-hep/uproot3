@@ -23,7 +23,6 @@ class TObjString(object):
     _format = struct.Struct(">IHHII")
 
     def write(self, context, cursor, name, algorithm, level, key, keycursor):
-        sink = context._sink
         cnt = numpy.int64(self.length(name) - 4) | uproot.const.kByteCountMask
         vers = 1
         givenbytes = cursor.return_fields(self._format, cnt, vers, 1, 0, uproot.const.kNotDeleted) + cursor.return_string(self.value)

@@ -71,6 +71,8 @@ def write_compressed(context, cursor, givenbytes, algorithm, level, key, keycurs
         else:
             cursor.write_data(context._sink, givenbytes)
             return key.fNbytes
+    elif algorithm == b"CS":
+        raise ValueError("unsupported compression algorithm: 'old' (according to ROOT comments, hasn't been used in 20+ years!)")
     else:
         raise ValueError("Unrecognized compression algorithm: {0}".format(algorithm))
     return fNbytes
