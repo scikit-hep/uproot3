@@ -18,6 +18,7 @@ import uproot.write.TKey
 import uproot.write.TDirectory
 import uproot.write.streamers
 from uproot.rootio import nofilter
+from uproot.write.compress import write_compressed
 
 class TFileUpdate(object):
     def __init__(self, path):
@@ -274,12 +275,7 @@ class TFileRecreate(TFileUpdate):
         streamerkey.write(cursor, self._sink)
 
         algorithm, level = self.getcompression()
-        fNbytes = streamerkey.fNbytes
-        if level > 0:
-            from uproot.write.compress import write_compressed
-            fNbytes = write_compressed(self, cursor, uproot.write.streamers.streamers, algorithm, level, streamerkey, streamerkeycursor)
-        else:
-            cursor.write_data(self._sink, uproot.write.streamers.streamers)
+        fNbytes = write_compressed(self, cursor, uproot.write.streamers.streamers, algorithm, level, streamerkey, streamerkeycursor)
 
         self._fNbytesInfo = fNbytes
         self._nbytescursor.update_fields(self._sink, self._format_nbytesinfo, self._fNbytesInfo)
