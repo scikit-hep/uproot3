@@ -31,33 +31,47 @@ env:
   - PYVER=pypy3.5 NPY="numpy>=1.15"
 
 install:
+  # Install conda
   - wget -nv http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
   - conda config --add channels conda-forge;
+  - conda install --quiet --yes -c conda-forge/label/mamba-alpha mamba
   - conda config --set always_yes yes --set changeps1 no
-  - if [ "${PYVER}" = "2.7" ] || [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" ]; then
-      conda create -q -n testenv python=${PYVER} root;
-    elif [[ "${PYVER}" = pypy* ]]; then
-      conda create -q -n testenv ${PYVER};
+  # Create the conda testing environment
+  # FIXME: Mamba decides to upgrade Python here so pin it again
+  # FIXME: Channel priority is also mixed up
+  # FIXME: Mamba doesn't install pip by default
+  # FIXME: Mamba causes pip install numpy to be extremely slow
+  - if [[ "${PYVER}" = pypy* ]]; then
+      conda create --quiet --yes -n testenv ${PYVER};
+    elif [ "${PYVER}" = "2.7" ] || [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" ]; then
+      mamba create --quiet --yes -n testenv python=${PYVER} pip;
     else
-      conda create -q -n testenv python=${PYVER};
+      conda create --quiet --yes -n testenv python=${PYVER};
     fi
   - source activate testenv
+  - if [ "${PYVER}" = "2.7" ] || [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" ]; then
+      mamba install --quiet --yes python=${PYVER} pip root;
+      source activate testenv;
+    fi
   - pip install --upgrade setuptools_scm
   - pip install $NPY
-  - if [[ $TRAVIS_PYTHON_VERSION = pypy* ]] ; then pip install "numpy<1.16.0" ; fi       # FIXME: pypy bug in numpy
   - python -c 'import numpy; print(numpy.__version__)'
-  - pip install "awkward>=0.7.0"
+  - pip install "awkward>=0.9.0"
   - python -c 'import awkward; print(awkward.__version__)'
-  - pip install "uproot-methods>=0.3.0"
+  - pip install "uproot-methods>=0.5.0"
   - python -c 'import uproot_methods; print(uproot_methods.__version__)'
   - pip install cachetools pkgconfig lz4 mock requests "pytest>=3.9" pytest-runner
   - pip install lz4 requests
-  - if [[ $TRAVIS_PYTHON_VERSION = "2.7" ]] ; then pip install backports.lzma ; fi
-  - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install pandas ; fi
-  - conda install -c anaconda pyopenssl     # for deployment
+  - if [[ ${PYVER} = "2.7" ]] ; then pip install backports.lzma ; fi
+  - pip install pandas
+  # FIXME: Mamba decides to upgrade Python here so pin it again
+  # pyopenssl is for deployment
+  - if [[ ${PYVER} != pypy* ]] ; then
+      mamba install -c anaconda python=${PYVER} pyopenssl;
+    fi
 
 addons:
   apt:

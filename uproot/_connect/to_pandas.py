@@ -1,32 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2019, IRIS-HEP
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-# * Redistributions of source code must retain the above copyright notice, this
-#   list of conditions and the following disclaimer.
-#
-# * Redistributions in binary form must reproduce the above copyright notice,
-#   this list of conditions and the following disclaimer in the documentation
-#   and/or other materials provided with the distribution.
-#
-# * Neither the name of the copyright holder nor the names of its
-#   contributors may be used to endorse or promote products derived from
-#   this software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
 import itertools
 import functools
@@ -36,19 +10,28 @@ import numpy
 
 import awkward as awkwardbase
 
+import uproot.tree
 import uproot.interp.numerical
 from uproot.interp.jagged import asjagged
 from uproot.interp.numerical import asdtype
 from uproot.interp.objects import asobj
 from uproot.interp.objects import astable
 
+from uproot.source.memmap import MemmapSource
+from uproot.source.xrootd import XRootDSource
+from uproot.source.http import HTTPSource
+
 class TTreeMethods_pandas(object):
     def __init__(self, tree):
         self._tree = tree
 
-    def df(self, branches=None, namedecode="utf-8", entrystart=None, entrystop=None, flatten=True, flatname=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+    def df(self, branches=None, namedecode="utf-8", entrystart=None, entrystop=None, flatten=True, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         import pandas
-        return self._tree.arrays(branches=branches, outputtype=pandas.DataFrame, namedecode=namedecode, entrystart=entrystart, entrystop=entrystop, flatten=flatten, flatname=flatname, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
+        return self._tree.arrays(branches=branches, outputtype=pandas.DataFrame, namedecode=namedecode, entrystart=entrystart, entrystop=entrystop, flatten=flatten, flatname=flatname, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
+
+    def iterate(self, branches=None, entrysteps=None, namedecode="utf-8", entrystart=None, entrystop=None, flatten=True, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+        import pandas
+        return self._tree.iterate(branches=branches, entrysteps=entrysteps, outputtype=pandas.DataFrame, namedecode=namedecode, reportentries=False, entrystart=entrystart, entrystop=entrystop, flatten=flatten, flatname=flatname, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
 
 def default_flatname(branchname, fieldname, index):
     out = branchname
@@ -131,7 +114,7 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
                     interpretation = interpretation.content
 
                 # justifies the assumption that array.content == array.flatten() and array.stops.max() == array.stops[-1]
-                assert array._canuseoffset() and len(array.starts) > 0 and array.starts[0] == 0
+                assert len(array.starts) == 0 or ((array.offsetsaliased(array.starts, array.stops) or (len(array.starts.shape) == 1 and array.numpy.array_equal(array.starts[1:], array.stops[:-1]))) and array.starts[0] == 0)
 
                 if starts is None:
                     starts = array.starts
@@ -141,7 +124,10 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
                     if starts is not array.starts and not awkward.numpy.array_equal(starts, array.starts):
                         raise ValueError("cannot use flatten=True on branches with different jagged structure, such as electrons and muons (different, variable number of each per event); either explicitly select compatible branches, such as [\"MET_*\", \"Muon_*\"] (scalar and variable per event is okay), or set flatten=False")
 
-                array = array.content
+                if len(array.starts) == 0:
+                    array = array.content[0:0]
+                else:
+                    array = array.content
                 needbroadcasts.append(False)
 
             else:
@@ -151,7 +137,7 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
             interpretations.append(interpretation)
             arrays.append(array)
 
-        index = pandas.MultiIndex.from_arrays([index._broadcast(numpy.arange(entrystart, entrystop, dtype=numpy.int64)).content, index.content], names=["entry", "subentry"])
+        index = pandas.MultiIndex.from_arrays([index.tojagged(numpy.arange(entrystart, entrystop, dtype=numpy.int64)).content, index.content], names=["entry", "subentry"])
 
         df = outputtype(index=index)
 
@@ -167,13 +153,13 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
 
                     if isinstance(array, awkwardbase.Table):
                         for nn in array.columns:
-                            array[nn] = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=array[nn].dtype))._broadcast(array[nn]).content
+                            array[nn] = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=array[nn].dtype)).tojagged(array[nn]).content
 
                     else:
                         if len(originaldims) != 0:
                             array = array.view(awkward.numpy.dtype([(str(i), array.dtype) for i in range(functools.reduce(operator.mul, array.shape[1:]))])).reshape(array.shape[0])
 
-                        array = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=array.dtype))._broadcast(array).content
+                        array = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=array.dtype)).tojagged(array).content
                         if len(originaldims) != 0:
                             array = array.view(originaldtype).reshape((-1,) + originaldims)
 
@@ -203,7 +189,7 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
                 array = awkward.numpy.array(array, dtype=object)
                 indexes = numpy.arange(len(array))
 
-                indexes = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=object))._broadcast(indexes).content
+                indexes = awkward.JaggedArray(starts, stops, awkward.numpy.empty(stops[-1], dtype=object)).tojagged(indexes).content
 
                 array = array[indexes]
 
