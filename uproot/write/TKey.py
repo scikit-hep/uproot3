@@ -27,7 +27,7 @@ class TKey(object):
     def fNbytes(self):
         return self.fObjlen + self.fKeylen
 
-    def update(self, Nbytes):
+    def update(self, Nbytes=None):
         if Nbytes is None:
             self.cursor.update_fields(self.sink, self._format1, self.fNbytes, self._version, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
         else:

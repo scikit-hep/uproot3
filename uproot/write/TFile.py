@@ -277,6 +277,7 @@ class TFileRecreate(TFileUpdate):
         u1 = (uncompressedbytes >> 0) & 0xff
         u2 = (uncompressedbytes >> 8) & 0xff
         u3 = (uncompressedbytes >> 16) & 0xff
+        fNbytes = streamerkey.fNbytes
         if level > 0:
             if algorithm == uproot.const.kZLIB:
                 algo = b"ZL"
@@ -331,10 +332,11 @@ class TFileRecreate(TFileUpdate):
                     streamerkey.write(streamerkeycursor, self._sink, fNbytes)
             else:
                 raise ValueError("Unrecognized compression algorithm: {0}".format(algorithm))
+            self._fNbytesInfo = fNbytes
         else:
             cursor.write_data(self._sink, uproot.write.streamers.streamers)
+            self._fNbytesInfo = streamerkey.fNbytes
 
-        self._fNbytesInfo = streamerkey.fNbytes
         self._nbytescursor.update_fields(self._sink, self._format_nbytesinfo, self._fNbytesInfo)
 
         self._expandfile(cursor)
