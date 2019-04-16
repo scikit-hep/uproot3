@@ -344,7 +344,8 @@ class TH1(object):
                 self._format_th1_3.size +
                 6)
 
-    def write(self, cursor, sink, name):
+    def write(self, context, cursor, name, algorithm, level, key, keycursor):
+        sink = context._sink
         cnt = numpy.int64(self.length(name) - 4) | uproot.const.kByteCountMask
         vers = 2
         cursor.write_fields(sink, self._format_cntvers, cnt, vers)

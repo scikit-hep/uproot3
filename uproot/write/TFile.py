@@ -64,6 +64,7 @@ class TFileUpdate(object):
         where, cycle = self._normalizewhere(where)
         what = uproot_methods.convert.towriteable(what)
         cursor = uproot.write.sink.cursor.Cursor(self._fSeekFree)
+        newkeycursor = cursor
         newkey = uproot.write.TKey.TKey(fClassName = what.fClassName,
                                         fName      = where,
                                         fTitle     = what.fTitle,
@@ -73,7 +74,8 @@ class TFileUpdate(object):
                                         fCycle     = cycle if cycle is not None else self._rootdir.newcycle(where))
 
         newkey.write(cursor, self._sink)
-        what.write(cursor, self._sink, where)
+        algorithm, level = self.getcompression()
+        what.write(self, cursor, where, algorithm, level, newkey, newkeycursor)
         self._expandfile(cursor)
 
         self._rootdir.setkey(newkey)
@@ -271,72 +273,15 @@ class TFileRecreate(TFileUpdate):
         streamerkeycursor = uproot.write.sink.cursor.Cursor(self._fSeekInfo)
         streamerkey.write(cursor, self._sink)
 
-        _header = struct.Struct("2sBBBBBBB")
         algorithm, level = self.getcompression()
-        uncompressedbytes = len(uproot.write.streamers.streamers)
-        u1 = (uncompressedbytes >> 0) & 0xff
-        u2 = (uncompressedbytes >> 8) & 0xff
-        u3 = (uncompressedbytes >> 16) & 0xff
         fNbytes = streamerkey.fNbytes
         if level > 0:
-            if algorithm == uproot.const.kZLIB:
-                algo = b"ZL"
-                import zlib
-                compressedbytes = len(zlib.compress(uproot.write.streamers.streamers, level=level))
-                if compressedbytes <= uncompressedbytes:
-                    c1 = (compressedbytes >> 0) & 0xff
-                    c2 = (compressedbytes >> 8) & 0xff
-                    c3 = (compressedbytes >> 16) & 0xff
-                    method = 8
-                    cursor.write_fields(self._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
-                    cursor.write_data(self._sink, zlib.compress(uproot.write.streamers.streamers, level=level))
-                    fNbytes = compressedbytes + streamerkey.fKeylen + 9
-                    streamerkey.write(streamerkeycursor, self._sink, fNbytes)
-            elif algorithm == uproot.const.kLZ4:
-                import xxhash
-                algo = b"L4"
-                try:
-                    import lz4.frame
-                except ImportError:
-                    raise ImportError("Install lz4 package with:\n    pip install lz4\nor\n    conda install -c anaconda lz4")
-                compressedbytes = len(lz4.frame.compress(uproot.write.streamers.streamers)) + 8
-                if compressedbytes <= uncompressedbytes:
-                    c1 = (compressedbytes >> 0) & 0xff
-                    c2 = (compressedbytes >> 8) & 0xff
-                    c3 = (compressedbytes >> 16) & 0xff
-                    method = lz4.library_version_number() // (100 * 100)
-                    checksum = xxhash.xxh64(uproot.write.streamers.streamers).digest()
-                    cursor.write_fields(self._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
-                    cursor.write_data(self._sink, checksum)
-                    cursor.write_data(self._sink, lz4.frame.compress(uproot.write.streamers.streamers, compression_level=level))
-                fNbytes = compressedbytes + streamerkey.fKeylen + 9
-                streamerkey.write(streamerkeycursor, self._sink, fNbytes)
-            elif algorithm == uproot.const.kLZMA:
-                algo = b"XZ"
-                try:
-                    import lzma
-                except ImportError:
-                    try:
-                        from backports import lzma
-                    except ImportError:
-                        raise ImportError("Install lzma package with:\n    pip install backports.lzma\nor\n    conda install -c conda-forge backports.lzma\n(or just use Python >= 3.3).")
-                compressedbytes = len(lzma.compress(uproot.write.streamers.streamers, preset=level))
-                if compressedbytes <= uncompressedbytes:
-                    c1 = (compressedbytes >> 0) & 0xff
-                    c2 = (compressedbytes >> 8) & 0xff
-                    c3 = (compressedbytes >> 16) & 0xff
-                    method = 0
-                    cursor.write_fields(self._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
-                    cursor.write_data(self._sink, lzma.compress(uproot.write.streamers.streamers, preset=level))
-                    fNbytes = compressedbytes + streamerkey.fKeylen + 9
-                    streamerkey.write(streamerkeycursor, self._sink, fNbytes)
-            else:
-                raise ValueError("Unrecognized compression algorithm: {0}".format(algorithm))
-            self._fNbytesInfo = fNbytes
+            from uproot.write.compress import write_compressed
+            fNbytes = write_compressed(self, cursor, uproot.write.streamers.streamers, algorithm, level, streamerkey, streamerkeycursor)
         else:
             cursor.write_data(self._sink, uproot.write.streamers.streamers)
-            self._fNbytesInfo = streamerkey.fNbytes
 
+        self._fNbytesInfo = fNbytes
         self._nbytescursor.update_fields(self._sink, self._format_nbytesinfo, self._fNbytesInfo)
 
         self._expandfile(cursor)
