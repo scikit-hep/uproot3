@@ -76,6 +76,16 @@ def test_lzma(tmp_path):
     assert str(f.Get("hello")) == "world"
     f.Close()
 
+def test_compressed_TObjString(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    with uproot.recreate(filename, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=1) as f:
+        f["hello"] = "a"*2000
+
+    f = ROOT.TFile.Open(filename)
+    assert str(f.Get("hello")) == "a"*2000
+    f.Close()
+
 def test_compressed_th1(tmp_path):
     filename = join(str(tmp_path), "example.root")
     testfile = join(str(tmp_path), "test.root")

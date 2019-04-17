@@ -65,7 +65,6 @@ class TFileUpdate(object):
         where, cycle = self._normalizewhere(where)
         what = uproot_methods.convert.towriteable(what)
         cursor = uproot.write.sink.cursor.Cursor(self._fSeekFree)
-        newkeycursor = cursor
         newkey = uproot.write.TKey.TKey(fClassName = what.fClassName,
                                         fName      = where,
                                         fTitle     = what.fTitle,
@@ -73,13 +72,13 @@ class TFileUpdate(object):
                                         fSeekKey   = self._fSeekFree,
                                         fSeekPdir  = self._fBEGIN,
                                         fCycle     = cycle if cycle is not None else self._rootdir.newcycle(where))
-
+        newkeycursor = uproot.write.sink.cursor.Cursor(newkey.fSeekKey)
         newkey.write(cursor, self._sink)
         algorithm, level = self.getcompression()
-        what.write(self, cursor, where, algorithm, level, newkey, newkeycursor)
+        fNbytes = what.write(self, cursor, where, algorithm, level, newkey, newkeycursor)
         self._expandfile(cursor)
 
-        self._rootdir.setkey(newkey)
+        self._rootdir.setkey(newkey, fNbytes)
         self._sink.flush()
 
     def __delitem__(self, where):
