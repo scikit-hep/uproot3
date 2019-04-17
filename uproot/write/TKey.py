@@ -24,16 +24,14 @@ class TKey(object):
     def fKeylen(self):
         return self._format1.size + uproot.write.sink.cursor.Cursor.length_strings([self.fClassName, self.fName, self.fTitle])
 
-    def update(self, Nbytes=None):
-        if Nbytes is not None:
-            self.fNbytes = Nbytes
+    def update(self):
         self.cursor.update_fields(self.sink, self._format1, self.fNbytes, self._version, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
 
-    def write(self, cursor, sink, Nbytes=None):
+    def write(self, cursor, sink):
         self.cursor = uproot.write.sink.cursor.Cursor(cursor.index)
         self.sink = sink
 
-        self.update(Nbytes)
+        self.update()
 
         cursor.skip(self._format1.size)
         cursor.write_string(sink, self.fClassName)

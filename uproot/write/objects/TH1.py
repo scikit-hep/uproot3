@@ -344,7 +344,7 @@ class TH1(object):
         cnt = numpy.int64(self.length(name) - 4) | uproot.const.kByteCountMask
         vers = 2
         givenbytes = cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th1(cursor, name) + self.return_tarray(cursor, self.valuesarray)
-        _ = write_compressed(context, cursor, givenbytes, algorithm, level, key, keycursor)
+        write_compressed(context, cursor, givenbytes, algorithm, level, key, keycursor)
 
     def length(self, name):
         return self.length_th1(name) + self.length_tarray(self.valuesarray) + 6

@@ -22,11 +22,10 @@ def write_compressed(context, cursor, givenbytes, algorithm, level, key, keycurs
             method = 8
             cursor.write_fields(context._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
             cursor.write_data(context._sink, zlib.compress(givenbytes, level=level))
-            fNbytes = compressedbytes + key.fKeylen + 9
-            key.write(keycursor, context._sink, fNbytes)
+            key.fNbytes = compressedbytes + key.fKeylen + 9
+            key.write(keycursor, context._sink)
         else:
             cursor.write_data(context._sink, givenbytes)
-            return key.fNbytes
     elif algorithm == uproot.const.kLZ4:
         import xxhash
         algo = b"L4"
@@ -46,7 +45,6 @@ def write_compressed(context, cursor, givenbytes, algorithm, level, key, keycurs
             cursor.write_data(context._sink, lz4.frame.compress(givenbytes, compression_level=level))
         else:
             cursor.write_data(context._sink, givenbytes)
-            return key.fNbytes
         fNbytes = compressedbytes + key.fKeylen + 9
         key.write(keycursor, context._sink, fNbytes)
     elif algorithm == uproot.const.kLZMA:
@@ -67,11 +65,10 @@ def write_compressed(context, cursor, givenbytes, algorithm, level, key, keycurs
             method = 0
             cursor.write_fields(context._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
             cursor.write_data(context._sink, lzma.compress(givenbytes, preset=level))
-            fNbytes = compressedbytes + key.fKeylen + 9
-            key.write(keycursor, context._sink, fNbytes)
+            key.fNbytes = compressedbytes + key.fKeylen + 9
+            key.write(keycursor, context._sink)
         else:
             cursor.write_data(context._sink, givenbytes)
-            return key.fNbytes
     else:
         raise ValueError("Unrecognized compression algorithm: {0}".format(algorithm))
-    return fNbytes
+

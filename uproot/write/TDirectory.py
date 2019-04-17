@@ -77,7 +77,7 @@ class TDirectory(object):
         self.maxcycle[name] += 1
         return self.maxcycle[name]
 
-    def setkey(self, newkey, fNbytes = None):
+    def setkey(self, newkey):
         newcursor = None
         if (newkey.fName, newkey.fCycle) in self.keys:
             self.headkey.fObjlen -= self.keys[(newkey.fName, newkey.fCycle)].fKeylen
@@ -94,7 +94,7 @@ class TDirectory(object):
         if newcursor is not None:
             self.writekeys(newcursor)
         else:
-            newkey.write(self.keycursor, self.sink, fNbytes)
+            newkey.write(self.keycursor, self.sink)
             self.headkey.update()
             self.nkeycursor.update_fields(self.sink, self._format2, len(self.keys))
             self.update()

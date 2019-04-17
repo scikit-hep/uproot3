@@ -75,10 +75,10 @@ class TFileUpdate(object):
         newkeycursor = uproot.write.sink.cursor.Cursor(newkey.fSeekKey)
         newkey.write(cursor, self._sink)
         algorithm, level = self.getcompression()
-        fNbytes = what.write(self, cursor, where, algorithm, level, newkey, newkeycursor)
+        what.write(self, cursor, where, algorithm, level, newkey, newkeycursor)
         self._expandfile(cursor)
 
-        self._rootdir.setkey(newkey, fNbytes)
+        self._rootdir.setkey(newkey)
         self._sink.flush()
 
     def __delitem__(self, where):
@@ -274,9 +274,9 @@ class TFileRecreate(TFileUpdate):
         streamerkey.write(cursor, self._sink)
 
         algorithm, level = self.getcompression()
-        fNbytes = write_compressed(self, cursor, uproot.write.streamers.streamers, algorithm, level, streamerkey, streamerkeycursor)
+        write_compressed(self, cursor, uproot.write.streamers.streamers, algorithm, level, streamerkey, streamerkeycursor)
 
-        self._fNbytesInfo = fNbytes
+        self._fNbytesInfo = streamerkey.fNbytes
         self._nbytescursor.update_fields(self._sink, self._format_nbytesinfo, self._fNbytesInfo)
 
         self._expandfile(cursor)
