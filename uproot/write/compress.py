@@ -33,7 +33,7 @@ def write_compressed(context, cursor, givenbytes, algorithm, level, key, keycurs
             import lz4.frame
         except ImportError:
             raise ImportError("Install lz4 package with:\n    pip install lz4\nor\n    conda install -c anaconda lz4")
-        compressedbytes = len(lz4.frame.compress(givenbytes)) + 8
+        compressedbytes = len(lz4.frame.compress(givenbytes, compression_level=level)) + 8
         if compressedbytes < uncompressedbytes:
             c1 = (compressedbytes >> 0) & 0xff
             c2 = (compressedbytes >> 8) & 0xff
