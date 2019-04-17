@@ -174,6 +174,8 @@ class TFileUpdate(object):
 
 class TFileRecreate(TFileUpdate):
     def __init__(self, path, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=1):
+        if compressionLevel > 9:
+            compressionLevel = 9
         self._openfile(path, compressionAlgorithm, compressionLevel)
         self._writeheader()
         self._writerootdir()

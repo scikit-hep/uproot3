@@ -39,7 +39,7 @@ def test_th1_varbin(tmp_path):
     bins = np.array([1.0, 3.0, 4.0, 10.0, 11.0, 12.0], dtype="float64")
     f = ROOT.TFile.Open(testfile, "RECREATE")
     h = ROOT.TH1F("hvar", "title", 5, bins)
-    f.Write()
+    h.Write()
     f.Close()
 
     t = uproot.open(testfile)
@@ -76,6 +76,16 @@ def test_lzma(tmp_path):
     assert str(f.Get("hello")) == "world"
     f.Close()
 
+def test_lz4(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    with uproot.recreate(filename, compressionAlgorithm=uproot.const.kLZ4, compressionLevel=1) as f:
+        f["hello"] = "world"
+
+    f = ROOT.TFile.Open(filename)
+    assert str(f.Get("hello")) == "world"
+    f.Close()
+
 def test_compressed_TObjString(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
@@ -94,7 +104,7 @@ def test_compressed_th1(tmp_path):
     bins = np.array([1.0, 3.0, 4.0, 10.0, 11.0, 12.0], dtype="float64")
     f = ROOT.TFile.Open(testfile, "RECREATE")
     h = ROOT.TH1F("hvar", "title", 5, bins)
-    f.Write()
+    h.Write()
     f.Close()
 
     t = uproot.open(testfile)

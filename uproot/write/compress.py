@@ -43,10 +43,10 @@ def write_compressed(context, cursor, givenbytes, algorithm, level, key, keycurs
             cursor.write_fields(context._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
             cursor.write_data(context._sink, checksum)
             cursor.write_data(context._sink, lz4.frame.compress(givenbytes, compression_level=level))
+            key.fNbytes = compressedbytes + key.fKeylen + 9
+            key.write(keycursor, context._sink)
         else:
             cursor.write_data(context._sink, givenbytes)
-        fNbytes = compressedbytes + key.fKeylen + 9
-        key.write(keycursor, context._sink, fNbytes)
     elif algorithm == uproot.const.kLZMA:
         algo = b"XZ"
         try:
@@ -69,6 +69,8 @@ def write_compressed(context, cursor, givenbytes, algorithm, level, key, keycurs
             key.write(keycursor, context._sink)
         else:
             cursor.write_data(context._sink, givenbytes)
+    elif algorithm == uproot.const.kOldCompressionAlgo:
+        raise ValueError("unsupported compression algorithm: 'old' (according to ROOT comments, hasn't been used in 20+ years!)")
     else:
         raise ValueError("Unrecognized compression algorithm: {0}".format(algorithm))
 
