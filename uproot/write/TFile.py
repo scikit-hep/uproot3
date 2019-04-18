@@ -174,8 +174,6 @@ class TFileUpdate(object):
 
 class TFileRecreate(TFileUpdate):
     def __init__(self, path, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=1):
-        if compressionLevel > 9:
-            compressionLevel = 9
         self._openfile(path, compressionAlgorithm, compressionLevel)
         self._writeheader()
         self._writerootdir()
@@ -195,13 +193,12 @@ class TFileRecreate(TFileUpdate):
         level = self.fCompress % 100
         return algo, level
 
-    def compression(self, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=1): # Replace with 1 when compression works
+    def compression(self, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=1):
         return (compressionAlgorithm * 100) + compressionLevel
 
-    def updateCompression(self, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=1): # Replace with 1 when compression works
+    def updateCompression(self, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=1):
         self.fCompress = self.compression(compressionAlgorithm=compressionAlgorithm, compressionLevel=compressionLevel)
         self.compresscursor.update_fields(self._sink, self._format3, self.fCompress)
-        self._writestreamers()
 
     def _writeheader(self):
         cursor = uproot.write.sink.cursor.Cursor(0)

@@ -6,6 +6,8 @@ import struct
 import uproot
 
 def write_compressed(context, cursor, givenbytes, algorithm, level, key, keycursor):
+    if level > 9:
+        level = 9
     _header = struct.Struct("2sBBBBBBB")
     uncompressedbytes = len(givenbytes)
     u1 = (uncompressedbytes >> 0) & 0xff
@@ -30,10 +32,13 @@ def write_compressed(context, cursor, givenbytes, algorithm, level, key, keycurs
         import xxhash
         algo = b"L4"
         try:
-            import lz4.frame
+            import lz4.block
         except ImportError:
             raise ImportError("Install lz4 package with:\n    pip install lz4\nor\n    conda install -c anaconda lz4")
-        compressedbytes = len(lz4.frame.compress(givenbytes, compression_level=level)) + 8
+        if level >= 4:
+            compressedbytes = len(lz4.block.compress(givenbytes, compression=level, mode="high_compression")) + 8
+        else:
+            compressedbytes = len(lz4.block.compress(givenbytes)) + 8
         if compressedbytes < uncompressedbytes:
             c1 = (compressedbytes >> 0) & 0xff
             c2 = (compressedbytes >> 8) & 0xff
@@ -42,7 +47,10 @@ def write_compressed(context, cursor, givenbytes, algorithm, level, key, keycurs
             checksum = xxhash.xxh64(givenbytes).digest()
             cursor.write_fields(context._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
             cursor.write_data(context._sink, checksum)
-            cursor.write_data(context._sink, lz4.frame.compress(givenbytes, compression_level=level))
+            if level >= 4:
+                cursor.write_data(context._sink, lz4.block.compress(givenbytes, compression=level, mode="high_compression"))
+            else:
+                cursor.write_data(context._sink, lz4.block.compress(givenbytes))
             key.fNbytes = compressedbytes + key.fKeylen + 9
             key.write(keycursor, context._sink)
         else:

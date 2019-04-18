@@ -76,10 +76,20 @@ def test_lzma(tmp_path):
     assert str(f.Get("hello")) == "world"
     f.Close()
 
-def test_lz4(tmp_path):
+def test_lz4_leveldown(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
     with uproot.recreate(filename, compressionAlgorithm=uproot.const.kLZ4, compressionLevel=1) as f:
+        f["hello"] = "world"
+
+    f = ROOT.TFile.Open(filename)
+    assert str(f.Get("hello")) == "world"
+    f.Close()
+
+def test_lz4_levelup(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    with uproot.recreate(filename, compressionAlgorithm=uproot.const.kLZ4, compressionLevel=5) as f:
         f["hello"] = "world"
 
     f = ROOT.TFile.Open(filename)
