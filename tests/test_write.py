@@ -66,6 +66,16 @@ def test_zlib(tmp_path):
     assert str(f.Get("hello")) == "world"
     f.Close()
 
+def test_compressargs(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    with uproot.recreate(filename, compressionAlgorithm=0, compressionLevel=1) as f:
+        f["hello"] = "world"
+
+    f = ROOT.TFile.Open(filename)
+    assert str(f.Get("hello")) == "world"
+    f.Close()
+
 def test_lzma(tmp_path):
     filename = join(str(tmp_path), "example.root")
 

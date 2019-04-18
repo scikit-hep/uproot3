@@ -8,6 +8,9 @@ import uproot
 def write_compressed(context, cursor, givenbytes, algorithm, level, key, keycursor):
     if level > 9:
         level = 9
+    elif algorithm == 0 or level == 0:
+        cursor.write_data(context._sink, givenbytes)
+        return
     _header = struct.Struct("2sBBBBBBB")
     uncompressedbytes = len(givenbytes)
     u1 = (uncompressedbytes >> 0) & 0xff
