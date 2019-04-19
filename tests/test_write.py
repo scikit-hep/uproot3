@@ -88,8 +88,7 @@ def test_nocompress(tmp_path):
         f["hello"] = "world"
 
     f = ROOT.TFile.Open(filename)
-    # GetCompressionFactor() returns >1 (1.000047206878662) even while not compressed
-    assert (f.GetCompressionAlgorithm()) == 0
+    assert (f.GetCompressionFactor()) == 1
     assert str(f.Get("hello")) == "world"
     f.Close()
 

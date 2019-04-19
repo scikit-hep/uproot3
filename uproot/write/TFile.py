@@ -189,7 +189,7 @@ class TFileRecreate(TFileUpdate):
     _format_nbytesinfo = struct.Struct(">i")
 
     def getCompression(self):
-        algo = max(self.fCompress // 100, uproot.const.kZLIB)
+        algo = self.fCompress // 100
         level = self.fCompress % 100
         return algo, level
 
