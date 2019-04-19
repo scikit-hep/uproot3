@@ -63,8 +63,21 @@ def test_zlib(tmp_path):
         f["hello"] = "world"
 
     f = ROOT.TFile.Open(filename)
+    assert (f.GetCompressionAlgorithm()) == uproot.const.kZLIB
+    assert (f.GetCompressionLevel()) == 1
     assert str(f.Get("hello")) == "world"
     f.Close()
+
+def test_compresschange(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    with uproot.recreate(filename, compressionAlgorithm=uproot.const.kLZMA, compressionLevel=2) as f:
+        f.updateCompression(compressionAlgorithm=uproot.const.kZLIB, compressionLevel=3)
+        f["hello"] = "world"
+
+    f = ROOT.TFile.Open(filename)
+    assert (f.GetCompressionAlgorithm()) == uproot.const.kZLIB
+    assert (f.GetCompressionLevel()) == 3
 
 def test_compressargs(tmp_path):
     filename = join(str(tmp_path), "example.root")
@@ -83,6 +96,8 @@ def test_lzma(tmp_path):
         f["hello"] = "world"
 
     f = ROOT.TFile.Open(filename)
+    assert (f.GetCompressionAlgorithm()) == uproot.const.kLZMA
+    assert (f.GetCompressionLevel()) == 1
     assert str(f.Get("hello")) == "world"
     f.Close()
 
@@ -93,6 +108,7 @@ def test_lz4_leveldown(tmp_path):
         f["hello"] = "world"
 
     f = ROOT.TFile.Open(filename)
+    assert (f.GetCompressionAlgorithm()) == uproot.const.LZ4
     assert str(f.Get("hello")) == "world"
     f.Close()
 
@@ -103,6 +119,8 @@ def test_lz4_levelup(tmp_path):
         f["hello"] = "world"
 
     f = ROOT.TFile.Open(filename)
+    assert (f.GetCompressionAlgorithm()) == uproot.const.kLZ4
+    assert (f.GetCompressionLevel()) == 5
     assert str(f.Get("hello")) == "world"
     f.Close()
 

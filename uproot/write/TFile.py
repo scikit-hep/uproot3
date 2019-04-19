@@ -196,7 +196,7 @@ class TFileRecreate(TFileUpdate):
     def compression(self, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=1):
         return (compressionAlgorithm * 100) + compressionLevel
 
-    def updateCompression(self, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=1):
+    def updateCompression(self, compressionAlgorithm, compressionLevel):
         self.fCompress = self.compression(compressionAlgorithm=compressionAlgorithm, compressionLevel=compressionLevel)
         self.compresscursor.update_fields(self._sink, self._format3, self.fCompress)
 
