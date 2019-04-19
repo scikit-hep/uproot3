@@ -79,13 +79,15 @@ def test_compresschange(tmp_path):
     assert (f.GetCompressionAlgorithm()) == uproot.const.kZLIB
     assert (f.GetCompressionLevel()) == 3
 
-def test_compressargs(tmp_path):
+def test_nocompress(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
     with uproot.recreate(filename, compressionAlgorithm=0, compressionLevel=1) as f:
         f["hello"] = "world"
 
     f = ROOT.TFile.Open(filename)
+    # GetCompressionFactor() returns >1 (1.000047206878662) even while not compressed
+    assert (f.GetCompressionAlgorithm()) == 0
     assert str(f.Get("hello")) == "world"
     f.Close()
 
@@ -108,7 +110,7 @@ def test_lz4_leveldown(tmp_path):
         f["hello"] = "world"
 
     f = ROOT.TFile.Open(filename)
-    assert (f.GetCompressionAlgorithm()) == uproot.const.LZ4
+    assert (f.GetCompressionAlgorithm()) == uproot.const.kLZ4
     assert str(f.Get("hello")) == "world"
     f.Close()
 
