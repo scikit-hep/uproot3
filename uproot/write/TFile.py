@@ -74,7 +74,7 @@ class TFileUpdate(object):
                                         fCycle     = cycle if cycle is not None else self._rootdir.newcycle(where))
         newkeycursor = uproot.write.sink.cursor.Cursor(newkey.fSeekKey)
         newkey.write(cursor, self._sink)
-        algorithm, level = self.getcompression()
+        algorithm, level = self.getCompression()
         what.write(self, cursor, where, algorithm, level, newkey, newkeycursor)
         self._expandfile(cursor)
 
@@ -188,7 +188,7 @@ class TFileRecreate(TFileUpdate):
     _format_seekinfo   = struct.Struct(">q")
     _format_nbytesinfo = struct.Struct(">i")
 
-    def getcompression(self):
+    def getCompression(self):
         algo = max(self.fCompress // 100, uproot.const.kZLIB)
         level = self.fCompress % 100
         return algo, level
@@ -196,7 +196,11 @@ class TFileRecreate(TFileUpdate):
     def compression(self, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=1):
         return (compressionAlgorithm * 100) + compressionLevel
 
-    def updateCompression(self, compressionAlgorithm, compressionLevel):
+    def updateCompression(self, compressionAlgorithm=None, compressionLevel=None):
+        if compressionAlgorithm is None:
+            compressionAlgorithm = self.getCompression()[0]
+        if compressionLevel is None:
+            compressionLevel = self.getCompression()[1]
         self.fCompress = self.compression(compressionAlgorithm=compressionAlgorithm, compressionLevel=compressionLevel)
         self.compresscursor.update_fields(self._sink, self._format3, self.fCompress)
 
@@ -272,7 +276,7 @@ class TFileRecreate(TFileUpdate):
         streamerkeycursor = uproot.write.sink.cursor.Cursor(self._fSeekInfo)
         streamerkey.write(cursor, self._sink)
 
-        algorithm, level = self.getcompression()
+        algorithm, level = self.getCompression()
         write_compressed(self, cursor, uproot.write.streamers.streamers, algorithm, level, streamerkey, streamerkeycursor)
 
         self._fNbytesInfo = streamerkey.fNbytes

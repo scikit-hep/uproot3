@@ -72,7 +72,9 @@ def test_compresschange(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
     with uproot.recreate(filename, compressionAlgorithm=uproot.const.kLZMA, compressionLevel=2) as f:
-        f.updateCompression(compressionAlgorithm=uproot.const.kZLIB, compressionLevel=3)
+        # Update separately to test flexibility of method
+        f.updateCompression(compressionLevel=3)
+        f.updateCompression(compressionAlgorithm=uproot.const.kZLIB)
         f["hello"] = "world"
 
     f = ROOT.TFile.Open(filename)
