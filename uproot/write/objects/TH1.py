@@ -48,15 +48,15 @@ class TH1(object):
         elif self.fClassName == b"TProfile":
             raise NotImplementedError(self.fClassName)
         elif self.fClassName == b"TH2C":
-            self.valuesarray = numpy.array(self.values, dtype=">i1").transpose
+            self.valuesarray = numpy.array(self.values, dtype=">i1").transpose()
         elif self.fClassName == b"TH2S":
-            self.valuesarray = numpy.array(self.values, dtype=">i2").transpose
+            self.valuesarray = numpy.array(self.values, dtype=">i2").transpose()
         elif self.fClassName == b"TH2I":
-            self.valuesarray = numpy.array(self.values, dtype=">i4").transpose
+            self.valuesarray = numpy.array(self.values, dtype=">i4").transpose()
         elif self.fClassName == b"TH2F":
-            self.valuesarray = numpy.array(self.values, dtype=">f4").transpose
+            self.valuesarray = numpy.array(self.values, dtype=">f4").transpose()
         elif self.fClassName == b"TH2D":
-            self.valuesarray = numpy.array(self.values, dtype=">f8").transpose
+            self.valuesarray = numpy.array(self.values, dtype=">f8").transpose()
         elif self.fClassName == b"TProfile2D":
             raise NotImplementedError(self.fClassName)
         elif self.fClassName == b"TH3C":
