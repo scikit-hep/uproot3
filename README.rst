@@ -61,8 +61,8 @@ Strict dependencies:
 --------------------
 
 - `numpy <https://scipy.org/install.html>`__ (1.13.1+)
-- `awkward-array <https://github.com/scikit-hep/awkward-array>`__ (0.8.0+)
-- `uproot-methods <https://github.com/scikit-hep/uproot-methods>`__ (0.4.0+)
+- `awkward-array <https://github.com/scikit-hep/awkward-array>`__ (0.9.0+)
+- `uproot-methods <https://github.com/scikit-hep/uproot-methods>`__ (0.5.0+)
 - `cachetools <https://pypi.org/project/cachetools>`__
 
 Optional dependencies:
@@ -1043,6 +1043,13 @@ As a connector between ROOT and the scientific Python world, uproot has a growin
 This method takes the same **branches**, **entrystart**, **entrystop**, **cache**, **basketcache**, **keycache**, and **executor** methods as all the other array methods.
 
 Note that ``pandas.DataFrame`` is also a recognized option for all **outputtype** parameters, so you can, for instance, iterate through DataFrames with ``uproot.iterate("files*.root", "treename", outputtype=pandas.DataFrame)``.
+
+Acknowledgements
+================
+
+Support for this work was provided by NSF cooperative agreement OAC-1836650 (IRIS-HEP), grant OAC-1450377 (DIANA/HEP) and PHY-1520942 (US-CMS LHC Ops).
+
+Thanks especially to the gracious help of `uproot contributors <https://github.com/scikit-hep/uproot/graphs/contributors>`__!
 
 .. inclusion-marker-4-do-not-remove
 
