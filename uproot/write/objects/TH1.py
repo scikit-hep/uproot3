@@ -182,7 +182,7 @@ class TH1(object):
 
     _format_tarray = struct.Struct(">i")
     def write_tarray(self, cursor, sink, values):
-        cursor.write_fields(sink, self._format_tarray, len(values))
+        cursor.write_fields(sink, self._format_tarray, values.size)
         cursor.write_array(sink, values)
     def length_tarray(self, values):
         return self._format_tarray.size + values.nbytes
