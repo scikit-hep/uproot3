@@ -9,7 +9,7 @@ import numpy
 import uproot.const
 import uproot.write.sink.cursor
 
-class TH1(object):
+class TH(object):
     def __init__(self, histogram):
         self.fTitle = self.fixstring(histogram._fTitle)
         self.fClassName = self.fixstring(histogram._classname)
@@ -97,8 +97,8 @@ class TH1(object):
 
     @staticmethod
     def fixaxis(axis):
-        axis["_fName"] = TH1.fixstring(axis["_fName"])
-        axis["_fTitle"] = TH1.fixstring(axis["_fTitle"])
+        axis["_fName"] = TH.fixstring(axis["_fName"])
+        axis["_fTitle"] = TH.fixstring(axis["_fTitle"])
         axis["_fXbins"] = numpy.array(axis["_fXbins"], dtype=">f8", copy=False)
         if axis["_fLabels"] is None:
             axis["_fLabels"] = []
