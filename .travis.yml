@@ -56,7 +56,6 @@ install:
       mamba install --quiet --yes python=${PYVER} pip root;
       source activate testenv;
     fi
-  - pip install --upgrade setuptools_scm
   - pip install $NPY
   - python -c 'import numpy; print(numpy.__version__)'
   - pip install "awkward>=0.9.0"
