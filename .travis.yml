@@ -55,6 +55,7 @@ install:
   - if [ "${PYVER}" = "2.7" ] || [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" ]; then
       mamba install --quiet --yes python=${PYVER} pip root;
       mamba install -c anaconda python=${PYVER} openssl;
+      mambda update python=${PYVER} openssl;
       source activate testenv;
     fi
   - pip install --upgrade setuptools-scm
