@@ -57,6 +57,7 @@ install:
       source activate testenv;
     fi
   - pip install $NPY
+  - pip install --upgrade setuptools_scm
   - python -c 'import numpy; print(numpy.__version__)'
   - pip install "awkward>=0.9.0"
   - python -c 'import awkward; print(awkward.__version__)'
