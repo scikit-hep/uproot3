@@ -58,6 +58,8 @@ install:
       mambda update python=${PYVER} openssl;
       source activate testenv;
     fi
+  - python --version && which python
+  - pip --version && which pip
   - pip install --upgrade setuptools-scm
   - pip install $NPY
   - python -c 'import numpy; print(numpy.__version__)'
