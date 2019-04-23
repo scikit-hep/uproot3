@@ -74,11 +74,6 @@ class TH(object):
         else:
             raise ValueError("unrecognized histogram class name {0}".format(self.fClassName))
 
-        if "TH2" in self.fClassName.decode("utf-8"):
-            self.fields["_fScalefactor"] = 1.0
-            self.fields["_fTsumwy"] = 0.0
-            self.fields["_fTsumwy2"] = 0.0
-            self.fields["_fTsumwxy"] = 0.0
         self.fields["_fNcells"] = self.valuesarray.size
         self.fields["_fContour"] = numpy.array(self.fields["_fContour"], dtype=">f8", copy=False)
         self.fields["_fSumw2"] = numpy.array(self.fields["_fSumw2"], dtype=">f8", copy=False)
@@ -135,7 +130,8 @@ class TH(object):
                 "_fTsumwz": 0.0,
                 "_fTsumwz2": 0.0,
                 "_fTsumwxz": 0.0,
-                "_fTsumwyz": 0.0}
+                "_fTsumwyz": 0.0,
+                "_fScalefactor": 0.0}
 
     @staticmethod
     def emptyaxis(name, titleoffset):
