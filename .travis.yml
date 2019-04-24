@@ -46,15 +46,13 @@ install:
   # FIXME: Mamba causes pip install numpy to be extremely slow
   - if [[ "${PYVER}" = pypy* ]]; then
       conda create --quiet --yes -n testenv ${PYVER};
-    elif [ "${PYVER}" = "2.7" ] || [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" ]; then
-      mamba create --quiet --yes -n testenv python=${PYVER} pip;
     else
       conda create --quiet --yes -n testenv python=${PYVER};
     fi
   - source activate testenv
   - if [ "${PYVER}" = "2.7" ] || [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" ]; then
-      mamba install --quiet --yes python=${PYVER} pip root;
-      mamba install -c anaconda 'openssl>1.1';
+      conda install --quiet --yes python=${PYVER} pip root;
+      conda install -c anaconda 'openssl>1.1';
       source activate testenv;
     fi
   - python --version && which python
