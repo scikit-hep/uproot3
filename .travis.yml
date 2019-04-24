@@ -80,6 +80,7 @@ addons:
   apt:
     packages:
       - python-setuptools
+      - libssl-dev
 
 script:
   pytest -v tests
