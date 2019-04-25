@@ -581,8 +581,10 @@ class Test(unittest.TestCase):
             for i in range(len(lazy), 0, -1):
                 assert normalize(lazy[i - 1 : i + 3]) == strict[i - 1 : i + 3].tolist()
 
-    @pytest.mark.skip(reason="Fails on appveyor sometimes")
     def test_hist_in_tree(self):
+        import sys
+        if sys.platform == "win32" or sys.platform == "Windows":
+            pytest.skip("test_hist_in_tree fails on appveyor sometimes")
         tree = uproot.open("http://scikit-hep.org/uproot/examples/Event.root")["T"]
         check = [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
                  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0,
