@@ -44,6 +44,7 @@ install:
   - "python --version"
 
 build_script:
+  - "python -m pip install --upgrade pip"
   - "pip install %NUMPY%"
   - "pip install \"awkward>=0.9.0\""
   - "python -c \"import awkward; print(awkward.__version__)\""
