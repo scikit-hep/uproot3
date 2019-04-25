@@ -2,6 +2,7 @@
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
+import os
 import threading
 
 import numpy
@@ -21,9 +22,7 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
 
     def _open(self):
         try:
-            import os
-            # To make uproot + xrootd + multiprocessing work
-            os.environ['XRD_RUNFORKHANDLER'] = '1'
+            os.environ["XRD_RUNFORKHANDLER"] = "1"   # To make uproot + xrootd + multiprocessing work
             import pyxrootd.client
         except ImportError:
             raise ImportError("Install pyxrootd package with:\n    conda install -c conda-forge xrootd\n(or download from http://xrootd.org/dload.html and manually compile with cmake; setting PYTHONPATH and LD_LIBRARY_PATH appropriately).")
