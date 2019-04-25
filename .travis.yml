@@ -37,13 +37,9 @@ install:
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
   - conda config --add channels conda-forge;
-  - conda install --quiet --yes -c conda-forge/label/mamba-alpha mamba
   - conda config --set always_yes yes --set changeps1 no
   # Create the conda testing environment
-  # FIXME: Mamba decides to upgrade Python here so pin it again
   # FIXME: Channel priority is also mixed up
-  # FIXME: Mamba doesn't install pip by default
-  # FIXME: Mamba causes pip install numpy to be extremely slow
   - if [[ "${PYVER}" = pypy* ]]; then
       conda create --quiet --yes -n testenv ${PYVER};
     else
@@ -51,12 +47,9 @@ install:
     fi
   - source activate testenv
   - if [ "${PYVER}" = "2.7" ] || [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" ]; then
-      conda install --quiet --yes python=${PYVER} pip root;
-      conda install -c anaconda 'openssl>1.1';
+      conda install --quiet --yes python=${PYVER} root;
       source activate testenv;
     fi
-  - python --version && which python
-  - pip --version && which pip
   - pip install --upgrade setuptools-scm
   - pip install $NPY
   - python -c 'import numpy; print(numpy.__version__)'
@@ -68,17 +61,15 @@ install:
   - pip install lz4 requests
   - if [[ ${PYVER} = "2.7" ]] ; then pip install backports.lzma ; fi
   - pip install pandas
-  # FIXME: Mamba decides to upgrade Python here so pin it again
   # pyopenssl is for deployment
   - if [[ ${PYVER} != pypy* ]] ; then
-      mamba install -c anaconda python=${PYVER} pyopenssl;
+      conda install -c anaconda python=${PYVER} pyopenssl;
     fi
 
 addons:
   apt:
     packages:
       - python-setuptools
-      - libssl-dev
 
 script:
   pytest -v tests
@@ -113,3 +104,4 @@ jobs:
     script:
     # Use Binder build API to trigger repo2docker to build image
     - bash binder/trigger_binder.sh https://mybinder.org/build/gh/scikit-hep/uproot/"${TRAVIS_BRANCH}"
+

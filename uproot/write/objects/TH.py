@@ -131,7 +131,9 @@ class TH(object):
                 "_fTsumwz2": 0.0,
                 "_fTsumwxz": 0.0,
                 "_fTsumwyz": 0.0,
-                "_fScalefactor": 0.0}
+                "_fScalefactor": 0.0,
+                "_fBinEntries": [],
+                "_fErrorMode": []} # Fix
 
     @staticmethod
     def emptyaxis(name, titleoffset):
@@ -377,21 +379,38 @@ class TH(object):
     def length_tatt3d(self):
         return self._format_cntvers.size
 
+    def write_th1d(self, cursor, sink, name):
+        cnt = numpy.int64(self.length(name) - 4) | uproot.const.kByteCountMask
+        vers = 2
+        cursor.write_fields(sink, self._format_cntvers, cnt, vers)
+        self.write_th1(cursor, sink, name)
+        self.write_tarray(cursor, sink, self.valuesarray)
+
+    def length_th1d(self, name):
+        return self.length_th1(name) + self.length_tarray(self.valuesarray) + self._format_cntvers.size
+
     def write(self, cursor, sink, name):
         cnt = numpy.int64(self.length(name) - 4) | uproot.const.kByteCountMask
         if "TH1" in self.fClassName.decode("utf-8"):
             vers = 2
             cursor.write_fields(sink, self._format_cntvers, cnt, vers)
             self.write_th1(cursor, sink, name)
+            self.write_tarray(cursor, sink, self.valuesarray)
         elif "TH2" in self.fClassName.decode("utf-8"):
             vers = 3
             cursor.write_fields(sink, self._format_cntvers, cnt, vers)
             self.write_th2(cursor, sink, name)
+            self.write_tarray(cursor, sink, self.valuesarray)
         elif "TH3" in self.fClassName.decode("utf-8"):
             vers = 3
             cursor.write_fields(sink, self._format_cntvers, cnt, vers)
             self.write_th3(cursor, sink, name)
-        self.write_tarray(cursor, sink, self.valuesarray)
+            self.write_tarray(cursor, sink, self.valuesarray)
+        elif "TProfile" in self.fClassName.decode("utf-8"):
+            vers = 6
+            cursor.write_fields(sink, self._format_cntvers, cnt, vers)
+            self.write_th1d(cursor, sink, name)
+
 
     def length(self, name):
         if "TH1" in self.fClassName.decode("utf-8"):
