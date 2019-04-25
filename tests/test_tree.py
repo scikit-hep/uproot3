@@ -2,11 +2,13 @@
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
+import os
 import unittest
 
 from collections import namedtuple
 
 import numpy
+import pytest
 
 import awkward
 import uproot
@@ -582,6 +584,9 @@ class Test(unittest.TestCase):
                 assert normalize(lazy[i - 1 : i + 3]) == strict[i - 1 : i + 3].tolist()
 
     def test_hist_in_tree(self):
+        if os.name == "nt":
+            pytest.skip("AppVeyor sometimes can't load Event.root")
+
         tree = uproot.open("http://scikit-hep.org/uproot/examples/Event.root")["T"]
         check = [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
                  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0,
@@ -594,6 +599,9 @@ class Test(unittest.TestCase):
         assert tree.array("fH")[20].values.tolist() == check
 
     def test_branch_auto_interpretation(self):
+        if os.name == "nt":
+            pytest.skip("AppVeyor sometimes can't load Event.root")
+
         # The aim is to reduce this list in a controlled manner
         known_branches_without_interp = [
             b'event',
