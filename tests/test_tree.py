@@ -581,6 +581,7 @@ class Test(unittest.TestCase):
             for i in range(len(lazy), 0, -1):
                 assert normalize(lazy[i - 1 : i + 3]) == strict[i - 1 : i + 3].tolist()
 
+    @pytest.skip
     def test_hist_in_tree(self):
         tree = uproot.open("http://scikit-hep.org/uproot/examples/Event.root")["T"]
         check = [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
