@@ -583,6 +583,7 @@ class Test(unittest.TestCase):
 
     def test_hist_in_tree(self):
         import sys
+        import pytest
         if sys.platform == "win32" or sys.platform == "Windows":
             pytest.skip("test_hist_in_tree fails on appveyor sometimes")
         tree = uproot.open("http://scikit-hep.org/uproot/examples/Event.root")["T"]
