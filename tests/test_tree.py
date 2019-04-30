@@ -583,10 +583,8 @@ class Test(unittest.TestCase):
             for i in range(len(lazy), 0, -1):
                 assert normalize(lazy[i - 1 : i + 3]) == strict[i - 1 : i + 3].tolist()
 
+    @pytest.mark.skip(reason="Appveyor and Travis sometimes fails")
     def test_hist_in_tree(self):
-        if os.name == "nt":
-            pytest.skip("AppVeyor sometimes can't load Event.root")
-
         tree = uproot.open("http://scikit-hep.org/uproot/examples/Event.root")["T"]
         check = [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
                  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0,
@@ -598,10 +596,8 @@ class Test(unittest.TestCase):
 
         assert tree.array("fH")[20].values.tolist() == check
 
+    @pytest.mark.skip(reason="Appveyor and Travis sometimes fails")
     def test_branch_auto_interpretation(self):
-        if os.name == "nt":
-            pytest.skip("AppVeyor sometimes can't load Event.root")
-
         # The aim is to reduce this list in a controlled manner
         known_branches_without_interp = [
             b'event',
