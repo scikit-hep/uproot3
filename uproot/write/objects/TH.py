@@ -46,7 +46,7 @@ class TH(object):
         elif self.fClassName == b"TH1D":
             self.valuesarray = numpy.array(self.values, dtype=">f8")
         elif self.fClassName == b"TProfile":
-            raise NotImplementedError(self.fClassName)
+            self.valuesarray = numpy.array(self.values, dtype=">f8")
         elif self.fClassName == b"TH2C":
             self.valuesarray = numpy.array(self.values, dtype=">i1").transpose()
         elif self.fClassName == b"TH2S":
@@ -77,6 +77,8 @@ class TH(object):
         self.fields["_fNcells"] = self.valuesarray.size
         self.fields["_fContour"] = numpy.array(self.fields["_fContour"], dtype=">f8", copy=False)
         self.fields["_fSumw2"] = numpy.array(self.fields["_fSumw2"], dtype=">f8", copy=False)
+        self.fields["_fBinEntries"] = numpy.array(self.fields["_fBinEntries"], dtype=">f8", copy=False)
+        self.fields["_fBinSumw2"] = numpy.array(self.fields["_fBinSumw2"], dtype=">f8", copy=False)
 
     @staticmethod
     def fixstring(string):
@@ -133,7 +135,10 @@ class TH(object):
                 "_fTsumwyz": 0.0,
                 "_fScalefactor": 0.0,
                 "_fBinEntries": [],
-                "_fErrorMode": []} # Fix
+                "_fYmin": 0.0,
+                "_fYmax": 0.0,
+                "_fBinSumw2": [],
+                "_fErrorMode": 0} # Fix
 
     @staticmethod
     def emptyaxis(name, titleoffset):
@@ -389,6 +394,7 @@ class TH(object):
     def length_th1d(self, name):
         return self.length_th1(name) + self.length_tarray(self.valuesarray) + self._format_cntvers.size
 
+    _format_tprofile_1 = struct.Struct(">idddd")
     def write(self, cursor, sink, name):
         cnt = numpy.int64(self.length(name) - 4) | uproot.const.kByteCountMask
         if "TH1" in self.fClassName.decode("utf-8"):
@@ -410,7 +416,10 @@ class TH(object):
             vers = 6
             cursor.write_fields(sink, self._format_cntvers, cnt, vers)
             self.write_th1d(cursor, sink, name)
-
+            self.write_tarray(cursor, sink, self.fields["_fBinEntries"])
+            cursor.write_fields(sink, self._format_tprofile_1, self.fields["_fErrorMode"], self.fields["_fYmin"],
+                                self.fields["_fYmax"], self.fields["_fTsumwy"], self.fields["_fTsumwy2"])
+            self.write_tarray(cursor, sink, self.fields["_fBinSumw2"])
 
     def length(self, name):
         if "TH1" in self.fClassName.decode("utf-8"):
@@ -419,3 +428,6 @@ class TH(object):
             return self.length_th2(name) + self.length_tarray(self.valuesarray) + self._format_cntvers.size
         elif "TH3" in self.fClassName.decode("utf-8"):
             return self.length_th3(name) + self.length_tarray(self.valuesarray) + self._format_cntvers.size
+        elif "TProfile" in self.fClassName.decode("utf-8"):
+            return (self.length_th1d(name) + self.length_tarray(self.fields["_fBinEntries"]) + self._format_tprofile_1.size
+                    + self.length_tarray(self.fields["_fBinSumw2"]) + self._format_cntvers.size)
