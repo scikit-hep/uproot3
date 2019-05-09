@@ -303,7 +303,7 @@ class asgenobj(_variable):
         return out
 
     def compatible(self, other):
-        return isinstance(other, asgenobj) and self.cls.__name__ == other.cls.__name__
+        return isinstance(other, asgenobj) and self.generator.cls.__name__ == other.generator.cls.__name__
 
     def __repr__(self):
         return "asgenobj({0})".format(self.generator)
