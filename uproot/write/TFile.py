@@ -18,13 +18,14 @@ import uproot.write.TKey
 import uproot.write.TDirectory
 import uproot.write.streamers
 from uproot.rootio import nofilter
+from uproot.write.compress import write_compressed
 
 class TFileUpdate(object):
     def __init__(self, path):
         self._openfile(path)
         raise NotImplementedError
 
-    def _openfile(self, path):
+    def _openfile(self, path, compressionAlgorithm, compressionLevel):
         if isinstance(path, getattr(os, "PathLike", ())):
             path = os.fspath(path)
         elif hasattr(path, "__fspath__"):
@@ -33,6 +34,9 @@ class TFileUpdate(object):
             import pathlib
             if isinstance(path, pathlib.Path):
                  path = str(path)
+
+        self.compressionAlgorithm = compressionAlgorithm
+        self.compressionLevel = compressionLevel
 
         self._sink = uproot.write.sink.file.FileSink(path)
         self._path = path
@@ -68,9 +72,10 @@ class TFileUpdate(object):
                                         fSeekKey   = self._fSeekFree,
                                         fSeekPdir  = self._fBEGIN,
                                         fCycle     = cycle if cycle is not None else self._rootdir.newcycle(where))
-
+        newkeycursor = uproot.write.sink.cursor.Cursor(newkey.fSeekKey)
         newkey.write(cursor, self._sink)
-        what.write(cursor, self._sink, where)
+        algorithm, level = self.getCompression()
+        what.write(self, cursor, where, algorithm, level, newkey, newkeycursor)
         self._expandfile(cursor)
 
         self._rootdir.setkey(newkey)
@@ -168,8 +173,8 @@ class TFileUpdate(object):
         self.close()
 
 class TFileRecreate(TFileUpdate):
-    def __init__(self, path):
-        self._openfile(path)
+    def __init__(self, path, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=1):
+        self._openfile(path, compressionAlgorithm, compressionLevel)
         self._writeheader()
         self._writerootdir()
         self._writestreamers()
@@ -178,9 +183,26 @@ class TFileRecreate(TFileUpdate):
 
     _format1           = struct.Struct(">4sii")
     _format_end        = struct.Struct(">qqii")
-    _format2           = struct.Struct(">iBi")
+    _format2           = struct.Struct(">iB")
+    _format3           = struct.Struct(">i")
     _format_seekinfo   = struct.Struct(">q")
     _format_nbytesinfo = struct.Struct(">i")
+
+    def getCompression(self):
+        algo = self.fCompress // 100
+        level = self.fCompress % 100
+        return algo, level
+
+    def compression(self, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=1):
+        return (compressionAlgorithm * 100) + compressionLevel
+
+    def updateCompression(self, compressionAlgorithm=None, compressionLevel=None):
+        if compressionAlgorithm is None:
+            compressionAlgorithm = self.getCompression()[0]
+        if compressionLevel is None:
+            compressionLevel = self.getCompression()[1]
+        self.fCompress = self.compression(compressionAlgorithm=compressionAlgorithm, compressionLevel=compressionLevel)
+        self.compresscursor.update_fields(self._sink, self._format3, self.fCompress)
 
     def _writeheader(self):
         cursor = uproot.write.sink.cursor.Cursor(0)
@@ -196,9 +218,12 @@ class TFileRecreate(TFileUpdate):
         cursor.write_fields(self._sink, self._format_end, self._fEND, self._fSeekFree, self._fNbytesFree, self._nfree)
 
         self._fNbytesName = 2*len(self._filename) + 36 + 8   # + 8 because two fields in TKey are 'q' rather than 'i'
-        fCompress = uproot.const.kZLIB * 100  # FIXME!
         fUnits = 4
-        cursor.write_fields(self._sink, self._format2, self._fNbytesName, fUnits, fCompress)
+        cursor.write_fields(self._sink, self._format2, self._fNbytesName, fUnits)
+
+        self.compresscursor = uproot.write.sink.cursor.Cursor(cursor.index)
+        self.fCompress = self.compression(compressionAlgorithm=self.compressionAlgorithm, compressionLevel=self.compressionLevel)
+        cursor.write_fields(self._sink, self._format3, self.fCompress)
 
         self._fSeekInfo = 0
         self._seekcursor = uproot.write.sink.cursor.Cursor(cursor.index)
@@ -248,8 +273,11 @@ class TFileRecreate(TFileUpdate):
                                                fObjlen    = len(uproot.write.streamers.streamers),
                                                fSeekKey   = self._fSeekInfo,
                                                fSeekPdir  = self._fBEGIN)
+        streamerkeycursor = uproot.write.sink.cursor.Cursor(self._fSeekInfo)
         streamerkey.write(cursor, self._sink)
-        cursor.write_data(self._sink, uproot.write.streamers.streamers)
+
+        algorithm, level = self.getCompression()
+        write_compressed(self, cursor, uproot.write.streamers.streamers, algorithm, level, streamerkey, streamerkeycursor)
 
         self._fNbytesInfo = streamerkey.fNbytes
         self._nbytescursor.update_fields(self._sink, self._format_nbytesinfo, self._fNbytesInfo)
