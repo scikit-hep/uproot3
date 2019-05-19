@@ -19,14 +19,14 @@ def write_compressed(context, cursor, givenbytes, algorithm, level, key, keycurs
     if algorithm == uproot.const.kZLIB:
         algo = b"ZL"
         import zlib
-        compressedbytes = len(zlib.compress(givenbytes, level=level))
+        compressedbytes = len(zlib.compress(givenbytes, level))
         if compressedbytes < uncompressedbytes:
             c1 = (compressedbytes >> 0) & 0xff
             c2 = (compressedbytes >> 8) & 0xff
             c3 = (compressedbytes >> 16) & 0xff
             method = 8
             cursor.write_fields(context._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
-            cursor.write_data(context._sink, zlib.compress(givenbytes, level=level))
+            cursor.write_data(context._sink, zlib.compress(givenbytes, level))
             key.fNbytes = compressedbytes + key.fKeylen + 9
             key.write(keycursor, context._sink)
         else:
