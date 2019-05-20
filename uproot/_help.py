@@ -814,30 +814,30 @@ u"""Read one branch into an array (or other object if provided an alternate *int
     array or other object, depending on *interpretation*.
 """.format(**tree_fragments)
 
-_method(uproot.tree.TTreeMethods.lazyarray).__doc__ = \
-u"""Create a lazy array that would read the branch as needed.
+# _method(uproot.tree.TTreeMethods.lazyarray).__doc__ = \
+# u"""Create a lazy array that would read the branch as needed.
 
-    Parameters
-    ----------
-    {branch}
+#     Parameters
+#     ----------
+#     {branch}
 
-    {interpretation}
+#     {interpretation}
 
-    {awkwardlib}
+#     {awkwardlib}
 
-    {cache}
+#     {cache}
 
-    {basketcache}
+#     {basketcache}
 
-    {keycache}
+#     {keycache}
 
-    {executor}
+#     {executor}
 
-    Returns
-    -------
-    lazy array (square brackets initiate data reading)
-        lazy version of the array.
-""".format(**tree_fragments)
+#     Returns
+#     -------
+#     lazy array (square brackets initiate data reading)
+#         lazy version of the array.
+# """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.arrays).__doc__ = \
 u"""Read many branches into arrays (or other objects if provided alternate *interpretations*).
@@ -874,32 +874,32 @@ u"""Read many branches into arrays (or other objects if provided alternate *inte
         branch data.
 """.format(**tree_fragments)
 
-_method(uproot.tree.TTreeMethods.lazyarrays).__doc__ = \
-u"""Create many lazy arrays.
+# _method(uproot.tree.TTreeMethods.lazyarrays).__doc__ = \
+# u"""Create many lazy arrays.
 
-    Parameters
-    ----------
-    {branches}
+#     Parameters
+#     ----------
+#     {branches}
 
-    {outputtype}
+#     {outputtype}
 
-    {namedecode}
+#     {namedecode}
 
-    {awkwardlib}
+#     {awkwardlib}
 
-    {cache}
+#     {cache}
 
-    {basketcache}
+#     {basketcache}
 
-    {keycache}
+#     {keycache}
 
-    {executor}
+#     {executor}
 
-    Returns
-    -------
-    outputtype of lazy arrays (square brackets initiate data reading)
-        lazy branch data.
-""".format(**tree_fragments)
+#     Returns
+#     -------
+#     outputtype of lazy arrays (square brackets initiate data reading)
+#         lazy branch data.
+# """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.iterate).__doc__ = \
 u"""Iterate over many arrays at once, yielding the same number of entries from all selected branches in each step.
@@ -1331,28 +1331,28 @@ u"""Read the branch into an array (or other object if provided an alternate *int
         branch data.
 """.format(**tree_fragments)
 
-_method(uproot.tree.TBranchMethods.lazyarray).__doc__ = \
-u"""Create a lazy array that would read the branch as needed.
+# _method(uproot.tree.TBranchMethods.lazyarray).__doc__ = \
+# u"""Create a lazy array that would read the branch as needed.
 
-    Parameters
-    ----------
-    {interpretation}
+#     Parameters
+#     ----------
+#     {interpretation}
 
-    {awkwardlib}
+#     {awkwardlib}
 
-    {cache}
+#     {cache}
 
-    {basketcache}
+#     {basketcache}
 
-    {keycache}
+#     {keycache}
 
-    {executor}
+#     {executor}
 
-    Returns
-    -------
-    lazy array (square brackets initiate data reading)
-        lazy version of branch data.
-""".format(**tree_fragments)
+#     Returns
+#     -------
+#     lazy array (square brackets initiate data reading)
+#         lazy version of branch data.
+# """.format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.basket).__doc__ = \
 u"""Read a single basket into an array.

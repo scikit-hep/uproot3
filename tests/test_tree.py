@@ -518,70 +518,70 @@ class Test(unittest.TestCase):
         arrays = tree.arrays(["three", "two", "one"], outputtype=MyTuple)
         assert isinstance(arrays, MyTuple)
 
-        arrays = tree.lazyarrays(["three", "two", "one"], outputtype=MyList)
-        assert isinstance(arrays, MyList)
+        # arrays = tree.lazyarrays(["three", "two", "one"], outputtype=MyList)
+        # assert isinstance(arrays, MyList)
 
-        arrays = tree.lazyarrays(["three", "two", "one"], outputtype=MyTuple)
-        assert isinstance(arrays, MyTuple)
+        # arrays = tree.lazyarrays(["three", "two", "one"], outputtype=MyTuple)
+        # assert isinstance(arrays, MyTuple)
 
-    def test_tree_lazy(self):
-        tree = uproot.open("tests/samples/sample-5.30.00-uncompressed.root")["sample"]
+    # def test_tree_lazy(self):
+    #     tree = uproot.open("tests/samples/sample-5.30.00-uncompressed.root")["sample"]
 
-        def normalize(x):
-            if isinstance(x, numpy.ndarray):
-                return [normalize(y) for y in x]
-            else:
-                return x
+    #     def normalize(x):
+    #         if isinstance(x, numpy.ndarray):
+    #             return [normalize(y) for y in x]
+    #         else:
+    #             return x
 
-        for branchname in b"u1", b"i8", b"Ai8", b"f4", b"af4":
-            strict = tree[branchname].array()
+    #     for branchname in b"u1", b"i8", b"Ai8", b"f4", b"af4":
+    #         strict = tree[branchname].array()
 
-            lazy = tree[branchname].lazyarray()
-            for i in range(len(lazy)):
-                assert normalize(lazy[i]) == strict[i].tolist()
+    #         lazy = tree[branchname].lazyarray()
+    #         for i in range(len(lazy)):
+    #             assert normalize(lazy[i]) == strict[i].tolist()
 
-            lazy = tree[branchname].lazyarray()
-            for i in range(len(lazy), 0, -1):
-                assert normalize(lazy[i - 1]) == strict[i - 1].tolist()
+    #         lazy = tree[branchname].lazyarray()
+    #         for i in range(len(lazy), 0, -1):
+    #             assert normalize(lazy[i - 1]) == strict[i - 1].tolist()
 
-            lazy = tree[branchname].lazyarray()
-            for i in range(len(lazy)):
-                assert normalize(lazy[i : i + 3]) == strict[i : i + 3].tolist()
+    #         lazy = tree[branchname].lazyarray()
+    #         for i in range(len(lazy)):
+    #             assert normalize(lazy[i : i + 3]) == strict[i : i + 3].tolist()
 
-            lazy = tree[branchname].lazyarray()
-            for i in range(len(lazy), 0, -1):
-                assert normalize(lazy[i - 1 : i + 3]) == strict[i - 1 : i + 3].tolist()
+    #         lazy = tree[branchname].lazyarray()
+    #         for i in range(len(lazy), 0, -1):
+    #             assert normalize(lazy[i - 1 : i + 3]) == strict[i - 1 : i + 3].tolist()
 
-    def test_tree_lazy_cached(self):
-        tree = uproot.open("tests/samples/sample-5.30.00-uncompressed.root")["sample"]
+    # def test_tree_lazy_cached(self):
+    #     tree = uproot.open("tests/samples/sample-5.30.00-uncompressed.root")["sample"]
 
-        def normalize(x):
-            if isinstance(x, numpy.ndarray):
-                return [normalize(y) for y in x]
-            else:
-                return x
+    #     def normalize(x):
+    #         if isinstance(x, numpy.ndarray):
+    #             return [normalize(y) for y in x]
+    #         else:
+    #             return x
 
-        keycache = {}
-        basketcache = {}
+    #     keycache = {}
+    #     basketcache = {}
 
-        for branchname in b"u1", b"i8", b"Ai8", b"f4", b"af4":
-            strict = tree[branchname].array()
+    #     for branchname in b"u1", b"i8", b"Ai8", b"f4", b"af4":
+    #         strict = tree[branchname].array()
 
-            lazy = tree[branchname].lazyarray(keycache=keycache, basketcache=basketcache)
-            for i in range(len(lazy)):
-                assert normalize(lazy[i]) == strict[i].tolist()
+    #         lazy = tree[branchname].lazyarray(keycache=keycache, basketcache=basketcache)
+    #         for i in range(len(lazy)):
+    #             assert normalize(lazy[i]) == strict[i].tolist()
 
-            lazy = tree[branchname].lazyarray(keycache=keycache, basketcache=basketcache)
-            for i in range(len(lazy), 0, -1):
-                assert normalize(lazy[i - 1]) == strict[i - 1].tolist()
+    #         lazy = tree[branchname].lazyarray(keycache=keycache, basketcache=basketcache)
+    #         for i in range(len(lazy), 0, -1):
+    #             assert normalize(lazy[i - 1]) == strict[i - 1].tolist()
 
-            lazy = tree[branchname].lazyarray(keycache=keycache, basketcache=basketcache)
-            for i in range(len(lazy)):
-                assert normalize(lazy[i : i + 3]) == strict[i : i + 3].tolist()
+    #         lazy = tree[branchname].lazyarray(keycache=keycache, basketcache=basketcache)
+    #         for i in range(len(lazy)):
+    #             assert normalize(lazy[i : i + 3]) == strict[i : i + 3].tolist()
 
-            lazy = tree[branchname].lazyarray(keycache=keycache, basketcache=basketcache)
-            for i in range(len(lazy), 0, -1):
-                assert normalize(lazy[i - 1 : i + 3]) == strict[i - 1 : i + 3].tolist()
+    #         lazy = tree[branchname].lazyarray(keycache=keycache, basketcache=basketcache)
+    #         for i in range(len(lazy), 0, -1):
+    #             assert normalize(lazy[i - 1 : i + 3]) == strict[i - 1 : i + 3].tolist()
 
     def test_hist_in_tree(self):
         if os.name == "nt":
