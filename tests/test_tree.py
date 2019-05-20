@@ -584,10 +584,9 @@ class Test(unittest.TestCase):
                 assert normalize(lazy[i - 1 : i + 3]) == strict[i - 1 : i + 3].tolist()
 
     def test_hist_in_tree(self):
-        path = os.path.join("samples", "Event.root")
+        path = os.path.join("tests", "samples", "Event.root")
         if os.path.exists(path):
             tree = uproot.open(path)["T"]
-            print("Debugging")
         else:
             tree = uproot.open("http://scikit-hep.org/uproot/examples/Event.root")["T"]
         check = [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
@@ -612,7 +611,7 @@ class Test(unittest.TestCase):
             b'fTriggerBits',
             b'fTriggerBits.TObject'
         ]
-        path = os.path.join("samples", "Event.root")
+        path = os.path.join("tests", "samples", "Event.root")
         if os.path.exists(path):
             tree = uproot.open(path)["T"]
         else:
