@@ -5,9 +5,9 @@
 import base64
 import codecs
 import glob
+import importlib
 import inspect
 import itertools
-import importlib
 import math
 import numbers
 import os
@@ -514,7 +514,7 @@ class TTreeMethods(object):
         elif entrysteps == float("inf"):
             return [(entrystart, min(entrystop, self.numentries))]
 
-        elif isinstance(entrysteps, numbers.Integral):
+        elif isinstance(entrysteps, (numbers.Integral, numpy.integer)):
             entrystepsize = entrysteps
             if entrystepsize <= 0:
                 raise ValueError("if an integer, entrysteps must be positive")
@@ -1455,29 +1455,44 @@ class TBranchMethods(object):
         elif entrysteps == float("inf"):
             return [(entrystart, min(entrystop, self.numentries))]
 
-        elif isinstance(entrysteps, numbers.Integral):
-            HERE
+        elif isinstance(entrysteps, (numbers.Integral, numpy.integer)):
+            entrystepsize = entrysteps
+            if entrystepsize <= 0:
+                raise ValueError("if an integer, entrysteps must be positive")
 
-        
-        raise NotImplementedError
+            effectivestop = min(entrystop, self.numentries)
+            starts = numpy.arange(entrystart, effectivestop, entrystepsize)
+            stops = numpy.append(starts[1:], effectivestop)
+            return zip(starts, stops)
+
+        else:
+            try:
+                iter(entrysteps)
+            except TypeError:
+                raise TypeError("entrysteps must be None for cluster iteration, a positive integer for equal steps in number of entries (inf for maximal), or an iterable of 2-tuples for explicit entry starts (inclusive) and stops (exclusive)")
+            return entrysteps
 
     def lazyarray(self, interpretation=None, entrysteps=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, persistvirtual=False):
-        raise NotImplementedError
+        awkward = _normalize_awkwardlib(awkwardlib)
+        interpretation = self._normalize_interpretation(interpretation, awkward)
+        if interpretation is None:
+            raise ValueError("cannot interpret branch {0} as a Python type\n   in file: {1}".format(repr(self.name), self._context.sourcepath))
+        if self._recoveredbaskets is None:
+            self._tryrecover()
 
-    # def lazyarray(self, interpretation=None, limitbytes=1024**2, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None):
-    #     awkward = _normalize_awkwardlib(awkwardlib)
-    #     interpretation = self._normalize_interpretation(interpretation, awkward)
-    #     if interpretation is None:
-    #         raise ValueError("cannot interpret branch {0} as a Python type\n   in file: {1}".format(repr(self.name), self._context.sourcepath))
-    #     if self._recoveredbaskets is None:
-    #         self._tryrecover()
+        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+        entrysteps = self._normalize_entrysteps(entrysteps, entrystart, entrystop)
 
-    #     if basketcache is None:
-    #         basketcache = uproot.cache.ThreadSafeArrayCache(limitbytes)
-    #     if keycache is None:
-    #         keycache = {}
+        lazybranch = _LazyBranch(self._context.sourcepath, self._context.treename, self.name, self, interpretation, basketcache, keycache, executor, blocking)
 
-    #     return LazyArray._frombranch(self, interpretation, awkward, cache, basketcache, keycache, executor)
+        chunks = []
+        counts = []
+        for start, stop in entrysteps:
+            numentries = stop - start
+            chunks.append(awkward.VirtualArray(lazybranch, (start, stop, flatten, awkward.__name__), cache=cache, type=awkward.type.ArrayType(numentries, interpretation.type), persistvirtual=persistvirtual))
+            counts.append(numentries)
+
+        return awkward.ChunkedArray(chunks, counts)
 
     class _BasketKey(object):
         def __init__(self, source, cursor, compression, complete):
@@ -1643,6 +1658,47 @@ class TBranchMethods(object):
     def __iter__(self):
         # prevent Python's attempt to interpret __len__ and __getitem__ as iteration
         raise TypeError("'TBranch' object is not iterable")
+
+################################################################ for persisting VirtualArrays
+
+class _LazyBranch(object):
+    def __init__(self, path, treepath, branchname, branch, interpretation, basketcache, keycache, executor, blocking):
+        self.path = path
+        self.treepath = treepath
+        self.branchname = branchname
+        self.branch = branch
+        self.interpretation = interpretation
+        self.basketcache = basketcache
+        self.keycache = keycache
+        self.executor = executor
+        self.blocking = blocking
+        self._init()
+
+    def _init(self):
+        if self.branch is None:
+            self.branch = uproot.rootio.open(self.path)[self.treepath][self.branchname]
+        if self.basketcache is None:
+            self.basketcache = uproot.cache.ThreadSafeArrayCache(1024**2)   # 1 MB
+        if self.keycache is None:
+            self.keycache = {}                                              # unlimited
+
+    def __getstate__(self):
+        return {"path": self.path, "treepath": self.treepath, "branchname": self.branchname, "interpretation": self.interpretation}
+
+    def __setstate__(self, state):
+        self.path = state["path"]
+        self.treepath = state["treepath"]
+        self.branchname = state["branchname"]
+        self.branch = None
+        self.interpretation = state["interpretation"]
+        self.basketcache = None
+        self.keycache = None
+        self.executor = None
+        self.blocking = True
+        self._init()
+
+    def __call__(self, entrystart, entrystop, flatten, awkwardlib):
+        return self.branch.array(interpretation=self.interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, awkwardlib=awkwardlib, cache=None, basketcache=self.basketcache, keycache=self.keycache, executor=self.executor, blocking=self.blocking)
 
 ################################################################ for quickly getting numentries
 
@@ -1969,7 +2025,7 @@ def _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, e
 #             assert pointer == len(out)
 #             return out
 
-#         elif isinstance(index, numbers.Integral):
+#         elif isinstance(index, (numbers.Integral, numpy.integer)):
 #             lenself = self._globalentryoffset[-1]
 #             if index < 0:
 #                 normindex = index + lenself
