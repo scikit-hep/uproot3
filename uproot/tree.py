@@ -435,8 +435,8 @@ class TTreeMethods(object):
                 if leadingstart >= entrystop:
                     break
 
-    def array(self, branch, interpretation=None, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
-        return self.get(branch).array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, flatname=flatname, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
+    def array(self, branch, interpretation=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+        return self.get(branch).array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
 
     def arrays(self, branches=None, outputtype=dict, namedecode=None, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         awkward = _normalize_awkwardlib(awkwardlib)
@@ -450,7 +450,7 @@ class TTreeMethods(object):
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
 
         # start the job of filling the arrays
-        futures = [(branch.name if namedecode is None else branch.name.decode(namedecode), interpretation, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=(flatten and not ispandas), flatname=flatname, awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=False)) for branch, interpretation in branches]
+        futures = [(branch.name if namedecode is None else branch.name.decode(namedecode), interpretation, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=(flatten and not ispandas), awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=False)) for branch, interpretation in branches]
 
         # make functions that wait for the filling job to be done and return the right outputtype
         if outputtype == namedtuple:
@@ -1120,7 +1120,7 @@ class TBranchMethods(object):
 
         return interpretation.fromroot(data, byteoffsets, local_entrystart, local_entrystop)
 
-    def basket(self, i, interpretation=None, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None):
+    def basket(self, i, interpretation=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None):
         awkward = _normalize_awkwardlib(awkwardlib)
         interpretation = self._normalize_interpretation(interpretation, awkward)
         if interpretation is None:
@@ -1176,7 +1176,7 @@ class TBranchMethods(object):
 
         return basketstart, basketstop
 
-    def baskets(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, reportentries=False, executor=None, blocking=True):
+    def baskets(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, reportentries=False, executor=None, blocking=True):
         awkward = _normalize_awkwardlib(awkwardlib)
         interpretation = self._normalize_interpretation(interpretation, awkward)
         if interpretation is None:
@@ -1199,7 +1199,7 @@ class TBranchMethods(object):
 
         def fill(j):
             try:
-                basket = self.basket(j + basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, flatname=flatname, awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache)
+                basket = self.basket(j + basketstart, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache)
                 if reportentries:
                     local_entrystart, local_entrystop = self._localentries(j + basketstart, entrystart, entrystop)
                     basket = (local_entrystart + self.basket_entrystart(j + basketstart),
@@ -1229,7 +1229,7 @@ class TBranchMethods(object):
                 return out
             return wait
 
-    def iterate_baskets(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, reportentries=False):
+    def iterate_baskets(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, reportentries=False):
         awkward = _normalize_awkwardlib(awkwardlib)
         interpretation = self._normalize_interpretation(interpretation, awkward)
         if interpretation is None:
@@ -1247,9 +1247,9 @@ class TBranchMethods(object):
                     if reportentries:
                         yield (local_entrystart + self.basket_entrystart(i),
                                local_entrystop + self.basket_entrystart(i),
-                               self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, flatname=flatname, awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache))
+                               self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache))
                     else:
-                        yield self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, flatname=flatname, awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache)
+                        yield self.basket(i, interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache)
 
     def _basket_itemoffset(self, interpretation, basketstart, basketstop, keycache):
         basket_itemoffset = [0]
@@ -1265,7 +1265,7 @@ class TBranchMethods(object):
             basket_entryoffset.append(basket_entryoffset[-1] + self.basket_numentries(i))
         return basket_entryoffset
 
-    def array(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+    def array(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         awkward = _normalize_awkwardlib(awkwardlib)
         interpretation = self._normalize_interpretation(interpretation, awkward)
         if interpretation is None:
