@@ -35,6 +35,15 @@ The :py:func:`lazyarray <uproot.lazyarray>` and :py:func:`lazyarrays <uproot.laz
 
 .. autofunction:: uproot.tree.lazyarrays
 
+uproot.daskarray and daskframe
+------------------------------
+
+Like the above, but presents the data as `Dask <https://dask.org/>`__ objects.
+
+.. autofunction:: uproot.tree.daskarray
+
+.. autofunction:: uproot.tree.daskframe
+
 uproot.tree.numentries
 ----------------------
 
