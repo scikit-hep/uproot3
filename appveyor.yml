@@ -53,4 +53,6 @@ build_script:
   - "pip install cachetools"
   - "pip install -i https://pypi.anaconda.org/carlkl/simple backports.lzma"
   - "pip install pytest pytest-runner pandas requests"
-  - "python setup.py pytest"
+  - "python setup.py"
+  - "curl -fsS -o tests/samples/Event.root http://scikit-hep.org/uproot/examples/Event.root"
+  - "pytest -v tests"

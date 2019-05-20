@@ -584,10 +584,10 @@ class Test(unittest.TestCase):
                 assert normalize(lazy[i - 1 : i + 3]) == strict[i - 1 : i + 3].tolist()
 
     def test_hist_in_tree(self):
-        if os.name == "nt":
-            pytest.skip("AppVeyor sometimes can't load Event.root")
-        if os.path.exists("samples/Event.root"):
-            tree = uproot.open("samples/Event.root")["T"]
+        path = os.path.join("samples", "Event.root")
+        if os.path.exists(path):
+            tree = uproot.open(path)["T"]
+            print("Debugging")
         else:
             tree = uproot.open("http://scikit-hep.org/uproot/examples/Event.root")["T"]
         check = [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
@@ -601,8 +601,6 @@ class Test(unittest.TestCase):
         assert tree.array("fH")[20].values.tolist() == check
 
     def test_branch_auto_interpretation(self):
-        if os.name == "nt":
-            pytest.skip("AppVeyor sometimes can't load Event.root")
         # The aim is to reduce this list in a controlled manner
         known_branches_without_interp = [
             b'event',
@@ -614,8 +612,9 @@ class Test(unittest.TestCase):
             b'fTriggerBits',
             b'fTriggerBits.TObject'
         ]
-        if os.path.exists("samples/Event.root"):
-            tree = uproot.open("samples/Event.root")["T"]
+        path = os.path.join("samples", "Event.root")
+        if os.path.exists(path):
+            tree = uproot.open(path)["T"]
         else:
             tree = uproot.open("http://scikit-hep.org/uproot/examples/Event.root")["T"]
         branches_without_interp = [b.name for b in tree.allvalues() if b.interpretation is None]
