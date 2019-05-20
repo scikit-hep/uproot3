@@ -3,7 +3,7 @@
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
 import uproot
-import uproot._connect.to_pandas
+import uproot._connect._pandas
 
 def _method(x):
     if hasattr(x, "__func__"):
@@ -1447,7 +1447,7 @@ u"""Iterate over baskets.
 
 ################################################################ uproot.tree.TTreeMethods.pandas
 
-_method(uproot._connect.to_pandas.TTreeMethods_pandas.df).__doc__ = \
+_method(uproot._connect._pandas.TTreeMethods_pandas.df).__doc__ = \
 u"""Create a Pandas DataFrame from some branches.
 
     Parameters

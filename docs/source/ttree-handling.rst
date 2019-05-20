@@ -48,15 +48,15 @@ array
 
 .. automethod:: uproot.tree.TTreeMethods.array
 
-lazyarray
-^^^^^^^^^
-
-.. automethod:: uproot.tree.TTreeMethods.lazyarray
-
 arrays
 ^^^^^^
 
 .. automethod:: uproot.tree.TTreeMethods.arrays
+
+lazyarray
+^^^^^^^^^
+
+.. automethod:: uproot.tree.TTreeMethods.lazyarray
 
 lazyarrays
 ^^^^^^^^^^
@@ -76,7 +76,7 @@ TTree objects can be converted into `Pandas <https://pandas.pydata.org>`_ DataFr
 .. autoattribute:: uproot.tree.TTreeMethods.pandas
    :annotation: = methods for interacting with Pandas.
 
-.. automethod:: uproot._connect.to_pandas.TTreeMethods_pandas.df
+.. automethod:: uproot._connect._pandas.TTreeMethods_pandas.df
 
 uproot.tree.TBranchMethods
 --------------------------

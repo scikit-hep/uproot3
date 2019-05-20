@@ -460,9 +460,9 @@ class TTreeMethods(object):
                 return outputtype(*[future() for name, interpretation, future in futures])
 
         elif ispandas:
-            import uproot._connect.to_pandas
+            import uproot._connect._pandas
             def wait():
-                return uproot._connect.to_pandas.futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, awkward)
+                return uproot._connect._pandas.futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, awkward)
 
         elif isinstance(outputtype, type) and issubclass(outputtype, dict):
             def wait():
@@ -482,16 +482,16 @@ class TTreeMethods(object):
         else:
             return wait
 
-    def lazyarray(self, branch, interpretation=None, entrysteps=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, persistvirtual=False):
-        return self.get(branch).lazyarray(interpretation=interpretation, entrysteps=entrysteps, entrystart=entrystart, entrystop=entrystop, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking, persistvirtual=persistvirtual)
+    def lazyarray(self, branch, interpretation=None, entrysteps=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False):
+        return self.get(branch).lazyarray(interpretation=interpretation, entrysteps=entrysteps, entrystart=entrystart, entrystop=entrystop, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, persistvirtual=persistvirtual)
 
-    def lazyarrays(self, branches=None, namedecode="utf-8", entrysteps=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, persistvirtual=False):
+    def lazyarrays(self, branches=None, namedecode="utf-8", entrysteps=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False):
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
         entrysteps = self._normalize_entrysteps(entrysteps, branches, entrystart, entrystop)
         awkward = _normalize_awkwardlib(awkwardlib)
         branches = list(self._normalize_branches(branches, awkward))
 
-        lazytree = _LazyTree(self._context.sourcepath, self._context.treename, self, dict((b.name, x) for b, x in branches), flatten, awkward.__name__, basketcache, keycache, executor, blocking)
+        lazytree = _LazyTree(self._context.sourcepath, self._context.treename, self, dict((b.name, x) for b, x in branches), flatten, awkward.__name__, basketcache, keycache, executor)
 
         chunks = []
         counts = []
@@ -500,7 +500,7 @@ class TTreeMethods(object):
             numentries = stop - start
             chunks.append(awkward.Table())
             for branch, interpretation in branches:
-                name = codecs.ascii_decode(branch.name, "replace")[0] if namedecode is None else branch.name.decode(namedecode)
+                name = branch.name if namedecode is None else branch.name.decode(namedecode)
                 chunks[-1][name] = awkward.VirtualArray(lazytree, (branch.name, start, stop), cache=cache, type=awkward.type.ArrayType(numentries, interpretation.type), persistvirtual=persistvirtual)
             chunks[-1].rowstart = rowstart
             rowstart += numentries
@@ -570,11 +570,11 @@ class TTreeMethods(object):
                 return lambda: outputtype(*[evaluate(branch, interpretation, future, past, cachekey, False) for branch, interpretation, future, past, cachekey in futures])
 
         elif ispandas:
-            import uproot._connect.to_pandas
+            import uproot._connect._pandas
             def wrap_for_python_scope(futures, start, stop):
                 def wrap_again(branch, interpretation, future):
                     return lambda: interpretation.finalize(future(), branch)
-                return lambda: uproot._connect.to_pandas.futures2df([(branch.name, interpretation, wrap_again(branch, interpretation, future)) for branch, interpretation, future, past, cachekey in futures], outputtype, start, stop, flatten, flatname, awkward)
+                return lambda: uproot._connect._pandas.futures2df([(branch.name, interpretation, wrap_again(branch, interpretation, future)) for branch, interpretation, future, past, cachekey in futures], outputtype, start, stop, flatten, flatname, awkward)
 
         elif isinstance(outputtype, type) and issubclass(outputtype, dict):
             def wrap_for_python_scope(futures, start, stop):
@@ -779,8 +779,8 @@ class TTreeMethods(object):
 
     @property
     def pandas(self):
-        import uproot._connect.to_pandas
-        return uproot._connect.to_pandas.TTreeMethods_pandas(self)
+        import uproot._connect._pandas
+        return uproot._connect._pandas.TTreeMethods_pandas(self)
 
 ################################################################ methods for TBranch
 
@@ -1471,7 +1471,7 @@ class TBranchMethods(object):
                 raise TypeError("entrysteps must be None for cluster iteration, a positive integer for equal steps in number of entries (inf for maximal), or an iterable of 2-tuples for explicit entry starts (inclusive) and stops (exclusive)")
             return entrysteps
 
-    def lazyarray(self, interpretation=None, entrysteps=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, persistvirtual=False):
+    def lazyarray(self, interpretation=None, entrysteps=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False):
         if self._recoveredbaskets is None:
             self._tryrecover()
         awkward = _normalize_awkwardlib(awkwardlib)
@@ -1481,7 +1481,7 @@ class TBranchMethods(object):
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
         entrysteps = self._normalize_entrysteps(entrysteps, entrystart, entrystop)
 
-        lazybranch = _LazyBranch(self._context.sourcepath, self._context.treename, self.name, self, interpretation, flatten, awkward.__name__, basketcache, keycache, executor, blocking)
+        lazybranch = _LazyBranch(self._context.sourcepath, self._context.treename, self.name, self, interpretation, flatten, awkward.__name__, basketcache, keycache, executor)
 
         chunks = []
         counts = []
@@ -1720,10 +1720,10 @@ class _LazyFiles(object):
         if tree is None:
             tree = self.trees[self.paths[pathi]] = uproot.rootio.open(self.paths[pathi])[self.treepath]
             tree.interpretations = dict((b.name, x) for b, x in tree._normalize_branches(self.branches, awkward))
-        return tree[branchname].lazyarray(interpretation=tree.interpretations[branchname], entrysteps=self.entrysteps, entrystart=None, entrystop=None, flatten=self.flatten, awkwardlib=awkward, cache=None, basketcache=self.basketcache, keycache=self.keycache, executor=self.executor, blocking=True, persistvirtual=self.persistvirtual)
+        return tree[branchname].lazyarray(interpretation=tree.interpretations[branchname], entrysteps=self.entrysteps, entrystart=None, entrystop=None, flatten=self.flatten, awkwardlib=awkward, cache=None, basketcache=self.basketcache, keycache=self.keycache, executor=self.executor, persistvirtual=self.persistvirtual)
 
 class _LazyTree(object):
-    def __init__(self, path, treepath, tree, interpretation, flatten, awkwardlib, basketcache, keycache, executor, blocking):
+    def __init__(self, path, treepath, tree, interpretation, flatten, awkwardlib, basketcache, keycache, executor):
         self.path = path
         self.treepath = treepath
         self.tree = tree
@@ -1733,7 +1733,6 @@ class _LazyTree(object):
         self.basketcache = basketcache
         self.keycache = keycache
         self.executor = executor
-        self.blocking = blocking
         self._init()
 
     def _init(self):
@@ -1761,14 +1760,13 @@ class _LazyTree(object):
         self.basketcache = None
         self.keycache = None
         self.executor = None
-        self.blocking = True
         self._init()
 
     def __call__(self, branch, entrystart, entrystop):
-        return self.tree[branch].array(interpretation=self.interpretation[branch], entrystart=entrystart, entrystop=entrystop, flatten=self.flatten, awkwardlib=self.awkwardlib, cache=None, basketcache=self.basketcache, keycache=self.keycache, executor=self.executor, blocking=self.blocking)
+        return self.tree[branch].array(interpretation=self.interpretation[branch], entrystart=entrystart, entrystop=entrystop, flatten=self.flatten, awkwardlib=self.awkwardlib, cache=None, basketcache=self.basketcache, keycache=self.keycache, executor=self.executor)
         
 class _LazyBranch(object):
-    def __init__(self, path, treepath, branchname, branch, interpretation, flatten, awkwardlib, basketcache, keycache, executor, blocking):
+    def __init__(self, path, treepath, branchname, branch, interpretation, flatten, awkwardlib, basketcache, keycache, executor):
         self.path = path
         self.treepath = treepath
         self.branchname = branchname
@@ -1779,7 +1777,6 @@ class _LazyBranch(object):
         self.basketcache = basketcache
         self.keycache = keycache
         self.executor = executor
-        self.blocking = blocking
         self._init()
 
     def _init(self):
@@ -1809,18 +1806,18 @@ class _LazyBranch(object):
         self.basketcache = None
         self.keycache = None
         self.executor = None
-        self.blocking = True
         self._init()
 
     def __call__(self, entrystart, entrystop):
-        return self.branch.array(interpretation=self.interpretation, entrystart=entrystart, entrystop=entrystop, flatten=self.flatten, awkwardlib=self.awkwardlib, cache=None, basketcache=self.basketcache, keycache=self.keycache, executor=self.executor, blocking=self.blocking)
+        return self.branch.array(interpretation=self.interpretation, entrystart=entrystart, entrystop=entrystop, flatten=self.flatten, awkwardlib=self.awkwardlib, cache=None, basketcache=self.basketcache, keycache=self.keycache, executor=self.executor, blocking=True)
 
-def lazyarray(path, treepath, branchname, interpretation=None, namedecode="utf-8", entrysteps=float("inf"), flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, persistvirtual=False, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
+def lazyarray(path, treepath, branchname, interpretation=None, namedecode="utf-8", entrysteps=float("inf"), flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
     if interpretation is None:
         branches = branchname
     else:
         branches = {branchname: interpretation}
-    return lazyarrays(path, treepath, branches=branches, namedecode=namedecode, entrysteps=entrysteps, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking, persistvirtual=persistvirtual, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)
+    out = lazyarrays(path, treepath, branches=branches, namedecode=namedecode, entrysteps=entrysteps, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, persistvirtual=persistvirtual, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)
+    return out[out.columns[0]]
 
 def lazyarrays(path, treepath, branches=None, namedecode="utf-8", entrysteps=float("inf"), flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
     awkward = _normalize_awkwardlib(awkwardlib)
@@ -1852,7 +1849,7 @@ def lazyarrays(path, treepath, branches=None, namedecode="utf-8", entrysteps=flo
     for pathi, path in enumerate(paths):
         chunks.append(awkward.Table())
         for branch, interpretation in listbranches:
-            name = codecs.ascii_decode(branch.name, "replace")[0] if namedecode is None else branch.name.decode(namedecode)
+            name = branch.name if namedecode is None else branch.name.decode(namedecode)
             chunks[-1][name] = awkward.VirtualArray(lazyfiles, (pathi, branch.name), cache=cache, type=awkward.type.ArrayType(path2count[path], interpretation.type), persistvirtual=persistvirtual)
         chunks[-1].rowstart = rowstart
         rowstart += path2count[path]
@@ -1860,14 +1857,27 @@ def lazyarrays(path, treepath, branches=None, namedecode="utf-8", entrysteps=flo
 
     return awkward.ChunkedArray(chunks, counts)
 
-def daskarray():
-    raise NotImplementedError
+def daskarray(path, treepath, branchname, interpretation=None, namedecode="utf-8", entrysteps=float("inf"), flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
+    out = lazyarray(path, treepath, branchname, interpretation=interpretation, namedecode=namedecode, entrysteps=entrysteps, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, persistvirtual=False, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)
+    import dask.array
+    if len(out.shape) == 1:
+        return dask.array.from_array(out, out.shape, fancy=True)
+    else:
+        raise NotImplementedError("TODO: len(shape) > 1")
 
-def daskarrays():
-    raise NotImplementedError
-
-def daskframe():
-    raise NotImplementedError
+def daskframe(path, treepath, branches=None, namedecode="utf-8", entrysteps=float("inf"), flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
+    import dask.array
+    import dask.dataframe
+    out = lazyarrays(path, treepath, branches=branches, namedecode=namedecode, entrysteps=entrysteps, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, persistvirtual=False, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)
+    series = []
+    for n in out.columns:
+        x = out[n]
+        if len(x.shape) == 1:
+            array = dask.array.from_array(x, x.shape, fancy=True)
+            series.append(dask.dataframe.from_dask_array(array, columns=n))
+        else:
+            raise NotImplementedError("TODO: len(shape) > 1")
+    return dask.dataframe.concat(series, axis=1)
 
 ################################################################ for quickly getting numentries
 
@@ -1933,289 +1943,3 @@ def _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, e
         return wait()
     else:
         return wait
-
-# def daskarray(path, treepath, branchname, interpretation=None, chunks=None, name=None, limitbytes=1024**2, awkwardlib=None, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
-#     return lazyarray(path, treepath, branchname, interpretation=interpretation, limitbytes=limitbytes, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor).dask.array(chunks=chunks, name=name)
-
-# def daskarrays(path, treepath, branches=None, chunks=None, outputtype=dict, namedecode=None, limitbytes=1024**2, awkwardlib=None, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
-#     out = lazyarrays(path, treepath, branches=branches, outputtype=OrderedDict, namedecode=namedecode, limitbytes=limitbytes, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor)
-#     if outputtype == namedtuple:
-#         outputtype = namedtuple("Arrays", [n.decode("ascii") for n in out])
-#     if isinstance(outputtype, type) and issubclass(outputtype, dict):
-#         return outputtype([(n, x.dask.array(chunks=chunks, name=n)) for n, x in out.items()])
-#     elif isinstance(outputtype, type) and issubclass(outputtype, (list, tuple)):
-#         return outputtype([x.dask.array(chunks=chunks, name=n) for n, x in out.items()])
-#     else:
-#         return outputtype(*[x.dask.array(chunks=chunks, name=n) for n, x in out.items()])
-
-# def daskframe(path, treepath, branches=None, chunks=None, namedecode="utf-8", limitbytes=1024**2, awkwardlib=None, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
-#     import dask.dataframe
-#     out = lazyarrays(path, treepath, branches=branches, outputtype=OrderedDict, namedecode=namedecode, limitbytes=limitbytes, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor)
-#     series = []
-#     for n, x in out.items():
-#         if len(x.shape) == 1:
-#             array = x.dask.array(chunks=chunks, name=n)
-#             series.append(dask.dataframe.from_dask_array(array, columns=n))
-#         else:
-#             for tup in itertools.product(*[range(y) for y in x.shape[1:]]):
-#                 name = "{0}[{1}]".format(n, "][".join(str(z) for z in tup))
-#                 array = x.dask.array(chunks=chunks, name=name)[(slice(None),) + tup]
-#                 series.append(dask.dataframe.from_dask_array(array, columns=name))
-#     return dask.dataframe.concat(series, axis=1)
-
-# def lazyarray(path, treepath, branchname, interpretation=None, limitbytes=1024**2, awkwardlib=None, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
-#     if interpretation is None:
-#         branches = branchname
-#     else:
-#         branches = {branchname: interpretation}
-#     return lazyarrays(path, treepath, branches=branches, outputtype=tuple, namedecode=None, limitbytes=limitbytes, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor)[0]
-
-# def lazyarrays(path, treepath, branches=None, outputtype=dict, namedecode=None, limitbytes=1024**2, awkwardlib=None, cache=None, basketcache=None, keycache=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None):
-#     if isinstance(path, string_types):
-#         paths = _filename_explode(path)
-#     else:
-#         paths = [y for x in path for y in _filename_explode(x)]
-
-#     uuids = [None] * len(paths)
-#     path2numentries = _numentries(paths, treepath, False, localsource, xrootdsource, httpsource, executor, True, uuids)
-#     globalentryoffset = numpy.empty(len(paths) + 1, dtype=numpy.int64)
-#     globalentryoffset[0] = 0
-#     for i in range(len(paths)):
-#         globalentryoffset[i + 1] = globalentryoffset[i] + path2numentries[paths[i]]
-
-#     tree = uproot.rootio.open(paths[0], localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource)[treepath]
-#     awkward = _normalize_awkwardlib(awkwardlib)
-#     branches = list(tree._normalize_branches(branches, awkward))
-
-#     if cache is None:
-#         cache = uproot.cache.ThreadSafeArrayCache(limitbytes)
-#     if basketcache is None:
-#         basketcache = cache
-#     if keycache is None:
-#         keycache = cache
-#     cache[LazyArray._cachekey(uuids[0], treepath)] = tree
-
-#     def chunksize(branch):
-#         if branch.numbaskets == 0:
-#             return 0
-#         else:
-#             return max(branch.basket_numentries(i) for i in range(branch.numbaskets))
-
-#     if outputtype == namedtuple:
-#         outputtype = namedtuple("Arrays", [codecs.ascii_decode(branch.name, "replace")[0] if namedecode is None else branch.name.decode(namedecode) for branch, interpretation in branches])
-#         return outputtype(*[LazyArray._frompaths(paths, uuids, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, awkward, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
-#     elif getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame":
-#         raise TypeError("pandas.DataFrame cannot store lazyarrays")
-#     elif isinstance(outputtype, type) and issubclass(outputtype, dict):
-#         return outputtype((branch.name if namedecode is None else branch.name.decode(namedecode), LazyArray._frompaths(paths, uuids, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, awkward, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor)) for branch, interpretation in branches)
-#     elif isinstance(outputtype, type) and issubclass(outputtype, (list, tuple)):
-#         return outputtype(LazyArray._frompaths(paths, uuids, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, awkward, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches)
-#     else:
-#         return outputtype(*[LazyArray._frompaths(paths, uuids, treepath, branch.name, chunksize(branch), interpretation, globalentryoffset, awkward, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor) for branch, interpretation in branches])
-
-# class LazyArray(object):
-#     def __init__(self):
-#         raise TypeError("LazyArrays should be created with uproot.lazyarrays or TTreeMethods.lazyarrays")
-
-#     @classmethod
-#     def _frombranch(cls, onlybranch, interpretation, awkward, cache, basketcache, keycache, executor):
-#         self = cls.__new__(cls)
-#         self._onlybranch = onlybranch
-#         self._paths = (None,)
-#         self._uuids = (None,)
-#         self._treepath = None
-#         self._branchname = onlybranch.name
-#         self._chunksize = max(onlybranch.basket_numentries(i) for i in range(onlybranch.numbaskets)) if onlybranch.numbaskets > 0 else 1
-#         self._interpretation = interpretation
-#         self._globalentryoffset = numpy.array([0, onlybranch.numentries], dtype=numpy.int64)
-#         self._awkward = awkward
-#         self._cache = cache
-#         self._basketcache = basketcache
-#         self._keycache = keycache
-#         self._localsource = None
-#         self._xrootdsource = None
-#         self._httpsource = None
-#         self._executor = executor
-#         return self
-
-#     @classmethod
-#     def _frompaths(cls, paths, uuids, treepath, branchname, chunksize, interpretation, globalentryoffset, awkward, cache, basketcache, keycache, localsource, xrootdsource, httpsource, executor):
-#         self = cls.__new__(cls)
-#         self._onlybranch = None
-#         self._paths = paths
-#         self._uuids = uuids
-#         self._treepath = treepath
-#         self._branchname = branchname
-#         self._chunksize = chunksize
-#         self._interpretation = interpretation
-#         self._globalentryoffset = globalentryoffset
-#         self._awkward = awkward
-#         self._cache = cache
-#         self._basketcache = basketcache
-#         self._keycache = keycache
-#         self._localsource = localsource
-#         self._xrootdsource = xrootdsource
-#         self._httpsource = httpsource
-#         self._executor = executor
-#         return self
-
-#     def __repr__(self):
-#         if isinstance(self._branchname, str):
-#             branchname = self._branchname
-#         else:
-#             branchname = self._branchname.decode("ascii")
-#         return "<LazyArray {0} at {1:012x}>".format(repr(branchname), id(self))
-
-#     def __str__(self):
-#         if len(self) > 6:
-#             return numpy.array_str(self[:3], max_line_width=numpy.inf).rstrip("]") + " ... " + numpy.array_str(self[-3:], max_line_width=numpy.inf).lstrip("[")
-#         else:
-#             return numpy.array_str(str, max_line_width=numpy.inf)
-
-#     def __len__(self):
-#         return int(self._globalentryoffset[-1])
-
-#     @property
-#     def shape(self):
-#         if isinstance(self._interpretation, asdtype):
-#             return (len(self),) + self._interpretation.todims
-#         else:
-#             return (len(self),)
-
-#     @property
-#     def dtype(self):
-#         if isinstance(self._interpretation, asdtype):
-#             return self._interpretation.todtypeflat
-#         else:
-#             return numpy.dtype(numpy.object_)
-
-#     @staticmethod
-#     def _cachekey(uuid, treepath):
-#         return "{0};{1}".format(base64.b64encode(uuid).decode("ascii"), _bytesid(treepath).decode("ascii"))
-
-#     def _tree(self, filenum):
-#         cachekey = LazyArray._cachekey(self._uuids[filenum], self._treepath)
-#         tree = self._cache.get(cachekey, None)
-#         if tree is None:
-#             tree = uproot.rootio.open(self._paths[filenum], localsource=self._localsource, xrootdsource=self._xrootdsource, httpsource=self._httpsource)[self._treepath]
-#             self._cache[cachekey] = tree
-#         return tree
-
-#     def _piece(self, filenum, start, stop, step):
-#         if step > 0:
-#             entrystart = start
-#             entrystop = stop
-#         elif stop is None:
-#             entrystart = 0
-#             entrystop = start + 1
-#         else:
-#             entrystart = stop + 1
-#             entrystop = start + 1
-
-#         if self._onlybranch is None:
-#             tree = self._tree(filenum)
-#             array = tree[self._branchname].array(interpretation=self._interpretation, entrystart=entrystart, entrystop=entrystop, flatten=False, flatname=None, awkwardlib=self._awkward, cache=None, basketcache=self._basketcache, keycache=self._keycache, executor=self._executor, blocking=True)
-#         else:
-#             array = self._onlybranch.array(interpretation=self._interpretation, entrystart=entrystart, entrystop=entrystop, flatten=False, flatname=None, awkwardlib=self._awkward, cache=None, basketcache=self._basketcache, keycache=self._keycache, executor=self._executor, blocking=True)
-
-#         if step < 0:
-#             array = array[::step]
-#         return array
-
-#     def __getslice__(self, start, end):
-#         return self.__getitem__(slice(start, end))
-
-#     def __getitem__(self, index):
-#         if isinstance(index, slice):
-#             start, stop, step = index.indices(self._globalentryoffset[-1])
-#             if step > 0:
-#                 step_filenum = 1
-#                 start_filenum = self._globalentryoffset.searchsorted(start, side="right") - 1
-#                 stop_filenum = self._globalentryoffset.searchsorted(stop, side="right")
-#             else:
-#                 step_filenum = -1
-#                 start_filenum = self._globalentryoffset.searchsorted(start, side="right") - 1
-#                 stop_filenum = self._globalentryoffset.searchsorted(stop, side="right") - 2
-#                 if stop_filenum < 0:
-#                     stop_filenum = None
-
-#             shape = (max(0, (stop - start + (step - (1 if step > 0 else -1))) // step),)
-#             if isinstance(self._interpretation, asdtype):
-#                 shape = shape + self._interpretation.todims
-
-#             out = self._awkward.numpy.empty(shape, dtype=self.dtype)
-#             pointer = 0
-
-#             skip = 0
-#             if start_filenum >= 0:
-#                 for filenum in range(*slice(start_filenum, stop_filenum, step_filenum).indices(len(self._paths))):
-#                     filestart = self._globalentryoffset[filenum]
-#                     filestop = self._globalentryoffset[filenum + 1]
-
-#                     if step_filenum == 1:
-#                         if start > filestart:
-#                             local_start = start - filestart
-#                         else:
-#                             local_start = skip
-
-#                         if stop < filestop:
-#                             local_stop = stop - filestart
-#                         else:
-#                             local_stop = filestop - filestart
-
-#                         size = local_stop - local_start
-
-#                     else:
-#                         if start < filestop:
-#                             local_start = start - filestart
-#                         else:
-#                             local_start = filestop - filestart - 1 - skip
-
-#                         if stop >= filestart:
-#                             local_stop = stop - filestart
-#                             size = local_start + 1 - local_stop
-#                         else:
-#                             local_stop = None
-#                             size = local_start + 1
-
-#                     piece = self._piece(filenum, local_start, local_stop, step)
-#                     skip = int(math.ceil(size / float(abs(step)))) * abs(step) - size
-
-#                     tmp = pointer
-
-#                     if isinstance(piece, self._awkward.numpy.ndarray):
-#                         out[pointer : pointer + len(piece)] = piece
-#                         pointer += len(piece)
-#                     else:
-#                         for x in piece:
-#                             out[pointer] = x
-#                             pointer += 1
-
-#             assert pointer == len(out)
-#             return out
-
-#         elif isinstance(index, (numbers.Integral, numpy.integer)):
-#             lenself = self._globalentryoffset[-1]
-#             if index < 0:
-#                 normindex = index + lenself
-#             else:
-#                 normindex = index
-#             if normindex >= lenself:
-#                 raise IndexError("index {0} out of range for LazyArray of length {1}".format(index, lenself))
-
-#             filenum = self._globalentryoffset.searchsorted(normindex, side="right") - 1
-#             localindex = normindex - self._globalentryoffset[filenum]
-
-#             return self._piece(filenum, localindex, localindex + 1, 1)[0]
-
-#         else:
-#             out = self.__getitem__(index[0])
-#             if len(index) > 1:
-#                 for i in range(len(out)):
-#                     out[i] = out[i][index[1:]]
-#             return out
-
-#     @property
-#     def dask(self):
-#         import uproot._connect.to_dask
-#         return uproot._connect.to_dask.LazyArray_dask(self)

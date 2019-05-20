@@ -26,6 +26,15 @@ The :py:func:`iterate <uproot.iterate>` function gives you an iterator over grou
 
 .. autofunction:: uproot.tree.iterate
 
+uproot.lazyarray and lazyarrays
+-------------------------------
+
+The :py:func:`lazyarray <uproot.lazyarray>` and :py:func:`lazyarrays <uproot.lazyarrays>` give you a lazy view into a whole collection of files. They behave like the :py:meth:`TTreeMethods.lazyarray <uproot.tree.TTreeMethods.lazyarray>` and :py:meth:`TTreeMethods.lazyarrays <uproot.tree.TTreeMethods.lazyarrays>` methods except that they wildcarded filenames and a TTree name as the first arguments.
+
+.. autofunction:: uproot.tree.lazyarray
+
+.. autofunction:: uproot.tree.lazyarrays
+
 uproot.tree.numentries
 ----------------------
 
