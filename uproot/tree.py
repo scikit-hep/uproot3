@@ -509,7 +509,10 @@ class TTreeMethods(object):
 
     def _normalize_entrysteps(self, entrysteps, branches, entrystart, entrystop):
         if entrysteps is None:
-            entrysteps = self.clusters(branches, entrystart=entrystart, entrystop=entrystop, strict=False)
+            return self.clusters(branches, entrystart=entrystart, entrystop=entrystop, strict=False)
+
+        elif entrysteps == float("inf"):
+            return [(entrystart, min(entrystop, self.numentries))]
 
         elif isinstance(entrysteps, numbers.Integral):
             entrystepsize = entrysteps
@@ -519,15 +522,14 @@ class TTreeMethods(object):
             effectivestop = min(entrystop, self.numentries)
             starts = numpy.arange(entrystart, effectivestop, entrystepsize)
             stops = numpy.append(starts[1:], effectivestop)
-            entrysteps = zip(starts, stops)
+            return zip(starts, stops)
 
         else:
             try:
                 iter(entrysteps)
             except TypeError:
-                raise TypeError("entrysteps must be None for cluster iteration, a positive integer for equal steps in number of entries, or an iterable of 2-tuples for explicit entry starts (inclusive) and stops (exclusive)")
-
-        return entrysteps
+                raise TypeError("entrysteps must be None for cluster iteration, a positive integer for equal steps in number of entries (inf for maximal), or an iterable of 2-tuples for explicit entry starts (inclusive) and stops (exclusive)")
+            return entrysteps
 
     def iterate(self, branches=None, entrysteps=None, outputtype=dict, namedecode=None, reportentries=False, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
@@ -1443,6 +1445,24 @@ class TBranchMethods(object):
                                        basket_entryoffset[-1])
 
         return wait
+
+    def _normalize_entrysteps(self, entrysteps, entrystart, entrystop):
+        if entrysteps is None:
+            if self._recoveredbaskets is None:
+                self._tryrecover()
+            return [(self._entryoffsets[i], self._entryoffsets[i + 1]) for i in range(self.numbaskets) if entrystart < self._entryoffsets[i + 1] and entrystop >= self._entryoffsets[i]]
+
+        elif entrysteps == float("inf"):
+            return [(entrystart, min(entrystop, self.numentries))]
+
+        elif isinstance(entrysteps, numbers.Integral):
+            HERE
+
+        
+        raise NotImplementedError
+
+    def lazyarray(self, interpretation=None, entrysteps=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, persistvirtual=False):
+        raise NotImplementedError
 
     # def lazyarray(self, interpretation=None, limitbytes=1024**2, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None):
     #     awkward = _normalize_awkwardlib(awkwardlib)
