@@ -1675,7 +1675,7 @@ class _LazyFiles(object):
         self.xrootdsource = xrootdsource
         self.httpsource = httpsource
         self.options = options
-        self._init(self)
+        self._init()
 
     def _init(self):
         self.trees = cachetools.LRUCache(5)                                 # last 5 TTrees
@@ -1715,13 +1715,11 @@ class _LazyFiles(object):
         self._init()
 
     def __call__(self, pathi, branchname):
-        awkward = _normalize_awkwardlib(awkwardlib)
-
+        awkward = _normalize_awkwardlib(self.awkwardlib)
         tree = self.trees.get(self.paths[pathi], None)
         if tree is None:
-            tree = self.trees[self.paths[pathi]] = uproot.rootio.open(self.path)[self.treepath]
-            tree.interpretations = dict((b.name, x) for b, x in self._normalize_branches(self.branches, awkward))
-
+            tree = self.trees[self.paths[pathi]] = uproot.rootio.open(self.paths[pathi])[self.treepath]
+            tree.interpretations = dict((b.name, x) for b, x in tree._normalize_branches(self.branches, awkward))
         return tree[branchname].lazyarray(interpretation=tree.interpretations[branchname], entrysteps=self.entrysteps, entrystart=None, entrystop=None, flatten=self.flatten, awkwardlib=awkward, cache=None, basketcache=self.basketcache, keycache=self.keycache, executor=self.executor, blocking=True, persistvirtual=self.persistvirtual)
 
 class _LazyTree(object):
@@ -1817,24 +1815,21 @@ class _LazyBranch(object):
     def __call__(self, entrystart, entrystop):
         return self.branch.array(interpretation=self.interpretation, entrystart=entrystart, entrystop=entrystop, flatten=self.flatten, awkwardlib=self.awkwardlib, cache=None, basketcache=self.basketcache, keycache=self.keycache, executor=self.executor, blocking=self.blocking)
 
-def lazyarray(path, treepath, branchname, interpretation=None, namedecode="utf-8", knowcounts=False, entrysteps=float("inf"), flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, persistvirtual=False, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
+def lazyarray(path, treepath, branchname, interpretation=None, namedecode="utf-8", entrysteps=float("inf"), flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, persistvirtual=False, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
     if interpretation is None:
         branches = branchname
     else:
         branches = {branchname: interpretation}
-    return lazyarrays(path, treepath, branches=branches, namedecode=namedecode, knowcounts=knowcounts, entrysteps=entrysteps, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking, persistvirtual=persistvirtual, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)
+    return lazyarrays(path, treepath, branches=branches, namedecode=namedecode, entrysteps=entrysteps, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking, persistvirtual=persistvirtual, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)
 
-def lazyarrays(path, treepath, branches=None, namedecode="utf-8", knowcounts=True, entrysteps=float("inf"), flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
+def lazyarrays(path, treepath, branches=None, namedecode="utf-8", entrysteps=float("inf"), flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
     awkward = _normalize_awkwardlib(awkwardlib)
     if isinstance(path, string_types):
         paths = _filename_explode(path)
     else:
         paths = [y for x in path for y in _filename_explode(x)]
 
-    if knowcounts:
-        path2count = numentries(path, treepath, total=False, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor, blocking=True)
-    else:
-        path2count = {}
+    path2count = numentries(path, treepath, total=False, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor, blocking=True)
 
     listbranches = None
     for path in paths:
@@ -1849,23 +1844,30 @@ def lazyarrays(path, treepath, branches=None, namedecode="utf-8", knowcounts=Tru
     if listbranches is None:
         raise ValueError("no matching paths contained a tree named {0}".format(repr(treepath)))
 
-    lazyfiles = _LazyFiles(paths, treepath, branches, entrysteps, flatten, awkward.__name__, basketcache, keycache, executor, localsource, xrootdsource, httpsource, options)
+    lazyfiles = _LazyFiles(paths, treepath, branches, entrysteps, flatten, awkward.__name__, basketcache, keycache, executor, persistvirtual, localsource, xrootdsource, httpsource, options)
 
     chunks = []
     counts = []
+    rowstart = 0
     for pathi, path in enumerate(paths):
-        numentries = path2count.get(path, None)
         chunks.append(awkward.Table())
         for branch, interpretation in listbranches:
             name = codecs.ascii_decode(branch.name, "replace")[0] if namedecode is None else branch.name.decode(namedecode)
-            chunks[-1][name] = awkward.VirtualArray(lazyfiles, (pathi, branch.name), cache=cache, type=(awkward.type.ArrayType(numentries, interpretation.type) if numentries is not None else None), persistvirtual=persistvirtual)
-        if numentries is not None:
-            counts.append(numentries)
-
-    if len(chunks) != len(counts):
-        counts = None
+            chunks[-1][name] = awkward.VirtualArray(lazyfiles, (pathi, branch.name), cache=cache, type=awkward.type.ArrayType(path2count[path], interpretation.type), persistvirtual=persistvirtual)
+        chunks[-1].rowstart = rowstart
+        rowstart += path2count[path]
+        counts.append(path2count[path])
 
     return awkward.ChunkedArray(chunks, counts)
+
+def daskarray():
+    raise NotImplementedError
+
+def daskarrays():
+    raise NotImplementedError
+
+def daskframe():
+    raise NotImplementedError
 
 ################################################################ for quickly getting numentries
 
