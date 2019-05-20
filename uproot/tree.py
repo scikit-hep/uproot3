@@ -516,13 +516,10 @@ class TTreeMethods(object):
             if entrystepsize <= 0:
                 raise ValueError("if an integer, entrysteps must be positive")
 
-            def startstop():
-                start = entrystart
-                while start < entrystop and start < self.numentries:
-                    stop = min(start + entrystepsize, entrystop)
-                    yield start, stop
-                    start = stop
-            entrysteps = startstop()
+            effectivestop = min(entrystop, self.numentries)
+            starts = numpy.arange(entrystart, effectivestop, entrystepsize)
+            stops = numpy.append(starts[1:], effectivestop)
+            entrysteps = zip(starts, stops)
 
         else:
             try:
