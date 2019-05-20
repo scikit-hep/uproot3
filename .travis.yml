@@ -71,6 +71,7 @@ install:
   - if [[ ${PYVER} != pypy* ]] ; then
       mamba install -c anaconda python=${PYVER} pyopenssl;
     fi
+  - wget -O tests/Event.root http://scikit-hep.org/uproot/examples/Event.root
 
 addons:
   apt:
