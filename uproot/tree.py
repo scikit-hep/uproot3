@@ -481,31 +481,28 @@ class TTreeMethods(object):
         else:
             return wait
 
-    # def lazyarray(self, branch, interpretation=None, limitbytes=1024**2, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None):
-    #     return self.get(branch).lazyarray(interpretation=interpretation, limitbytes=limitbytes, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor)
+    def lazyarray(self, branch, interpretation=None, entrysteps=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, persistvirtual=False):
+        return self.get(branch).lazyarray(interpretation=interpretation, entrysteps=entrysteps, entrystart=entrystart, entrystop=entrystop, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking, persistvirtual=persistvirtual)
 
-    # def lazyarrays(self, branches=None, outputtype=dict, namedecode=None, limitbytes=1024**2, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None):
-    #     awkward = _normalize_awkwardlib(awkwardlib)
-    #     branches = list(self._normalize_branches(branches, awkward))
+    def lazyarrays(self, branches=None, namedecode=None, entrysteps=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, persistvirtual=False):
+        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+        entrysteps = self._normalize_entrysteps(entrysteps, branches, entrystart, entrystop)
+        awkward = _normalize_awkwardlib(awkwardlib)
+        branches = list(self._normalize_branches(branches, awkward))
 
-    #     if basketcache is None:
-    #         basketcache = uproot.cache.ThreadSafeArrayCache(limitbytes)
-    #     if keycache is None:
-    #         keycache = {}
+        lazytree = _LazyTree(self._context.sourcepath, self._context.treename, self, dict((b.name, x) for b, x in branches), flatten, awkward.__name__, basketcache, keycache, executor, blocking)
 
-    #     lazyarrays = [(branch.name if namedecode is None else branch.name.decode(namedecode), branch.lazyarray(interpretation=interpretation, limitbytes=limitbytes, awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor)) for branch, interpretation in branches]
+        chunks = []
+        counts = []
+        for start, stop in entrysteps:
+            numentries = stop - start
+            chunks.append(awkward.Table())
+            for branch, interpretation in branches:
+                name = codecs.ascii_decode(branch.name, "replace")[0] if namedecode is None else branch.name.decode(namedecode)
+                chunks[-1][name] = awkward.VirtualArray(lazytree, (branch.name, start, stop), cache=cache, type=awkward.type.ArrayType(numentries, interpretation.type), persistvirtual=persistvirtual)
+            counts.append(numentries)
 
-    #     if outputtype == namedtuple:
-    #         outputtype = namedtuple("Arrays", [codecs.ascii_decode(branch.name, "replace")[0] if namedecode is None else branch.name.decode(namedecode) for branch, interpretation in branches])
-    #         return outputtype(*[lazyarray for name, lazyarray in lazyarrays])
-    #     elif getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame":
-    #         raise TypeError("pandas.DataFrame cannot store lazyarrays")
-    #     elif isinstance(outputtype, type) and issubclass(outputtype, dict):
-    #         return outputtype(lazyarrays)
-    #     elif isinstance(outputtype, type) and issubclass(outputtype, (list, tuple)):
-    #         return outputtype(lazyarray for name, lazyarray in lazyarrays)
-    #     else:
-    #         return outputtype(*[lazyarray for name, lazyarray in lazyarrays])
+        return awkward.ChunkedArray(chunks, counts)
 
     def _normalize_entrysteps(self, entrysteps, branches, entrystart, entrystop):
         if entrysteps is None:
@@ -534,12 +531,11 @@ class TTreeMethods(object):
     def iterate(self, branches=None, entrysteps=None, outputtype=dict, namedecode=None, reportentries=False, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
         entrysteps = self._normalize_entrysteps(entrysteps, branches, entrystart, entrystop)
+        awkward = _normalize_awkwardlib(awkwardlib)
+        branches = list(self._normalize_branches(branches, awkward))
 
         # for the case of outputtype == pandas.DataFrame, do some preparation to fill DataFrames efficiently
         ispandas = getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame"
-
-        awkward = _normalize_awkwardlib(awkwardlib)
-        branches = list(self._normalize_branches(branches, awkward))
 
         if keycache is None:
             keycache = {}
@@ -1269,13 +1265,12 @@ class TBranchMethods(object):
         return basket_entryoffset
 
     def array(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+        if self._recoveredbaskets is None:
+            self._tryrecover()
         awkward = _normalize_awkwardlib(awkwardlib)
         interpretation = self._normalize_interpretation(interpretation, awkward)
         if interpretation is None:
             raise ValueError("cannot interpret branch {0} as a Python type\n   in file: {1}".format(repr(self.name), self._context.sourcepath))
-        if self._recoveredbaskets is None:
-            self._tryrecover()
-
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
         basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
 
@@ -1473,23 +1468,22 @@ class TBranchMethods(object):
             return entrysteps
 
     def lazyarray(self, interpretation=None, entrysteps=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, persistvirtual=False):
+        if self._recoveredbaskets is None:
+            self._tryrecover()
         awkward = _normalize_awkwardlib(awkwardlib)
         interpretation = self._normalize_interpretation(interpretation, awkward)
         if interpretation is None:
             raise ValueError("cannot interpret branch {0} as a Python type\n   in file: {1}".format(repr(self.name), self._context.sourcepath))
-        if self._recoveredbaskets is None:
-            self._tryrecover()
-
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
         entrysteps = self._normalize_entrysteps(entrysteps, entrystart, entrystop)
 
-        lazybranch = _LazyBranch(self._context.sourcepath, self._context.treename, self.name, self, interpretation, basketcache, keycache, executor, blocking)
+        lazybranch = _LazyBranch(self._context.sourcepath, self._context.treename, self.name, self, interpretation, flatten, awkward.__name__, basketcache, keycache, executor, blocking)
 
         chunks = []
         counts = []
         for start, stop in entrysteps:
             numentries = stop - start
-            chunks.append(awkward.VirtualArray(lazybranch, (start, stop, flatten, awkward.__name__), cache=cache, type=awkward.type.ArrayType(numentries, interpretation.type), persistvirtual=persistvirtual))
+            chunks.append(awkward.VirtualArray(lazybranch, (start, stop), cache=cache, type=awkward.type.ArrayType(numentries, interpretation.type), persistvirtual=persistvirtual))
             counts.append(numentries)
 
         return awkward.ChunkedArray(chunks, counts)
@@ -1661,13 +1655,56 @@ class TBranchMethods(object):
 
 ################################################################ for persisting VirtualArrays
 
+class _LazyTree(object):
+    def __init__(self, path, treepath, tree, interpretation, flatten, awkwardlib, basketcache, keycache, executor, blocking):
+        self.path = path
+        self.treepath = treepath
+        self.tree = tree
+        self.interpretation = interpretation
+        self.flatten = flatten
+        self.awkwardlib = awkwardlib
+        self.basketcache = basketcache
+        self.keycache = keycache
+        self.executor = executor
+        self.blocking = blocking
+        self._init()
+
+    def _init(self):
+        if self.tree is None:
+            self.tree = uproot.rootio.open(self.path)[self.treepath]
+        if self.basketcache is None:
+            self.basketcache = uproot.cache.ThreadSafeArrayCache(1024**2)   # 1 MB
+        if self.keycache is None:
+            self.keycache = {}                                              # unlimited
+
+    def __getstate__(self):
+        return {"path": self.path, "treepath": self.treepath, "interpretation": self.interpretation, "flatten": self.flatten, "awkwardlib": self.awkwardlib}
+
+    def __setstate__(self, state):
+        self.path = state["path"]
+        self.treepath = state["treepath"]
+        self.tree = None
+        self.interpretation = state["interpretation"]
+        self.flatten = state["flatten"]
+        self.awkwardlib = state["awkwardlib"]
+        self.basketcache = None
+        self.keycache = None
+        self.executor = None
+        self.blocking = True
+        self._init()
+
+    def __call__(self, branch, entrystart, entrystop):
+        return self.tree[branch].array(interpretation=self.interpretation[branch], entrystart=entrystart, entrystop=entrystop, flatten=self.flatten, awkwardlib=self.awkwardlib, cache=None, basketcache=self.basketcache, keycache=self.keycache, executor=self.executor, blocking=self.blocking)
+        
 class _LazyBranch(object):
-    def __init__(self, path, treepath, branchname, branch, interpretation, basketcache, keycache, executor, blocking):
+    def __init__(self, path, treepath, branchname, branch, interpretation, flatten, awkwardlib, basketcache, keycache, executor, blocking):
         self.path = path
         self.treepath = treepath
         self.branchname = branchname
         self.branch = branch
         self.interpretation = interpretation
+        self.flatten = flatten
+        self.awkwardlib = awkwardlib
         self.basketcache = basketcache
         self.keycache = keycache
         self.executor = executor
@@ -1683,7 +1720,7 @@ class _LazyBranch(object):
             self.keycache = {}                                              # unlimited
 
     def __getstate__(self):
-        return {"path": self.path, "treepath": self.treepath, "branchname": self.branchname, "interpretation": self.interpretation}
+        return {"path": self.path, "treepath": self.treepath, "branchname": self.branchname, "interpretation": self.interpretation, "flatten": self.flatten, "awkwardlib": self.awkwardlib}
 
     def __setstate__(self, state):
         self.path = state["path"]
@@ -1691,14 +1728,16 @@ class _LazyBranch(object):
         self.branchname = state["branchname"]
         self.branch = None
         self.interpretation = state["interpretation"]
+        self.flatten = state["flatten"]
+        self.awkwardlib = state["awkwardlib"]
         self.basketcache = None
         self.keycache = None
         self.executor = None
         self.blocking = True
         self._init()
 
-    def __call__(self, entrystart, entrystop, flatten, awkwardlib):
-        return self.branch.array(interpretation=self.interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, awkwardlib=awkwardlib, cache=None, basketcache=self.basketcache, keycache=self.keycache, executor=self.executor, blocking=self.blocking)
+    def __call__(self, entrystart, entrystop):
+        return self.branch.array(interpretation=self.interpretation, entrystart=entrystart, entrystop=entrystop, flatten=self.flatten, awkwardlib=self.awkwardlib, cache=None, basketcache=self.basketcache, keycache=self.keycache, executor=self.executor, blocking=self.blocking)
 
 ################################################################ for quickly getting numentries
 
