@@ -507,12 +507,7 @@ class TTreeMethods(object):
     #     else:
     #         return outputtype(*[lazyarray for name, lazyarray in lazyarrays])
 
-    def iterate(self, branches=None, entrysteps=None, outputtype=dict, namedecode=None, reportentries=False, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
-        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
-
-        # for the case of outputtype == pandas.DataFrame, do some preparation to fill DataFrames efficiently
-        ispandas = getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame"
-
+    def _normalize_entrysteps(self, entrysteps, branches, entrystart, entrystop):
         if entrysteps is None:
             entrysteps = self.clusters(branches, entrystart=entrystart, entrystop=entrystop, strict=False)
 
@@ -534,6 +529,15 @@ class TTreeMethods(object):
                 iter(entrysteps)
             except TypeError:
                 raise TypeError("entrysteps must be None for cluster iteration, a positive integer for equal steps in number of entries, or an iterable of 2-tuples for explicit entry starts (inclusive) and stops (exclusive)")
+
+        return entrysteps
+
+    def iterate(self, branches=None, entrysteps=None, outputtype=dict, namedecode=None, reportentries=False, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+        entrysteps = self._normalize_entrysteps(entrysteps, branches, entrystart, entrystop)
+
+        # for the case of outputtype == pandas.DataFrame, do some preparation to fill DataFrames efficiently
+        ispandas = getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame"
 
         awkward = _normalize_awkwardlib(awkwardlib)
         branches = list(self._normalize_branches(branches, awkward))
