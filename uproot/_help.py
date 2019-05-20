@@ -421,12 +421,12 @@ tree_fragments = {
         entry at which reading stops (exclusive). If ``None`` *(default)*, stop at the end of the branch.""",
 
     # entrysteps
-    "entrysteps": u"""entrysteps : ``None``, positive int, or iterable of *(int, int)* pairs
-        if ``None`` *(default)*, iterate in steps of TTree clusters (number of entries for which all branches' baskets align); if an integer, iterate in steps of equal numbers of entries (except at the end of a file); otherwise, iterate in explicit, user-specified *(start, stop)* intervals ("start" is inclusive and "stop" is exclusive).""",
+    "entrysteps": u"""entrysteps : ``None``, positive int, ``float("inf")``, or iterable of *(int, int)* pairs
+        if ``None`` *(default)*, iterate in steps of TTree clusters (number of entries for which all branches' baskets align); if an integer, iterate in steps of equal numbers of entries (except at the end of a file); if infinite, take file-sized steps; otherwise, iterate in explicit, user-specified *(start, stop)* intervals ("start" is inclusive and "stop" is exclusive).""",
 
     # entrysteps_tree
-    "entrysteps_tree": u"""entrysteps : ``None``, positive int, or iterable of *(int, int)* pairs
-        if ``None`` *(default)*, iterate in steps of TTree clusters (number of entries for which all branches' baskets align); if an integer, iterate in steps of equal numbers of entries; otherwise, iterate in explicit, user-specified *(start, stop)* intervals ("start" is inclusive and "stop" is exclusive).""",
+    "entrysteps_tree": u"""entrysteps : ``None``, positive int, ``float("inf")``, or iterable of *(int, int)* pairs
+        if ``None`` *(default)*, iterate in steps of TTree clusters (number of entries for which all branches' baskets align); if an integer, iterate in steps of equal numbers of entries; if infinite, iterate over the whole file in one step; otherwise, iterate in explicit, user-specified *(start, stop)* intervals ("start" is inclusive and "stop" is exclusive).""",
 
     # branch
     "branch": u"""branch : str
@@ -468,6 +468,10 @@ tree_fragments = {
     "flatten": u"""flatten : None or bool
         if ``True``, convert JaggedArrays into flat Numpy arrays. If False *(default)*, make JaggedArrays lists. If None, remove JaggedArrays.""",
 
+    # flatname
+    "flatname": u"""flatname : None or (branchname, fieldname, index) \u2192 str
+        if ``None`` *(default)*, use ``uproot._connect._pandas.default_flatname`` to convert a branchname with a subfield and regular index number into a Pandas column name; otherwise, take a user-defined function.""",
+
     # awkwardlib
     "awkwardlib": u"""awkwardlib : ``None``, str, or module
         if ``None`` *(default)*, use ``import awkward`` to get awkward-array constructors. Otherwise, parse the module string name or use the provided module.""",
@@ -491,6 +495,10 @@ tree_fragments = {
     # blocking
     "blocking": u"""blocking : bool
         if ``True`` *(default)*, do not exit this function until the arrays are read, and return those arrays. If ``False``, exit immediately and return a zero-argument function. That zero-argument function returns the desired array, and it blocks until the array is available. This option is only useful with a non-``None`` executor.""",
+
+    # persistvirtual
+    "persistvirtual": u"""persistvirtual : bool
+        if ``False`` *(default)*, the resulting awkward.VirtualArrays would convert themselves into real arrays (materialize) before being saved in awkward-array's persistence methods; if ``True``, the "virtualness" of the arrays is preserved\u2014that is, only instructions for reconstituting the arrays is saved, not the array data themselves.""",
 
     # recursive
     "recursive": u"""recursive : bool
@@ -541,6 +549,8 @@ u"""Opens a series of ROOT files (local or remote), yielding the same number of 
     {reportentries}
 
     {flatten}
+
+    {flatname}
 
     {awkwardlib}
 
@@ -599,8 +609,8 @@ u"""Adds array reading methods to TTree objects that have been streamed from a R
     **Methods for reading array data:**
 
     - :py:meth:`array <uproot.tree.TTreeMethods.array>` read one branch into an array (or other object if provided an alternate *interpretation*).
-    - :py:meth:`lazyarray <uproot.tree.TTreeMethods.lazyarray>` create a lazy array that would read the branch as needed.
     - :py:meth:`arrays <uproot.tree.TTreeMethods.arrays>` read many branches into arrays (or other objects if provided alternate *interpretations*).
+    - :py:meth:`lazyarray <uproot.tree.TTreeMethods.lazyarray>` create a lazy array that would read the branch as needed.
     - :py:meth:`lazyarrays <uproot.tree.TTreeMethods.lazyarrays>` create many lazy arrays.
     - :py:meth:`iterate <uproot.tree.TTreeMethods.iterate>` iterate over many arrays at once, yielding the same number of entries from all selected branches in each step.
 """
@@ -814,31 +824,6 @@ u"""Read one branch into an array (or other object if provided an alternate *int
     array or other object, depending on *interpretation*.
 """.format(**tree_fragments)
 
-# _method(uproot.tree.TTreeMethods.lazyarray).__doc__ = \
-# u"""Create a lazy array that would read the branch as needed.
-
-#     Parameters
-#     ----------
-#     {branch}
-
-#     {interpretation}
-
-#     {awkwardlib}
-
-#     {cache}
-
-#     {basketcache}
-
-#     {keycache}
-
-#     {executor}
-
-#     Returns
-#     -------
-#     lazy array (square brackets initiate data reading)
-#         lazy version of the array.
-# """.format(**tree_fragments)
-
 _method(uproot.tree.TTreeMethods.arrays).__doc__ = \
 u"""Read many branches into arrays (or other objects if provided alternate *interpretations*).
 
@@ -855,6 +840,8 @@ u"""Read many branches into arrays (or other objects if provided alternate *inte
     {entrystop}
 
     {flatten}
+
+    {flatname}
 
     {awkwardlib}
 
@@ -874,32 +861,75 @@ u"""Read many branches into arrays (or other objects if provided alternate *inte
         branch data.
 """.format(**tree_fragments)
 
-# _method(uproot.tree.TTreeMethods.lazyarrays).__doc__ = \
-# u"""Create many lazy arrays.
+_method(uproot.tree.TTreeMethods.lazyarray).__doc__ = \
+u"""Create a lazy array that would read the branch as needed.
 
-#     Parameters
-#     ----------
-#     {branches}
+    Parameters
+    ----------
+    {branch}
 
-#     {outputtype}
+    {interpretation}
 
-#     {namedecode}
+    {entrysteps_tree}
 
-#     {awkwardlib}
+    {entrystart}
 
-#     {cache}
+    {entrystop}
 
-#     {basketcache}
+    {flatten}
 
-#     {keycache}
+    {awkwardlib}
 
-#     {executor}
+    {cache}
 
-#     Returns
-#     -------
-#     outputtype of lazy arrays (square brackets initiate data reading)
-#         lazy branch data.
-# """.format(**tree_fragments)
+    {basketcache}
+
+    {keycache}
+
+    {executor}
+
+    {persistvirtual}
+
+    Returns
+    -------
+    ChunkedArray of VirtualArrays
+        lazy version of the array.
+""".format(**tree_fragments)
+
+_method(uproot.tree.TTreeMethods.lazyarrays).__doc__ = \
+u"""Create a table of lazy arrays.
+
+    Parameters
+    ----------
+    {branches}
+
+    {namedecode}
+
+    {entrysteps}
+
+    {entrystart}
+
+    {entrystop}
+
+    {flatten}
+
+    {awkwardlib}
+
+    {cache}
+
+    {basketcache}
+
+    {keycache}
+
+    {executor}
+
+    {persistvirtual}
+
+    Returns
+    -------
+    ChunkedArray of Table of VirtualArrays
+        lazy branch data.
+""".format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.iterate).__doc__ = \
 u"""Iterate over many arrays at once, yielding the same number of entries from all selected branches in each step.
@@ -923,6 +953,8 @@ u"""Iterate over many arrays at once, yielding the same number of entries from a
     {entrystop}
 
     {flatten}
+
+    {flatname}
 
     {awkwardlib}
 
@@ -1331,28 +1363,38 @@ u"""Read the branch into an array (or other object if provided an alternate *int
         branch data.
 """.format(**tree_fragments)
 
-# _method(uproot.tree.TBranchMethods.lazyarray).__doc__ = \
-# u"""Create a lazy array that would read the branch as needed.
+_method(uproot.tree.TBranchMethods.lazyarray).__doc__ = \
+u"""Create a lazy array that would read the branch as needed.
 
-#     Parameters
-#     ----------
-#     {interpretation}
+    Parameters
+    ----------
+    {interpretation}
 
-#     {awkwardlib}
+    {entrysteps}
 
-#     {cache}
+    {entrystart}
 
-#     {basketcache}
+    {entrystop}
 
-#     {keycache}
+    {flatten}
 
-#     {executor}
+    {awkwardlib}
 
-#     Returns
-#     -------
-#     lazy array (square brackets initiate data reading)
-#         lazy version of branch data.
-# """.format(**tree_fragments)
+    {cache}
+
+    {basketcache}
+
+    {keycache}
+
+    {executor}
+
+    {persistvirtual}
+
+    Returns
+    -------
+    ChunkedArray of VirtualArrays
+        lazy version of branch data.
+""".format(**tree_fragments)
 
 _method(uproot.tree.TBranchMethods.basket).__doc__ = \
 u"""Read a single basket into an array.
@@ -1478,6 +1520,196 @@ u"""Create a Pandas DataFrame from some branches.
         data frame (`see docs <http://pandas.pydata.org/pandas-docs/stable/api.html#dataframe>`_).
 """.format(**tree_fragments)
 
+################################################################ uproot.tree.lazyarray(s)
+
+uproot.tree.lazyarray.__doc__ = \
+u"""Create a lazy array that would read from a set of files as needed.
+
+    Parameters
+    ----------
+
+    path : str or list of str
+        glob pattern(s) for local file paths (POSIX wildcards like "``*``") or URLs specifying the locations of the files. A list of filenames are processed in the given order, but glob patterns get pre-sorted to ensure a predictable order.
+
+    treepath : str
+        path within each ROOT file to find the TTree (may include "``/``" for subdirectories or "``;``" for cycle numbers).
+
+    branchname : str
+        path within each TTree to find the TBranch
+
+    {interpretation}
+
+    {namedecode}
+
+    {entrysteps}
+
+    {flatten}
+
+    {awkwardlib}
+
+    {cache}
+
+    {basketcache}
+
+    {keycache}
+
+    {executor}
+
+    {persistvirtual}
+
+    {localsource}
+
+    {xrootdsource}
+
+    {httpsource}
+
+    {options}
+
+    Returns
+    -------
+    ChunkedArray of VirtualArrays of VirtualArrays
+        lazy files of lazy baskets.
+""".format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
+
+uproot.tree.lazyarrays.__doc__ = \
+u"""Create a lazy table that would read from a set of files as needed.
+
+    Parameters
+    ----------
+
+    path : str or list of str
+        glob pattern(s) for local file paths (POSIX wildcards like "``*``") or URLs specifying the locations of the files. A list of filenames are processed in the given order, but glob patterns get pre-sorted to ensure a predictable order.
+
+    treepath : str
+        path within each ROOT file to find the TTree (may include "``/``" for subdirectories or "``;``" for cycle numbers).
+
+    {branches}
+
+    {namedecode}
+
+    {entrysteps}
+
+    {flatten}
+
+    {awkwardlib}
+
+    {cache}
+
+    {basketcache}
+
+    {keycache}
+
+    {executor}
+
+    {persistvirtual}
+
+    {localsource}
+
+    {xrootdsource}
+
+    {httpsource}
+
+    {options}
+
+    Returns
+    -------
+    ChunkedArray of Table of VirtualArrays of VirtualArrays
+        lazy files of branches of lazy baskets.
+""".format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
+
+################################################################ uproot.tree.daskarray/daskframe
+
+uproot.tree.daskarray.__doc__ = \
+u"""Create a Dask array that would read from a set of files as needed.
+
+    Parameters
+    ----------
+
+    path : str or list of str
+        glob pattern(s) for local file paths (POSIX wildcards like "``*``") or URLs specifying the locations of the files. A list of filenames are processed in the given order, but glob patterns get pre-sorted to ensure a predictable order.
+
+    treepath : str
+        path within each ROOT file to find the TTree (may include "``/``" for subdirectories or "``;``" for cycle numbers).
+
+    branchname : str
+        path within each TTree to find the TBranch
+
+    {interpretation}
+
+    {namedecode}
+
+    {entrysteps}
+
+    {flatten}
+
+    {awkwardlib}
+
+    {cache}
+
+    {basketcache}
+
+    {keycache}
+
+    {executor}
+
+    {localsource}
+
+    {xrootdsource}
+
+    {httpsource}
+
+    {options}
+
+    Returns
+    -------
+    dask.array.core.Array
+        lazy files of lazy baskets.
+""".format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
+
+uproot.tree.daskframe.__doc__ = \
+u"""Create a Dask DataFrame that would read from a set of files as needed.
+
+    Parameters
+    ----------
+
+    path : str or list of str
+        glob pattern(s) for local file paths (POSIX wildcards like "``*``") or URLs specifying the locations of the files. A list of filenames are processed in the given order, but glob patterns get pre-sorted to ensure a predictable order.
+
+    treepath : str
+        path within each ROOT file to find the TTree (may include "``/``" for subdirectories or "``;``" for cycle numbers).
+
+    {branches}
+
+    {namedecode}
+
+    {entrysteps}
+
+    {flatten}
+
+    {awkwardlib}
+
+    {cache}
+
+    {basketcache}
+
+    {keycache}
+
+    {executor}
+
+    {localsource}
+
+    {xrootdsource}
+
+    {httpsource}
+
+    {options}
+
+    Returns
+    -------
+    dask.dataframe.core.DataFrame
+        lazy files of branches of lazy baskets.
+""".format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
+
 ################################################################ uproot.tree.numentries
 
 uproot.tree.numentries.__doc__ = \
@@ -1564,8 +1796,8 @@ u"""Generate a default interpretation of a branch.
     This function is called with default options on each branch in the following methods to generate a default interpretation. You can override the default either by calling this function explicitly with different parameters or by modifying its result.
 
     - :py:meth:`TTreeMethods.array <uproot.tree.TTreeMethods.array>`
-    - :py:meth:`TTreeMethods.lazyarray <uproot.tree.TTreeMethods.lazyarray>`
     - :py:meth:`TTreeMethods.arrays <uproot.tree.TTreeMethods.arrays>`
+    - :py:meth:`TTreeMethods.lazyarray <uproot.tree.TTreeMethods.lazyarray>`
     - :py:meth:`TTreeMethods.lazyarrays <uproot.tree.TTreeMethods.lazyarrays>`
     - :py:meth:`TTreeMethods.iterate <uproot.tree.TTreeMethods.iterate>`
     - :py:meth:`TTreeMethods.iterate_clusters <uproot.tree.TTreeMethods.iterate_clusters>`
