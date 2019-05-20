@@ -6,6 +6,8 @@ import sys
 import numbers
 import math
 
+import numpy
+
 import uproot.interp.interp
 
 if sys.version_info[0] <= 2:

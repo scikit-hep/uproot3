@@ -494,12 +494,15 @@ class TTreeMethods(object):
 
         chunks = []
         counts = []
+        rowstart = 0
         for start, stop in entrysteps:
             numentries = stop - start
             chunks.append(awkward.Table())
             for branch, interpretation in branches:
                 name = codecs.ascii_decode(branch.name, "replace")[0] if namedecode is None else branch.name.decode(namedecode)
                 chunks[-1][name] = awkward.VirtualArray(lazytree, (branch.name, start, stop), cache=cache, type=awkward.type.ArrayType(numentries, interpretation.type), persistvirtual=persistvirtual)
+            chunks[-1].rowstart = rowstart
+            rowstart += numentries
             counts.append(numentries)
 
         return awkward.ChunkedArray(chunks, counts)
