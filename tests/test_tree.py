@@ -595,10 +595,11 @@ class Test(unittest.TestCase):
                 assert lazy[i - 1 : i + 3].tolist() == strict[i - 1 : i + 3].tolist()
 
     def test_hist_in_tree(self):
-        if os.name == "nt":
-            pytest.skip("AppVeyor sometimes can't load Event.root")
-
-        tree = uproot.open("http://scikit-hep.org/uproot/examples/Event.root")["T"]
+        path = os.path.join("tests", "samples", "Event.root")
+        if os.path.exists(path):
+            tree = uproot.open(path)["T"]
+        else:
+            tree = uproot.open("http://scikit-hep.org/uproot/examples/Event.root")["T"]
         check = [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
                  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0,
                  1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -610,9 +611,6 @@ class Test(unittest.TestCase):
         assert tree.array("fH")[20].values.tolist() == check
 
     def test_branch_auto_interpretation(self):
-        if os.name == "nt":
-            pytest.skip("AppVeyor sometimes can't load Event.root")
-
         # The aim is to reduce this list in a controlled manner
         known_branches_without_interp = [
             b'event',
@@ -624,7 +622,11 @@ class Test(unittest.TestCase):
             b'fTriggerBits',
             b'fTriggerBits.TObject'
         ]
-        tree = uproot.open("http://scikit-hep.org/uproot/examples/Event.root")["T"]
+        path = os.path.join("tests", "samples", "Event.root")
+        if os.path.exists(path):
+            tree = uproot.open(path)["T"]
+        else:
+            tree = uproot.open("http://scikit-hep.org/uproot/examples/Event.root")["T"]
         branches_without_interp = [b.name for b in tree.allvalues() if b.interpretation is None]
         assert branches_without_interp == known_branches_without_interp
         assert tree.array("fTracks.fTArray[3]", entrystop=10)[5][10].tolist()  == [11.03951644897461, 19.40645980834961, 34.54059982299805]
