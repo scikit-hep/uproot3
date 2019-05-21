@@ -8,8 +8,8 @@ uproot
 .. image:: https://travis-ci.org/scikit-hep/uproot.svg?branch=master
    :target: https://travis-ci.org/scikit-hep/uproot
 
-.. image:: https://readthedocs.org/projects/uproot/badge/
-   :target: http://uproot.readthedocs.io/
+.. image:: https://readthedocs.org/projects/uproot/badge/?version=latest
+   :target: https://uproot.readthedocs.io/en/latest/?badge=latest
 
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.1173083.svg
    :target: https://doi.org/10.5281/zenodo.1173083
@@ -55,7 +55,7 @@ or install with `conda <https://conda.io/en/latest/miniconda.html>`__:
     conda config --add channels conda-forge   # if you haven't added conda-forge already
     conda install uproot
 
-The pip installer automatically installs strict dependencies; the conda installer installs optional dependencies, too.
+The pip installer automatically installs strict dependencies; the conda installer also installs optional dependencies (except for Pandas).
 
 Strict dependencies:
 --------------------
@@ -72,6 +72,7 @@ Optional dependencies:
 - `lzma <https://pypi.org/project/backports.lzma>`__ to read lzma-compressed ROOT files in Python 2
 - `xrootd <https://anaconda.org/conda-forge/xrootd>`__ to access remote files through XRootD
 - `requests <https://pypi.org/project/requests>`__ to access remote files through HTTP
+- `pandas <https://pandas.pydata.org>`__ to fill Pandas DataFrames instead of Numpy arrays
 
 **Reminder: you do not need C++ ROOT to run uproot.**
 
