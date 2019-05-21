@@ -42,23 +42,30 @@ uproot.source.source.Source
 uproot.FileSource
 -----------------
 
-.. automethod:: uproot.source.file.FileSource.defaults
+.. autoattribute:: uproot.source.file.FileSource.defaults
 
 .. autoclass:: uproot.source.file.FileSource
 
 uproot.MemmapSource
 -------------------
 
-.. automethod:: uproot.source.memmap.MemmapSource.defaults
+.. autoattribute:: uproot.source.memmap.MemmapSource.defaults
 
 .. autoclass:: uproot.source.memmap.MemmapSource
 
 uproot.XRootDSource
 -------------------
 
-.. automethod:: uproot.source.xrootd.XRootDSource.defaults
+.. autoattribute:: uproot.source.xrootd.XRootDSource.defaults
 
 .. autoclass:: uproot.source.xrootd.XRootDSource
+
+uproot.HTTPSource
+-------------------
+
+.. autoattribute:: uproot.source.http.HTTPSource.defaults
+
+.. autoclass:: uproot.source.http.HTTPSource
 
 uproot.source.compressed.CompressedSource
 -----------------------------------------

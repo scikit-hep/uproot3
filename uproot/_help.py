@@ -16,18 +16,18 @@ def _method(x):
 open_fragments = {
     # localsource
     "localsource": u"""localsource : function: path \u21d2 :py:class:`Source <uproot.source.source.Source> or ``dict`` of keyword arguments`
-        function that will be applied to the path to produce an uproot :py:class:`Source <uproot.source.source.Source>` object if the path is a local file. Default is :py:meth:`MemmapSource.defaults <uproot.source.memmap.MemmapSource.defaults>` for memory-mapped files. If a ``dict``, the ``dict`` is passed as keyword arguments to :py:class:`MemmapSource <uproot.source.memmap.MemmapSource>` constructor.""",
+        function that will be applied to the path to produce an uproot :py:class:`Source <uproot.source.source.Source>` object if the path is a local file. Default is ``MemmapSource.defaults`` for memory-mapped files. If a ``dict``, the ``dict`` is passed as keyword arguments to :py:class:`MemmapSource <uproot.source.memmap.MemmapSource>` constructor.""",
 
     # xrootdsource
     "xrootdsource": u"""xrootdsource : function: path \u21d2 :py:class:`Source <uproot.source.source.Source> or ``dict`` of keyword arguments`
-        function that will be applied to the path to produce an uproot :py:class:`Source <uproot.source.source.Source>` object if the path is an XRootD URL. Default is :py:meth:`XRootDSource.defaults <uproot.source.xrootd.XRootDSource.defaults>` for XRootD with default chunk size/caching. (See :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>` constructor for details.) If a ``dict``, the ``dict`` is passed as keyword arguments to :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>` constructor.""",
+        function that will be applied to the path to produce an uproot :py:class:`Source <uproot.source.source.Source>` object if the path is an XRootD URL. Default is ``uproot.source.xrootd.XRootDSource.defaults`` for XRootD with default chunk size/caching. (See :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>` constructor for details.) If a ``dict``, the ``dict`` is passed as keyword arguments to :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>` constructor.""",
 
     # httpsource
     "httpsource": u"""httpsource : function: path \u21d2 :py:class:`Source <uproot.source.source.Source> or ``dict`` of keyword arguments`
-        function that will be applied to the path to produce an uproot :py:class:`Source <uproot.source.source.Source>` object if the path is an HTTP URL. Default is :py:meth:`HTTPSource.defaults <uproot.source.http.HTTPSource.defaults>` for HTTP with default chunk size/caching. (See :py:class:`HTTPSource <uproot.source.http.HTTPSource>` constructor for details.) If a ``dict``, the ``dict`` is passed as keyword arguments to :py:class:`HTTPSource <uproot.source.http.HTTPSource>` constructor.""",
+        function that will be applied to the path to produce an uproot :py:class:`Source <uproot.source.source.Source>` object if the path is an HTTP URL. Default is ``uproot.source.http.HTTPSource.defaults`` for HTTP with default chunk size/caching. (See :py:class:`HTTPSource <uproot.source.http.HTTPSource>` constructor for details.) If a ``dict``, the ``dict`` is passed as keyword arguments to :py:class:`HTTPSource <uproot.source.http.HTTPSource>` constructor.""",
 
     # options
-    "options": u"""**options
+    "options": u"""options
         passed to :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` constructor.""",
 }
 
@@ -54,7 +54,6 @@ u"""Opens a ROOT file (local or remote), specified by file path.
     ----------
     path : str
         local file path or URL specifying the location of a file (note: not a Python file object!). If the URL schema is "root://", :py:func:`xrootd <uproot.xrootd>` will be called; if "http://", :py:func:`http <uproot.http>` will be called.
-
 
     {localsource}
 
