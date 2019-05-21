@@ -116,9 +116,7 @@ from uproot.tree import iterate, numentries, lazyarray, lazyarrays, daskarray, d
 from uproot.write.TFile import TFileCreate as create
 from uproot.write.TFile import TFileRecreate as recreate
 from uproot.write.TFile import TFileUpdate as update
-from uproot.write.compress import ZLIB
-from uproot.write.compress import LZMA
-from uproot.write.compress import LZ4
+from uproot.write.compress import ZLIB, LZMA, LZ4
 
 from uproot.source.memmap import MemmapSource
 from uproot.source.file import FileSource

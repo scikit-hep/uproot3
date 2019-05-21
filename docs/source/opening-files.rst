@@ -26,6 +26,13 @@ The :py:func:`iterate <uproot.iterate>` function gives you an iterator over grou
 
 .. autofunction:: uproot.tree.iterate
 
+uproot.pandas.iterate
+---------------------
+
+Like the above, except that it iterates over Pandas DataFrames (as though you passed ``outputtype=pandas.DataFrame`` and changed some defaults).
+
+.. autofunction:: uproot.pandas.iterate
+
 uproot.lazyarray and lazyarrays
 -------------------------------
 

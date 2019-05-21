@@ -574,7 +574,62 @@ u"""Opens a series of ROOT files (local or remote), yielding the same number of 
 
     Returns
     -------
-    iterator over (int, int, outputtype) (if *reportentries*) or just outputtype (otherwise)
+    iterator over (str, :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>`, int, int, outputtype) (if *reportpath*, *reportfile*, *reportentries*) or just outputtype (otherwise)
+        aligned array segments from the files.
+    """.format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
+
+################################################################ uproot.pandas.iterate
+
+uproot.pandas.iterate.__doc__ = \
+u"""Opens a series of ROOT files (local or remote), yielding Pandas DataFrames in each step.
+
+    Depending on the "entrysteps" parameter, the number of entries in one step may differ from the number of entries in the next step, but in every step, the same number of entries is retrieved from all *baskets.*
+
+    Parameters
+    ----------
+    path : str or list of str
+        glob pattern(s) for local file paths (POSIX wildcards like "``*``") or URLs specifying the locations of the files. A list of filenames are processed in the given order, but glob patterns get pre-sorted to ensure a predictable order.
+
+    treepath : str
+        path within each ROOT file to find the TTree (may include "``/``" for subdirectories or "``;``" for cycle numbers).
+
+    {branches}
+
+    {entrysteps}
+
+    {namedecode}
+
+    {reportpath}
+
+    {reportfile}
+
+    {flatten}
+
+    {flatname}
+
+    {awkwardlib}
+
+    {cache}
+
+    {basketcache}
+
+    {keycache}
+
+    {executor}
+
+    {blocking}
+
+    {localsource}
+
+    {xrootdsource}
+
+    {httpsource}
+
+    {options}
+
+    Returns
+    -------
+    iterator over (str, :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>`, pandas.Dataframe) (if *reportpath* and *reportfile*) or just pandas.DataFrame (otherwise)
         aligned array segments from the files.
     """.format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
 
