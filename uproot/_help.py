@@ -472,6 +472,10 @@ tree_fragments = {
     "flatname": u"""flatname : None or (branchname, fieldname, index) \u2192 str
         if ``None`` *(default)*, use ``uproot._connect._pandas.default_flatname`` to convert a branchname with a subfield and regular index number into a Pandas column name; otherwise, take a user-defined function.""",
 
+    # profile
+    "profile": u"""profile : None or str
+        if a string *(not default)*, format the lazy arrays using a module from uproot_methods.profiles named by the string.""",
+
     # awkwardlib
     "awkwardlib": u"""awkwardlib : ``None``, str, or module
         if ``None`` *(default)*, use ``import awkward`` to get awkward-array constructors. Otherwise, parse the module string name or use the provided module.""",
@@ -967,6 +971,8 @@ u"""Create a table of lazy arrays.
     {entrystop}
 
     {flatten}
+
+    {profile}
 
     {awkwardlib}
 
@@ -1645,6 +1651,8 @@ u"""Create a lazy table that would read from a set of files as needed.
     {entrysteps}
 
     {flatten}
+
+    {profile}
 
     {awkwardlib}
 

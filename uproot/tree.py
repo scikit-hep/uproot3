@@ -26,6 +26,7 @@ import numpy
 import cachetools
 
 import awkward
+import uproot_methods.profiles
 
 import uproot.rootio
 from uproot.rootio import _bytesid
@@ -485,7 +486,7 @@ class TTreeMethods(object):
     def lazyarray(self, branch, interpretation=None, entrysteps=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False):
         return self.get(branch).lazyarray(interpretation=interpretation, entrysteps=entrysteps, entrystart=entrystart, entrystop=entrystop, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, persistvirtual=persistvirtual)
 
-    def lazyarrays(self, branches=None, namedecode="utf-8", entrysteps=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False):
+    def lazyarrays(self, branches=None, namedecode="utf-8", entrysteps=None, entrystart=None, entrystop=None, flatten=False, profile=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False):
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
         entrysteps = self._normalize_entrysteps(entrysteps, branches, entrystart, entrystop)
         awkward = _normalize_awkwardlib(awkwardlib)
@@ -506,7 +507,10 @@ class TTreeMethods(object):
             rowstart += numentries
             counts.append(numentries)
 
-        return awkward.ChunkedArray(chunks, counts)
+        out = awkward.ChunkedArray(chunks, counts)
+        if profile is not None:
+            out = uproot_methods.profiles.transformer(profile)(out)
+        return out
 
     def _normalize_entrysteps(self, entrysteps, branches, entrystart, entrystop):
         if entrysteps is None:
@@ -1816,10 +1820,10 @@ def lazyarray(path, treepath, branchname, interpretation=None, namedecode="utf-8
         branches = branchname
     else:
         branches = {branchname: interpretation}
-    out = lazyarrays(path, treepath, branches=branches, namedecode=namedecode, entrysteps=entrysteps, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, persistvirtual=persistvirtual, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)
+    out = lazyarrays(path, treepath, branches=branches, namedecode=namedecode, entrysteps=entrysteps, flatten=flatten, profile=None, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, persistvirtual=persistvirtual, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)
     return out[out.columns[0]]
 
-def lazyarrays(path, treepath, branches=None, namedecode="utf-8", entrysteps=float("inf"), flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
+def lazyarrays(path, treepath, branches=None, namedecode="utf-8", entrysteps=float("inf"), flatten=False, profile=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
     awkward = _normalize_awkwardlib(awkwardlib)
     if isinstance(path, string_types):
         paths = _filename_explode(path)
@@ -1855,7 +1859,10 @@ def lazyarrays(path, treepath, branches=None, namedecode="utf-8", entrysteps=flo
         rowstart += path2count[path]
         counts.append(path2count[path])
 
-    return awkward.ChunkedArray(chunks, counts)
+    out = awkward.ChunkedArray(chunks, counts)
+    if profile is not None:
+        out = uproot_methods.profiles.transformer(profile)(out)
+    return out
 
 def daskarray(path, treepath, branchname, interpretation=None, namedecode="utf-8", entrysteps=float("inf"), flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
     out = lazyarray(path, treepath, branchname, interpretation=interpretation, namedecode=namedecode, entrysteps=entrysteps, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, persistvirtual=False, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)
@@ -1868,7 +1875,7 @@ def daskarray(path, treepath, branchname, interpretation=None, namedecode="utf-8
 def daskframe(path, treepath, branches=None, namedecode="utf-8", entrysteps=float("inf"), flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
     import dask.array
     import dask.dataframe
-    out = lazyarrays(path, treepath, branches=branches, namedecode=namedecode, entrysteps=entrysteps, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, persistvirtual=False, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)
+    out = lazyarrays(path, treepath, branches=branches, namedecode=namedecode, entrysteps=entrysteps, flatten=flatten, profile=None, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, persistvirtual=False, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)
     series = []
     for n in out.columns:
         x = out[n]
