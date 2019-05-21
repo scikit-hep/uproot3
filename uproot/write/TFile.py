@@ -188,21 +188,21 @@ class TFileRecreate(TFileUpdate):
 
     @property
     def compression(self):
-        if self.fCompress == 0:
+        if self._fCompress == 0:
             return None
         else:
-            return uproot.write.compress.algo[self.fCompress // 100](self.fCompress % 100)
+            return uproot.write.compress.algo[self._fCompress // 100](self._fCompress % 100)
 
     @compression.setter
     def compression(self, value):
         if value is None:
-            self.fCompress = 0
+            self._fCompress = 0
         else:
             if not isinstance(value, uproot.write.compress.Compression):
                 raise TypeError("uproot.write.TFile.compression must be a Compression object like ZLIB(4)")
-            self.fCompress = value.code
-        if hasattr(self, "compresscursor"):
-            self.compresscursor.update_fields(self._sink, self._format3, self.fCompress)
+            self._fCompress = value.code
+        if hasattr(self, "_compresscursor"):
+            self._compresscursor.update_fields(self._sink, self._format3, self._fCompress)
 
     def _writeheader(self):
         cursor = uproot.write.sink.cursor.Cursor(0)
@@ -221,8 +221,8 @@ class TFileRecreate(TFileUpdate):
         fUnits = 4
         cursor.write_fields(self._sink, self._format2, self._fNbytesName, fUnits)
 
-        self.compresscursor = uproot.write.sink.cursor.Cursor(cursor.index)
-        cursor.write_fields(self._sink, self._format3, self.fCompress)
+        self._compresscursor = uproot.write.sink.cursor.Cursor(cursor.index)
+        cursor.write_fields(self._sink, self._format3, self._fCompress)
 
         self._fSeekInfo = 0
         self._seekcursor = uproot.write.sink.cursor.Cursor(cursor.index)
