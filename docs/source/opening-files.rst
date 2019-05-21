@@ -26,6 +26,31 @@ The :py:func:`iterate <uproot.iterate>` function gives you an iterator over grou
 
 .. autofunction:: uproot.tree.iterate
 
+uproot.pandas.iterate
+---------------------
+
+Like the above, except that it iterates over Pandas DataFrames (as though you passed ``outputtype=pandas.DataFrame`` and changed some defaults).
+
+.. autofunction:: uproot.pandas.iterate
+
+uproot.lazyarray and lazyarrays
+-------------------------------
+
+The :py:func:`lazyarray <uproot.lazyarray>` and :py:func:`lazyarrays <uproot.lazyarrays>` give you a lazy view into a whole collection of files. They behave like the :py:meth:`TTreeMethods.lazyarray <uproot.tree.TTreeMethods.lazyarray>` and :py:meth:`TTreeMethods.lazyarrays <uproot.tree.TTreeMethods.lazyarrays>` methods except that they wildcarded filenames and a TTree name as the first arguments.
+
+.. autofunction:: uproot.tree.lazyarray
+
+.. autofunction:: uproot.tree.lazyarrays
+
+uproot.daskarray and daskframe
+------------------------------
+
+Like the above, but presents the data as `Dask <https://dask.org/>`__ objects.
+
+.. autofunction:: uproot.tree.daskarray
+
+.. autofunction:: uproot.tree.daskframe
+
 uproot.tree.numentries
 ----------------------
 

@@ -6,6 +6,8 @@ import sys
 import numbers
 import math
 
+import numpy
+
 import uproot.interp.interp
 
 if sys.version_info[0] <= 2:
@@ -199,7 +201,7 @@ class asdouble32(_asnumeric):
     __metaclass__ = type.__new__(type, "type", (_asnumeric.__metaclass__,), {})
 
     def __init__(self, low, high, numbits, fromdims=(), todims=None):
-        if not isinstance(numbits, numbers.Integral) or not 2 <= numbits <= 32:
+        if not isinstance(numbits, (numbers.Integral, numpy.integer)) or not 2 <= numbits <= 32:
             raise TypeError("numbits must be an integer between 2 and 32 (inclusive)")
         self.truncated = low == 0.0 and high == 0.0
         if high <= low and not self.truncated:

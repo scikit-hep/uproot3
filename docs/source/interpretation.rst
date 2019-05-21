@@ -15,8 +15,8 @@ uproot.interpret
 
 .. autofunction:: uproot.interp.auto.interpret
 
-uproot.interp.asdtype
----------------------
+uproot.interp.numerical.asdtype
+-------------------------------
 
 .. autoclass:: uproot.interp.numerical.asdtype
 
@@ -24,33 +24,44 @@ uproot.interp.asdtype
 
 .. automethod:: uproot.interp.numerical.asdtype.toarray
 
-uproot.interp.asarray
----------------------
+uproot.interp.numerical.asarray
+-------------------------------
 
 .. autoclass:: uproot.interp.numerical.asarray
 
-uproot.interp.asjagged
-----------------------
+uproot.interp.numerical.asdouble32
+----------------------------------
+
+.. autoclass:: uproot.interp.numerical.asdouble32
+
+uproot.interp.numerical.asstlbitset
+-----------------------------------
+
+.. autoclass:: uproot.interp.numerical.asstlbitset
+
+uproot.interp.jagged.asjagged
+-----------------------------
 
 .. autoclass:: uproot.interp.jagged.asjagged
 
 .. automethod:: uproot.interp.jagged.asjagged.to
 
-uproot.interp.jagged.JaggedArray
---------------------------------
-
-.. autoclass:: uproot.interp.jagged.JaggedArray
-
-.. automethod:: uproot.interp.jagged.JaggedArray.fromlists
-
-uproot.interp.asstrings
------------------------
-
-.. autoclass:: uproot.interp.strings.asstrings
-
-uproot.interp.strings.Strings
+uproot.interp.objects.astable
 -----------------------------
 
-.. autoclass:: uproot.interp.strings.Strings
+.. autoclass:: uproot.interp.objects.astable
 
-.. automethod:: uproot.interp.strings.Strings.fromstrs
+uproot.interp.objects.asobj
+---------------------------
+
+.. autoclass:: uproot.interp.objects.asobj
+
+uproot.interp.objects.asgenobj
+------------------------------
+
+.. autoclass:: uproot.interp.objects.asgenobj
+
+uproot.interp.objects.asstring
+------------------------------
+
+.. autoclass:: uproot.interp.objects.asstring
