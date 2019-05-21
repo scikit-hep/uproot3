@@ -7,8 +7,8 @@ import struct
 import numpy
 
 import uproot.const
+import uproot.write.compress
 import uproot.write.sink.cursor
-from uproot.write.compress import write_compressed
 
 class TH(object):
     def __init__(self, histogram):
@@ -377,7 +377,7 @@ class TH(object):
     def length_tatt3d(self):
         return self._format_cntvers.size
 
-    def write(self, context, cursor, name, algorithm, level, key, keycursor):
+    def write(self, context, cursor, name, compression, key, keycursor):
         givenbytes = 0
         cnt = numpy.int64(self.length(name) - 4) | uproot.const.kByteCountMask
         if "TH1" in self.fClassName.decode("utf-8"):
@@ -390,7 +390,7 @@ class TH(object):
             vers = 3
             givenbytes = cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th3(cursor, name)
         givenbytes += self.return_tarray(cursor, self.valuesarray)
-        write_compressed(context, cursor, givenbytes, algorithm, level, key, keycursor)
+        uproot.write.compress.write(context, cursor, givenbytes, compression, key, keycursor)
 
     def length(self, name):
         if "TH1" in self.fClassName.decode("utf-8"):

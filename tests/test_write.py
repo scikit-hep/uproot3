@@ -12,7 +12,7 @@ ROOT = pytest.importorskip("ROOT")
 def test_strings(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    with uproot.recreate(filename, compressionAlgorithm=0, compressionLevel=0) as f:
+    with uproot.recreate(filename, compression=None) as f:
         f["hello"] = "world"
 
     f = ROOT.TFile.Open(filename)
@@ -22,7 +22,7 @@ def test_strings(tmp_path):
 def test_cycle(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    with uproot.recreate(filename, compressionAlgorithm=0, compressionLevel=0) as f:
+    with uproot.recreate(filename, compression=None) as f:
         f["hello"] = "world"
         f["hello"] = "uproot"
 
@@ -34,55 +34,53 @@ def test_cycle(tmp_path):
 def test_zlib(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    with uproot.recreate(filename, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=1) as f:
+    with uproot.recreate(filename, compression=uproot.ZLIB(1)) as f:
         f["hello"] = "world"
 
     f = ROOT.TFile.Open(filename)
-    assert (f.GetCompressionAlgorithm()) == uproot.const.kZLIB
-    assert (f.GetCompressionLevel()) == 1
+    assert f.GetCompressionAlgorithm() == uproot.const.kZLIB
+    assert f.GetCompressionLevel() == 1
     assert str(f.Get("hello")) == "world"
     f.Close()
 
 def test_compresschange(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    with uproot.recreate(filename, compressionAlgorithm=uproot.const.kLZMA, compressionLevel=2) as f:
-        # Update separately to test flexibility of method
-        f.updateCompression(compressionLevel=3)
-        f.updateCompression(compressionAlgorithm=uproot.const.kZLIB)
+    with uproot.recreate(filename, compression=uproot.ZLIB(2)) as f:
+        f.compression = uproot.ZLIB(3)
         f["hello"] = "world"
 
     f = ROOT.TFile.Open(filename)
-    assert (f.GetCompressionAlgorithm()) == uproot.const.kZLIB
-    assert (f.GetCompressionLevel()) == 3
+    assert f.GetCompressionAlgorithm() == uproot.const.kZLIB
+    assert f.GetCompressionLevel() == 3
 
 def test_nocompress(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    with uproot.recreate(filename, compressionAlgorithm=0, compressionLevel=1) as f:
+    with uproot.recreate(filename, compression=None) as f:
         f["hello"] = "world"
 
     f = ROOT.TFile.Open(filename)
-    assert (f.GetCompressionFactor()) == 1
+    assert f.GetCompressionFactor() == 1
     assert str(f.Get("hello")) == "world"
     f.Close()
 
 def test_lzma(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    with uproot.recreate(filename, compressionAlgorithm=uproot.const.kLZMA, compressionLevel=1) as f:
+    with uproot.recreate(filename, compression=uproot.LZMA(1)) as f:
         f["hello"] = "world"
 
     f = ROOT.TFile.Open(filename)
-    assert (f.GetCompressionAlgorithm()) == uproot.const.kLZMA
-    assert (f.GetCompressionLevel()) == 1
+    assert f.GetCompressionAlgorithm() == uproot.const.kLZMA
+    assert f.GetCompressionLevel() == 1
     assert str(f.Get("hello")) == "world"
     f.Close()
 
 def test_compressed_TObjString(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    with uproot.recreate(filename, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=1) as f:
+    with uproot.recreate(filename, compression=uproot.ZLIB(1)) as f:
         f["hello"] = "a"*2000
 
     f = ROOT.TFile.Open(filename)
@@ -103,7 +101,7 @@ def test_th1(tmp_path):
 
     t = uproot.open(testfile)
     hist = t["hvar"]
-    with uproot.recreate(filename, compressionAlgorithm=0, compressionLevel=0) as f:
+    with uproot.recreate(filename, compression=None) as f:
         f["test"] = hist
 
     f = ROOT.TFile.Open(filename)
@@ -132,7 +130,7 @@ def test_th1_varbin(tmp_path):
 
     t = uproot.open(testfile)
     hist = t["hvar"]
-    with uproot.recreate(filename, compressionAlgorithm=0, compressionLevel=0) as f:
+    with uproot.recreate(filename, compression=None) as f:
         f["test"] = hist
 
     f = ROOT.TFile.Open(filename)
@@ -157,7 +155,7 @@ def test_compressed_th1(tmp_path):
 
     t = uproot.open(testfile)
     hist = t["hvar"]
-    with uproot.recreate(filename, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=1) as f:
+    with uproot.recreate(filename, compression=uproot.ZLIB(1)) as f:
         f["test"] = hist
 
     f = ROOT.TFile.Open(filename)
@@ -183,7 +181,7 @@ def test_th2(tmp_path):
 
     t = uproot.open(testfile)
     hist = t["hvar"]
-    with uproot.recreate(filename, compressionAlgorithm=0, compressionLevel=0) as f:
+    with uproot.recreate(filename, compression=None) as f:
         f["test"] = hist
 
     f = ROOT.TFile.Open(filename)
@@ -215,7 +213,7 @@ def test_th2_varbin(tmp_path):
 
     t = uproot.open(testfile)
     hist = t["hvar"]
-    with uproot.recreate(filename, compressionAlgorithm=0, compressionLevel=0) as f:
+    with uproot.recreate(filename, compression=None) as f:
         f["test"] = hist
 
     f = ROOT.TFile.Open(filename)
@@ -237,7 +235,7 @@ def test_compressed_th2(tmp_path):
 
     t = uproot.open(testfile)
     hist = t["hvar"]
-    with uproot.recreate(filename, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=1) as f:
+    with uproot.recreate(filename, compression=uproot.ZLIB(1)) as f:
         f["test"] = hist
 
     f = ROOT.TFile.Open(filename)
@@ -259,7 +257,7 @@ def test_th3(tmp_path):
 
     t = uproot.open(testfile)
     hist = t["hvar"]
-    with uproot.recreate(filename, compressionAlgorithm=0, compressionLevel=0) as f:
+    with uproot.recreate(filename, compression=None) as f:
         f["test"] = hist
 
     f = ROOT.TFile.Open(filename)
@@ -294,7 +292,7 @@ def test_th3_varbin(tmp_path):
 
     t = uproot.open(testfile)
     hist = t["hvar"]
-    with uproot.recreate(filename, compressionAlgorithm=0, compressionLevel=0) as f:
+    with uproot.recreate(filename, compression=None) as f:
         f["test"] = hist
 
     f = ROOT.TFile.Open(filename)
@@ -318,7 +316,7 @@ def test_compressed_th3(tmp_path):
 
     t = uproot.open(testfile)
     hist = t["hvar"]
-    with uproot.recreate(filename, compressionAlgorithm=uproot.const.kZLIB, compressionLevel=1) as f:
+    with uproot.recreate(filename, compression=uproot.ZLIB(1)) as f:
         f["test"] = hist
 
     f = ROOT.TFile.Open(filename)
