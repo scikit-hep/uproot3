@@ -7,6 +7,7 @@ import struct
 import numpy
 
 import uproot.const
+import uproot.write.compress
 import uproot.write.sink.cursor
 
 class TObjString(object):
@@ -21,11 +22,11 @@ class TObjString(object):
 
     _format = struct.Struct(">IHHII")
 
-    def write(self, cursor, sink, name):
+    def write(self, context, cursor, name, compression, key, keycursor):
         cnt = numpy.int64(self.length(name) - 4) | uproot.const.kByteCountMask
         vers = 1
-        cursor.write_fields(sink, self._format, cnt, vers, 1, 0, uproot.const.kNotDeleted)
-        cursor.write_string(sink, self.value)
+        givenbytes = cursor.return_fields(self._format, cnt, vers, 1, 0, uproot.const.kNotDeleted) + cursor.return_string(self.value)
+        uproot.write.compress.write(context, cursor, givenbytes, compression, key, keycursor)
 
     def length(self, name):
         return self._format.size + uproot.write.sink.cursor.Cursor.length_string(self.value)
