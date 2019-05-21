@@ -106,7 +106,12 @@ For a list of all functions, classes, methods, and their parameters, click below
 
   - `uproot.open <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-open>`__
   - `uproot.xrootd <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-xrootd>`__
+  - `uproot.http <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-http>`__
   - `uproot.iterate <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-iterate>`__
+  - `uproot.pandas.iterate <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-pandas-iterate>`__
+  - `uproot.lazyarray(s) <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-lazyarray-and-lazyarrays>`__
+  - `uproot.daskarray/daskframe <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-daskarray-and-daskframe>`__
+  - `uproot.numentries <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-numentries>`__
 
 * `ROOT I/O <http://uproot.readthedocs.io/en/latest/root-io.html>`__
 
