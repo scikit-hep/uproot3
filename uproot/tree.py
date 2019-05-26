@@ -503,10 +503,13 @@ class TTreeMethods(object):
             numentries = stop - start
             chunks.append(awkward.Table())
             for branch, interpretation in branches:
-                if isinstance(interpretation, asobj) and getattr(interpretation.cls, "_arraymethods", None) is not None:
-                    virtualarray = awkward.Methods.mixin(interpretation.cls._arraymethods, awkward.VirtualArray)
-                elif isinstance(interpretation, asgenobj) and getattr(interpretation.generator.cls, "_arraymethods", None) is not None:
-                    virtualarray = awkward.Methods.mixin(interpretation.generator.cls._arraymethods, awkward.VirtualArray)
+                inner = interpretation
+                while isinstance(inner, asjagged):
+                    inner = inner.content
+                if isinstance(inner, asobj) and getattr(inner.cls, "_arraymethods", None) is not None:
+                    virtualarray = awkward.Methods.mixin(inner.cls._arraymethods, awkward.VirtualArray)
+                elif isinstance(inner, asgenobj) and getattr(inner.generator.cls, "_arraymethods", None) is not None:
+                    virtualarray = awkward.Methods.mixin(inner.generator.cls._arraymethods, awkward.VirtualArray)
                 else:
                     virtualarray = awkward.VirtualArray
                 name = branch.name if namedecode is None else branch.name.decode(namedecode)
@@ -1493,12 +1496,15 @@ class TBranchMethods(object):
         entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
         entrysteps = self._normalize_entrysteps(entrysteps, entrystart, entrystop)
 
-        if isinstance(interpretation, asobj) and getattr(interpretation.cls, "_arraymethods", None) is not None:
-            virtualarray = awkward.Methods.mixin(interpretation.cls._arraymethods, awkward.VirtualArray)
-            chunkedarray = awkward.Methods.mixin(interpretation.cls._arraymethods, awkward.ChunkedArray)
-        elif isinstance(interpretation, asgenobj) and getattr(interpretation.generator.cls, "_arraymethods", None) is not None:
-            virtualarray = awkward.Methods.mixin(interpretation.generator.cls._arraymethods, awkward.VirtualArray)
-            chunkedarray = awkward.Methods.mixin(interpretation.generator.cls._arraymethods, awkward.ChunkedArray)
+        inner = interpretation
+        while isinstance(inner, asjagged):
+            inner = inner.content
+        if isinstance(inner, asobj) and getattr(inner.cls, "_arraymethods", None) is not None:
+            virtualarray = awkward.Methods.mixin(inner.cls._arraymethods, awkward.VirtualArray)
+            chunkedarray = awkward.Methods.mixin(inner.cls._arraymethods, awkward.ChunkedArray)
+        elif isinstance(inner, asgenobj) and getattr(inner.generator.cls, "_arraymethods", None) is not None:
+            virtualarray = awkward.Methods.mixin(inner.generator.cls._arraymethods, awkward.VirtualArray)
+            chunkedarray = awkward.Methods.mixin(inner.generator.cls._arraymethods, awkward.ChunkedArray)
         else:
             virtualarray = awkward.VirtualArray
             chunkedarray = awkward.ChunkedArray
@@ -1871,10 +1877,13 @@ def lazyarrays(path, treepath, branches=None, namedecode="utf-8", entrysteps=flo
     for pathi, path in enumerate(paths):
         chunks.append(awkward.Table())
         for branch, interpretation in listbranches:
-            if isinstance(interpretation, asobj) and getattr(interpretation.cls, "_arraymethods", None) is not None:
-                virtualarray = awkward.Methods.mixin(interpretation.cls._arraymethods, awkward.VirtualArray)
-            elif isinstance(interpretation, asgenobj) and getattr(interpretation.generator.cls, "_arraymethods", None) is not None:
-                virtualarray = awkward.Methods.mixin(interpretation.generator.cls._arraymethods, awkward.VirtualArray)
+            inner = interpretation
+            while isinstance(inner, asjagged):
+                inner = inner.content
+            if isinstance(inner, asobj) and getattr(inner.cls, "_arraymethods", None) is not None:
+                virtualarray = awkward.Methods.mixin(inner.cls._arraymethods, awkward.VirtualArray)
+            elif isinstance(inner, asgenobj) and getattr(inner.generator.cls, "_arraymethods", None) is not None:
+                virtualarray = awkward.Methods.mixin(inner.generator.cls._arraymethods, awkward.VirtualArray)
             else:
                 virtualarray = awkward.VirtualArray
             name = branch.name if namedecode is None else branch.name.decode(namedecode)
