@@ -2,7 +2,9 @@
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
+import multiprocessing
 import os.path
+import sys
 
 import numpy
 
@@ -12,7 +14,7 @@ class FileSource(uproot.source.chunked.ChunkedSource):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (uproot.source.chunked.ChunkedSource.__metaclass__,), {})
 
-    defaults = {"chunkbytes": 8*1024, "limitbytes": 1024**2}
+    defaults = {"chunkbytes": 8*1024, "limitbytes": 1024**2, "parallel": 8*multiprocessing.cpu_count() if sys.version_info[0] > 2 else 1}
 
     def __init__(self, path, *args, **kwds):
         self._size = None
