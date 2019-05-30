@@ -53,9 +53,9 @@ install:
   - pip install --upgrade setuptools-scm
   - pip install $NPY
   - python -c 'import numpy; print(numpy.__version__)'
-  - pip install "awkward>=0.9.0"
+  - pip install "awkward>=0.10.0"
   - python -c 'import awkward; print(awkward.__version__)'
-  - pip install "uproot-methods>=0.5.0"
+  - pip install "uproot-methods>=0.6.0"
   - python -c 'import uproot_methods; print(uproot_methods.__version__)'
   - pip install cachetools pkgconfig lz4 mock requests "pytest>=3.9" pytest-runner
   - pip install lz4 requests
@@ -65,6 +65,7 @@ install:
   - if [[ ${PYVER} != pypy* ]] ; then
       conda install -c anaconda python=${PYVER} pyopenssl;
     fi
+  - wget -O tests/samples/Event.root http://scikit-hep.org/uproot/examples/Event.root
 
 addons:
   apt:

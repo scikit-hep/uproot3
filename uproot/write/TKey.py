@@ -18,14 +18,11 @@ class TKey(object):
         self.fSeekPdir = fSeekPdir
         self.fCycle = fCycle
         self.fDatime = uproot.write.util.datime()
+        self.fNbytes = self.fObjlen + self.fKeylen
 
     @property
     def fKeylen(self):
         return self._format1.size + uproot.write.sink.cursor.Cursor.length_strings([self.fClassName, self.fName, self.fTitle])
-
-    @property
-    def fNbytes(self):
-        return self.fObjlen + self.fKeylen
 
     def update(self):
         self.cursor.update_fields(self.sink, self._format1, self.fNbytes, self._version, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
