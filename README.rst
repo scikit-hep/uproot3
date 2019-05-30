@@ -8,8 +8,8 @@ uproot
 .. image:: https://travis-ci.org/scikit-hep/uproot.svg?branch=master
    :target: https://travis-ci.org/scikit-hep/uproot
 
-.. image:: https://readthedocs.org/projects/uproot/badge/
-   :target: http://uproot.readthedocs.io/
+.. image:: https://readthedocs.org/projects/uproot/badge/?version=latest
+   :target: https://uproot.readthedocs.io/en/latest/?badge=latest
 
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.1173083.svg
    :target: https://doi.org/10.5281/zenodo.1173083
@@ -55,14 +55,14 @@ or install with `conda <https://conda.io/en/latest/miniconda.html>`__:
     conda config --add channels conda-forge   # if you haven't added conda-forge already
     conda install uproot
 
-The pip installer automatically installs strict dependencies; the conda installer installs optional dependencies, too.
+The pip installer automatically installs strict dependencies; the conda installer also installs optional dependencies (except for Pandas).
 
 Strict dependencies:
 --------------------
 
 - `numpy <https://scipy.org/install.html>`__ (1.13.1+)
-- `awkward-array <https://github.com/scikit-hep/awkward-array>`__ (0.9.0+)
-- `uproot-methods <https://github.com/scikit-hep/uproot-methods>`__ (0.5.0+)
+- `awkward-array <https://github.com/scikit-hep/awkward-array>`__ (0.10.0+)
+- `uproot-methods <https://github.com/scikit-hep/uproot-methods>`__ (0.6.0+)
 - `cachetools <https://pypi.org/project/cachetools>`__
 
 Optional dependencies:
@@ -72,6 +72,7 @@ Optional dependencies:
 - `lzma <https://pypi.org/project/backports.lzma>`__ to read lzma-compressed ROOT files in Python 2
 - `xrootd <https://anaconda.org/conda-forge/xrootd>`__ to access remote files through XRootD
 - `requests <https://pypi.org/project/requests>`__ to access remote files through HTTP
+- `pandas <https://pandas.pydata.org>`__ to fill Pandas DataFrames instead of Numpy arrays
 
 **Reminder: you do not need C++ ROOT to run uproot.**
 
@@ -105,7 +106,12 @@ For a list of all functions, classes, methods, and their parameters, click below
 
   - `uproot.open <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-open>`__
   - `uproot.xrootd <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-xrootd>`__
+  - `uproot.http <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-http>`__
   - `uproot.iterate <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-iterate>`__
+  - `uproot.pandas.iterate <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-pandas-iterate>`__
+  - `uproot.lazyarray(s) <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-lazyarray-and-lazyarrays>`__
+  - `uproot.daskarray/daskframe <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-daskarray-and-daskframe>`__
+  - `uproot.numentries <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-numentries>`__
 
 * `ROOT I/O <http://uproot.readthedocs.io/en/latest/root-io.html>`__
 

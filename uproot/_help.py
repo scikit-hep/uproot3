@@ -3,7 +3,7 @@
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
 import uproot
-import uproot._connect.to_pandas
+import uproot._connect._pandas
 
 def _method(x):
     if hasattr(x, "__func__"):
@@ -16,18 +16,18 @@ def _method(x):
 open_fragments = {
     # localsource
     "localsource": u"""localsource : function: path \u21d2 :py:class:`Source <uproot.source.source.Source> or ``dict`` of keyword arguments`
-        function that will be applied to the path to produce an uproot :py:class:`Source <uproot.source.source.Source>` object if the path is a local file. Default is :py:meth:`MemmapSource.defaults <uproot.source.memmap.MemmapSource.defaults>` for memory-mapped files. If a ``dict``, the ``dict`` is passed as keyword arguments to :py:class:`MemmapSource <uproot.source.memmap.MemmapSource>` constructor.""",
+        function that will be applied to the path to produce an uproot :py:class:`Source <uproot.source.source.Source>` object if the path is a local file. Default is ``MemmapSource.defaults`` for memory-mapped files. If a ``dict``, the ``dict`` is passed as keyword arguments to :py:class:`MemmapSource <uproot.source.memmap.MemmapSource>` constructor.""",
 
     # xrootdsource
     "xrootdsource": u"""xrootdsource : function: path \u21d2 :py:class:`Source <uproot.source.source.Source> or ``dict`` of keyword arguments`
-        function that will be applied to the path to produce an uproot :py:class:`Source <uproot.source.source.Source>` object if the path is an XRootD URL. Default is :py:meth:`XRootDSource.defaults <uproot.source.xrootd.XRootDSource.defaults>` for XRootD with default chunk size/caching. (See :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>` constructor for details.) If a ``dict``, the ``dict`` is passed as keyword arguments to :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>` constructor.""",
+        function that will be applied to the path to produce an uproot :py:class:`Source <uproot.source.source.Source>` object if the path is an XRootD URL. Default is ``uproot.source.xrootd.XRootDSource.defaults`` for XRootD with default chunk size/caching. (See :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>` constructor for details.) If a ``dict``, the ``dict`` is passed as keyword arguments to :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>` constructor.""",
 
     # httpsource
     "httpsource": u"""httpsource : function: path \u21d2 :py:class:`Source <uproot.source.source.Source> or ``dict`` of keyword arguments`
-        function that will be applied to the path to produce an uproot :py:class:`Source <uproot.source.source.Source>` object if the path is an HTTP URL. Default is :py:meth:`HTTPSource.defaults <uproot.source.http.HTTPSource.defaults>` for HTTP with default chunk size/caching. (See :py:class:`HTTPSource <uproot.source.http.HTTPSource>` constructor for details.) If a ``dict``, the ``dict`` is passed as keyword arguments to :py:class:`HTTPSource <uproot.source.http.HTTPSource>` constructor.""",
+        function that will be applied to the path to produce an uproot :py:class:`Source <uproot.source.source.Source>` object if the path is an HTTP URL. Default is ``uproot.source.http.HTTPSource.defaults`` for HTTP with default chunk size/caching. (See :py:class:`HTTPSource <uproot.source.http.HTTPSource>` constructor for details.) If a ``dict``, the ``dict`` is passed as keyword arguments to :py:class:`HTTPSource <uproot.source.http.HTTPSource>` constructor.""",
 
     # options
-    "options": u"""**options
+    "options": u"""options
         passed to :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` constructor.""",
 }
 
@@ -54,7 +54,6 @@ u"""Opens a ROOT file (local or remote), specified by file path.
     ----------
     path : str
         local file path or URL specifying the location of a file (note: not a Python file object!). If the URL schema is "root://", :py:func:`xrootd <uproot.xrootd>` will be called; if "http://", :py:func:`http <uproot.http>` will be called.
-
 
     {localsource}
 
@@ -421,12 +420,12 @@ tree_fragments = {
         entry at which reading stops (exclusive). If ``None`` *(default)*, stop at the end of the branch.""",
 
     # entrysteps
-    "entrysteps": u"""entrysteps : ``None``, positive int, or iterable of *(int, int)* pairs
-        if ``None`` *(default)*, iterate in steps of TTree clusters (number of entries for which all branches' baskets align); if an integer, iterate in steps of equal numbers of entries (except at the end of a file); otherwise, iterate in explicit, user-specified *(start, stop)* intervals ("start" is inclusive and "stop" is exclusive).""",
+    "entrysteps": u"""entrysteps : ``None``, positive int, ``float("inf")``, or iterable of *(int, int)* pairs
+        if ``None`` *(default)*, iterate in steps of TTree clusters (number of entries for which all branches' baskets align); if an integer, iterate in steps of equal numbers of entries (except at the end of a file); if infinite, take file-sized steps; otherwise, iterate in explicit, user-specified *(start, stop)* intervals ("start" is inclusive and "stop" is exclusive).""",
 
     # entrysteps_tree
-    "entrysteps_tree": u"""entrysteps : ``None``, positive int, or iterable of *(int, int)* pairs
-        if ``None`` *(default)*, iterate in steps of TTree clusters (number of entries for which all branches' baskets align); if an integer, iterate in steps of equal numbers of entries; otherwise, iterate in explicit, user-specified *(start, stop)* intervals ("start" is inclusive and "stop" is exclusive).""",
+    "entrysteps_tree": u"""entrysteps : ``None``, positive int, ``float("inf")``, or iterable of *(int, int)* pairs
+        if ``None`` *(default)*, iterate in steps of TTree clusters (number of entries for which all branches' baskets align); if an integer, iterate in steps of equal numbers of entries; if infinite, iterate over the whole file in one step; otherwise, iterate in explicit, user-specified *(start, stop)* intervals ("start" is inclusive and "stop" is exclusive).""",
 
     # branch
     "branch": u"""branch : str
@@ -468,6 +467,14 @@ tree_fragments = {
     "flatten": u"""flatten : None or bool
         if ``True``, convert JaggedArrays into flat Numpy arrays. If False *(default)*, make JaggedArrays lists. If None, remove JaggedArrays.""",
 
+    # flatname
+    "flatname": u"""flatname : None or (branchname, fieldname, index) \u2192 str
+        if ``None`` *(default)*, use ``uproot._connect._pandas.default_flatname`` to convert a branchname with a subfield and regular index number into a Pandas column name; otherwise, take a user-defined function.""",
+
+    # profile
+    "profile": u"""profile : None or str
+        if a string *(not default)*, format the lazy arrays using a module from uproot_methods.profiles named by the string.""",
+
     # awkwardlib
     "awkwardlib": u"""awkwardlib : ``None``, str, or module
         if ``None`` *(default)*, use ``import awkward`` to get awkward-array constructors. Otherwise, parse the module string name or use the provided module.""",
@@ -491,6 +498,10 @@ tree_fragments = {
     # blocking
     "blocking": u"""blocking : bool
         if ``True`` *(default)*, do not exit this function until the arrays are read, and return those arrays. If ``False``, exit immediately and return a zero-argument function. That zero-argument function returns the desired array, and it blocks until the array is available. This option is only useful with a non-``None`` executor.""",
+
+    # persistvirtual
+    "persistvirtual": u"""persistvirtual : bool
+        if ``False`` *(default)*, the resulting awkward.VirtualArrays would convert themselves into real arrays (materialize) before being saved in awkward-array's persistence methods; if ``True``, the "virtualness" of the arrays is preserved\u2014that is, only instructions for reconstituting the arrays is saved, not the array data themselves.""",
 
     # recursive
     "recursive": u"""recursive : bool
@@ -542,6 +553,8 @@ u"""Opens a series of ROOT files (local or remote), yielding the same number of 
 
     {flatten}
 
+    {flatname}
+
     {awkwardlib}
 
     {cache}
@@ -564,7 +577,62 @@ u"""Opens a series of ROOT files (local or remote), yielding the same number of 
 
     Returns
     -------
-    iterator over (int, int, outputtype) (if *reportentries*) or just outputtype (otherwise)
+    iterator over (str, :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>`, int, int, outputtype) (if *reportpath*, *reportfile*, *reportentries*) or just outputtype (otherwise)
+        aligned array segments from the files.
+    """.format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
+
+################################################################ uproot.pandas.iterate
+
+uproot.pandas.iterate.__doc__ = \
+u"""Opens a series of ROOT files (local or remote), yielding Pandas DataFrames in each step.
+
+    Depending on the "entrysteps" parameter, the number of entries in one step may differ from the number of entries in the next step, but in every step, the same number of entries is retrieved from all *baskets.*
+
+    Parameters
+    ----------
+    path : str or list of str
+        glob pattern(s) for local file paths (POSIX wildcards like "``*``") or URLs specifying the locations of the files. A list of filenames are processed in the given order, but glob patterns get pre-sorted to ensure a predictable order.
+
+    treepath : str
+        path within each ROOT file to find the TTree (may include "``/``" for subdirectories or "``;``" for cycle numbers).
+
+    {branches}
+
+    {entrysteps}
+
+    {namedecode}
+
+    {reportpath}
+
+    {reportfile}
+
+    {flatten}
+
+    {flatname}
+
+    {awkwardlib}
+
+    {cache}
+
+    {basketcache}
+
+    {keycache}
+
+    {executor}
+
+    {blocking}
+
+    {localsource}
+
+    {xrootdsource}
+
+    {httpsource}
+
+    {options}
+
+    Returns
+    -------
+    iterator over (str, :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>`, pandas.Dataframe) (if *reportpath* and *reportfile*) or just pandas.DataFrame (otherwise)
         aligned array segments from the files.
     """.format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
 
@@ -599,8 +667,8 @@ u"""Adds array reading methods to TTree objects that have been streamed from a R
     **Methods for reading array data:**
 
     - :py:meth:`array <uproot.tree.TTreeMethods.array>` read one branch into an array (or other object if provided an alternate *interpretation*).
-    - :py:meth:`lazyarray <uproot.tree.TTreeMethods.lazyarray>` create a lazy array that would read the branch as needed.
     - :py:meth:`arrays <uproot.tree.TTreeMethods.arrays>` read many branches into arrays (or other objects if provided alternate *interpretations*).
+    - :py:meth:`lazyarray <uproot.tree.TTreeMethods.lazyarray>` create a lazy array that would read the branch as needed.
     - :py:meth:`lazyarrays <uproot.tree.TTreeMethods.lazyarrays>` create many lazy arrays.
     - :py:meth:`iterate <uproot.tree.TTreeMethods.iterate>` iterate over many arrays at once, yielding the same number of entries from all selected branches in each step.
 """
@@ -814,31 +882,6 @@ u"""Read one branch into an array (or other object if provided an alternate *int
     array or other object, depending on *interpretation*.
 """.format(**tree_fragments)
 
-_method(uproot.tree.TTreeMethods.lazyarray).__doc__ = \
-u"""Create a lazy array that would read the branch as needed.
-
-    Parameters
-    ----------
-    {branch}
-
-    {interpretation}
-
-    {awkwardlib}
-
-    {cache}
-
-    {basketcache}
-
-    {keycache}
-
-    {executor}
-
-    Returns
-    -------
-    lazy array (square brackets initiate data reading)
-        lazy version of the array.
-""".format(**tree_fragments)
-
 _method(uproot.tree.TTreeMethods.arrays).__doc__ = \
 u"""Read many branches into arrays (or other objects if provided alternate *interpretations*).
 
@@ -855,6 +898,8 @@ u"""Read many branches into arrays (or other objects if provided alternate *inte
     {entrystop}
 
     {flatten}
+
+    {flatname}
 
     {awkwardlib}
 
@@ -874,16 +919,22 @@ u"""Read many branches into arrays (or other objects if provided alternate *inte
         branch data.
 """.format(**tree_fragments)
 
-_method(uproot.tree.TTreeMethods.lazyarrays).__doc__ = \
-u"""Create many lazy arrays.
+_method(uproot.tree.TTreeMethods.lazyarray).__doc__ = \
+u"""Create a lazy array that would read the branch as needed.
 
     Parameters
     ----------
-    {branches}
+    {branch}
 
-    {outputtype}
+    {interpretation}
 
-    {namedecode}
+    {entrysteps_tree}
+
+    {entrystart}
+
+    {entrystop}
+
+    {flatten}
 
     {awkwardlib}
 
@@ -895,9 +946,48 @@ u"""Create many lazy arrays.
 
     {executor}
 
+    {persistvirtual}
+
     Returns
     -------
-    outputtype of lazy arrays (square brackets initiate data reading)
+    ChunkedArray of VirtualArrays
+        lazy version of the array.
+""".format(**tree_fragments)
+
+_method(uproot.tree.TTreeMethods.lazyarrays).__doc__ = \
+u"""Create a table of lazy arrays.
+
+    Parameters
+    ----------
+    {branches}
+
+    {namedecode}
+
+    {entrysteps}
+
+    {entrystart}
+
+    {entrystop}
+
+    {flatten}
+
+    {profile}
+
+    {awkwardlib}
+
+    {cache}
+
+    {basketcache}
+
+    {keycache}
+
+    {executor}
+
+    {persistvirtual}
+
+    Returns
+    -------
+    ChunkedArray of Table of VirtualArrays
         lazy branch data.
 """.format(**tree_fragments)
 
@@ -923,6 +1013,8 @@ u"""Iterate over many arrays at once, yielding the same number of entries from a
     {entrystop}
 
     {flatten}
+
+    {flatname}
 
     {awkwardlib}
 
@@ -1338,6 +1430,14 @@ u"""Create a lazy array that would read the branch as needed.
     ----------
     {interpretation}
 
+    {entrysteps}
+
+    {entrystart}
+
+    {entrystop}
+
+    {flatten}
+
     {awkwardlib}
 
     {cache}
@@ -1348,9 +1448,11 @@ u"""Create a lazy array that would read the branch as needed.
 
     {executor}
 
+    {persistvirtual}
+
     Returns
     -------
-    lazy array (square brackets initiate data reading)
+    ChunkedArray of VirtualArrays
         lazy version of branch data.
 """.format(**tree_fragments)
 
@@ -1447,7 +1549,7 @@ u"""Iterate over baskets.
 
 ################################################################ uproot.tree.TTreeMethods.pandas
 
-_method(uproot._connect.to_pandas.TTreeMethods_pandas.df).__doc__ = \
+_method(uproot._connect._pandas.TTreeMethods_pandas.df).__doc__ = \
 u"""Create a Pandas DataFrame from some branches.
 
     Parameters
@@ -1477,6 +1579,198 @@ u"""Create a Pandas DataFrame from some branches.
     Pandas DataFrame
         data frame (`see docs <http://pandas.pydata.org/pandas-docs/stable/api.html#dataframe>`_).
 """.format(**tree_fragments)
+
+################################################################ uproot.tree.lazyarray(s)
+
+uproot.tree.lazyarray.__doc__ = \
+u"""Create a lazy array that would read from a set of files as needed.
+
+    Parameters
+    ----------
+
+    path : str or list of str
+        glob pattern(s) for local file paths (POSIX wildcards like "``*``") or URLs specifying the locations of the files. A list of filenames are processed in the given order, but glob patterns get pre-sorted to ensure a predictable order.
+
+    treepath : str
+        path within each ROOT file to find the TTree (may include "``/``" for subdirectories or "``;``" for cycle numbers).
+
+    branchname : str
+        path within each TTree to find the TBranch
+
+    {interpretation}
+
+    {namedecode}
+
+    {entrysteps}
+
+    {flatten}
+
+    {awkwardlib}
+
+    {cache}
+
+    {basketcache}
+
+    {keycache}
+
+    {executor}
+
+    {persistvirtual}
+
+    {localsource}
+
+    {xrootdsource}
+
+    {httpsource}
+
+    {options}
+
+    Returns
+    -------
+    ChunkedArray of VirtualArrays of VirtualArrays
+        lazy files of lazy baskets.
+""".format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
+
+uproot.tree.lazyarrays.__doc__ = \
+u"""Create a lazy table that would read from a set of files as needed.
+
+    Parameters
+    ----------
+
+    path : str or list of str
+        glob pattern(s) for local file paths (POSIX wildcards like "``*``") or URLs specifying the locations of the files. A list of filenames are processed in the given order, but glob patterns get pre-sorted to ensure a predictable order.
+
+    treepath : str
+        path within each ROOT file to find the TTree (may include "``/``" for subdirectories or "``;``" for cycle numbers).
+
+    {branches}
+
+    {namedecode}
+
+    {entrysteps}
+
+    {flatten}
+
+    {profile}
+
+    {awkwardlib}
+
+    {cache}
+
+    {basketcache}
+
+    {keycache}
+
+    {executor}
+
+    {persistvirtual}
+
+    {localsource}
+
+    {xrootdsource}
+
+    {httpsource}
+
+    {options}
+
+    Returns
+    -------
+    ChunkedArray of Table of VirtualArrays of VirtualArrays
+        lazy files of branches of lazy baskets.
+""".format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
+
+################################################################ uproot.tree.daskarray/daskframe
+
+uproot.tree.daskarray.__doc__ = \
+u"""Create a Dask array that would read from a set of files as needed.
+
+    Parameters
+    ----------
+
+    path : str or list of str
+        glob pattern(s) for local file paths (POSIX wildcards like "``*``") or URLs specifying the locations of the files. A list of filenames are processed in the given order, but glob patterns get pre-sorted to ensure a predictable order.
+
+    treepath : str
+        path within each ROOT file to find the TTree (may include "``/``" for subdirectories or "``;``" for cycle numbers).
+
+    branchname : str
+        path within each TTree to find the TBranch
+
+    {interpretation}
+
+    {namedecode}
+
+    {entrysteps}
+
+    {flatten}
+
+    {awkwardlib}
+
+    {cache}
+
+    {basketcache}
+
+    {keycache}
+
+    {executor}
+
+    {localsource}
+
+    {xrootdsource}
+
+    {httpsource}
+
+    {options}
+
+    Returns
+    -------
+    dask.array.core.Array
+        lazy files of lazy baskets.
+""".format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
+
+uproot.tree.daskframe.__doc__ = \
+u"""Create a Dask DataFrame that would read from a set of files as needed.
+
+    Parameters
+    ----------
+
+    path : str or list of str
+        glob pattern(s) for local file paths (POSIX wildcards like "``*``") or URLs specifying the locations of the files. A list of filenames are processed in the given order, but glob patterns get pre-sorted to ensure a predictable order.
+
+    treepath : str
+        path within each ROOT file to find the TTree (may include "``/``" for subdirectories or "``;``" for cycle numbers).
+
+    {branches}
+
+    {namedecode}
+
+    {entrysteps}
+
+    {flatten}
+
+    {awkwardlib}
+
+    {cache}
+
+    {basketcache}
+
+    {keycache}
+
+    {executor}
+
+    {localsource}
+
+    {xrootdsource}
+
+    {httpsource}
+
+    {options}
+
+    Returns
+    -------
+    dask.dataframe.core.DataFrame
+        lazy files of branches of lazy baskets.
+""".format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
 
 ################################################################ uproot.tree.numentries
 
@@ -1564,8 +1858,8 @@ u"""Generate a default interpretation of a branch.
     This function is called with default options on each branch in the following methods to generate a default interpretation. You can override the default either by calling this function explicitly with different parameters or by modifying its result.
 
     - :py:meth:`TTreeMethods.array <uproot.tree.TTreeMethods.array>`
-    - :py:meth:`TTreeMethods.lazyarray <uproot.tree.TTreeMethods.lazyarray>`
     - :py:meth:`TTreeMethods.arrays <uproot.tree.TTreeMethods.arrays>`
+    - :py:meth:`TTreeMethods.lazyarray <uproot.tree.TTreeMethods.lazyarray>`
     - :py:meth:`TTreeMethods.lazyarrays <uproot.tree.TTreeMethods.lazyarrays>`
     - :py:meth:`TTreeMethods.iterate <uproot.tree.TTreeMethods.iterate>`
     - :py:meth:`TTreeMethods.iterate_clusters <uproot.tree.TTreeMethods.iterate_clusters>`
