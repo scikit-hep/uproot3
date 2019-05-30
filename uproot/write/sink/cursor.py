@@ -52,13 +52,13 @@ class Cursor(object):
         self.update_string(sink, data)
         self.index += self.length_string(data)
 
-    def update_cstring(self, sink, data):
-        sink.write(data, self.index)
-        sink.write(b"\x00")
+    #def update_cstring(self, sink, data):
+    #    sink.write(data, self.index)
+    #    sink.write(b"\x00")
 
-    def write_cstring(self, sink, data):
-        self.update_cstring(sink, data)
-        self.index += len(data) + 1
+    #def write_cstring(self, sink, data):
+    #    self.update_cstring(sink, data)
+    #    self.index += len(data) + 1
 
     def update_data(self, sink, data):
         sink.write(data, self.index)
@@ -70,9 +70,9 @@ class Cursor(object):
     def return_array(self, data):
         return data.tostring()
 
-    def update_array(self, sink, data):
-        sink.write(data.tostring(), self.index)
+    #def update_array(self, sink, data):
+    #    sink.write(data.tostring(), self.index)
 
-    def write_array(self, sink, data):
-        self.update_array(sink, data)
-        self.index += data.nbytes
+    #def write_array(self, sink, data):
+    #    self.update_array(sink, data)
+    #    self.index += data.nbytes
