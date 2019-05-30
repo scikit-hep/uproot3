@@ -338,7 +338,7 @@ def test_th1_binlabel(tmp_path):
 
     t = uproot.open(testfile)
     hist = t["hvar"]
-    with uproot.recreate(filename) as f:
+    with uproot.recreate(filename, compression=None) as f:
         f["test"] = hist
 
     f = ROOT.TFile.Open(filename)
@@ -359,7 +359,7 @@ def test_th2_binlabel(tmp_path):
 
     t = uproot.open(testfile)
     hist = t["hvar"]
-    with uproot.recreate(filename) as f:
+    with uproot.recreate(filename, compression=None) as f:
         f["test"] = hist
 
     f = ROOT.TFile.Open(filename)
@@ -382,7 +382,7 @@ def test_th3_binlabel(tmp_path):
 
     t = uproot.open(testfile)
     hist = t["hvar"]
-    with uproot.recreate(filename) as f:
+    with uproot.recreate(filename, compression=None) as f:
         f["test"] = hist
 
     f = ROOT.TFile.Open(filename)
