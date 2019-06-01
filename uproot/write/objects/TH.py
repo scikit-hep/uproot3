@@ -59,7 +59,7 @@ class TH(object):
         elif self.fClassName == b"TH2D":
             self.valuesarray = numpy.array(self.values, dtype=">f8").transpose()
         elif self.fClassName == b"TProfile2D":
-            raise NotImplementedError(self.fClassName)
+            self.valuesarray = numpy.array(self.values, dtype=">f8").transpose()
         elif self.fClassName == b"TH3C":
             self.valuesarray = numpy.array(self.values, dtype=">i1").transpose()
         elif self.fClassName == b"TH3S":
@@ -139,7 +139,9 @@ class TH(object):
                 "_fYmin": 0.0,
                 "_fYmax": 0.0,
                 "_fBinSumw2": [],
-                "_fErrorMode": 0} # Fix
+                "_fErrorMode": 0,
+                "_fZmin": 0.0,
+                "_fZmax": 0.0}
 
     @staticmethod
     def emptyaxis(name, titleoffset):
@@ -394,7 +396,16 @@ class TH(object):
     def length_th1d(self, name):
         return self.length_th1(name) + self.length_tarray(self.valuesarray) + self._format_cntvers.size
 
-    _format_tprofile_1 = struct.Struct(">idddd")
+    def return_th2d(self, cursor, name):
+        cnt = numpy.int64(self.length_th2d(name) - 4) | uproot.const.kByteCountMask
+        vers = 3
+        return (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th2(cursor, name)
+                + self.return_tarray(cursor, self.valuesarray))
+
+    def length_th2d(self, name):
+        return self.length_th2(name) + self.length_tarray(self.valuesarray) + self._format_cntvers.size
+
+    _format_tprofile = struct.Struct(">idddd")
     def write(self, context, cursor, name, compression, key, keycursor):
         givenbytes = 0
         cnt = numpy.int64(self.length(name) - 4) | uproot.const.kByteCountMask
@@ -407,12 +418,19 @@ class TH(object):
         elif "TH3" in self.fClassName.decode("utf-8"):
             vers = 3
             givenbytes = cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th3(cursor, name)
-        elif "TProfile" in self.fClassName.decode("utf-8"):
+        elif "TProfile" == self.fClassName.decode("utf-8"):
             vers = 6
             givenbytes = (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th1d(cursor, name)
                             + self.return_tarray(cursor, self.fields["_fBinEntries"]) +
-                            cursor.return_fields(self._format_tprofile_1, self.fields["_fErrorMode"], self.fields["_fYmin"],
+                            cursor.return_fields(self._format_tprofile, self.fields["_fErrorMode"], self.fields["_fYmin"],
                             self.fields["_fYmax"], self.fields["_fTsumwy"], self.fields["_fTsumwy2"]) +
+                            self.return_tarray(cursor, self.fields["_fBinSumw2"]))
+        elif "TProfile2D" == self.fClassName.decode("utf-8"):
+            vers = 7
+            givenbytes = (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th2d(cursor, name)
+                            + self.return_tarray(cursor, self.fields["_fBinEntries"]) +
+                            cursor.return_fields(self._format_tprofile, self.fields["_fErrorMode"], self.fields["_fZmin"],
+                            self.fields["_fZmax"], self.fields["_fTsumwz"], self.fields["_fTsumwz2"]) +
                             self.return_tarray(cursor, self.fields["_fBinSumw2"]))
         givenbytes += self.return_tarray(cursor, self.valuesarray)
         uproot.write.compress.write(context, cursor, givenbytes, compression, key, keycursor)
@@ -425,5 +443,6 @@ class TH(object):
         elif "TH3" in self.fClassName.decode("utf-8"):
             return self.length_th3(name) + self.length_tarray(self.valuesarray) + self._format_cntvers.size
         elif "TProfile" in self.fClassName.decode("utf-8"):
-            return (self.length_th1d(name) + self.length_tarray(self.fields["_fBinEntries"]) + self._format_tprofile_1.size
+            return (self.length_th1d(name) + self.length_tarray(self.fields["_fBinEntries"]) + self._format_tprofile.size
                     + self.length_tarray(self.fields["_fBinSumw2"]) + self._format_cntvers.size)
+

@@ -354,3 +354,96 @@ def test_tprofile(tmp_path):
     for x in range(1, 6):
         assert h.GetBinContent(x) == bincontents[count]
         count += 1
+
+def test_compressed_tprofile(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+    testfile = join(str(tmp_path), "test.root")
+
+    f = ROOT.TFile.Open(testfile, "RECREATE")
+    h = ROOT.TProfile("hvar", "title", 5, 1, 10)
+    h.Sumw2()
+    h.Fill(1.0, 3)
+    h.Fill(2.0, 4)
+    h.Write()
+    f.Close()
+
+    t = uproot.open(testfile)
+    hist = t["hvar"]
+    with uproot.recreate(filename, compression=uproot.LZMA(5)) as f:
+        f["test"] = hist
+
+    f = ROOT.TFile.Open(filename)
+    h = f.Get("test")
+    sums = [0.0, 25.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    bincontents = [3.5, 0.0, 0.0, 0.0, 0.0]
+    assert list(h.GetSumw2()) == sums
+    assert h.GetMean() == 1.5
+    assert h.GetRMS() == 0.5
+    count = 0
+    for x in range(1, 6):
+        assert h.GetBinContent(x) == bincontents[count]
+        count += 1
+
+def test_tprofile2d(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+    testfile = join(str(tmp_path), "test.root")
+
+    f = ROOT.TFile.Open(testfile, "RECREATE")
+    h = ROOT.TProfile2D("hvar", "title", 5, 1, 10, 6, 1, 20)
+    h.Sumw2()
+    h.Fill(1.0, 5.0, 3)
+    h.Fill(2.0, 10.0, 4)
+    h.Write()
+    f.Close()
+
+    t = uproot.open(testfile)
+    hist = t["hvar"]
+    with uproot.recreate(filename, compression=None) as f:
+        f["test"] = hist
+
+    f = ROOT.TFile.Open(filename)
+    h = f.Get("test")
+    sums = [0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 9.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 16.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0]
+    bincontents = [0.0, 3.0, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    count = 0
+    for x in range(1, 6):
+        for y in range(1, 7):
+            assert h.GetBinContent(x, y) == bincontents[count]
+            count += 1
+    assert list(h.GetSumw2()) == sums
+    assert h.GetMean() == 1.5
+    assert h.GetRMS() == 0.5
+    assert h.GetNbinsX() == 5
+    assert h.GetNbinsY() == 6
+
+def test_compressed_tprofile2d(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+    testfile = join(str(tmp_path), "test.root")
+
+    f = ROOT.TFile.Open(testfile, "RECREATE")
+    h = ROOT.TProfile2D("hvar", "title", 5, 1, 10, 6, 1, 20)
+    h.Sumw2()
+    h.Fill(1.0, 5.0, 3)
+    h.Fill(2.0, 10.0, 4)
+    h.Write()
+    f.Close()
+
+    t = uproot.open(testfile)
+    hist = t["hvar"]
+    with uproot.recreate(filename, compression=uproot.LZMA(5)) as f:
+        f["test"] = hist
+
+    f = ROOT.TFile.Open(filename)
+    h = f.Get("test")
+    sums = [0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 9.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 16.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0]
+    bincontents = [0.0, 3.0, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    count = 0
+    for x in range(1, 6):
+        for y in range(1, 7):
+            assert h.GetBinContent(x, y) == bincontents[count]
+            count += 1
+    assert list(h.GetSumw2()) == sums
+    assert h.GetMean() == 1.5
+    assert h.GetRMS() == 0.5
+    assert h.GetNbinsX() == 5
+    assert h.GetNbinsY() == 6
