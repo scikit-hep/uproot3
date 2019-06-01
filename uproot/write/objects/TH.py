@@ -386,7 +386,7 @@ class TH(object):
         return self._format_cntvers.size
 
     def return_th1d(self, cursor, name):
-        cnt = numpy.int64(self.length(name) - 4) | uproot.const.kByteCountMask
+        cnt = numpy.int64(self.length_th1d(name) - 4) | uproot.const.kByteCountMask
         vers = 2
         return (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th1(cursor, name)
                 + self.return_tarray(cursor, self.valuesarray))
@@ -426,4 +426,4 @@ class TH(object):
             return self.length_th3(name) + self.length_tarray(self.valuesarray) + self._format_cntvers.size
         elif "TProfile" in self.fClassName.decode("utf-8"):
             return (self.length_th1d(name) + self.length_tarray(self.fields["_fBinEntries"]) + self._format_tprofile_1.size
-                    + self.length_tarray(self.fields["_fBinSumw2"]) + self.length_tarray(self.valuesarray) + self._format_cntvers.size)
+                    + self.length_tarray(self.fields["_fBinSumw2"]) + self._format_cntvers.size)
