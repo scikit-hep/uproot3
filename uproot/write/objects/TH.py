@@ -426,4 +426,4 @@ class TH(object):
             return self.length_th3(name) + self.length_tarray(self.valuesarray) + self._format_cntvers.size
         elif "TProfile" in self.fClassName.decode("utf-8"):
             return (self.length_th1d(name) + self.length_tarray(self.fields["_fBinEntries"]) + self._format_tprofile_1.size
-                    + self.length_tarray(self.fields["_fBinSumw2"]) + self._format_cntvers.size)
+                    + self.length_tarray(self.fields["_fBinSumw2"]) + self.length_tarray(self.valuesarray) + self._format_cntvers.size)
