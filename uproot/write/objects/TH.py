@@ -411,20 +411,23 @@ class TH(object):
         cnt = numpy.int64(self.length(name) - 4) | uproot.const.kByteCountMask
         if "TH1" in self.fClassName.decode("utf-8"):
             vers = 2
-            givenbytes = cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th1(cursor, name)
+            givenbytes = (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th1(cursor, name)
+                          + self.return_tarray(cursor, self.valuesarray))
         elif "TH2" in self.fClassName.decode("utf-8"):
             vers = 3
-            givenbytes = cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th2(cursor, name)
+            givenbytes = (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th2(cursor, name)
+                          + self.return_tarray(cursor, self.valuesarray))
         elif "TH3" in self.fClassName.decode("utf-8"):
             vers = 3
-            givenbytes = cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th3(cursor, name)
+            givenbytes = (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th3(cursor, name)
+                          + self.return_tarray(cursor, self.valuesarray))
         elif "TProfile" == self.fClassName.decode("utf-8"):
             vers = 6
             givenbytes = (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th1d(cursor, name)
                             + self.return_tarray(cursor, self.fields["_fBinEntries"]) +
                             cursor.return_fields(self._format_tprofile, self.fields["_fErrorMode"], self.fields["_fYmin"],
                             self.fields["_fYmax"], self.fields["_fTsumwy"], self.fields["_fTsumwy2"]) +
-                            self.return_tarray(cursor, self.fields["_fBinSumw2"]))
+                            self.return_tarray(cursor, self.fields["_fBinSumw2"]) + self.return_tarray(cursor, self.valuesarray))
         elif "TProfile2D" == self.fClassName.decode("utf-8"):
             vers = 7
             givenbytes = (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th2d(cursor, name)
@@ -432,7 +435,6 @@ class TH(object):
                             cursor.return_fields(self._format_tprofile, self.fields["_fErrorMode"], self.fields["_fZmin"],
                             self.fields["_fZmax"], self.fields["_fTsumwz"], self.fields["_fTsumwz2"]) +
                             self.return_tarray(cursor, self.fields["_fBinSumw2"]))
-        givenbytes += self.return_tarray(cursor, self.valuesarray)
         uproot.write.compress.write(context, cursor, givenbytes, compression, key, keycursor)
 
     def length(self, name):
