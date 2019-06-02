@@ -325,7 +325,6 @@ def test_compressed_th3(tmp_path):
     assert h.GetNbinsY() == 6
     assert h.GetNbinsZ() == 7
 
-
 def test_tprofile(tmp_path):
     filename = join(str(tmp_path), "example.root")
     testfile = join(str(tmp_path), "test.root")

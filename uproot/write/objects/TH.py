@@ -189,7 +189,6 @@ class TH(object):
     _format_tarray = struct.Struct(">i")
     def return_tarray(self, cursor, values):
         return cursor.return_fields(self._format_tarray, values.size) + cursor.return_array(values)
-
     def length_tarray(self, values):
         return self._format_tarray.size + values.nbytes
 

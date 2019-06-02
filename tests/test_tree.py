@@ -595,7 +595,6 @@ class Test(unittest.TestCase):
                 assert lazy[i - 1 : i + 3].tolist() == strict[i - 1 : i + 3].tolist()
 
     def test_hist_in_tree(self):
-
         path = os.path.join("tests", "samples", "Event.root")
         if os.path.exists(path):
             tree = uproot.open(path)["T"]
@@ -612,7 +611,6 @@ class Test(unittest.TestCase):
         assert tree.array("fH")[20].values.tolist() == check
 
     def test_branch_auto_interpretation(self):
-
         # The aim is to reduce this list in a controlled manner
         known_branches_without_interp = [
             b'event',
