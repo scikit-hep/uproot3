@@ -189,6 +189,7 @@ class TH(object):
     _format_tarray = struct.Struct(">i")
     def return_tarray(self, cursor, values):
         return cursor.return_fields(self._format_tarray, values.size) + cursor.return_array(values)
+
     def length_tarray(self, values):
         return self._format_tarray.size + values.nbytes
 
@@ -410,23 +411,20 @@ class TH(object):
         cnt = numpy.int64(self.length(name) - 4) | uproot.const.kByteCountMask
         if "TH1" in self.fClassName.decode("utf-8"):
             vers = 2
-            givenbytes = (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th1(cursor, name)
-                          + self.return_tarray(cursor, self.valuesarray))
+            givenbytes = cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th1(cursor, name)
         elif "TH2" in self.fClassName.decode("utf-8"):
             vers = 3
-            givenbytes = (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th2(cursor, name)
-                          + self.return_tarray(cursor, self.valuesarray))
+            givenbytes = cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th2(cursor, name)
         elif "TH3" in self.fClassName.decode("utf-8"):
             vers = 3
-            givenbytes = (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th3(cursor, name)
-                          + self.return_tarray(cursor, self.valuesarray))
+            givenbytes = cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th3(cursor, name)
         elif "TProfile" == self.fClassName.decode("utf-8"):
             vers = 6
             givenbytes = (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th1d(cursor, name)
                             + self.return_tarray(cursor, self.fields["_fBinEntries"]) +
                             cursor.return_fields(self._format_tprofile, self.fields["_fErrorMode"], self.fields["_fYmin"],
                             self.fields["_fYmax"], self.fields["_fTsumwy"], self.fields["_fTsumwy2"]) +
-                            self.return_tarray(cursor, self.fields["_fBinSumw2"]) + self.return_tarray(cursor, self.valuesarray))
+                            self.return_tarray(cursor, self.fields["_fBinSumw2"]))
         elif "TProfile2D" == self.fClassName.decode("utf-8"):
             vers = 7
             givenbytes = (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th2d(cursor, name)
@@ -434,6 +432,7 @@ class TH(object):
                             cursor.return_fields(self._format_tprofile, self.fields["_fErrorMode"], self.fields["_fZmin"],
                             self.fields["_fZmax"], self.fields["_fTsumwz"], self.fields["_fTsumwz2"]) +
                             self.return_tarray(cursor, self.fields["_fBinSumw2"]))
+        givenbytes += self.return_tarray(cursor, self.valuesarray)
         uproot.write.compress.write(context, cursor, givenbytes, compression, key, keycursor)
 
     def length(self, name):
@@ -445,8 +444,10 @@ class TH(object):
             return self.length_th3(name) + self.length_tarray(self.valuesarray) + self._format_cntvers.size
         elif "TProfile" == self.fClassName.decode("utf-8"):
             return (self.length_th1d(name) + self.length_tarray(self.fields["_fBinEntries"]) + self._format_tprofile.size
-                    + self.length_tarray(self.fields["_fBinSumw2"]) + self._format_cntvers.size)
+                    + self.length_tarray(self.fields["_fBinSumw2"]) + self.length_tarray(self.valuesarray)
+                    + self._format_cntvers.size)
         elif "TProfile2D" == self.fClassName.decode("utf-8"):
             return (self.length_th2d(name) + self.length_tarray(self.fields["_fBinEntries"]) + self._format_tprofile.size
-                    + self.length_tarray(self.fields["_fBinSumw2"]) + self._format_cntvers.size)
+                    + self.length_tarray(self.fields["_fBinSumw2"]) + self.length_tarray(self.valuesarray)
+                    + self._format_cntvers.size)
 
