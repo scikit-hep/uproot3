@@ -87,8 +87,12 @@ class Test(unittest.TestCase):
 
     def test_issue57(self):
         tree = uproot.open("tests/samples/issue57.root")["outtree"]
-        assert all(isinstance(y, uproot_methods.classes.TLorentzVector.Methods) and isinstance(y._fP, uproot_methods.classes.TVector3.Methods) for x in tree["sel_lep"].array() for y in x)
-        assert all(isinstance(y, uproot_methods.classes.TLorentzVector.Methods) and isinstance(y._fP, uproot_methods.classes.TVector3.Methods) for x in tree["selJet"].array() for y in x)
+        for x in tree["sel_lep"].array():
+            for y in x:
+                assert isinstance(y, uproot_methods.classes.TLorentzVector.Methods) and isinstance(y._fP, uproot_methods.classes.TVector3.Methods)
+        for x in tree["selJet"].array():
+            for y in x:
+                assert isinstance(y, uproot_methods.classes.TLorentzVector.Methods) and isinstance(y._fP, uproot_methods.classes.TVector3.Methods)
 
     def test_issue60(self):
         t = uproot.open("tests/samples/issue60.root")["nllscan"]
