@@ -7,3 +7,6 @@ lz4
 backports.lzma;python_version<"3.3"
 pandas
 requests
+dask[array]
+dask[dataframe]
+h5py
