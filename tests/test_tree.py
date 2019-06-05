@@ -42,7 +42,7 @@ class Test(unittest.TestCase):
     def test_flat_basket(self):
         branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["i8"]
         interpretation = branch._normalize_interpretation(None, awkward)
-        entrystart, entrystop = branch._normalize_entrystartstop(None, None)
+        entrystart, entrystop = uproot.tree._normalize_entrystartstop(branch.numentries, None, None)
         local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
 
         one = branch._basket(0, interpretation, local_entrystart, local_entrystop, awkward, None, None)
@@ -62,7 +62,7 @@ class Test(unittest.TestCase):
     def test_regular_basket(self):
         branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["ai8"]
         interpretation = branch._normalize_interpretation(None, awkward)
-        entrystart, entrystop = branch._normalize_entrystartstop(None, None)
+        entrystart, entrystop = uproot.tree._normalize_entrystartstop(branch.numentries, None, None)
         local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
 
         one = branch._basket(0, interpretation, local_entrystart, local_entrystop, awkward, None, None)
@@ -88,7 +88,7 @@ class Test(unittest.TestCase):
     def test_irregular_basket(self):
         branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["Ai8"]
         interpretation = branch._normalize_interpretation(None, awkward)
-        entrystart, entrystop = branch._normalize_entrystartstop(None, None)
+        entrystart, entrystop = uproot.tree._normalize_entrystartstop(branch.numentries, None, None)
         local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
 
         one = branch._basket(0, interpretation, local_entrystart, local_entrystop, awkward, None, None)
@@ -104,7 +104,7 @@ class Test(unittest.TestCase):
     def test_strings_basket(self):
         branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["str"]
         interpretation = branch._normalize_interpretation(None, awkward)
-        entrystart, entrystop = branch._normalize_entrystartstop(None, None)
+        entrystart, entrystop = uproot.tree._normalize_entrystartstop(branch.numentries, None, None)
         local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
 
         one = branch.basket(0, interpretation, local_entrystart, local_entrystop)
@@ -668,3 +668,8 @@ class Test(unittest.TestCase):
             index = df.index.get_level_values("entry").tolist()
             assert min(index) == 100
             assert max(index) == 199
+
+    def test_mempartitions(self):
+        t = uproot.open("tests/samples/sample-5.23.02-zlib.root")["sample"]
+        assert list(t.mempartitions(500)) == [(0, 2), (2, 4), (4, 6), (6, 8), (8, 10), (10, 12), (12, 14), (14, 16), (16, 18), (18, 20), (20, 22), (22, 24), (24, 26), (26, 28), (28, 30)]
+        assert [sum(y.nbytes for y in x.values()) for x in t.iterate(entrysteps="0.5 kB")] == [693, 865, 822, 779, 951, 695, 867, 824, 781, 953, 695, 867, 824, 781, 953]

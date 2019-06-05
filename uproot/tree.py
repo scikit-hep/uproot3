@@ -30,6 +30,7 @@ import uproot_methods.profiles
 
 import uproot.rootio
 from uproot.rootio import _bytesid
+from uproot.rootio import _memsize
 from uproot.rootio import nofilter
 from uproot.interp.auto import interpret
 from uproot.interp.numerical import asdtype
@@ -85,6 +86,24 @@ def _normalize_awkwardlib(awkwardlib):
         return importlib.import_module(awkwardlib)
     else:
         return awkwardlib
+
+def _normalize_entrystartstop(numentries, entrystart, entrystop):
+    if entrystart is None:
+        entrystart = 0
+    elif entrystart < 0:
+        entrystart += numentries
+    entrystart = min(numentries, max(0, entrystart))
+
+    if entrystop is None:
+        entrystop = numentries
+    elif entrystop < 0:
+        entrystop += numentries
+    entrystop = min(numentries, max(0, entrystop))
+
+    if entrystop < entrystart:
+        raise IndexError("entrystop must be greater than or equal to entrystart")
+
+    return int(entrystart), int(entrystop)
 
 ################################################################ high-level interface
 
@@ -377,6 +396,41 @@ class TTreeMethods(object):
         else:
             return True
 
+    def mempartitions(self, numbytes, branches=None, entrystart=None, entrystop=None, keycache=None, linear=True):
+        m = _memsize(numbytes)
+        if m is not None:
+            numbytes = m
+
+        if numbytes <= 0:
+            raise ValueError("target numbytes must be positive")
+
+        awkward = _normalize_awkwardlib(None)
+        branches = list(self._normalize_branches(branches, awkward))
+        entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
+
+        if not linear:
+            raise NotImplementedError("non-linear mempartition has not been implemented")
+
+        relevant_numbytes = 0.0
+        for branch, interpretation in branches:
+            if branch._recoveredbaskets is None:
+                branch._tryrecover()
+            for i, key in enumerate(branch._threadsafe_iterate_keys(keycache, False)):
+                start, stop = branch._entryoffsets[i], branch._entryoffsets[i + 1]
+                if entrystart < stop and start < entrystop:
+                    this_numbytes = key._fObjlen * (min(stop, entrystop) - max(start, entrystart)) / float(stop - start)
+                    assert this_numbytes >= 0.0
+                    relevant_numbytes += this_numbytes
+
+        entrysteps = max(1, int(round(math.ceil((entrystop - entrystart) * numbytes / relevant_numbytes))))
+
+        start, stop = entrystart, entrystart
+        while stop < entrystop:
+            stop = min(stop + entrysteps, entrystop)
+            if stop > start:
+                yield start, stop
+            start = stop
+
     def clusters(self, branches=None, entrystart=None, entrystop=None, strict=False):
         awkward = _normalize_awkwardlib(None)
         branches = list(self._normalize_branches(branches, awkward))
@@ -397,7 +451,7 @@ class TTreeMethods(object):
         cursors = [BranchCursor(branch) for branch, interpretation in branches if branch.numbaskets > 0]
 
         if len(cursors) == 0:
-            yield self._normalize_entrystartstop(entrystart, entrystop)
+            yield _normalize_entrystartstop(self.numentries, entrystart, entrystop)
 
         else:
             # everybody starts at the same entry number; if there is no such place before someone runs out of baskets, there will be an exception
@@ -409,7 +463,7 @@ class TTreeMethods(object):
                         cursor.basketstop += 1
                 leadingstart = max(cursor.entrystart for cursor in cursors)
 
-            entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+            entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
 
             # move all cursors forward, yielding a (start, stop) pair if their baskets line up
             while any(cursor.basketstop < cursor.branch.numbaskets for cursor in cursors):
@@ -451,7 +505,7 @@ class TTreeMethods(object):
 
         # for the case of outputtype == pandas.DataFrame, do some preparation to fill DataFrames efficiently
         ispandas = getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame"
-        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+        entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
 
         # start the job of filling the arrays
         futures = [(branch.name if namedecode is None else branch.name.decode(namedecode), interpretation, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=(flatten and not ispandas), awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=False)) for branch, interpretation in branches]
@@ -489,8 +543,8 @@ class TTreeMethods(object):
         return self.get(branch).lazyarray(interpretation=interpretation, entrysteps=entrysteps, entrystart=entrystart, entrystop=entrystop, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, persistvirtual=persistvirtual)
 
     def lazyarrays(self, branches=None, namedecode="utf-8", entrysteps=None, entrystart=None, entrystop=None, flatten=False, profile=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False):
-        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
-        entrysteps = self._normalize_entrysteps(entrysteps, branches, entrystart, entrystop)
+        entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
+        entrysteps = self._normalize_entrysteps(entrysteps, branches, entrystart, entrystop, keycache)
         awkward = _normalize_awkwardlib(awkwardlib)
         branches = list(self._normalize_branches(branches, awkward))
 
@@ -523,7 +577,13 @@ class TTreeMethods(object):
             out = uproot_methods.profiles.transformer(profile)(out)
         return out
 
-    def _normalize_entrysteps(self, entrysteps, branches, entrystart, entrystop):
+    def _normalize_entrysteps(self, entrysteps, branches, entrystart, entrystop, keycache):
+        numbytes = _memsize(entrysteps)
+        if numbytes is not None:
+            return self.mempartitions(numbytes, branches=branches, entrystart=entrystart, entrystop=entrystop, keycache=keycache, linear=True)
+        if isinstance(entrysteps, string_types):
+            raise ValueError("string {0} does not match the memory size pattern (number followed by B/kB/MB/GB/etc.)".format(repr(entrysteps)))
+
         if entrysteps is None:
             return self.clusters(branches, entrystart=entrystart, entrystop=entrystop, strict=False)
 
@@ -539,23 +599,15 @@ class TTreeMethods(object):
             starts = numpy.arange(entrystart, effectivestop, entrystepsize)
             stops = numpy.append(starts[1:], effectivestop)
             return zip(starts, stops)
-
+                    
         else:
             try:
                 iter(entrysteps)
             except TypeError:
-                raise TypeError("entrysteps must be None for cluster iteration, a positive integer for equal steps in number of entries (inf for maximal), or an iterable of 2-tuples for explicit entry starts (inclusive) and stops (exclusive)")
+                raise TypeError("entrysteps must be None for cluster iteration, a positive integer for equal steps in number of entries (inf for maximal), a memory size string (number followed by B/kB/MB/GB/etc.), or an iterable of 2-tuples for explicit entry starts (inclusive) and stops (exclusive)")
             return entrysteps
 
     def iterate(self, branches=None, entrysteps=None, outputtype=dict, namedecode=None, reportentries=False, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
-        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
-        entrysteps = self._normalize_entrysteps(entrysteps, branches, entrystart, entrystop)
-        awkward = _normalize_awkwardlib(awkwardlib)
-        branches = list(self._normalize_branches(branches, awkward))
-
-        # for the case of outputtype == pandas.DataFrame, do some preparation to fill DataFrames efficiently
-        ispandas = getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame"
-
         if keycache is None:
             keycache = {}
 
@@ -564,6 +616,14 @@ class TTreeMethods(object):
             explicit_basketcache = False
         else:
             explicit_basketcache = True
+
+        entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
+        entrysteps = self._normalize_entrysteps(entrysteps, branches, entrystart, entrystop, keycache)
+        awkward = _normalize_awkwardlib(awkwardlib)
+        branches = list(self._normalize_branches(branches, awkward))
+
+        # for the case of outputtype == pandas.DataFrame, do some preparation to fill DataFrames efficiently
+        ispandas = getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame"
             
         def evaluate(branch, interpretation, future, past, cachekey, pythonize):
             if future is None:
@@ -764,24 +824,6 @@ class TTreeMethods(object):
                         else:
                             yield branch, interpretation
 
-    def _normalize_entrystartstop(self, entrystart, entrystop):
-        if entrystart is None:
-            entrystart = 0
-        elif entrystart < 0:
-            entrystart += self.numentries
-        entrystart = min(self.numentries, max(0, entrystart))
-
-        if entrystop is None:
-            entrystop = self.numentries
-        elif entrystop < 0:
-            entrystop += self.numentries
-        entrystop = min(self.numentries, max(0, entrystop))
-
-        if entrystop < entrystart:
-            raise IndexError("entrystop must be greater than or equal to entrystart")
-
-        return int(entrystart), int(entrystop)
-
     def __len__(self):
         return self.numentries
 
@@ -958,16 +1000,17 @@ class TBranchMethods(object):
         if keycache is not None:
             keys = [keycache.get(self._keycachekey(i), None) for i in range(basketstart, basketstop)]
             if all(x is not None for x in keys):
-                for key in keys:
-                    yield key
-                done = True
+                if not complete or all(hasattr(x, "border") for x in keys):
+                    for key in keys:
+                        yield key
+                    done = True
 
         if not done:
             keysource = self._source.threadlocal()
             try:
                 for i in range(basketstart, basketstop):
                     key = None if keycache is None else keycache.get(self._keycachekey(i), None)
-                    if key is None:
+                    if key is None or (complete and not hasattr(key, "border")):
                         key = self._basketkey(keysource, i, complete)
                         if keycache is not None:
                             keycache[self._keycachekey(i)] = key
@@ -1087,15 +1130,6 @@ class TBranchMethods(object):
         key = self._threadsafe_key(i, keycache, True)
         return interpretation.numitems(key.border, self.basket_numentries(i))
 
-    def _normalize_entrystartstop(self, entrystart, entrystop):
-        if entrystart is None:
-            entrystart = 0
-        if entrystop is None:
-            entrystop = self.numentries
-        if entrystop < entrystart:
-            raise IndexError("entrystop must be greater than or equal to entrystart")
-        return entrystart, entrystop
-
     def _localentries(self, i, entrystart, entrystop):
         local_entrystart = max(0, entrystart - self.basket_entrystart(i))
         local_entrystop  = max(0, min(entrystop - self.basket_entrystart(i), self.basket_entrystop(i) - self.basket_entrystart(i)))
@@ -1149,7 +1183,7 @@ class TBranchMethods(object):
         if not 0 <= i < self.numbaskets:
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
-        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+        entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
         local_entrystart, local_entrystop = self._localentries(i, entrystart, entrystop)
         entrystart = self.basket_entrystart(i) + local_entrystart
         entrystop = self.basket_entrystart(i) + local_entrystop
@@ -1202,7 +1236,7 @@ class TBranchMethods(object):
         if self._recoveredbaskets is None:
             self._tryrecover()
 
-        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+        entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
         basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
 
         if basketstart is None:
@@ -1255,7 +1289,7 @@ class TBranchMethods(object):
         if self._recoveredbaskets is None:
             self._tryrecover()
 
-        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+        entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
 
         for i in range(self.numbaskets):
             if entrystart < self.basket_entrystop(i) and self.basket_entrystart(i) < entrystop:
@@ -1290,7 +1324,7 @@ class TBranchMethods(object):
         interpretation = self._normalize_interpretation(interpretation, awkward)
         if interpretation is None:
             raise ValueError("cannot interpret branch {0} as a Python type\n   in file: {1}".format(repr(self.name), self._context.sourcepath))
-        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+        entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
         basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
 
         if basketstart is not None and basketstop is not None and self._source.parent() is not None:
@@ -1460,7 +1494,46 @@ class TBranchMethods(object):
 
         return wait
 
-    def _normalize_entrysteps(self, entrysteps, entrystart, entrystop):
+    def mempartitions(self, numbytes, entrystart=None, entrystop=None, keycache=None, linear=True):
+        m = _memsize(numbytes)
+        if m is not None:
+            numbytes = m
+
+        if numbytes <= 0:
+            raise ValueError("target numbytes must be positive")
+
+        awkward = _normalize_awkwardlib(None)
+        entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
+
+        if not linear:
+            raise NotImplementedError("non-linear mempartition has not been implemented")
+
+        relevant_numbytes = 0.0
+        if self._recoveredbaskets is None:
+            self._tryrecover()
+        for i, key in enumerate(self._threadsafe_iterate_keys(keycache, False)):
+            start, stop = self._entryoffsets[i], self._entryoffsets[i + 1]
+            if entrystart < stop and start < entrystop:
+                this_numbytes = key._fObjlen * (min(stop, entrystop) - max(start, entrystart)) / float(stop - start)
+                assert this_numbytes >= 0.0
+                relevant_numbytes += this_numbytes
+
+        entrysteps = max(1, round(math.ceil((entrystop - entrystart) * numbytes / relevant_numbytes)))
+
+        start, stop = entrystart, entrystart
+        while stop < entrystop:
+            stop = min(stop + entrysteps, entrystop)
+            if stop > start:
+                yield start, stop
+            start = stop
+
+    def _normalize_entrysteps(self, entrysteps, entrystart, entrystop, keycache):
+        numbytes = _memsize(entrysteps)
+        if numbytes is not None:
+            return self.mempartitions(numbytes, entrystart=entrystart, entrystop=entrystop, keycache=keycache, linear=True)
+        if isinstance(entrysteps, string_types):
+            raise ValueError("string {0} does not match the memory size pattern (number followed by B/kB/MB/GB/etc.)".format(repr(entrysteps)))
+
         if entrysteps is None:
             if self._recoveredbaskets is None:
                 self._tryrecover()
@@ -1483,7 +1556,7 @@ class TBranchMethods(object):
             try:
                 iter(entrysteps)
             except TypeError:
-                raise TypeError("entrysteps must be None for cluster iteration, a positive integer for equal steps in number of entries (inf for maximal), or an iterable of 2-tuples for explicit entry starts (inclusive) and stops (exclusive)")
+                raise TypeError("entrysteps must be None for cluster iteration, a positive integer for equal steps in number of entries (inf for maximal), a memory size string (number followed by B/kB/MB/GB/etc.), or an iterable of 2-tuples for explicit entry starts (inclusive) and stops (exclusive)")
             return entrysteps
 
     def lazyarray(self, interpretation=None, entrysteps=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False):
@@ -1493,8 +1566,8 @@ class TBranchMethods(object):
         interpretation = self._normalize_interpretation(interpretation, awkward)
         if interpretation is None:
             raise ValueError("cannot interpret branch {0} as a Python type\n   in file: {1}".format(repr(self.name), self._context.sourcepath))
-        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
-        entrysteps = self._normalize_entrysteps(entrysteps, entrystart, entrystop)
+        entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
+        entrysteps = self._normalize_entrysteps(entrysteps, entrystart, entrystop, keycache)
 
         inner = interpretation
         while isinstance(inner, asjagged):
@@ -1921,14 +1994,14 @@ def daskframe(path, treepath, branches=None, namedecode="utf-8", entrysteps=floa
 
 ################################################################ for quickly getting numentries
 
-def numentries(path, treepath, total=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None, blocking=True):
+def numentries(path, treepath, total=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None, blocking=True, **options):
     if isinstance(path, string_types):
         paths = _filename_explode(path)
     else:
         paths = [y for x in path for y in _filename_explode(x)]
-    return _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, executor, blocking, [None] * len(paths))
+    return _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, executor, blocking, [None] * len(paths), options)
 
-def _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, executor, blocking, uuids):
+def _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, executor, blocking, uuids, options):
     class _TTreeForNumEntries(uproot.rootio.ROOTStreamedObject):
         @classmethod
         def _readinto(cls, self, source, cursor, context, parent):
@@ -1945,7 +2018,7 @@ def _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, e
 
     def fill(i):
         try:
-            file = uproot.rootio.open(paths[i], localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, read_streamers=False)
+            file = uproot.rootio.open(paths[i], localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, read_streamers=False, **options)
         except:
             return sys.exc_info()
         else:

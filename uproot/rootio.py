@@ -42,16 +42,19 @@ def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defa
         if isinstance(localsource, dict):
             kwargs = dict(MemmapSource.defaults)
             kwargs.update(localsource)
+            for n in kwargs:
+                if n in options:
+                    kwargs[n] = options.pop(n)
             openfcn = lambda path: MemmapSource(path, **kwargs)
         else:
             openfcn = localsource
         return ROOTDirectory.read(openfcn(path), **options)
 
     elif _bytesid(parsed.scheme) == b"root":
-        return xrootd(path, xrootdsource)
+        return xrootd(path, xrootdsource=xrootdsource, **options)
 
     elif _bytesid(parsed.scheme) == b"http" or _bytesid(parsed.scheme) == b"https":
-        return http(path, httpsource)
+        return http(path, httpsource=httpsource, **options)
 
     else:
         raise ValueError("URI scheme not recognized: {0}".format(path))
@@ -62,6 +65,9 @@ def xrootd(path, xrootdsource=XRootDSource.defaults, **options):
     if isinstance(xrootdsource, dict):
         kwargs = dict(XRootDSource.defaults)
         kwargs.update(xrootdsource)
+        for n in kwargs:
+            if n in options:
+                kwargs[n] = options.pop(n)
         openfcn = lambda path: XRootDSource(path, **kwargs)
     else:
         openfcn = xrootdsource
@@ -71,6 +77,9 @@ def http(path, httpsource=HTTPSource.defaults, **options):
     if isinstance(httpsource, dict):
         kwargs = dict(HTTPSource.defaults)
         kwargs.update(httpsource)
+        for n in kwargs:
+            if n in options:
+                kwargs[n] = options.pop(n)
         openfcn = lambda path: HTTPSource(path, **kwargs)
     else:
         openfcn = httpsource
@@ -355,6 +364,30 @@ _KeyError.__name__ = "KeyError"
 _KeyError.__module__ = "builtins" if sys.version_info[0] > 2 else None
 
 ################################################################ helper functions for common tasks
+
+def _memsize(data):
+    if isinstance(data, str):
+        m = re.match(r"^\s*([+-]?(\d+(\.\d*)?|\.\d+)(e[+-]?\d+)?)\s*([kmgtpezy]?b)\s*$", data, re.I)
+        if m is not None:
+            target, unit = float(m.group(1)), m.group(5).upper()
+            if unit == "KB":
+                target *= 1024
+            elif unit == "MB":
+                target *= 1024**2
+            elif unit == "GB":
+                target *= 1024**3
+            elif unit == "TB":
+                target *= 1024**4
+            elif unit == "PB":
+                target *= 1024**5
+            elif unit == "EB":
+                target *= 1024**6
+            elif unit == "ZB":
+                target *= 1024**7
+            elif unit == "YB":
+                target *= 1024**8
+            return target
+    return None
 
 def _bytesid(x):
     if sys.version_info[0] > 2:

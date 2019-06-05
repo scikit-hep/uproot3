@@ -2,6 +2,7 @@
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
+import math
 import threading
 try:
     from collections.abc import MutableMapping
@@ -16,6 +17,10 @@ class ArrayCache(MutableMapping):
         return getattr(obj, "nbytes", 1)
 
     def __init__(self, limitbytes, method="LRU"):
+        from uproot.rootio import _memsize
+        m = _memsize(limitbytes)
+        if m is not None:
+            limitbytes = int(math.ceil(m))
         if method == "LRU":
             self._cache = cachetools.LRUCache(limitbytes, getsizeof=self.getsizeof)
         elif method == "LFU":

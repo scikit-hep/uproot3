@@ -117,7 +117,7 @@ def _obj_or_genobj(streamerClass, branch, isjagged, cntvers=False, tobject=True,
 
     else:
         if streamerClass._methods is None:
-            return astable(asdtype(recarray))
+            return asdtype(recarray)
         else:
             if isjagged:
                 if streamerClass._methods is None:
@@ -126,7 +126,7 @@ def _obj_or_genobj(streamerClass, branch, isjagged, cntvers=False, tobject=True,
                     return asjagged(asobj(astable(asdtype(recarray)), streamerClass._methods))
             else:
                 if streamerClass._methods is None:
-                    return astable(asdtype(recarray))
+                    return asdtype(recarray)
                 else:
                     return asobj(astable(asdtype(recarray)), streamerClass._methods)
 
@@ -239,7 +239,7 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
                 todtype = fromdtype
 
             if all(leaf._fLeafCount is None for leaf in branch._fLeaves):
-                return astable(asdtype(awkward.numpy.dtype((fromdtype, dims)), awkward.numpy.dtype((todtype, dims))))
+                return asdtype(awkward.numpy.dtype((fromdtype, dims)), awkward.numpy.dtype((todtype, dims)))
             else:
                 return None
 
