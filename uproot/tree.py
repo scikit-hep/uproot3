@@ -86,6 +86,24 @@ def _normalize_awkwardlib(awkwardlib):
     else:
         return awkwardlib
 
+def _normalize_entrystartstop(numentries, entrystart, entrystop):
+    if entrystart is None:
+        entrystart = 0
+    elif entrystart < 0:
+        entrystart += numentries
+    entrystart = min(numentries, max(0, entrystart))
+
+    if entrystop is None:
+        entrystop = numentries
+    elif entrystop < 0:
+        entrystop += numentries
+    entrystop = min(numentries, max(0, entrystop))
+
+    if entrystop < entrystart:
+        raise IndexError("entrystop must be greater than or equal to entrystart")
+
+    return int(entrystart), int(entrystop)
+
 ################################################################ high-level interface
 
 def iterate(path, treepath, branches=None, entrysteps=float("inf"), outputtype=dict, namedecode=None, reportpath=False, reportfile=False, reportentries=False, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
@@ -397,7 +415,7 @@ class TTreeMethods(object):
         cursors = [BranchCursor(branch) for branch, interpretation in branches if branch.numbaskets > 0]
 
         if len(cursors) == 0:
-            yield self._normalize_entrystartstop(entrystart, entrystop)
+            yield _normalize_entrystartstop(self.numentries, entrystart, entrystop)
 
         else:
             # everybody starts at the same entry number; if there is no such place before someone runs out of baskets, there will be an exception
@@ -409,7 +427,7 @@ class TTreeMethods(object):
                         cursor.basketstop += 1
                 leadingstart = max(cursor.entrystart for cursor in cursors)
 
-            entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+            entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
 
             # move all cursors forward, yielding a (start, stop) pair if their baskets line up
             while any(cursor.basketstop < cursor.branch.numbaskets for cursor in cursors):
@@ -451,7 +469,7 @@ class TTreeMethods(object):
 
         # for the case of outputtype == pandas.DataFrame, do some preparation to fill DataFrames efficiently
         ispandas = getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame"
-        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+        entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
 
         # start the job of filling the arrays
         futures = [(branch.name if namedecode is None else branch.name.decode(namedecode), interpretation, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=(flatten and not ispandas), awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=False)) for branch, interpretation in branches]
@@ -489,7 +507,7 @@ class TTreeMethods(object):
         return self.get(branch).lazyarray(interpretation=interpretation, entrysteps=entrysteps, entrystart=entrystart, entrystop=entrystop, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, persistvirtual=persistvirtual)
 
     def lazyarrays(self, branches=None, namedecode="utf-8", entrysteps=None, entrystart=None, entrystop=None, flatten=False, profile=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False):
-        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+        entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
         entrysteps = self._normalize_entrysteps(entrysteps, branches, entrystart, entrystop)
         awkward = _normalize_awkwardlib(awkwardlib)
         branches = list(self._normalize_branches(branches, awkward))
@@ -548,7 +566,7 @@ class TTreeMethods(object):
             return entrysteps
 
     def iterate(self, branches=None, entrysteps=None, outputtype=dict, namedecode=None, reportentries=False, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
-        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+        entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
         entrysteps = self._normalize_entrysteps(entrysteps, branches, entrystart, entrystop)
         awkward = _normalize_awkwardlib(awkwardlib)
         branches = list(self._normalize_branches(branches, awkward))
@@ -763,24 +781,6 @@ class TTreeMethods(object):
                             raise ValueError("cannot interpret branch {0} as a Python type\n   in file: {1}".format(repr(branch.name), self._context.sourcepath))
                         else:
                             yield branch, interpretation
-
-    def _normalize_entrystartstop(self, entrystart, entrystop):
-        if entrystart is None:
-            entrystart = 0
-        elif entrystart < 0:
-            entrystart += self.numentries
-        entrystart = min(self.numentries, max(0, entrystart))
-
-        if entrystop is None:
-            entrystop = self.numentries
-        elif entrystop < 0:
-            entrystop += self.numentries
-        entrystop = min(self.numentries, max(0, entrystop))
-
-        if entrystop < entrystart:
-            raise IndexError("entrystop must be greater than or equal to entrystart")
-
-        return int(entrystart), int(entrystop)
 
     def __len__(self):
         return self.numentries
@@ -1087,15 +1087,6 @@ class TBranchMethods(object):
         key = self._threadsafe_key(i, keycache, True)
         return interpretation.numitems(key.border, self.basket_numentries(i))
 
-    def _normalize_entrystartstop(self, entrystart, entrystop):
-        if entrystart is None:
-            entrystart = 0
-        if entrystop is None:
-            entrystop = self.numentries
-        if entrystop < entrystart:
-            raise IndexError("entrystop must be greater than or equal to entrystart")
-        return entrystart, entrystop
-
     def _localentries(self, i, entrystart, entrystop):
         local_entrystart = max(0, entrystart - self.basket_entrystart(i))
         local_entrystop  = max(0, min(entrystop - self.basket_entrystart(i), self.basket_entrystop(i) - self.basket_entrystart(i)))
@@ -1149,7 +1140,7 @@ class TBranchMethods(object):
         if not 0 <= i < self.numbaskets:
             raise IndexError("index {0} out of range for branch with {1} baskets".format(i, self.numbaskets))
 
-        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+        entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
         local_entrystart, local_entrystop = self._localentries(i, entrystart, entrystop)
         entrystart = self.basket_entrystart(i) + local_entrystart
         entrystop = self.basket_entrystart(i) + local_entrystop
@@ -1202,7 +1193,7 @@ class TBranchMethods(object):
         if self._recoveredbaskets is None:
             self._tryrecover()
 
-        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+        entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
         basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
 
         if basketstart is None:
@@ -1255,7 +1246,7 @@ class TBranchMethods(object):
         if self._recoveredbaskets is None:
             self._tryrecover()
 
-        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+        entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
 
         for i in range(self.numbaskets):
             if entrystart < self.basket_entrystop(i) and self.basket_entrystart(i) < entrystop:
@@ -1290,7 +1281,7 @@ class TBranchMethods(object):
         interpretation = self._normalize_interpretation(interpretation, awkward)
         if interpretation is None:
             raise ValueError("cannot interpret branch {0} as a Python type\n   in file: {1}".format(repr(self.name), self._context.sourcepath))
-        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+        entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
         basketstart, basketstop = self._basketstartstop(entrystart, entrystop)
 
         if basketstart is not None and basketstop is not None and self._source.parent() is not None:
@@ -1493,7 +1484,7 @@ class TBranchMethods(object):
         interpretation = self._normalize_interpretation(interpretation, awkward)
         if interpretation is None:
             raise ValueError("cannot interpret branch {0} as a Python type\n   in file: {1}".format(repr(self.name), self._context.sourcepath))
-        entrystart, entrystop = self._normalize_entrystartstop(entrystart, entrystop)
+        entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
         entrysteps = self._normalize_entrysteps(entrysteps, entrystart, entrystop)
 
         inner = interpretation

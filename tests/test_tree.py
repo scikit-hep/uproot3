@@ -42,7 +42,7 @@ class Test(unittest.TestCase):
     def test_flat_basket(self):
         branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["i8"]
         interpretation = branch._normalize_interpretation(None, awkward)
-        entrystart, entrystop = branch._normalize_entrystartstop(None, None)
+        entrystart, entrystop = uproot.tree._normalize_entrystartstop(branch.numentries, None, None)
         local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
 
         one = branch._basket(0, interpretation, local_entrystart, local_entrystop, awkward, None, None)
@@ -62,7 +62,7 @@ class Test(unittest.TestCase):
     def test_regular_basket(self):
         branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["ai8"]
         interpretation = branch._normalize_interpretation(None, awkward)
-        entrystart, entrystop = branch._normalize_entrystartstop(None, None)
+        entrystart, entrystop = uproot.tree._normalize_entrystartstop(branch.numentries, None, None)
         local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
 
         one = branch._basket(0, interpretation, local_entrystart, local_entrystop, awkward, None, None)
@@ -88,7 +88,7 @@ class Test(unittest.TestCase):
     def test_irregular_basket(self):
         branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["Ai8"]
         interpretation = branch._normalize_interpretation(None, awkward)
-        entrystart, entrystop = branch._normalize_entrystartstop(None, None)
+        entrystart, entrystop = uproot.tree._normalize_entrystartstop(branch.numentries, None, None)
         local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
 
         one = branch._basket(0, interpretation, local_entrystart, local_entrystop, awkward, None, None)
@@ -104,7 +104,7 @@ class Test(unittest.TestCase):
     def test_strings_basket(self):
         branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["str"]
         interpretation = branch._normalize_interpretation(None, awkward)
-        entrystart, entrystop = branch._normalize_entrystartstop(None, None)
+        entrystart, entrystop = uproot.tree._normalize_entrystartstop(branch.numentries, None, None)
         local_entrystart, local_entrystop = branch._localentries(0, entrystart, entrystop)
 
         one = branch.basket(0, interpretation, local_entrystart, local_entrystop)
