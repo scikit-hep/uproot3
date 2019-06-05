@@ -397,6 +397,10 @@ class TTreeMethods(object):
             return True
 
     def mempartitions(self, numbytes, branches=None, entrystart=None, entrystop=None, keycache=None, linear=True):
+        m = _memsize(numbytes)
+        if m is not None:
+            numbytes = m
+
         if numbytes <= 0:
             raise ValueError("target numbytes must be positive")
 
@@ -1491,6 +1495,10 @@ class TBranchMethods(object):
         return wait
 
     def mempartitions(self, numbytes, entrystart=None, entrystop=None, keycache=None, linear=True):
+        m = _memsize(numbytes)
+        if m is not None:
+            numbytes = m
+
         if numbytes <= 0:
             raise ValueError("target numbytes must be positive")
 

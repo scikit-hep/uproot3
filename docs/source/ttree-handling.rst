@@ -121,6 +121,8 @@ branch information
 
 .. automethod:: uproot.tree.TBranchMethods.numitems
 
+.. automethod:: uproot.tree.TBranchMethods.mempartitions
+
 basket information
 ^^^^^^^^^^^^^^^^^^
 

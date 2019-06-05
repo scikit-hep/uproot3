@@ -663,6 +663,7 @@ u"""Adds array reading methods to TTree objects that have been streamed from a R
     - :py:meth:`allvalues <uproot.tree.TTreeMethods.allvalues>` return branches at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`values <uproot.tree.TTreeMethods.values>`).
     - :py:meth:`allitems <uproot.tree.TTreeMethods.allitems>` return *(branch name, branch)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`items <uproot.tree.TTreeMethods.items>`).
     - :py:meth:`clusters <uproot.tree.TTreeMethods.clusters>` iterate over *(int, int)* pairs representing cluster entry starts and stops in this TTree.
+    - :py:meth:`mempartitions <uproot.tree.TTreeMethods.mempartitions>` iterate over *(int, int)* pairs representing entry starts and stops that attempt to maintain a constant memory footprint.
 
     **Methods for reading array data:**
 
@@ -864,12 +865,12 @@ u"""Return entry starts and stops as *(int, int)* pairs representing clusters fo
 _method(uproot.tree.TTreeMethods.mempartitions).__doc__ = \
 u"""Return entry starts and stops as *(int, int)* pairs of (approximately) equal-memory partitions for a given set of branches in this TTree.
 
-    Similar to :py:meth:`clusters <uproot.tree.TTreeMethods.clusters>` in that it 
+    Similar to :py:meth:`clusters <uproot.tree.TTreeMethods.clusters>` in that it provides a list of (start, stop) entry pairs, but instead of fitting baskets, this method attempts to keep the memory use constant.
 
     Parameters
     ----------
-    numbytes : positive number (int or float)
-        target number of bytes in each step (not an upper limit, but an average)
+    numbytes : positive number (int or float) or string matching number + /[kMGTPEZY]?B/i
+        target number of bytes in each step (not an upper limit, but an average); if a string, parse the memory size
 
     {branches}
 
@@ -1114,6 +1115,7 @@ u"""Adds array reading methods to TBranch objects that have been streamed from a
     - :py:meth:`basket_uncompressedbytes <uproot.tree.TBranchMethods.basket_uncompressedbytes>` the number of bytes contained in the basket (data and offsets; not including any key headers) *after* decompression, if applicable.
     - :py:meth:`basket_compressedbytes <uproot.tree.TBranchMethods.basket_compressedbytes>` the number of bytes contained in the basket (data and offsets; not including any key headers) *before* decompression, if applicable.
     - :py:meth:`basket_numitems <uproot.tree.TBranchMethods.basket_numitems>` the number of items in the basket, under a given interpretation.
+    - :py:meth:`mempartitions <uproot.tree.TBranchMethods.mempartitions>` iterate over *(int, int)* pairs representing entry starts and stops that attempt to maintain a constant memory footprint.
 
     **Methods for reading array data:**
 
@@ -1460,6 +1462,31 @@ u"""Read the branch into an array (or other object if provided an alternate *int
     array or other object, depending on *interpretation*
         branch data.
 """.format(**tree_fragments)
+
+_method(uproot.tree.TBranchMethods.mempartitions).__doc__ = \
+u"""Return entry starts and stops as *(int, int)* pairs of (approximately) equal-memory partitions in this TBranch.
+
+    Similar to :py:meth:`clusters <uproot.tree.TTreeMethods.clusters>` in that it provides a list of (start, stop) entry pairs, but instead of fitting baskets, this method attempts to keep the memory use constant.
+
+    Parameters
+    ----------
+    numbytes : positive number (int or float) or string matching number + /[kMGTPEZY]?B/i
+        target number of bytes in each step (not an upper limit, but an average); if a string, parse the memory size
+
+    {entrystart}
+
+    {entrystop}
+
+    {keycache}
+
+    linear : bool
+        if ``True`` *(default)*, the step size is uniform (same number of entries in each step); any variations in entry size as a function of entry number are averaged over. Non-linear steps (``False``), which would take into account bigger entry sizes at the beginning or end of the file, have not been implemented.
+
+    Returns
+    -------
+    list of (int, int)
+        start (inclusive) and stop (exclusive) pairs for each equal-memory partition.
+"""
 
 _method(uproot.tree.TBranchMethods.lazyarray).__doc__ = \
 u"""Create a lazy array that would read the branch as needed.
@@ -2455,6 +2482,33 @@ u"""Describe the compression of a compressed block.
 ################################################################ uproot.source.compressed.CompressedSource
 
 uproot.source.compressed.CompressedSource.__doc__ = \
+u"""A :py:class:`Source <uproot.source.source.Source>` for compressed data.
+
+    Decompresses on demand--- without caching the result--- so cache options in higher-level array functions are very important.
+
+    Ordinary users would never create a :py:class:`CompressedSource <uproot.source.compressed.CompressedSource>`. They are produced when a TKey encounters a compressed value.
+
+    Parameters
+    ----------
+    compression : :py:class:`Compression <uproot.source.compressed.Compression>`
+        inherited description of the compression. Note that *this is overridden* by the first two bytes of the compressed block, which can disagree with the higher-level description and takes precedence.
+
+    source : :py:class:`Source <uproot.source.source.Source>`
+        the source in which compressed data may be found.
+
+    cursor : :py:class:`Cursor <uproot.source.cursor.Cursor>`
+        location in the source.
+
+    compressedbytes : int
+        number of bytes after compression.
+
+    uncompressedbytes : int
+        number of bytes before compression.
+"""
+
+################################################################ uproot.cache.ArrayCache
+
+uproot.cache.ArrayCache.__doc__ = \
 u"""A :py:class:`Source <uproot.source.source.Source>` for compressed data.
 
     Decompresses on demand--- without caching the result--- so cache options in higher-level array functions are very important.
