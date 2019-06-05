@@ -752,7 +752,7 @@ class TTreeMethods(object):
         elif allowcallable and callable(arg):
             for branch in self.allvalues():
                 result = arg(branch)
-                if result is None:
+                if result is None or result is False:
                     pass
                 elif result is True:                       # function is a filter
                     interpretation = interpret(branch, awkward)
