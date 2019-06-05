@@ -395,6 +395,37 @@ class TTreeMethods(object):
         else:
             return True
 
+    def mempartitions(self, numbytes, branches=None, entrystart=None, entrystop=None, keycache=None, linear=True):
+        if numbytes <= 0:
+            raise ValueError("target numbytes must be positive")
+
+        awkward = _normalize_awkwardlib(None)
+        branches = list(self._normalize_branches(branches, awkward))
+        entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
+
+        if not linear:
+            raise NotImplementedError("non-linear mempartition has not been implemented")
+
+        relevant_numbytes = 0.0
+        for branch, interpretation in branches:
+            if branch._recoveredbaskets is None:
+                branch._tryrecover()
+            for i, key in enumerate(branch._threadsafe_iterate_keys(keycache, False)):
+                start, stop = branch._entryoffsets[i], branch._entryoffsets[i + 1]
+                if entrystart < stop and start < entrystop:
+                    this_numbytes = key._fObjlen * (min(stop, entrystop) - max(start, entrystart)) / float(stop - start)
+                    assert this_numbytes >= 0.0
+                    relevant_numbytes += this_numbytes
+
+        entrysteps = max(1, round(math.ceil((entrystop - entrystart) * numbytes / relevant_numbytes)))
+
+        start, stop = entrystart, entrystart
+        while stop < entrystop:
+            stop = min(stop + entrysteps, entrystop)
+            if stop > start:
+                yield start, stop
+            start = stop
+
     def clusters(self, branches=None, entrystart=None, entrystop=None, strict=False):
         awkward = _normalize_awkwardlib(None)
         branches = list(self._normalize_branches(branches, awkward))
