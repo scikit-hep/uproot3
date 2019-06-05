@@ -1994,14 +1994,14 @@ def daskframe(path, treepath, branches=None, namedecode="utf-8", entrysteps=floa
 
 ################################################################ for quickly getting numentries
 
-def numentries(path, treepath, total=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None, blocking=True):
+def numentries(path, treepath, total=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None, blocking=True, **options):
     if isinstance(path, string_types):
         paths = _filename_explode(path)
     else:
         paths = [y for x in path for y in _filename_explode(x)]
-    return _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, executor, blocking, [None] * len(paths))
+    return _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, executor, blocking, [None] * len(paths), options)
 
-def _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, executor, blocking, uuids):
+def _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, executor, blocking, uuids, options):
     class _TTreeForNumEntries(uproot.rootio.ROOTStreamedObject):
         @classmethod
         def _readinto(cls, self, source, cursor, context, parent):
@@ -2018,7 +2018,7 @@ def _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, e
 
     def fill(i):
         try:
-            file = uproot.rootio.open(paths[i], localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, read_streamers=False)
+            file = uproot.rootio.open(paths[i], localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, read_streamers=False, **options)
         except:
             return sys.exc_info()
         else:
