@@ -42,6 +42,9 @@ def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defa
         if isinstance(localsource, dict):
             kwargs = dict(MemmapSource.defaults)
             kwargs.update(localsource)
+            for n in kwargs:
+                if n in options:
+                    kwargs[n] = options.pop(n)
             openfcn = lambda path: MemmapSource(path, **kwargs)
         else:
             openfcn = localsource
@@ -62,6 +65,9 @@ def xrootd(path, xrootdsource=XRootDSource.defaults, **options):
     if isinstance(xrootdsource, dict):
         kwargs = dict(XRootDSource.defaults)
         kwargs.update(xrootdsource)
+        for n in kwargs:
+            if n in options:
+                kwargs[n] = options.pop(n)
         openfcn = lambda path: XRootDSource(path, **kwargs)
     else:
         openfcn = xrootdsource
@@ -71,6 +77,9 @@ def http(path, httpsource=HTTPSource.defaults, **options):
     if isinstance(httpsource, dict):
         kwargs = dict(HTTPSource.defaults)
         kwargs.update(httpsource)
+        for n in kwargs:
+            if n in options:
+                kwargs[n] = options.pop(n)
         openfcn = lambda path: HTTPSource(path, **kwargs)
     else:
         openfcn = httpsource
