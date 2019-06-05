@@ -2393,10 +2393,10 @@ u"""Emulate a memory-mapped interface with traditional file handles, opening man
     path : str
         local file path of the input file (it must not be moved during reading!).
 
-    chunkbytes : int
+    chunkbytes : int or string matching number + /[kMGTPEZY]?B/i
         number of bytes per chunk.
 
-    limitbytes : int
+    limitbytes : int or string matching number + /[kMGTPEZY]?B/i
         maximum number of bytes to keep in the cache.
 
     Notes
@@ -2443,10 +2443,10 @@ u"""Emulate a memory-mapped interface with XRootD.
     path : str
         remote file URL.
 
-    chunkbytes : int
+    chunkbytes : int or string matching number + /[kMGTPEZY]?B/i
         number of bytes per chunk.
 
-    limitbytes : int
+    limitbytes : int or string matching number + /[kMGTPEZY]?B/i
         maximum number of bytes to keep in the cache.
 
     Notes

@@ -2,6 +2,8 @@
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
+import math
+
 import numpy
 
 import uproot.cache
@@ -12,6 +14,13 @@ class ChunkedSource(uproot.source.source.Source):
     __metaclass__ = type.__new__(type, "type", (uproot.source.source.Source.__metaclass__,), {})
 
     def __init__(self, path, chunkbytes, limitbytes, parallel):
+        from uproot.rootio import _memsize
+        m = _memsize(chunkbytes)
+        if m is not None:
+            chunkbytes = int(math.ceil(m))
+        m = _memsize(limitbytes)
+        if m is not None:
+            limitbytes = int(math.ceil(m))
         self.path = path
         self._chunkbytes = chunkbytes
         self._limitbytes = limitbytes

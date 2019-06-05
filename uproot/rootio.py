@@ -51,10 +51,10 @@ def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defa
         return ROOTDirectory.read(openfcn(path), **options)
 
     elif _bytesid(parsed.scheme) == b"root":
-        return xrootd(path, xrootdsource)
+        return xrootd(path, xrootdsource=xrootdsource, **options)
 
     elif _bytesid(parsed.scheme) == b"http" or _bytesid(parsed.scheme) == b"https":
-        return http(path, httpsource)
+        return http(path, httpsource=httpsource, **options)
 
     else:
         raise ValueError("URI scheme not recognized: {0}".format(path))
