@@ -420,12 +420,12 @@ tree_fragments = {
         entry at which reading stops (exclusive). If ``None`` *(default)*, stop at the end of the branch.""",
 
     # entrysteps
-    "entrysteps": u"""entrysteps : ``None``, positive int, ``float("inf")``, or iterable of *(int, int)* pairs
-        if ``None`` *(default)*, iterate in steps of TTree clusters (number of entries for which all branches' baskets align); if an integer, iterate in steps of equal numbers of entries (except at the end of a file); if infinite, take file-sized steps; otherwise, iterate in explicit, user-specified *(start, stop)* intervals ("start" is inclusive and "stop" is exclusive).""",
+    "entrysteps": u"""entrysteps : ``None``, positive int, ``float("inf")``, string matching number + /[kMGTPEZY]?B/i, or iterable of *(int, int)* pairs
+        if ``None`` *(default)*, iterate in steps of TTree clusters (number of entries for which all branches' baskets align); if an integer, iterate in steps of equal numbers of entries (except at the end of a file); if infinite, take file-sized steps; if a string, iterate in steps of approximately equal memory, given by a memory size string; otherwise, iterate in explicit, user-specified *(start, stop)* intervals ("start" is inclusive and "stop" is exclusive).""",
 
     # entrysteps_tree
-    "entrysteps_tree": u"""entrysteps : ``None``, positive int, ``float("inf")``, or iterable of *(int, int)* pairs
-        if ``None`` *(default)*, iterate in steps of TTree clusters (number of entries for which all branches' baskets align); if an integer, iterate in steps of equal numbers of entries; if infinite, iterate over the whole file in one step; otherwise, iterate in explicit, user-specified *(start, stop)* intervals ("start" is inclusive and "stop" is exclusive).""",
+    "entrysteps_tree": u"""entrysteps : ``None``, positive int, ``float("inf")``, string matching number + /[kMGTPEZY]?B/i, or iterable of *(int, int)* pairs
+        if ``None`` *(default)*, iterate in steps of TTree clusters (number of entries for which all branches' baskets align); if an integer, iterate in steps of equal numbers of entries; if infinite, iterate over the whole file in one step; if a string, iterate in steps of approximately equal memory, given by a memory size string; otherwise, iterate in explicit, user-specified *(start, stop)* intervals ("start" is inclusive and "stop" is exclusive).""",
 
     # branch
     "branch": u"""branch : str
@@ -840,7 +840,7 @@ u"""Return *(branch name, branch)* pairs at all levels of depth (shortcut for pa
 """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.clusters).__doc__ = \
-u"""Return *(int, int)* pairs representing cluster entry starts and stops in this TTree.
+u"""Return entry starts and stops as *(int, int)* pairs representing clusters for a given set of branches this TTree.
 
     Rather than using ROOT's self-reported clusters (which don't exist in every ROOT file), this method finds the minimal step sizes in which a given set of branches have basket thresholds for the same entry number. For a single branch, this is exactly the basket boundaries. It is possible for a given set of branches to never line up, in which case, the cluster is the entire file.
 
@@ -859,6 +859,33 @@ u"""Return *(int, int)* pairs representing cluster entry starts and stops in thi
     -------
     list of (int, int)
         start (inclusive) and stop (exclusive) pairs for each cluster.
+"""
+
+_method(uproot.tree.TTreeMethods.mempartitions).__doc__ = \
+u"""Return entry starts and stops as *(int, int)* pairs of (approximately) equal-memory partitions for a given set of branches in this TTree.
+
+    Similar to :py:meth:`clusters <uproot.tree.TTreeMethods.clusters>` in that it 
+
+    Parameters
+    ----------
+    numbytes : positive number (int or float)
+        target number of bytes in each step (not an upper limit, but an average)
+
+    {branches}
+
+    {entrystart}
+
+    {entrystop}
+
+    {keycache}
+
+    linear : bool
+        if ``True`` *(default)*, the step size is uniform (same number of entries in each step); any variations in entry size as a function of entry number are averaged over. Non-linear steps (``False``), which would take into account bigger entry sizes at the beginning or end of the file, have not been implemented.
+
+    Returns
+    -------
+    list of (int, int)
+        start (inclusive) and stop (exclusive) pairs for each equal-memory partition.
 """
 
 _method(uproot.tree.TTreeMethods.array).__doc__ = \

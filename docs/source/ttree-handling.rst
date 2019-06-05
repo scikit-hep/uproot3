@@ -43,6 +43,8 @@ branch accessors
 
 .. automethod:: uproot.tree.TTreeMethods.clusters
 
+.. automethod:: uproot.tree.TTreeMethods.mempartitions
+
 array
 ^^^^^
 

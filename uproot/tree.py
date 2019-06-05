@@ -30,6 +30,7 @@ import uproot_methods.profiles
 
 import uproot.rootio
 from uproot.rootio import _bytesid
+from uproot.rootio import _memsize
 from uproot.rootio import nofilter
 from uproot.interp.auto import interpret
 from uproot.interp.numerical import asdtype
@@ -539,7 +540,7 @@ class TTreeMethods(object):
 
     def lazyarrays(self, branches=None, namedecode="utf-8", entrysteps=None, entrystart=None, entrystop=None, flatten=False, profile=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False):
         entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
-        entrysteps = self._normalize_entrysteps(entrysteps, branches, entrystart, entrystop)
+        entrysteps = self._normalize_entrysteps(entrysteps, branches, entrystart, entrystop, keycache)
         awkward = _normalize_awkwardlib(awkwardlib)
         branches = list(self._normalize_branches(branches, awkward))
 
@@ -572,7 +573,13 @@ class TTreeMethods(object):
             out = uproot_methods.profiles.transformer(profile)(out)
         return out
 
-    def _normalize_entrysteps(self, entrysteps, branches, entrystart, entrystop):
+    def _normalize_entrysteps(self, entrysteps, branches, entrystart, entrystop, keycache):
+        numbytes = _memsize(entrysteps)
+        if numbytes is not None:
+            return self.mempartitions(numbytes, branches=branches, entrystart=entrystart, entrystop=entrystop, keycache=keycache, linear=True)
+        if isinstance(entrysteps, string_types):
+            raise ValueError("string {0} does not match the memory size pattern (number followed by B/kB/MB/GB/etc.)".format(repr(entrysteps)))
+
         if entrysteps is None:
             return self.clusters(branches, entrystart=entrystart, entrystop=entrystop, strict=False)
 
@@ -588,23 +595,15 @@ class TTreeMethods(object):
             starts = numpy.arange(entrystart, effectivestop, entrystepsize)
             stops = numpy.append(starts[1:], effectivestop)
             return zip(starts, stops)
-
+                    
         else:
             try:
                 iter(entrysteps)
             except TypeError:
-                raise TypeError("entrysteps must be None for cluster iteration, a positive integer for equal steps in number of entries (inf for maximal), or an iterable of 2-tuples for explicit entry starts (inclusive) and stops (exclusive)")
+                raise TypeError("entrysteps must be None for cluster iteration, a positive integer for equal steps in number of entries (inf for maximal), a memory size string (number followed by B/kB/MB/GB/etc.), or an iterable of 2-tuples for explicit entry starts (inclusive) and stops (exclusive)")
             return entrysteps
 
     def iterate(self, branches=None, entrysteps=None, outputtype=dict, namedecode=None, reportentries=False, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
-        entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
-        entrysteps = self._normalize_entrysteps(entrysteps, branches, entrystart, entrystop)
-        awkward = _normalize_awkwardlib(awkwardlib)
-        branches = list(self._normalize_branches(branches, awkward))
-
-        # for the case of outputtype == pandas.DataFrame, do some preparation to fill DataFrames efficiently
-        ispandas = getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame"
-
         if keycache is None:
             keycache = {}
 
@@ -613,6 +612,14 @@ class TTreeMethods(object):
             explicit_basketcache = False
         else:
             explicit_basketcache = True
+
+        entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
+        entrysteps = self._normalize_entrysteps(entrysteps, branches, entrystart, entrystop, keycache)
+        awkward = _normalize_awkwardlib(awkwardlib)
+        branches = list(self._normalize_branches(branches, awkward))
+
+        # for the case of outputtype == pandas.DataFrame, do some preparation to fill DataFrames efficiently
+        ispandas = getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame"
             
         def evaluate(branch, interpretation, future, past, cachekey, pythonize):
             if future is None:
@@ -989,16 +996,17 @@ class TBranchMethods(object):
         if keycache is not None:
             keys = [keycache.get(self._keycachekey(i), None) for i in range(basketstart, basketstop)]
             if all(x is not None for x in keys):
-                for key in keys:
-                    yield key
-                done = True
+                if not complete or all(hasattr(x, "border") for x in keys):
+                    for key in keys:
+                        yield key
+                    done = True
 
         if not done:
             keysource = self._source.threadlocal()
             try:
                 for i in range(basketstart, basketstop):
                     key = None if keycache is None else keycache.get(self._keycachekey(i), None)
-                    if key is None:
+                    if key is None or (complete and not hasattr(key, "border")):
                         key = self._basketkey(keysource, i, complete)
                         if keycache is not None:
                             keycache[self._keycachekey(i)] = key
@@ -1482,7 +1490,42 @@ class TBranchMethods(object):
 
         return wait
 
-    def _normalize_entrysteps(self, entrysteps, entrystart, entrystop):
+    def mempartitions(self, numbytes, entrystart=None, entrystop=None, keycache=None, linear=True):
+        if numbytes <= 0:
+            raise ValueError("target numbytes must be positive")
+
+        awkward = _normalize_awkwardlib(None)
+        entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
+
+        if not linear:
+            raise NotImplementedError("non-linear mempartition has not been implemented")
+
+        relevant_numbytes = 0.0
+        if self._recoveredbaskets is None:
+            self._tryrecover()
+        for i, key in enumerate(self._threadsafe_iterate_keys(keycache, False)):
+            start, stop = self._entryoffsets[i], self._entryoffsets[i + 1]
+            if entrystart < stop and start < entrystop:
+                this_numbytes = key._fObjlen * (min(stop, entrystop) - max(start, entrystart)) / float(stop - start)
+                assert this_numbytes >= 0.0
+                relevant_numbytes += this_numbytes
+
+        entrysteps = max(1, round(math.ceil((entrystop - entrystart) * numbytes / relevant_numbytes)))
+
+        start, stop = entrystart, entrystart
+        while stop < entrystop:
+            stop = min(stop + entrysteps, entrystop)
+            if stop > start:
+                yield start, stop
+            start = stop
+
+    def _normalize_entrysteps(self, entrysteps, entrystart, entrystop, keycache):
+        numbytes = _memsize(entrysteps)
+        if numbytes is not None:
+            return self.mempartitions(numbytes, entrystart=entrystart, entrystop=entrystop, keycache=keycache, linear=True)
+        if isinstance(entrysteps, string_types):
+            raise ValueError("string {0} does not match the memory size pattern (number followed by B/kB/MB/GB/etc.)".format(repr(entrysteps)))
+
         if entrysteps is None:
             if self._recoveredbaskets is None:
                 self._tryrecover()
@@ -1505,7 +1548,7 @@ class TBranchMethods(object):
             try:
                 iter(entrysteps)
             except TypeError:
-                raise TypeError("entrysteps must be None for cluster iteration, a positive integer for equal steps in number of entries (inf for maximal), or an iterable of 2-tuples for explicit entry starts (inclusive) and stops (exclusive)")
+                raise TypeError("entrysteps must be None for cluster iteration, a positive integer for equal steps in number of entries (inf for maximal), a memory size string (number followed by B/kB/MB/GB/etc.), or an iterable of 2-tuples for explicit entry starts (inclusive) and stops (exclusive)")
             return entrysteps
 
     def lazyarray(self, interpretation=None, entrysteps=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False):
@@ -1516,7 +1559,7 @@ class TBranchMethods(object):
         if interpretation is None:
             raise ValueError("cannot interpret branch {0} as a Python type\n   in file: {1}".format(repr(self.name), self._context.sourcepath))
         entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
-        entrysteps = self._normalize_entrysteps(entrysteps, entrystart, entrystop)
+        entrysteps = self._normalize_entrysteps(entrysteps, entrystart, entrystop, keycache)
 
         inner = interpretation
         while isinstance(inner, asjagged):

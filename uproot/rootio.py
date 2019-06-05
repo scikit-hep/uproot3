@@ -356,6 +356,30 @@ _KeyError.__module__ = "builtins" if sys.version_info[0] > 2 else None
 
 ################################################################ helper functions for common tasks
 
+def _memsize(data):
+    if isinstance(data, str):
+        m = re.match(r"^\s*([+-]?(\d+(\.\d*)?|\.\d+)(e[+-]?\d+)?)\s*([kmgtpezy]?b)\s*$", data, re.I)
+        if m is not None:
+            target, unit = float(m.group(1)), m.group(5).upper()
+            if unit == "KB":
+                target *= 1024
+            elif unit == "MB":
+                target *= 1024**2
+            elif unit == "GB":
+                target *= 1024**3
+            elif unit == "TB":
+                target *= 1024**4
+            elif unit == "PB":
+                target *= 1024**5
+            elif unit == "EB":
+                target *= 1024**6
+            elif unit == "ZB":
+                target *= 1024**7
+            elif unit == "YB":
+                target *= 1024**8
+            return target
+    return None
+
 def _bytesid(x):
     if sys.version_info[0] > 2:
         if isinstance(x, str):
