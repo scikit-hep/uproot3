@@ -662,7 +662,7 @@ u"""Adds array reading methods to TTree objects that have been streamed from a R
     - :py:meth:`allkeys <uproot.tree.TTreeMethods.allkeys>` return branch names at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`keys <uproot.tree.TTreeMethods.keys>`).
     - :py:meth:`allvalues <uproot.tree.TTreeMethods.allvalues>` return branches at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`values <uproot.tree.TTreeMethods.values>`).
     - :py:meth:`allitems <uproot.tree.TTreeMethods.allitems>` return *(branch name, branch)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`items <uproot.tree.TTreeMethods.items>`).
-    - :py:meth:`clusters <uproot.tree.TTreeMethods.clusters>` iterate over *(int, int)* pairs representing cluster entry starts and stops in this TTree *(not implemented)*.
+    - :py:meth:`clusters <uproot.tree.TTreeMethods.clusters>` iterate over *(int, int)* pairs representing cluster entry starts and stops in this TTree.
 
     **Methods for reading array data:**
 
@@ -842,7 +842,18 @@ u"""Return *(branch name, branch)* pairs at all levels of depth (shortcut for pa
 _method(uproot.tree.TTreeMethods.clusters).__doc__ = \
 u"""Return *(int, int)* pairs representing cluster entry starts and stops in this TTree.
 
-    .. todo:: Not implemented.
+    Rather than using ROOT's self-reported clusters (which don't exist in every ROOT file), this method finds the minimal step sizes in which a given set of branches have basket thresholds for the same entry number. For a single branch, this is exactly the basket boundaries. It is possible for a given set of branches to never line up, in which case, the cluster is the entire file.
+
+    Parameters
+    ----------
+    {branches}
+
+    {entrystart}
+
+    {entrystop}
+
+    strict : bool
+        if ``False`` *(default)*, the potential ``start, stop`` pair must satisfy ``entrystart < stop and start < entrystop``; if ``True``, the potential ``start, stop`` pair must satisfy ``entrystart <= start and stop <= entrystop``.
 
     Returns
     -------
