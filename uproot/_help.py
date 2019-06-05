@@ -2509,26 +2509,29 @@ u"""A :py:class:`Source <uproot.source.source.Source>` for compressed data.
 ################################################################ uproot.cache.ArrayCache
 
 uproot.cache.ArrayCache.__doc__ = \
-u"""A :py:class:`Source <uproot.source.source.Source>` for compressed data.
+u"""A cache (wrapping cachetools) whose eviction threshold is determined by total array size.
 
-    Decompresses on demand--- without caching the result--- so cache options in higher-level array functions are very important.
-
-    Ordinary users would never create a :py:class:`CompressedSource <uproot.source.compressed.CompressedSource>`. They are produced when a TKey encounters a compressed value.
+    Uses the nbytes property of all values to determine total size. By default, cachetools only counts the number of objects, ignoring their sizes.
 
     Parameters
     ----------
-    compression : :py:class:`Compression <uproot.source.compressed.Compression>`
-        inherited description of the compression. Note that *this is overridden* by the first two bytes of the compressed block, which can disagree with the higher-level description and takes precedence.
+    limitbytes : int or string matching number + /[kMGTPEZY]?B/i
+        maximum number of bytes to keep in the cache.
 
-    source : :py:class:`Source <uproot.source.source.Source>`
-        the source in which compressed data may be found.
+    method : "LRU" *(default)* or "LFU"
+        least recently used or least frequently used
+"""
 
-    cursor : :py:class:`Cursor <uproot.source.cursor.Cursor>`
-        location in the source.
+################################################################ uproot.cache.ThreadSafeArrayCache
 
-    compressedbytes : int
-        number of bytes after compression.
+uproot.cache.ThreadSafeArrayCache.__doc__ = \
+u"""An :py:class:`ArrayCache <uproot.cache.ArrayCache>` with locks for thread safety.
 
-    uncompressedbytes : int
-        number of bytes before compression.
+    Parameters
+    ----------
+    limitbytes : int or string matching number + /[kMGTPEZY]?B/i
+        maximum number of bytes to keep in the cache.
+
+    method : "LRU" *(default)* or "LFU"
+        least recently used or least frequently used
 """

@@ -10,12 +10,17 @@ except ImportError:
 
 import cachetools
 
+from uproot.rootio import _memsize
+
 class ArrayCache(MutableMapping):
     @staticmethod
     def getsizeof(obj):
         return getattr(obj, "nbytes", 1)
 
     def __init__(self, limitbytes, method="LRU"):
+        m = _memsize(limitbytes)
+        if m is not None:
+            limitbytes = m
         if method == "LRU":
             self._cache = cachetools.LRUCache(limitbytes, getsizeof=self.getsizeof)
         elif method == "LFU":
