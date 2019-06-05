@@ -422,7 +422,7 @@ class TTreeMethods(object):
                     assert this_numbytes >= 0.0
                     relevant_numbytes += this_numbytes
 
-        entrysteps = max(1, round(math.ceil((entrystop - entrystart) * numbytes / relevant_numbytes)))
+        entrysteps = max(1, int(round(math.ceil((entrystop - entrystart) * numbytes / relevant_numbytes))))
 
         start, stop = entrystart, entrystart
         while stop < entrystop:
