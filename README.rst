@@ -3731,8 +3731,6 @@ the arbitrary Python objects into awkward-arrays.
     # <JaggedArray [[] [[] []] [[10.0] [] [10.0 20.0]] [[20.0 -21.0 -22.0]]
     #               [[200.0] [-201.0] [202.0]]] at 0x7f3644225da0>
 
-.. code-block:: python3
-
     jagged[jagged.counts > 0, 0]
     # <JaggedArray [[] [10.0] [20.0 -21.0 -22.0] [200.0]] at 0x7f3644229c88>
 
@@ -3743,19 +3741,11 @@ can be any number of levels deep.
 
     jagged.flatten()
     # <JaggedArray [[] [] [10.0] ... [200.0] [-201.0] [202.0]] at 0x7f3644229fd0>
-
-.. code-block:: python3
-
     jagged.flatten().flatten()
     # array([  10.,   10.,   20.,   20.,  -21.,  -22.,  200., -201.,  202.])
 
-.. code-block:: python3
-
     jagged.sum()
     # <JaggedArray [[] [0.0 0.0] [10.0 0.0 30.0] [-23.0] [200.0 -201.0 202.0]] at 0x7f36246a5048>
-
-.. code-block:: python3
-
     jagged.sum().sum()
     # array([  0.,   0.,  40., -23., 201.])
 
