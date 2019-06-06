@@ -3983,14 +3983,10 @@ This file contains ``TH1F`` objects, which is a subclass of ``TH1``. The
     file["htime"].edges
     # array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.])
 
-.. code-block:: python3
-
     file["htime"].values
     # array([0.33352208, 0.30402994, 0.32451916, 0.3509729 , 0.36894202,
     #        0.30728292, 0.30681205, 0.341563  , 0.16150808, 0.        ],
     #       dtype=float32)
-
-.. code-block:: python3
 
     file["htime"].show()
 
@@ -4169,8 +4165,6 @@ ecosystem, are just a tuple of counts/bin contents and edge positions.
     #        dtype=float32),
     #  array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.]))
 
-.. code-block:: python3
-
     uproot.open("http://scikit-hep.org/uproot/examples/hepdata-example.root")["hpxpy"].numpy()
     # (array([[0., 0., 0., ..., 0., 0., 0.],
     #         [0., 0., 0., ..., 0., 0., 0.],
@@ -4248,12 +4242,8 @@ We can also read it back in uproot, like this:
     file.keys()
     # [b'name;1']
 
-.. code-block:: python3
-
     dict(file.classes())
     # {b'name;1': uproot.rootio.TObjString}
-
-.. code-block:: python3
 
     file["name"]
     # b'Some object, like a TObjString.'
@@ -4381,7 +4371,8 @@ which may have come from other libraries.
 
 .. code-block:: python3
 
-    file["from_numpy2d"] = numpy.histogram2d(numpy.random.normal(0, 1, 10000), numpy.random.normal(0, 1, 10000))
+    file["from_numpy2d"] = numpy.histogram2d(numpy.random.normal(0, 1, 10000),
+                                             numpy.random.normal(0, 1, 10000))
 
 .. code-block:: python3
 
