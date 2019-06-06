@@ -203,18 +203,9 @@ key-value access with square brackets.
 
 .. code-block:: python
 
-    file.keys()
-
-.. parsed-literal::
-
+    >>> file.keys()
     [b'one;1', b'three;1']
-
-.. code-block:: python
-
-    file["one"]
-
-.. parsed-literal::
-
+    >>> file["one"]
     <ROOTDirectory b'one' at 0x7f3750588710>
 
 Subdirectories also have type
