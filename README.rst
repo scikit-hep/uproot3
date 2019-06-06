@@ -189,13 +189,10 @@ automatically installed if you installed uproot with conda.)
 
 .. code-block:: python
 
-    import uproot
-    
-    file = uproot.open("http://scikit-hep.org/uproot/examples/nesteddirs.root")
-    file
-
-.. parsed-literal::
-
+    >>> import uproot
+    >>> 
+    >>> file = uproot.open("http://scikit-hep.org/uproot/examples/nesteddirs.root")
+    >>> file
     <ROOTDirectory b'tests/nesteddirs.root' at 0x7f37504ecc50>
 
 `uproot.open <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-open>`__
