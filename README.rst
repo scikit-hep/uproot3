@@ -127,7 +127,7 @@ Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?urlpath=
   - `Special physics objects: Lorentz vectors <#special-physics-objects-lorentz-vectors>`__
   - `Variable-width values: strings <#variable-width-values-strings>`__
   - `Arbitrary objects in TTrees <#arbitrary-objects-in-ttrees>`__
-  - `Doubly nested jagged arrays (i.e. ``std::vector<std::vector<T>>``) <#doubly-nested-jagged-arrays-ie-stdvectorstdvectort>`__
+  - `Doubly nested jagged arrays (i.e. std::vector<std::vector<T>>) <#doubly-nested-jagged-arrays-ie-stdvectorstdvectort>`__
 
 * `Parallel array reading <#parallel-array-reading>`__
 * `Histograms, TProfiles, TGraphs, and others <#histograms-tprofiles-tgraphs-and-others>`__
