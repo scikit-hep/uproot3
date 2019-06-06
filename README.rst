@@ -3307,7 +3307,7 @@ method on each).
 
     muons.mass   # some mass**2 are slightly negative, hence the Numpy warning about negative square roots
     # /home/pivarski/miniconda3/lib/python3.7/site-packages/uproot_methods-0.6.1-py3.7.egg/uproot_methods/
-    #                         classes/TLorentzVector.py:189: RuntimeWarning: invalid value encountered in sqrt
+    #                        classes/TLorentzVector.py:189: RuntimeWarning: invalid value encountered in sqrt
     #   return self._trymemo("mass", lambda self: self.awkward.numpy.sqrt(self.mag2))
     # <JaggedArray [[0.10559298741436905 0.10545247041042287] [0.105499240400313]
     #               [0.10696309110601164 0.10513788128369116] ... [0.1054382466674704] [0.0975059956172863]
