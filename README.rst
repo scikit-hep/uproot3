@@ -1161,6 +1161,7 @@ information.
         "f8",
          reportpath=True, reportfile=True, reportentries=True):
         print(path, file, start, stop, len(arrays))
+
     # http://scikit-hep.org/uproot/examples/sample-5.23.02-zlib.root
     #     <ROOTDirectory b'sample-5.23.02-zlib.root' at 0x7f36441c3c50> 0 30 1
     # http://scikit-hep.org/uproot/examples/sample-5.24.00-zlib.root
@@ -1200,10 +1201,7 @@ parameters minimize the data to read.
 .. code-block:: python3
 
     len(events.array("E1", entrystart=100, entrystop=300))
-
-.. parsed-literal::
-
-    200
+    # 200
 
 As with Python slices, the **entrystart** and **entrystop** can be
 negative to count from the end of the TTree.
@@ -1211,12 +1209,9 @@ negative to count from the end of the TTree.
 .. code-block:: python3
 
     events.array("E1", entrystart=-10)
-
-.. parsed-literal::
-
-    array([ 35.36458334,  35.46037568,  27.74254176,  32.67634359,
-            32.67634359,  32.70165023, 168.78012134,  81.27013558,
-            81.27013558,  81.56621735])
+    # array([ 35.36458334,  35.46037568,  27.74254176,  32.67634359,
+    #         32.67634359,  32.70165023, 168.78012134,  81.27013558,
+    #         81.27013558,  81.56621735])
 
 Internally, ROOT files are written in chunks and whole chunks must be
 read, so the best places to set **entrystart** and **entrystop** are
@@ -1228,36 +1223,27 @@ between basket boundaries.
     tree = uproot.open("http://scikit-hep.org/uproot/examples/foriter.root")["foriter"]
     branch = tree["data"]
     [branch.basket_numentries(i) for i in range(branch.numbaskets)]
-
-.. parsed-literal::
-
-    [6, 6, 6, 6, 6, 6, 6, 4]
+    # [6, 6, 6, 6, 6, 6, 6, 4]
 
 .. code-block:: python3
 
     # (entrystart, entrystop) pairs where ALL the TBranches' TBaskets align
     list(tree.clusters())
-
-.. parsed-literal::
-
-    [(0, 6), (6, 12), (12, 18), (18, 24), (24, 30), (30, 36), (36, 42), (42, 46)]
+    # [(0, 6), (6, 12), (12, 18), (18, 24), (24, 30), (30, 36), (36, 42), (42, 46)]
 
 Or simply,
 
 .. code-block:: python3
 
     branch.baskets()
-
-.. parsed-literal::
-
-    [array([0, 1, 2, 3, 4, 5], dtype=int32),
-     array([ 6,  7,  8,  9, 10, 11], dtype=int32),
-     array([12, 13, 14, 15, 16, 17], dtype=int32),
-     array([18, 19, 20, 21, 22, 23], dtype=int32),
-     array([24, 25, 26, 27, 28, 29], dtype=int32),
-     array([30, 31, 32, 33, 34, 35], dtype=int32),
-     array([36, 37, 38, 39, 40, 41], dtype=int32),
-     array([42, 43, 44, 45], dtype=int32)]
+    # [array([0, 1, 2, 3, 4, 5], dtype=int32),
+    #  array([ 6,  7,  8,  9, 10, 11], dtype=int32),
+    #  array([12, 13, 14, 15, 16, 17], dtype=int32),
+    #  array([18, 19, 20, 21, 22, 23], dtype=int32),
+    #  array([24, 25, 26, 27, 28, 29], dtype=int32),
+    #  array([30, 31, 32, 33, 34, 35], dtype=int32),
+    #  array([36, 37, 38, 39, 40, 41], dtype=int32),
+    #  array([42, 43, 44, 45], dtype=int32)]
 
 Controlling lazy chunk and iteration step sizes
 -----------------------------------------------
@@ -1273,18 +1259,12 @@ iteration functions also have:
 .. code-block:: python3
 
     [len(chunk) for chunk in events.lazyarrays(entrysteps=500).chunks]
-
-.. parsed-literal::
-
-    [500, 500, 500, 500, 304]
+    # [500, 500, 500, 500, 304]
 
 .. code-block:: python3
 
     [len(data[b"E1"]) for data in events.iterate(["E*", "p[xyz]*"], entrysteps=500)]
-
-.. parsed-literal::
-
-    [500, 500, 500, 500, 304]
+    # [500, 500, 500, 500, 304]
 
 The TTree lazy array/iteration functions
 (`TTreeMethods.array <https://uproot.readthedocs.io/en/latest/ttree-handling.html#array>`__,
@@ -1306,20 +1286,14 @@ use the maximum per file: ``numpy.inf``.
     tree = uproot.open("http://scikit-hep.org/uproot/examples/foriter.root")["foriter"]
     branch = tree["data"]
     [len(a["data"]) for a in tree.iterate(namedecode="utf-8")]
-
-.. parsed-literal::
-
-    [6, 6, 6, 6, 6, 6, 6, 4]
+    # [6, 6, 6, 6, 6, 6, 6, 4]
 
 .. code-block:: python3
 
     # This file has small TBaskets
     [len(a["data"]) for a in uproot.iterate(["http://scikit-hep.org/uproot/examples/foriter.root"] * 3,
                                             "foriter", namedecode="utf-8")]
-
-.. parsed-literal::
-
-    [46, 46, 46]
+    # [46, 46, 46]
 
 One particularly useful way to specify the **entrysteps** is with a
 memory size string. This string consists of a number followed by a
@@ -1335,18 +1309,12 @@ are chosen for the memory target.
 .. code-block:: python3
 
     [len(data[b"E1"]) for data in events.iterate(["E*", "p[xyz]*"], entrysteps="50 kB")]
-
-.. parsed-literal::
-
-    [753, 753, 753, 45]
+    # [753, 753, 753, 45]
 
 .. code-block:: python3
 
     [len(data[b"E1"]) for data in events.iterate(entrysteps="50 kB")]
-
-.. parsed-literal::
-
-    [359, 359, 359, 359, 359, 359, 150]
+    # [359, 359, 359, 359, 359, 359, 150]
 
 Since lazy arrays represent all branches but we won’t necessarily be
 reading all branches, memory size chunking is less useful for lazy
@@ -1356,10 +1324,7 @@ consistently.
 .. code-block:: python3
 
     [len(chunk) for chunk in events.lazyarrays(entrysteps="50 kB").chunks]
-
-.. parsed-literal::
-
-    [359, 359, 359, 359, 359, 359, 150]
+    # [359, 359, 359, 359, 359, 359, 150]
 
 Caching and iteration
 ---------------------
@@ -1428,11 +1393,8 @@ a tuple-assignment.
 .. code-block:: python3
 
     px
-
-.. parsed-literal::
-
-    array([-41.19528764,  35.11804977,  35.11804977, ...,  32.37749196,
-            32.37749196,  32.48539387])
+    # array([-41.19528764,  35.11804977,  35.11804977, ...,  32.37749196,
+    #         32.37749196,  32.48539387])
 
 Using ``tuple`` as an **outputtype** in
 `TTreeMethods.iterate <https://uproot.readthedocs.io/en/latest/ttree-handling.html#iterate>`__
@@ -1457,11 +1419,8 @@ everything into a single object, but the fields are accessible by name.
 .. code-block:: python3
 
     a.px1
-
-.. parsed-literal::
-
-    array([-41.19528764,  35.11804977,  35.11804977, ...,  32.37749196,
-            32.37749196,  32.48539387])
+    # array([-41.19528764,  35.11804977,  35.11804977, ...,  32.37749196,
+    #         32.37749196,  32.48539387])
 
 You can also use your own classes.
 
@@ -1474,11 +1433,8 @@ You can also use your own classes.
             return "<Stuff %r>" % self.p
     
     events.arrays("p[xyz]1", outputtype=Stuff)
-
-.. parsed-literal::
-
-    <Stuff array([82.20179848, 62.34483942, 62.34483942, ..., 81.27006689,
-           81.27006689, 81.56614892])>
+    # <Stuff array([82.20179848, 62.34483942, 62.34483942, ..., 81.27006689,
+    #        81.27006689, 81.56614892])>
 
 And perhaps most importantly, you can pass in
 `pandas.DataFrame <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html>`__.
@@ -1492,20 +1448,7 @@ And perhaps most importantly, you can pass in
 .. raw:: html
 
     <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
-    
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-    
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
+    <table border="0" class="dataframe">
       <thead>
         <tr style="text-align: right;">
           <th></th>
