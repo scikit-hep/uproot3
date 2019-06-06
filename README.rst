@@ -581,21 +581,19 @@ at those keys:
 .. code-block:: python3
 
     mycache
-
-.. parsed-literal::
-
-    {'AAGUS3fQmKsR56dpAQAAf77v;events;px1;asdtype(Bf8(),Lf8());0-2304': array([-41.19528764,  35.11804977,  35.11804977, ...,  32.37749196,
-             32.37749196,  32.48539387]),
-     'AAGUS3fQmKsR56dpAQAAf77v;events;py1;asdtype(Bf8(),Lf8());0-2304': array([ 17.4332439 , -16.57036233, -16.57036233, ...,   1.19940578,
-              1.19940578,   1.2013503 ]),
-     'AAGUS3fQmKsR56dpAQAAf77v;events;pz1;asdtype(Bf8(),Lf8());0-2304': array([-68.96496181, -48.77524654, -48.77524654, ..., -74.53243061,
-            -74.53243061, -74.80837247]),
-     'AAGUS3fQmKsR56dpAQAAf77v;events;px2;asdtype(Bf8(),Lf8());0-2304': array([ 34.14443725, -41.19528764, -40.88332344, ..., -68.04191497,
-            -68.79413604, -68.79413604]),
-     'AAGUS3fQmKsR56dpAQAAf77v;events;py2;asdtype(Bf8(),Lf8());0-2304': array([-16.11952457,  17.4332439 ,  17.29929704, ..., -26.10584737,
-            -26.39840043, -26.39840043]),
-     'AAGUS3fQmKsR56dpAQAAf77v;events;pz2;asdtype(Bf8(),Lf8());0-2304': array([ -47.42698439,  -68.96496181,  -68.44725519, ..., -152.2350181 ,
-            -153.84760383, -153.84760383])}
+    # {'AAGUS3fQmKsR56dpAQAAf77v;events;px1;asdtype(Bf8(),Lf8());0-2304':
+    #      array([-41.19528764,  35.11804977,  35.11804977, ...,  32.37749196, 32.37749196,  32.48539387]),
+    #  'AAGUS3fQmKsR56dpAQAAf77v;events;py1;asdtype(Bf8(),Lf8());0-2304':
+    #      array([ 17.4332439 , -16.57036233, -16.57036233, ...,   1.19940578, 1.19940578,   1.2013503 ]),
+    #  'AAGUS3fQmKsR56dpAQAAf77v;events;pz1;asdtype(Bf8(),Lf8());0-2304':
+    #      array([-68.96496181, -48.77524654, -48.77524654, ..., -74.53243061, -74.53243061, -74.80837247]),
+    #  'AAGUS3fQmKsR56dpAQAAf77v;events;px2;asdtype(Bf8(),Lf8());0-2304':
+    #      array([ 34.14443725, -41.19528764, -40.88332344, ..., -68.04191497, -68.79413604, -68.79413604]),
+    #  'AAGUS3fQmKsR56dpAQAAf77v;events;py2;asdtype(Bf8(),Lf8());0-2304':
+    #      array([-16.11952457,  17.4332439 ,  17.29929704, ..., -26.10584737, -26.39840043, -26.39840043]),
+    #  'AAGUS3fQmKsR56dpAQAAf77v;events;pz2;asdtype(Bf8(),Lf8());0-2304':
+    #      array([ -47.42698439,  -68.96496181,  -68.44725519, ..., -152.2350181 , -153.84760383, -153.84760383])
+    # }
 
 though they’re not very human-readable.
 
@@ -606,10 +604,7 @@ simply clearing the dict.
 
     mycache.clear()
     mycache
-
-.. parsed-literal::
-
-    {}
+    # {}
 
 Now the same line of code reads from the file again.
 
@@ -640,10 +635,7 @@ drops old data when the data usage reaches a limit, specified in bytes.
     events.arrays("*", cache=mycache);
     
     len(mycache), len(events.keys())
-
-.. parsed-literal::
-
-    (6, 20)
+    # (6, 20)
 
 With a limit of 100 kB, only 6 of the 20 arrays fit into cache, the rest
 have been evicted.
@@ -689,10 +681,7 @@ through the **limitbytes** parameter.
 
     # default remote file caches in MB
     uproot.HTTPSource.defaults["limitbytes"] / 1024**2, uproot.XRootDSource.defaults["limitbytes"] / 1024**2
-
-.. parsed-literal::
-
-    (32.0, 32.0)
+    # (32.0, 32.0)
 
 If you want to limit this cache to less than the default **chunkbytes**
 of 32 kB (?!?), be sure to make the **chunkbytes** smaller, so that it’s
