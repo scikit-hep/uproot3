@@ -187,7 +187,7 @@ requires `pyxrootd <http://xrootd.org/>`__, both of which have to be
 explicitly pip-installed if you installed uproot with pip, but are
 automatically installed if you installed uproot with conda.)
 
-.. code-block:: python
+.. code-block:: python3
 
     >>> import uproot
     >>> 
@@ -201,7 +201,7 @@ returns a
 which behaves like a Python dict; it has ``keys()``, ``values()``, and
 key-value access with square brackets.
 
-.. code-block:: python
+.. code-block:: python3
 
     >>> file.keys()
     [b'one;1', b'three;1']
@@ -212,7 +212,7 @@ Subdirectories also have type
 `ROOTDirectory <https://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootdirectory>`__,
 so they behave like Python dicts, too.
 
-.. code-block:: python
+.. code-block:: python3
 
     file["one"].keys()
 
@@ -220,7 +220,7 @@ so they behave like Python dicts, too.
 
     [b'two;1', b'tree;1']
 
-.. code-block:: python
+.. code-block:: python3
 
     file["one"].values()
 
@@ -243,7 +243,7 @@ get the latest one.
 
 This file is deeply nested, so while you could find the TTree with
 
-.. code-block:: python
+.. code-block:: python3
 
     file["one"]["two"]["tree"]
 
@@ -253,7 +253,7 @@ This file is deeply nested, so while you could find the TTree with
 
 you can also find it using a directory path, with slashes.
 
-.. code-block:: python
+.. code-block:: python3
 
     file["one/two/tree"]
 
@@ -271,7 +271,7 @@ Here are a few more tricks for finding your way around a file:
 
 Here’s how you would search the subdirectories to find all TTrees:
 
-.. code-block:: python
+.. code-block:: python3
 
     file.allkeys(filterclass=lambda cls: issubclass(cls, uproot.tree.TTreeMethods))
 
@@ -281,7 +281,7 @@ Here’s how you would search the subdirectories to find all TTrees:
 
 Or get a Python dict of them:
 
-.. code-block:: python
+.. code-block:: python3
 
     all_ttrees = dict(file.allitems(filterclass=lambda cls: issubclass(cls, uproot.tree.TTreeMethods)))
     all_ttrees
@@ -296,7 +296,7 @@ Be careful: Python 3 is not as forgiving about matching key names.
 ``all_ttrees`` is a plain Python dict, so the key must be a bytestring
 and must include the cycle number.
 
-.. code-block:: python
+.. code-block:: python3
 
     all_ttrees[b"one/two/tree;1"]
 
@@ -325,7 +325,7 @@ The
 class has a ``compression`` property that tells you the compression
 algorithm and level associated with this file,
 
-.. code-block:: python
+.. code-block:: python3
 
     file.compression
 
@@ -350,7 +350,7 @@ All TTrees inherit from
 `TTreeMethods <https://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__
 so that they get the same data-reading methods.)
 
-.. code-block:: python
+.. code-block:: python3
 
     events = uproot.open("http://scikit-hep.org/uproot/examples/Zmumu.root")["events"]
     events
@@ -366,7 +366,7 @@ objects behave like Python dicts of
 objects, the easiest way to browse a TTree is by calling its ``show()``
 method, which prints the branches and their interpretations as arrays.
 
-.. code-block:: python
+.. code-block:: python3
 
     events.keys()
 
@@ -393,7 +393,7 @@ method, which prints the branches and their interpretations as arrays.
      b'Q2',
      b'M']
 
-.. code-block:: python
+.. code-block:: python3
 
     events.show()
 
@@ -423,7 +423,7 @@ method, which prints the branches and their interpretations as arrays.
 Basic information about the TTree, such as its number of entries, are
 available as properties.
 
-.. code-block:: python
+.. code-block:: python3
 
     events.name, events.title, events.numentries
 
@@ -482,7 +482,7 @@ ways to do that:
 
 Let’s start with the simplest.
 
-.. code-block:: python
+.. code-block:: python3
 
     a = events.array("E1")
     a
@@ -499,7 +499,7 @@ of 8-byte floating point numbers, the `Numpy
 dtype <https://docs.scipy.org/doc/numpy/reference/arrays.dtypes.html>`__
 specified by the ``"E1"`` branch’s interpretation.
 
-.. code-block:: python
+.. code-block:: python3
 
     events["E1"].interpretation
 
@@ -510,7 +510,7 @@ specified by the ``"E1"`` branch’s interpretation.
 We can use this array in Numpy calculations; see the `Numpy
 documentation <https://docs.scipy.org/doc/numpy/>`__ for details.
 
-.. code-block:: python
+.. code-block:: python3
 
     import numpy
     
@@ -538,7 +538,7 @@ method is the same as
 except that you don’t have to specify the TBranch name (naturally).
 Sometimes one is more convenient, sometimes the other.
 
-.. code-block:: python
+.. code-block:: python3
 
     events.array("E1"), events["E1"].array()
 
@@ -553,7 +553,7 @@ The plural ``arrays`` method is different. Whereas singular ``array``
 could only return one array, plural ``arrays`` takes a list of names
 (possibly including wildcards) and returns them all in a Python dict.
 
-.. code-block:: python
+.. code-block:: python3
 
     events.arrays(["px1", "py1", "pz1"])
 
@@ -566,7 +566,7 @@ could only return one array, plural ``arrays`` takes a list of names
      b'pz1': array([-68.96496181, -48.77524654, -48.77524654, ..., -74.53243061,
             -74.53243061, -74.80837247])}
 
-.. code-block:: python
+.. code-block:: python3
 
     events.arrays(["p[xyz]*"])
 
@@ -590,7 +590,7 @@ As with all ROOT object names, the TBranch names are bytestrings
 (``"ascii"`` and ``"utf-8"`` are generic), pass a ``namedecode`` to get
 keys that are strings.
 
-.. code-block:: python
+.. code-block:: python3
 
     events.arrays(["p[xyz]*"], namedecode="utf-8")
 
@@ -625,7 +625,7 @@ parameter, which is an entry point for you to manage your own cache. The
 **cache** only needs to behave like a dict (many third-party Python
 caches do).
 
-.. code-block:: python
+.. code-block:: python3
 
     mycache = {}
     
@@ -640,7 +640,7 @@ with unique ID → array pairs, and it uses the unique ID to identify an
 array that it has previously read. You can see that it’s full by looking
 at those keys:
 
-.. code-block:: python
+.. code-block:: python3
 
     mycache
 
@@ -664,7 +664,7 @@ though they’re not very human-readable.
 If you’re running out of memory, you could manually clear your cache by
 simply clearing the dict.
 
-.. code-block:: python
+.. code-block:: python3
 
     mycache.clear()
     mycache
@@ -675,7 +675,7 @@ simply clearing the dict.
 
 Now the same line of code reads from the file again.
 
-.. code-block:: python
+.. code-block:: python3
 
     # not in cache: reads from file
     events.arrays(["p[xyz]*"], cache=mycache);
@@ -696,7 +696,7 @@ drops old data from cache when a maximum number of items is reached,
 `ArrayCache <https://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-arraycache>`__
 drops old data when the data usage reaches a limit, specified in bytes.
 
-.. code-block:: python
+.. code-block:: python3
 
     mycache = uproot.ArrayCache("100 kB")
     events.arrays("*", cache=mycache);
@@ -747,7 +747,7 @@ setting these parameters before opening a file, or by passing them to
 `uproot.open <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-open>`__
 through the **limitbytes** parameter.
 
-.. code-block:: python
+.. code-block:: python3
 
     # default remote file caches in MB
     uproot.HTTPSource.defaults["limitbytes"] / 1024**2, uproot.XRootDSource.defaults["limitbytes"] / 1024**2
@@ -760,7 +760,7 @@ If you want to limit this cache to less than the default **chunkbytes**
 of 32 kB (?!?), be sure to make the **chunkbytes** smaller, so that it’s
 able to load at least one chunk!
 
-.. code-block:: python
+.. code-block:: python3
 
     uproot.open("http://scikit-hep.org/uproot/examples/Zmumu.root", limitbytes="16 kB", chunkbytes="4 kB")
 
@@ -792,7 +792,7 @@ and
 functions take most of the same parameters but return lazy array
 objects, rather than Numpy arrays.
 
-.. code-block:: python
+.. code-block:: python3
 
     data = events.lazyarrays("*")
     data
@@ -806,7 +806,7 @@ specified by ROOT’s internal baskets (specifically, the places where the
 baskets align, called “clusters”). Each chunk contains a
 ``VirtualArray``, which is read when any element from it is accessed.
 
-.. code-block:: python
+.. code-block:: python3
 
     data = events.lazyarrays(entrysteps=500)   # chunks of 500 events each
     data["E1"]
@@ -819,7 +819,7 @@ Requesting ``"E1"`` through all the chunks and printing it (above) has
 caused the first and last chunks of the array to be read, because that’s
 all that got written to the screen. (See the ``...``?)
 
-.. code-block:: python
+.. code-block:: python3
 
     [chunk["E1"].ismaterialized for chunk in data.chunks]
 
@@ -832,7 +832,7 @@ functions <https://docs.scipy.org/doc/numpy/reference/ufuncs.html>`__
 (ufuncs), which are the mathematical functions that perform elementwise
 mathematics.
 
-.. code-block:: python
+.. code-block:: python3
 
     numpy.log(data["E1"])
 
@@ -843,7 +843,7 @@ mathematics.
 Now all of the chunks have been read, because the values were needed to
 compute ``log(E1)`` for all ``E1``.
 
-.. code-block:: python
+.. code-block:: python3
 
     [chunk["E1"].ismaterialized for chunk in data.chunks]
 
@@ -861,7 +861,7 @@ them to the Numpy constructor, as shown below. This causes the whole
 array to be loaded into memory and to be stitched together into a
 contiguous whole.)
 
-.. code-block:: python
+.. code-block:: python3
 
     numpy.array(data["E1"])
 
@@ -888,7 +888,7 @@ TChain presents many files as though they were a single TTree, and a
 file-spanning lazy array presents many files as though they were a
 single array.
 
-.. code-block:: python
+.. code-block:: python3
 
     data = uproot.lazyarray(
         # list of files; local files can have wildcards (*)
@@ -913,7 +913,7 @@ It uses the
 `uproot.numentries <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-numentries>`__
 shortcut method (which reads less data than normal file-opening):
 
-.. code-block:: python
+.. code-block:: python3
 
     dict(uproot.numentries(
         # list of files; local files can have wildcards (*)
@@ -949,7 +949,7 @@ keep in memory at a time.
 
 This is caching, and the caching mechanism is the same as before:
 
-.. code-block:: python
+.. code-block:: python3
 
     mycache = uproot.cache.ArrayCache(100*1024)   # 100 kB
     
@@ -962,7 +962,7 @@ This is caching, and the caching mechanism is the same as before:
 
 Before performing a calculation, the cache is empty.
 
-.. code-block:: python
+.. code-block:: python3
 
     len(mycache)
 
@@ -970,7 +970,7 @@ Before performing a calculation, the cache is empty.
 
     0
 
-.. code-block:: python
+.. code-block:: python3
 
     numpy.sqrt((data["E1"] + data["E2"])**2 - (data["px1"] + data["px2"])**2 -
                (data["py1"] + data["py2"])**2 - (data["pz1"] + data["pz2"])**2)
@@ -982,7 +982,7 @@ Before performing a calculation, the cache is empty.
 After performing the calculation, the cache contains only as many chunks
 as it could hold.
 
-.. code-block:: python
+.. code-block:: python3
 
     # chunks in cache  chunks touched to compute (E1 + E2)**2 - (px1 + px2)**2 - (py1 + py2)**2 - (pz1 + pz2)**2
     len(mycache),      len(data.chunks) * 8
@@ -1003,7 +1003,7 @@ with respect to the original ROOT files.
 Below, we load lazy arrays from a ROOT file with **persistvirtual=True**
 and add a derived feature:
 
-.. code-block:: python
+.. code-block:: python3
 
     data = events.lazyarrays(["E*", "p[xyz]*"], persistvirtual=True)
     
@@ -1012,7 +1012,7 @@ and add a derived feature:
 
 and save the whole thing to an awkward-array file (``.awkd``).
 
-.. code-block:: python
+.. code-block:: python3
 
     import awkward
     
@@ -1023,11 +1023,11 @@ file but the original features are loaded as pointers to the original
 ROOT files (``VirtualArrays`` whose array-making function knows the
 original ROOT filenames—don’t move them!).
 
-.. code-block:: python
+.. code-block:: python3
 
     data2 = awkward.load("derived-feature.awkd")
 
-.. code-block:: python
+.. code-block:: python3
 
     # reads from derived-feature.awkd
     data2["mass"]
@@ -1036,7 +1036,7 @@ original ROOT filenames—don’t move them!).
 
     <ChunkedArray [82.46269155513643 83.62620400526137 83.30846466680981 ... 95.96547966432459 96.49594381502096 96.6567276548945] at 0x7f3739bafc88>
 
-.. code-block:: python
+.. code-block:: python3
 
     # reads from the original ROOT flies
     data2["E1"]
@@ -1049,7 +1049,7 @@ Similarly, a dataset with a cut applied saves the identities of the
 selected events but only pointers to the original ROOT data. This acts
 as a lightweight skim.
 
-.. code-block:: python
+.. code-block:: python3
 
     selected = data[data["mass"] < 80]
     selected
@@ -1058,11 +1058,11 @@ as a lightweight skim.
 
     <ChunkedArray [<Row 16> <Row 17> <Row 18> <Row 19> <Row 47> <Row 48> <Row 49> ...] at 0x7f3739b3e7f0>
 
-.. code-block:: python
+.. code-block:: python3
 
     awkward.save("selected-events.awkd", selected, mode="w")
 
-.. code-block:: python
+.. code-block:: python3
 
     data3 = awkward.load("selected-events.awkd")
     data3
@@ -1082,7 +1082,7 @@ and
 `uproot.daskframe <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot.tree.daskframe>`__
 functions.
 
-.. code-block:: python
+.. code-block:: python3
 
     uproot.daskarray("http://scikit-hep.org/uproot/examples/Zmumu.root", "events", "E1")
 
@@ -1090,7 +1090,7 @@ functions.
 
     dask.array<array, shape=(2304,), dtype=float64, chunksize=(2304,)>
 
-.. code-block:: python
+.. code-block:: python3
 
     uproot.daskframe("http://scikit-hep.org/uproot/examples/Zmumu.root", "events")
 
@@ -1229,7 +1229,7 @@ Like a file-spanning lazy array, a file-spanning iterator erases the
 difference between files. However, the iteration is over *chunks of many
 events*, not *single events*.
 
-.. code-block:: python
+.. code-block:: python3
 
     histogram = None
     
@@ -1245,7 +1245,7 @@ events*, not *single events*.
         else:
             histogram = histogram[0] + counts, edges
 
-.. code-block:: python
+.. code-block:: python3
 
     %matplotlib inline
     import matplotlib.pyplot
@@ -1287,7 +1287,7 @@ information.
    chunk of data. In a multi-file iteration, these are global (always
    increasing, not returning to zero as we start the next file).
 
-.. code-block:: python
+.. code-block:: python3
 
     for path, file, start, stop, arrays in uproot.iterate(
         ["http://scikit-hep.org/uproot/examples/sample-%s-zlib.root" % x
@@ -1325,7 +1325,7 @@ Setting **entrystart** and/or **entrystop** differs from slicing the
 resulting array in that slicing reads, then discards, but these
 parameters minimize the data to read.
 
-.. code-block:: python
+.. code-block:: python3
 
     len(events.array("E1", entrystart=100, entrystop=300))
 
@@ -1336,7 +1336,7 @@ parameters minimize the data to read.
 As with Python slices, the **entrystart** and **entrystop** can be
 negative to count from the end of the TTree.
 
-.. code-block:: python
+.. code-block:: python3
 
     events.array("E1", entrystart=-10)
 
@@ -1350,7 +1350,7 @@ Internally, ROOT files are written in chunks and whole chunks must be
 read, so the best places to set **entrystart** and **entrystop** are
 between basket boundaries.
 
-.. code-block:: python
+.. code-block:: python3
 
     # This file has small TBaskets
     tree = uproot.open("http://scikit-hep.org/uproot/examples/foriter.root")["foriter"]
@@ -1361,7 +1361,7 @@ between basket boundaries.
 
     [6, 6, 6, 6, 6, 6, 6, 4]
 
-.. code-block:: python
+.. code-block:: python3
 
     # (entrystart, entrystop) pairs where ALL the TBranches' TBaskets align
     list(tree.clusters())
@@ -1372,7 +1372,7 @@ between basket boundaries.
 
 Or simply,
 
-.. code-block:: python
+.. code-block:: python3
 
     branch.baskets()
 
@@ -1398,7 +1398,7 @@ iteration functions also have:
    by file boundaries), a memory size string, or a list of
    ``(entrystart, entrystop)`` pairs to be explicit.
 
-.. code-block:: python
+.. code-block:: python3
 
     [len(chunk) for chunk in events.lazyarrays(entrysteps=500).chunks]
 
@@ -1406,7 +1406,7 @@ iteration functions also have:
 
     [500, 500, 500, 500, 304]
 
-.. code-block:: python
+.. code-block:: python3
 
     [len(data[b"E1"]) for data in events.iterate(["E*", "p[xyz]*"], entrysteps=500)]
 
@@ -1428,7 +1428,7 @@ and
 `uproot.iterate <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-iterate>`__)
 use the maximum per file: ``numpy.inf``.
 
-.. code-block:: python
+.. code-block:: python3
 
     # This file has small TBaskets
     tree = uproot.open("http://scikit-hep.org/uproot/examples/foriter.root")["foriter"]
@@ -1439,7 +1439,7 @@ use the maximum per file: ``numpy.inf``.
 
     [6, 6, 6, 6, 6, 6, 6, 4]
 
-.. code-block:: python
+.. code-block:: python3
 
     # This file has small TBaskets
     [len(a["data"]) for a in uproot.iterate(["http://scikit-hep.org/uproot/examples/foriter.root"] * 3,
@@ -1460,7 +1460,7 @@ approximates this size on average. The result depends on the number of
 branches chosen because it is the total size of the set of branches that
 are chosen for the memory target.
 
-.. code-block:: python
+.. code-block:: python3
 
     [len(data[b"E1"]) for data in events.iterate(["E*", "p[xyz]*"], entrysteps="50 kB")]
 
@@ -1468,7 +1468,7 @@ are chosen for the memory target.
 
     [753, 753, 753, 45]
 
-.. code-block:: python
+.. code-block:: python3
 
     [len(data[b"E1"]) for data in events.iterate(entrysteps="50 kB")]
 
@@ -1481,7 +1481,7 @@ reading all branches, memory size chunking is less useful for lazy
 arrays, but you can do it because all function parameters are treated
 consistently.
 
-.. code-block:: python
+.. code-block:: python3
 
     [len(chunk) for chunk in events.lazyarrays(entrysteps="50 kB").chunks]
 
@@ -1549,11 +1549,11 @@ than bytestrings.) Sometimes, we want a different kind of container.
 One particularly useful container is ``tuple``, which can be unpacked by
 a tuple-assignment.
 
-.. code-block:: python
+.. code-block:: python3
 
     px, py, pz = events.arrays("p[xyz]1", outputtype=tuple)
 
-.. code-block:: python
+.. code-block:: python3
 
     px
 
@@ -1568,7 +1568,7 @@ and
 `uproot.iterate <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-iterate>`__
 lets us unpack the arrays in Python’s for statement.
 
-.. code-block:: python
+.. code-block:: python3
 
     for px, py, pz in events.iterate("p[xyz]1", outputtype=tuple):
         px**2 + py**2 + pz**2
@@ -1576,13 +1576,13 @@ lets us unpack the arrays in Python’s for statement.
 Another useful type is ``collections.namedtuple``, which packs
 everything into a single object, but the fields are accessible by name.
 
-.. code-block:: python
+.. code-block:: python3
 
     import collections    # from the Python standard library
     
     a = events.arrays("p[xyz]1", outputtype=collections.namedtuple)
 
-.. code-block:: python
+.. code-block:: python3
 
     a.px1
 
@@ -1593,7 +1593,7 @@ everything into a single object, but the fields are accessible by name.
 
 You can also use your own classes.
 
-.. code-block:: python
+.. code-block:: python3
 
     class Stuff:
         def __init__(self, px, py, pz):
@@ -1611,7 +1611,7 @@ You can also use your own classes.
 And perhaps most importantly, you can pass in
 `pandas.DataFrame <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html>`__.
 
-.. code-block:: python
+.. code-block:: python3
 
     import pandas
     
@@ -1724,7 +1724,7 @@ important container type that there are specialized functions for it:
 and
 `uproot.pandas.df <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-pandas-iterate>`__.
 
-.. code-block:: python
+.. code-block:: python3
 
     events.pandas.df("p[xyz]1", entrystop=10)
 
@@ -1827,7 +1827,7 @@ and
 The **entry** index in the resulting DataFrame represents the actual
 entry numbers in the file. For instance, counting from the end:
 
-.. code-block:: python
+.. code-block:: python3
 
     events.pandas.df("p[xyz]1", entrystart=-10)
 
@@ -1932,7 +1932,7 @@ The
 function doesn’t have a **reportentries** because they’re included in
 the DataFrame itself.
 
-.. code-block:: python
+.. code-block:: python3
 
     for df in uproot.pandas.iterate("http://scikit-hep.org/uproot/examples/Zmumu.root", "events", "p[xyz]1", entrysteps=500):
         print(df[:3])
@@ -1976,11 +1976,11 @@ the DataFrame index. Flattening is usually undesirable for
 arrays—because arrays don’t have an index to record that information—but
 it’s usually desirable for DataFrames.
 
-.. code-block:: python
+.. code-block:: python3
 
     events2 = uproot.open("http://scikit-hep.org/uproot/examples/HZZ.root")["events"]   # non-flat data
 
-.. code-block:: python
+.. code-block:: python3
 
     events2.pandas.df(["MET_p*", "Muon_P*"], entrystop=10, flatten=False)   # not the default
 
@@ -2110,7 +2110,7 @@ functions for manipulating this kind of structure.
 
 However, if we use the default **flatten=True**:
 
-.. code-block:: python
+.. code-block:: python3
 
     df = events2.pandas.df(["MET_p*", "Muon_P*"], entrystop=10)
     df
@@ -2317,7 +2317,7 @@ and we can use Pandas functions like
 `DataFrame.unstack <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.unstack.html>`__
 to manipulate that structure.
 
-.. code-block:: python
+.. code-block:: python3
 
     df.unstack()
 
@@ -2516,7 +2516,7 @@ to manipulate that structure.
 There’s also a **flatten=None** that skips all non-flat TBranches,
 included as a convenience against overzealous branch selection.
 
-.. code-block:: python
+.. code-block:: python3
 
     events2.pandas.df(["MET_p*", "Muon_P*"], entrystop=10, flatten=None)
 
@@ -2618,7 +2618,7 @@ expressions. Any branch request between slashes (``/`` inside the
 quotation marks) will be interpreted as regular expressions instead
 (i.e. ``.*`` instead of ``*``).
 
-.. code-block:: python
+.. code-block:: python3
 
     events.arrays("p[xyz]?").keys()      # using wildcards
 
@@ -2626,7 +2626,7 @@ quotation marks) will be interpreted as regular expressions instead
 
     dict_keys([b'px1', b'py1', b'pz1', b'px2', b'py2', b'pz2'])
 
-.. code-block:: python
+.. code-block:: python3
 
     events.arrays("/p[x-z].?/").keys()   # using regular expressions
 
@@ -2639,7 +2639,7 @@ If, instead of strings, you pass a function from branch objects to
 function as a filter. This is a way of selecting branches based on
 properties other than their names.
 
-.. code-block:: python
+.. code-block:: python3
 
     events.arrays(lambda branch: branch.compressionratio() > 3).keys()
 
@@ -2660,7 +2660,7 @@ TBranch interpretations
 The very first thing we looked at when we opened a TTree was its
 TBranches and their interpretations with the ``show`` method:
 
-.. code-block:: python
+.. code-block:: python3
 
     events.show()
 
@@ -2689,7 +2689,7 @@ TBranches and their interpretations with the ``show`` method:
 
 Every branch has a default interpretation, such as
 
-.. code-block:: python
+.. code-block:: python3
 
     events["E1"].interpretation
 
@@ -2703,7 +2703,7 @@ We could interpret this branch with a different `Numpy
 dtype <https://docs.scipy.org/doc/numpy/reference/arrays.dtypes.html>`__,
 but it wouldn’t be meaningful.
 
-.. code-block:: python
+.. code-block:: python3
 
     events["E1"].array(uproot.asdtype(">i8"))
 
@@ -2726,7 +2726,7 @@ It differs from
 only in that the latter creates a new array when reading data while the
 former fills a user-specified array.
 
-.. code-block:: python
+.. code-block:: python3
 
     myarray = numpy.zeros(events.numentries, dtype=numpy.float32)    # (different size)
     reinterpretation = events["E1"].interpretation.toarray(myarray)
@@ -2740,7 +2740,7 @@ Passing the new
 `uproot.asarray <https://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-numerical-asarray>`__
 interpretation to the array-reading function
 
-.. code-block:: python
+.. code-block:: python3
 
     events["E1"].array(reinterpretation)
 
@@ -2753,7 +2753,7 @@ fills and returns that array. When you look at my array object, you can
 see that it is now filled, overwriting whatever might have been in it
 before.
 
-.. code-block:: python
+.. code-block:: python3
 
     myarray
 
@@ -2780,7 +2780,7 @@ returning ``True`` or ``False``, and I stressed that it must be
 literally ``True``, not an object that Python would evaluate to
 ``True``.
 
-.. code-block:: python
+.. code-block:: python3
 
     events.arrays(lambda branch: isinstance(branch.interpretation, uproot.asdtype) and
                                  str(branch.interpretation.fromdtype) == ">f8").keys()
@@ -2792,7 +2792,7 @@ literally ``True``, not an object that Python would evaluate to
 This is because a function that returns objects selects branches and
 sets their interpretations in one pass.
 
-.. code-block:: python
+.. code-block:: python3
 
     events.arrays(lambda branch: uproot.asdtype(">f8", "<f4") if branch.name.startswith(b"px") else None)
 
@@ -2812,7 +2812,7 @@ for the ones to reinterpret.
 
 The same could have been said in a less functional way with a dict:
 
-.. code-block:: python
+.. code-block:: python3
 
     events.arrays({"px1": uproot.asdtype(">f8", "<f4"),
                    "px2": uproot.asdtype(">f8", "<f4")})
@@ -2835,7 +2835,7 @@ Monte Carlo.
 
 Here’s an artificial example:
 
-.. code-block:: python
+.. code-block:: python3
 
     tree = uproot.open("http://scikit-hep.org/uproot/examples/nesteddirs.root")["one/two/tree"]
     array = tree.array("ArrayInt64", entrystop=20)
@@ -2872,7 +2872,7 @@ as the other arrays you’ve seen (apart from lazy
 arrays—\ ``ChunkedArray`` and ``VirtualArray``—which are not Numpy
 objects).
 
-.. code-block:: python
+.. code-block:: python3
 
     array.shape
 
@@ -2884,7 +2884,7 @@ All but the first dimension of the shape parameter (the “length”) is
 known before reading the array: it’s the `dtype
 shape <https://docs.scipy.org/doc/numpy/reference/generated/numpy.dtype.shape.html>`__.
 
-.. code-block:: python
+.. code-block:: python3
 
     tree["ArrayInt64"].interpretation
 
@@ -2892,7 +2892,7 @@ shape <https://docs.scipy.org/doc/numpy/reference/generated/numpy.dtype.shape.ht
 
     asdtype("('>i8', (10,))")
 
-.. code-block:: python
+.. code-block:: python3
 
     tree["ArrayInt64"].interpretation.todtype.shape
 
@@ -2905,7 +2905,7 @@ shape <https://docs.scipy.org/doc/numpy/reference/generated/numpy.dtype.shape.ht
 of a TBranch with one value per event (simple, 1-dimensional arrays) is
 an empty tuple.
 
-.. code-block:: python
+.. code-block:: python3
 
     tree["Int64"].interpretation.todtype.shape
 
@@ -2917,7 +2917,7 @@ Fixed-width arrays are exploded into one column per element when viewed
 as a
 `pandas.DataFrame <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html>`__.
 
-.. code-block:: python
+.. code-block:: python3
 
     tree.pandas.df("ArrayInt64", entrystop=20)
 
@@ -3248,7 +3248,7 @@ array <https://docs.scipy.org/doc/numpy/user/basics.rec.html>`__, a
 with named fields, which is Numpy’s view into a C array of structs (with
 or without padding).
 
-.. code-block:: python
+.. code-block:: python3
 
     tree = uproot.open("http://scikit-hep.org/uproot/examples/leaflist.root")["tree"]
     array = tree.array("leaflist")
@@ -3264,7 +3264,7 @@ contiguous block of memory with floating point numbers (``"x"``),
 integers (``"y"``), and single characters (``"z"``) adjacent to each
 other.
 
-.. code-block:: python
+.. code-block:: python3
 
     array[0]
 
@@ -3272,7 +3272,7 @@ other.
 
     (1.1, 1, 97)
 
-.. code-block:: python
+.. code-block:: python3
 
     array["x"]
 
@@ -3280,7 +3280,7 @@ other.
 
     array([1.1, 2.2, 3.3, 4. , 5.5])
 
-.. code-block:: python
+.. code-block:: python3
 
     array["y"]
 
@@ -3288,7 +3288,7 @@ other.
 
     array([1, 2, 3, 4, 5], dtype=int32)
 
-.. code-block:: python
+.. code-block:: python3
 
     array["z"]
 
@@ -3303,7 +3303,7 @@ size <https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.itemsiz
 is ``8 + 4 + 1 = 13``, not a power of 2, as arrays of primitive types
 are.
 
-.. code-block:: python
+.. code-block:: python3
 
     array.dtype
 
@@ -3311,7 +3311,7 @@ are.
 
     dtype([('x', '<f8'), ('y', '<i4'), ('z', 'i1')])
 
-.. code-block:: python
+.. code-block:: python3
 
     array.dtype.itemsize
 
@@ -3330,7 +3330,7 @@ Leaf-list TBranches are exploded into one column per field when viewed
 as a
 `pandas.DataFrame <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html>`__.
 
-.. code-block:: python
+.. code-block:: python3
 
     tree.pandas.df("leaflist")
 
@@ -3425,7 +3425,7 @@ not the data themselves.
 For this, uproot fills a new ``JaggedArray`` data structure (from the
 awkward-array library, like ``ChunkedArray`` and ``VirtualArray``).
 
-.. code-block:: python
+.. code-block:: python3
 
     tree = uproot.open("http://scikit-hep.org/uproot/examples/nesteddirs.root")["one/two/tree"]
     array = tree.array("SliceInt64", entrystop=20)
@@ -3445,7 +3445,7 @@ indexing <https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#advanc
 Awkward-array generalizes Numpy in many ways—details can be found `in
 its documentation <https://github.com/scikit-hep/awkward-array>`__.
 
-.. code-block:: python
+.. code-block:: python3
 
     array.counts
 
@@ -3453,7 +3453,7 @@ its documentation <https://github.com/scikit-hep/awkward-array>`__.
 
     array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
 
-.. code-block:: python
+.. code-block:: python3
 
     array.flatten()
 
@@ -3466,7 +3466,7 @@ its documentation <https://github.com/scikit-hep/awkward-array>`__.
            17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 18, 18, 18, 19, 19, 19, 19,
            19, 19, 19, 19, 19])
 
-.. code-block:: python
+.. code-block:: python3
 
     array[:6]
 
@@ -3474,7 +3474,7 @@ its documentation <https://github.com/scikit-hep/awkward-array>`__.
 
     <JaggedArray [[] [1] [2 2] [3 3 3] [4 4 4 4] [5 5 5 5 5]] at 0x7f362476e4e0>
 
-.. code-block:: python
+.. code-block:: python3
 
     array[array.counts > 1, 0]
 
@@ -3484,11 +3484,11 @@ its documentation <https://github.com/scikit-hep/awkward-array>`__.
 
 Here is an example of ``JaggedArrays`` in physics data:
 
-.. code-block:: python
+.. code-block:: python3
 
     events2 = uproot.open("http://scikit-hep.org/uproot/examples/HZZ.root")["events"]
 
-.. code-block:: python
+.. code-block:: python3
 
     E, px, py, pz = events2.arrays(["Muon_E", "Muon_P[xyz]"], outputtype=tuple)
     E
@@ -3497,7 +3497,7 @@ Here is an example of ``JaggedArrays`` in physics data:
 
     <JaggedArray [[54.7795 39.401695] [31.690445] [54.739788 47.488857] ... [62.39516] [174.20863] [69.55621]] at 0x7f362476e748>
 
-.. code-block:: python
+.. code-block:: python3
 
     pt = numpy.sqrt(px**2 + py**2)
     p = numpy.sqrt(px**2 + py**2 + pz**2)
@@ -3507,7 +3507,7 @@ Here is an example of ``JaggedArrays`` in physics data:
 
     <JaggedArray [[54.7794 39.401554] [31.69027] [54.739685 47.48874] ... [62.395073] [174.2086] [69.55613]] at 0x7f3624738c88>
 
-.. code-block:: python
+.. code-block:: python3
 
     eta = numpy.log((p + pz)/(p - pz))/2
     eta
@@ -3516,7 +3516,7 @@ Here is an example of ``JaggedArrays`` in physics data:
 
     <JaggedArray [[-0.15009263 -0.29527554] [0.7538137] [0.20692922 1.0412954] ... [-1.2350467] [1.6653312] [1.0626991]] at 0x7f362476e2e8>
 
-.. code-block:: python
+.. code-block:: python3
 
     phi = numpy.arctan2(py, px)
     phi
@@ -3525,7 +3525,7 @@ Here is an example of ``JaggedArrays`` in physics data:
 
     <JaggedArray [[-2.9247396 0.01837404] [-1.6042395] [-0.41738483 1.5430332] ... [-2.666572] [1.552847] [-0.980149]] at 0x7f36246d6b38>
 
-.. code-block:: python
+.. code-block:: python3
 
     pt.counts
 
@@ -3533,7 +3533,7 @@ Here is an example of ``JaggedArrays`` in physics data:
 
     array([2, 1, 2, ..., 1, 1, 1])
 
-.. code-block:: python
+.. code-block:: python3
 
     pt.flatten()
 
@@ -3542,7 +3542,7 @@ Here is an example of ``JaggedArrays`` in physics data:
     array([54.168106, 37.744152, 24.417913, ..., 33.461536, 63.619816,
            42.93995 ], dtype=float32)
 
-.. code-block:: python
+.. code-block:: python3
 
     pt[:6]
 
@@ -3554,7 +3554,7 @@ To select elements of inner lists (Pandas’s
 `DataFrame.xs <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.xs.html>`__),
 first require the list to have at least that many elements.
 
-.. code-block:: python
+.. code-block:: python3
 
     pt[pt.counts > 1, 0]
 
@@ -3566,7 +3566,7 @@ first require the list to have at least that many elements.
 ``JaggedArrays`` of booleans select from inner lists (i.e. put a cut on
 particles):
 
-.. code-block:: python
+.. code-block:: python3
 
     pt > 50
 
@@ -3574,7 +3574,7 @@ particles):
 
     <JaggedArray [[True False] [False] [True False] ... [False] [True] [False]] at 0x7f36246d1c18>
 
-.. code-block:: python
+.. code-block:: python3
 
     eta[pt > 50]
 
@@ -3585,7 +3585,7 @@ particles):
 And Numpy arrays of booleans select from outer lists (i.e. put a cut on
 events):
 
-.. code-block:: python
+.. code-block:: python3
 
     eta[pt.max() > 50]
 
@@ -3597,7 +3597,7 @@ Reducers like ``count``, ``sum``, ``min``, ``max``, ``any`` (boolean),
 or ``all`` (boolean) apply per-event, turning a ``JaggedArray`` into a
 Numpy array.
 
-.. code-block:: python
+.. code-block:: python3
 
     pt.max()
 
@@ -3610,7 +3610,7 @@ You can even do combinatorics, such as ``a.cross(b)`` to compute the
 Cartesian product of ``a`` and ``b`` per event, or ``a.choose(n)`` to
 choose ``n`` distinct combinations of elements per event.
 
-.. code-block:: python
+.. code-block:: python3
 
     pt.choose(2)
 
@@ -3621,7 +3621,7 @@ choose ``n`` distinct combinations of elements per event.
 Some of these functions have “arg” versions that return integers, which
 can be used in indexing.
 
-.. code-block:: python
+.. code-block:: python3
 
     abs(eta).argmax()
 
@@ -3629,7 +3629,7 @@ can be used in indexing.
 
     <JaggedArray [[1] [0] [1] ... [0] [0] [0]] at 0x7f36246d6470>
 
-.. code-block:: python
+.. code-block:: python3
 
     pairs = pt.argchoose(2)
     pairs
@@ -3638,7 +3638,7 @@ can be used in indexing.
 
     <JaggedArray [[(0, 1)] [] [(0, 1)] ... [] [] []] at 0x7f36246d6f98>
 
-.. code-block:: python
+.. code-block:: python3
 
     left  = pairs.i0
     right = pairs.i1
@@ -3651,7 +3651,7 @@ can be used in indexing.
 
 Masses of unique pairs of muons, for events that have them:
 
-.. code-block:: python
+.. code-block:: python3
 
     masses = numpy.sqrt((E[left] + E[right])**2 - (px[left] + px[right])**2 -
                         (py[left] + py[right])**2 - (pz[left] + pz[right])**2)
@@ -3661,7 +3661,7 @@ Masses of unique pairs of muons, for events that have them:
 
     <JaggedArray [[90.227806] [] [74.746544] ... [] [] []] at 0x7f364401bc50>
 
-.. code-block:: python
+.. code-block:: python3
 
     counts, edges = numpy.histogram(masses.flatten(), bins=120, range=(0, 120))
     
@@ -3685,7 +3685,7 @@ which has data locality issues, ``JaggedArray`` consists of two
 contiguous arrays: one containing content (the ``floats``) and the other
 representing structure via ``offsets`` (random access) or ``counts``.
 
-.. code-block:: python
+.. code-block:: python3
 
     masses.content
 
@@ -3694,7 +3694,7 @@ representing structure via ``offsets`` (random access) or ``counts``.
     array([90.227806, 74.746544, 89.75766 , ..., 92.06495 , 85.44384 ,
            75.96062 ], dtype=float32)
 
-.. code-block:: python
+.. code-block:: python3
 
     masses.offsets
 
@@ -3702,7 +3702,7 @@ representing structure via ``offsets`` (random access) or ``counts``.
 
     array([   0,    1,    1, ..., 1521, 1521, 1521])
 
-.. code-block:: python
+.. code-block:: python3
 
     masses.counts
 
@@ -3735,11 +3735,11 @@ encouraged to contribute them to
 One of these classes is ``TLorentzVectorArray``, which defines an
 *array* of Lorentz vectors.
 
-.. code-block:: python
+.. code-block:: python3
 
     events3 = uproot.open("http://scikit-hep.org/uproot/examples/HZZ-objects.root")["events"]
 
-.. code-block:: python
+.. code-block:: python3
 
     muons = events3.array("muonp4")
     muons
@@ -3752,7 +3752,7 @@ In the print-out, these appear to be Python objects, but they’re
 high-performance arrays that are only turned into objects when you look
 at individuals.
 
-.. code-block:: python
+.. code-block:: python3
 
     muon = muons[0, 0]
     type(muon), muon
@@ -3764,7 +3764,7 @@ at individuals.
 
 This object has all the usual kinematics methods,
 
-.. code-block:: python
+.. code-block:: python3
 
     muon.mass
 
@@ -3772,7 +3772,7 @@ This object has all the usual kinematics methods,
 
     0.10559298741436905
 
-.. code-block:: python
+.. code-block:: python3
 
     muons[0, 0].delta_phi(muons[0, 1])
 
@@ -3784,7 +3784,7 @@ But an array of Lorentz vectors also has these methods, and they are
 computed in bulk (faster than creating each object and calling the
 method on each).
 
-.. code-block:: python
+.. code-block:: python3
 
     muons.mass   # some mass**2 are slightly negative, hence the Numpy warning about negative square roots
 
@@ -3800,7 +3800,7 @@ method on each).
 (**Note:** if you don’t want to see Numpy warnings, use
 `numpy.seterr <https://docs.scipy.org/doc/numpy/reference/generated/numpy.seterr.html>`__.)
 
-.. code-block:: python
+.. code-block:: python3
 
     pairs = muons.choose(2)
     lefts  = pairs.i0
@@ -3823,12 +3823,12 @@ components.
 You can still use the ``TLorentzVectorArray`` Python class; you just
 need to use a special constructor to build the object from its branches.
 
-.. code-block:: python
+.. code-block:: python3
 
     # Suppose you have four component branches...
     E, px, py, pz = events2.arrays(["Muon_E", "Muon_P[xyz]"], outputtype=tuple)
 
-.. code-block:: python
+.. code-block:: python3
 
     import uproot_methods
     
@@ -3843,7 +3843,7 @@ There are constructors for different coordinate systems. Internally,
 ``TLorentzVectorArray`` uses the coordinates you give it and only
 converts to other systems on demand.
 
-.. code-block:: python
+.. code-block:: python3
 
     [x for x in dir(uproot_methods.TLorentzVectorArray) if x.startswith("from_")]
 
@@ -3864,7 +3864,7 @@ Strings are another fundamental type. In C++, they may be ``char*``,
 ``std::string``, or ``TString``, but all string types are converted (on
 demand) to the same Python string type.
 
-.. code-block:: python
+.. code-block:: python3
 
     branch = uproot.open("http://scikit-hep.org/uproot/examples/sample-6.14.00-zlib.root")["sample"]["str"]
     branch.array()
@@ -3878,7 +3878,7 @@ As with most strings from ROOT, they are unencoded bytestrings (see the
 **namedecode**, but they can be decoded as needed using the usual Python
 method.
 
-.. code-block:: python
+.. code-block:: python3
 
     [x.decode("utf-8") for x in branch.array()]
 
@@ -3935,7 +3935,7 @@ In the example below, ``Track`` objects under ``fTracks`` have been
 split into ``fTracks.fUniqueID``, ``fTracks.fBits``, ``fTracks.fPx``,
 ``fTracks.fPy``, ``fTracks.fPz``, etc.
 
-.. code-block:: python
+.. code-block:: python3
 
     tree = uproot.open("http://scikit-hep.org/uproot/examples/Event.root")["T"]
     tree.show()
@@ -4015,7 +4015,7 @@ split into ``fTracks.fUniqueID``, ``fTracks.fBits``, ``fTracks.fPx``,
 In this view, many of the attributes are *not* special classes and can
 be read as arrays of numbers,
 
-.. code-block:: python
+.. code-block:: python3
 
     tree.array("fTemperature", entrystop=20)
 
@@ -4028,7 +4028,7 @@ be read as arrays of numbers,
 
 as arrays of fixed-width matrices,
 
-.. code-block:: python
+.. code-block:: python3
 
     tree.array("fMatrix[4][4]", entrystop=6)
 
@@ -4066,7 +4066,7 @@ as arrays of fixed-width matrices,
 
 as jagged arrays (of ROOT’s “Float16_t” encoding),
 
-.. code-block:: python
+.. code-block:: python3
 
     tree.array("fTracks.fMass2", entrystop=6)
 
@@ -4076,7 +4076,7 @@ as jagged arrays (of ROOT’s “Float16_t” encoding),
 
 or as jagged arrays of fixed arrays (of ROOT’s “Double32_t” encoding),
 
-.. code-block:: python
+.. code-block:: python3
 
     tree.array("fTracks.fTArray[3]", entrystop=6)
 
@@ -4089,7 +4089,7 @@ deserialized individually (not vectorally). This example includes
 *histograms* in the TTree, and histograms are sufficiently complex that
 they cannot be split.
 
-.. code-block:: python
+.. code-block:: python3
 
     tree.array("fH", entrystop=6)
 
@@ -4101,7 +4101,7 @@ Each of those is a standard histogram object, something that would
 ordinarily be in a ``TDirectory``, not a ``TTree``. It has histogram
 convenience methods (see below).
 
-.. code-block:: python
+.. code-block:: python3
 
     for histogram in tree.array("fH", entrystop=3):
         print(histogram.title)
@@ -4166,7 +4166,7 @@ between
 `uproot.asgenobj <https://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-objects-asgenobj>`__
 (variable width, read into Python objects).
 
-.. code-block:: python
+.. code-block:: python3
 
     # TLorentzVectors all have the same number of fixed width components, so they can be read vectorially.
     events3["muonp4"].interpretation
@@ -4175,7 +4175,7 @@ between
 
     asjagged(asobj(<uproot_methods.classes.TLorentzVector.Methods>), 10)
 
-.. code-block:: python
+.. code-block:: python3
 
     # Histograms contain name strings and variable length lists, so they must be read as Python objects.
     tree["fH"].interpretation
@@ -4193,7 +4193,7 @@ depth. This is why ``JaggedArrays``, representing types such as
 Unfortunately, the same does not apply to doubly nested jagged arrays,
 such as ``std::vector<std::vector<T>>``.
 
-.. code-block:: python
+.. code-block:: python3
 
     branch = uproot.open("http://scikit-hep.org/uproot/examples/vectorVectorDouble.root")["t"]["x"]
     branch.interpretation
@@ -4202,7 +4202,7 @@ such as ``std::vector<std::vector<T>>``.
 
     asgenobj(STLVector(STLVector(asdtype('>f8'))))
 
-.. code-block:: python
+.. code-block:: python3
 
     branch._streamer._fTypeName
 
@@ -4210,7 +4210,7 @@ such as ``std::vector<std::vector<T>>``.
 
     b'vector<vector<double> >'
 
-.. code-block:: python
+.. code-block:: python3
 
     array = branch.array()
     array
@@ -4225,7 +4225,7 @@ auto-generated prescription for turning them into Python objects (from
 the “streamers,” self-describing the ROOT file). You can’t apply the
 usual ``JaggedArray`` slicing.
 
-.. code-block:: python
+.. code-block:: python3
 
     try:
         array[array.counts > 0, 0]
@@ -4239,7 +4239,7 @@ usual ``JaggedArray`` slicing.
 To get ``JaggedArray`` semantics, use ``awkward.fromiter`` to convert
 the arbitrary Python objects into awkward-arrays.
 
-.. code-block:: python
+.. code-block:: python3
 
     jagged = awkward.fromiter(array)
     jagged
@@ -4248,7 +4248,7 @@ the arbitrary Python objects into awkward-arrays.
 
     <JaggedArray [[] [[] []] [[10.0] [] [10.0 20.0]] [[20.0 -21.0 -22.0]] [[200.0] [-201.0] [202.0]]] at 0x7f3644225da0>
 
-.. code-block:: python
+.. code-block:: python3
 
     jagged[jagged.counts > 0, 0]
 
@@ -4259,7 +4259,7 @@ the arbitrary Python objects into awkward-arrays.
 Doubly nested ``JaggedArrays`` are a native type in awkward-array: they
 can be any number of levels deep.
 
-.. code-block:: python
+.. code-block:: python3
 
     jagged.flatten()
 
@@ -4267,7 +4267,7 @@ can be any number of levels deep.
 
     <JaggedArray [[] [] [10.0] ... [200.0] [-201.0] [202.0]] at 0x7f3644229fd0>
 
-.. code-block:: python
+.. code-block:: python3
 
     jagged.flatten().flatten()
 
@@ -4275,7 +4275,7 @@ can be any number of levels deep.
 
     array([  10.,   10.,   20.,   20.,  -21.,  -22.,  200., -201.,  202.])
 
-.. code-block:: python
+.. code-block:: python3
 
     jagged.sum()
 
@@ -4283,7 +4283,7 @@ can be any number of levels deep.
 
     <JaggedArray [[] [0.0 0.0] [10.0 0.0 30.0] [-23.0] [200.0 -201.0 202.0]] at 0x7f36246a5048>
 
-.. code-block:: python
+.. code-block:: python3
 
     jagged.sum().sum()
 
@@ -4307,7 +4307,7 @@ parallel. All of the array-reading functions have **executor** and
    called, blocks until the result is ready. This zero-argument function
    is a simple type of “future.”
 
-.. code-block:: python
+.. code-block:: python3
 
     import concurrent.futures
     
@@ -4324,7 +4324,7 @@ parallel. All of the array-reading functions have **executor** and
 
 We can work on other things while the array is being read.
 
-.. code-block:: python
+.. code-block:: python3
 
     # and now get the array (waiting, if necessary, for it to complete)
     result()
@@ -4337,7 +4337,7 @@ The **executor** and **blocking** parameters are often used together,
 but they do not have to be. You can collect data in parallel but let the
 array-reading function block until it is finished:
 
-.. code-block:: python
+.. code-block:: python3
 
     tree.array("fTracks.fVertex[3]", executor=executor)
 
@@ -4406,7 +4406,7 @@ graphs. Uproot uses the ROOT file’s “streamers” to learn how to
 deserialize any object, but an anonymous deserialization often isn’t
 useful:
 
-.. code-block:: python
+.. code-block:: python3
 
     file = uproot.open("http://scikit-hep.org/uproot/examples/Event.root")
     dict(file.classes())
@@ -4418,7 +4418,7 @@ useful:
      b'T;1': uproot.rootio.TTree,
      b'hstat;1': uproot.rootio.TH1F}
 
-.. code-block:: python
+.. code-block:: python3
 
     processid = file["ProcessID0"]
     processid
@@ -4429,7 +4429,7 @@ useful:
 
 What is a ``TProcessID``?
 
-.. code-block:: python
+.. code-block:: python3
 
     processid._members()
 
@@ -4439,7 +4439,7 @@ What is a ``TProcessID``?
 
 Something with an ``fName`` and ``fTitle``\ …
 
-.. code-block:: python
+.. code-block:: python3
 
     processid._fName, processid._fTitle     # note the underscore; these are private members
 
@@ -4450,7 +4450,7 @@ Something with an ``fName`` and ``fTitle``\ …
 Some C++ classes have Pythonic overloads to make them more useful in
 Python. Here’s a way to find out which ones have been defined so far:
 
-.. code-block:: python
+.. code-block:: python3
 
     import pkgutil
     
@@ -4472,7 +4472,7 @@ Python. Here’s a way to find out which ones have been defined so far:
 This file contains ``TH1F`` objects, which is a subclass of ``TH1``. The
 ``TH1`` methods will extend it.
 
-.. code-block:: python
+.. code-block:: python3
 
     file["htime"].edges
 
@@ -4480,7 +4480,7 @@ This file contains ``TH1F`` objects, which is a subclass of ``TH1``. The
 
     array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.])
 
-.. code-block:: python
+.. code-block:: python3
 
     file["htime"].values
 
@@ -4490,7 +4490,7 @@ This file contains ``TH1F`` objects, which is a subclass of ``TH1``. The
            0.30728292, 0.30681205, 0.341563  , 0.16150808, 0.        ],
           dtype=float32)
 
-.. code-block:: python
+.. code-block:: python3
 
     file["htime"].show()
 
@@ -4515,7 +4515,7 @@ This file contains ``TH1F`` objects, which is a subclass of ``TH1``. The
 The purpose of most of these methods is to extract data, which includes
 conversion to common Python formats.
 
-.. code-block:: python
+.. code-block:: python3
 
     uproot.open("http://scikit-hep.org/uproot/examples/issue33.root")["cutflow"].show()
 
@@ -4534,7 +4534,7 @@ conversion to common Python formats.
     (overflow)           0     |                                                   |
                                +---------------------------------------------------+
 
-.. code-block:: python
+.. code-block:: python3
 
     file["htime"].pandas()
 
@@ -4622,7 +4622,7 @@ conversion to common Python formats.
     </table>
     </div>
 
-.. code-block:: python
+.. code-block:: python3
 
     print(file["htime"].hepdata())
 
@@ -4680,7 +4680,7 @@ Numpy histograms, used as a common format through the scientific Python
 ecosystem, are just a tuple of counts/bin contents and edge positions.
 (There’s one more edge than contents to cover left and right.)
 
-.. code-block:: python
+.. code-block:: python3
 
     file["htime"].numpy()
 
@@ -4691,7 +4691,7 @@ ecosystem, are just a tuple of counts/bin contents and edge positions.
            dtype=float32),
      array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.]))
 
-.. code-block:: python
+.. code-block:: python3
 
     uproot.open("http://scikit-hep.org/uproot/examples/hepdata-example.root")["hpxpy"].numpy()
 
@@ -4726,7 +4726,7 @@ using ``uproot.create``, ``uproot.recreate``, or ``uproot.update``
 file modes). The compression level is given by ``uproot.ZLIB(n)``,
 ``uproot.LZMA(n)``, ``uproot.LZ4(n)``, or ``None``.
 
-.. code-block:: python
+.. code-block:: python3
 
     file = uproot.recreate("tmp.root", compression=uproot.ZLIB(4))
 
@@ -4747,7 +4747,7 @@ When you write objects to the ROOT file, they can be unnamed things like
 a Python string, but they get “stamped” with the lookup name once they
 go into the file.
 
-.. code-block:: python
+.. code-block:: python3
 
     file["name"] = "Some object, like a TObjString."
 
@@ -4777,7 +4777,7 @@ read the data, like this:
 
 We can also read it back in uproot, like this:
 
-.. code-block:: python
+.. code-block:: python3
 
     file.keys()
 
@@ -4785,7 +4785,7 @@ We can also read it back in uproot, like this:
 
     [b'name;1']
 
-.. code-block:: python
+.. code-block:: python3
 
     dict(file.classes())
 
@@ -4793,7 +4793,7 @@ We can also read it back in uproot, like this:
 
     {b'name;1': uproot.rootio.TObjString}
 
-.. code-block:: python
+.. code-block:: python3
 
     file["name"]
 
@@ -4810,7 +4810,7 @@ Histograms can be written to the file in the same way: by assignment
 (choosing a name at the time of assignment). The histograms may be taken
 from another file and modified,
 
-.. code-block:: python
+.. code-block:: python3
 
     histogram = uproot.open("http://scikit-hep.org/uproot/examples/histograms.root")["one"]
     histogram.show()
@@ -4856,7 +4856,7 @@ from another file and modified,
 
 or it may be created entirely in Python.
 
-.. code-block:: python
+.. code-block:: python3
 
     import types
     import uproot_methods.classes.TH1
@@ -4876,7 +4876,7 @@ or it may be created entirely in Python.
     
     file["synthetic"] = histogram
 
-.. code-block:: python
+.. code-block:: python3
 
     file["synthetic"].show()
 
@@ -4902,11 +4902,11 @@ But it is particularly useful that uproot recognizes `Numpy
 histograms <https://docs.scipy.org/doc/numpy/reference/generated/numpy.histogram.html>`__,
 which may have come from other libraries.
 
-.. code-block:: python
+.. code-block:: python3
 
     file["from_numpy"] = numpy.histogram(numpy.random.normal(0, 1, 10000))
 
-.. code-block:: python
+.. code-block:: python3
 
     file["from_numpy"].show()
 
@@ -4928,11 +4928,11 @@ which may have come from other libraries.
     [3.8238, inf]       0    |                                                     |
                              +-----------------------------------------------------+
 
-.. code-block:: python
+.. code-block:: python3
 
     file["from_numpy2d"] = numpy.histogram2d(numpy.random.normal(0, 1, 10000), numpy.random.normal(0, 1, 10000))
 
-.. code-block:: python
+.. code-block:: python3
 
     file["from_numpy2d"].numpy()
 
