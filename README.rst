@@ -922,13 +922,15 @@ original ROOT filenames—don’t move them!).
 
     # reads from derived-feature.awkd
     data2["mass"]
-    # <ChunkedArray [82.46269155513643 83.62620400526137 83.30846466680981 ... 95.96547966432459 96.49594381502096 96.6567276548945] at 0x7f3739bafc88>
+    # <ChunkedArray [82.46269155513643 83.62620400526137 83.30846466680981 ...
+    #                95.96547966432459 96.49594381502096 96.6567276548945] at 0x7f3739bafc88>
 
 .. code-block:: python3
 
     # reads from the original ROOT flies
     data2["E1"]
-    # <ChunkedArray [82.2018663875 62.3449289481 62.3449289481 ... 81.2701355756 81.2701355756 81.5662173543] at 0x7f3739b3e400>
+    # <ChunkedArray [82.2018663875 62.3449289481 62.3449289481 ...
+    #                81.2701355756 81.2701355756 81.5662173543] at 0x7f3739b3e400>
 
 Similarly, a dataset with a cut applied saves the identities of the
 selected events but only pointers to the original ROOT data. This acts
@@ -974,20 +976,7 @@ functions.
 
     <div><strong>Dask DataFrame Structure:</strong></div>
     <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
-    
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-    
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
+    <table border="solid 1px gray" class="dataframe">
       <thead>
         <tr style="text-align: right;">
           <th></th>
