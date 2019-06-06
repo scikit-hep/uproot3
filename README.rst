@@ -205,6 +205,7 @@ key-value access with square brackets.
 
     file.keys()
     # [b'one;1', b'three;1']
+
     file["one"]
     # <ROOTDirectory b'one' at 0x7f3750588710>
 
@@ -216,6 +217,7 @@ so they behave like Python dicts, too.
 
     file["one"].keys()
     # [b'two;1', b'tree;1']
+
     file["one"].values()
     # [<ROOTDirectory b'two' at 0x7f3750588fd0>, <TTree b'tree' at 0x7f3750588cc0>]
 
@@ -447,8 +449,7 @@ Let’s start with the simplest.
 
     a = events.array("E1")
     a
-    # array([82.20186639, 62.34492895, 62.34492895, ..., 81.27013558,
-    #        81.27013558, 81.56621735])
+    # array([82.20186639, 62.34492895, 62.34492895, ..., 81.27013558, 81.27013558, 81.56621735])
 
 Since ``array`` is singular, you specify one branch name and get one
 array back. This is a `Numpy
