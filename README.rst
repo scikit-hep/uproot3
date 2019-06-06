@@ -1546,20 +1546,7 @@ and
 .. raw:: html
 
     <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
-    
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-    
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
+    <table border="0" class="dataframe">
       <thead>
         <tr style="text-align: right;">
           <th></th>
@@ -1649,20 +1636,7 @@ entry numbers in the file. For instance, counting from the end:
 .. raw:: html
 
     <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
-    
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-    
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
+    <table border="0" class="dataframe">
       <thead>
         <tr style="text-align: right;">
           <th></th>
@@ -1752,33 +1726,31 @@ the DataFrame itself.
     for df in uproot.pandas.iterate("http://scikit-hep.org/uproot/examples/Zmumu.root", "events", "p[xyz]1", entrysteps=500):
         print(df[:3])
 
-.. parsed-literal::
-
-                 px1        py1        pz1
-    entry                                 
-    0     -41.195288  17.433244 -68.964962
-    1      35.118050 -16.570362 -48.775247
-    2      35.118050 -16.570362 -48.775247
-                 px1        py1        pz1
-    entry                                 
-    500    39.163212 -19.185280 -13.979333
-    501    39.094970 -19.152964 -13.936115
-    502    -7.656437 -33.431880  91.840257
-                 px1        py1       pz1
-    entry                                
-    1000   26.043759 -17.618814 -0.567176
-    1001   26.043759 -17.618814 -0.567176
-    1002   25.996204 -17.585241 -0.568920
-                 px1        py1        pz1
-    entry                                 
-    1500   82.816840  13.262734  27.797909
-    1501  -11.416911  39.815352  32.349893
-    1502  -11.416911  39.815352  32.349893
-                 px1        py1       pz1
-    entry                                
-    2000  -43.378378 -15.235422  3.019698
-    2001  -43.378378 -15.235422  3.019698
-    2002  -43.244422 -15.187402  3.003985
+    #              px1        py1        pz1
+    # entry                                 
+    # 0     -41.195288  17.433244 -68.964962
+    # 1      35.118050 -16.570362 -48.775247
+    # 2      35.118050 -16.570362 -48.775247
+    #              px1        py1        pz1
+    # entry                                 
+    # 500    39.163212 -19.185280 -13.979333
+    # 501    39.094970 -19.152964 -13.936115
+    # 502    -7.656437 -33.431880  91.840257
+    #              px1        py1       pz1
+    # entry                                
+    # 1000   26.043759 -17.618814 -0.567176
+    # 1001   26.043759 -17.618814 -0.567176
+    # 1002   25.996204 -17.585241 -0.568920
+    #              px1        py1        pz1
+    # entry                                 
+    # 1500   82.816840  13.262734  27.797909
+    # 1501  -11.416911  39.815352  32.349893
+    # 1502  -11.416911  39.815352  32.349893
+    #              px1        py1       pz1
+    # entry                                
+    # 2000  -43.378378 -15.235422  3.019698
+    # 2001  -43.378378 -15.235422  3.019698
+    # 2002  -43.244422 -15.187402  3.003985
 
 Part of the motivation for a special function is that it’s the first of
 potentially many external connectors (Dask is another: see above). The
@@ -1802,20 +1774,7 @@ it’s usually desirable for DataFrames.
 .. raw:: html
 
     <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
-    
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-    
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
+    <table border="0" class="dataframe">
       <thead>
         <tr style="text-align: right;">
           <th></th>
@@ -1933,20 +1892,7 @@ However, if we use the default **flatten=True**:
 .. raw:: html
 
     <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
-    
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-    
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
+    <table border="0" class="dataframe">
       <thead>
         <tr style="text-align: right;">
           <th></th>
@@ -2139,24 +2085,7 @@ to manipulate that structure.
 .. raw:: html
 
     <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
-    
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-    
-        .dataframe thead tr th {
-            text-align: left;
-        }
-    
-        .dataframe thead tr:last-of-type th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
+    <table border="0" class="dataframe">
       <thead>
         <tr>
           <th></th>
@@ -2338,20 +2267,7 @@ included as a convenience against overzealous branch selection.
 .. raw:: html
 
     <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
-    
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-    
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
+    <table border="0" class="dataframe">
       <thead>
         <tr style="text-align: right;">
           <th></th>
@@ -2436,18 +2352,12 @@ quotation marks) will be interpreted as regular expressions instead
 .. code-block:: python3
 
     events.arrays("p[xyz]?").keys()      # using wildcards
-
-.. parsed-literal::
-
-    dict_keys([b'px1', b'py1', b'pz1', b'px2', b'py2', b'pz2'])
+    # dict_keys([b'px1', b'py1', b'pz1', b'px2', b'py2', b'pz2'])
 
 .. code-block:: python3
 
     events.arrays("/p[x-z].?/").keys()   # using regular expressions
-
-.. parsed-literal::
-
-    dict_keys([b'px1', b'py1', b'pz1', b'px2', b'py2', b'pz2'])
+    # dict_keys([b'px1', b'py1', b'pz1', b'px2', b'py2', b'pz2'])
 
 If, instead of strings, you pass a function from branch objects to
 ``True`` or ``False``, the branches will be selected by evaluating the
@@ -2457,10 +2367,7 @@ properties other than their names.
 .. code-block:: python3
 
     events.arrays(lambda branch: branch.compressionratio() > 3).keys()
-
-.. parsed-literal::
-
-    dict_keys([b'Type', b'Run', b'Event', b'Q1', b'Q2'])
+    # dict_keys([b'Type', b'Run', b'Event', b'Q1', b'Q2'])
 
 Note that the return values must be strictly ``True`` and ``False``, not
 anything that `Python evaluates to true or
@@ -2478,39 +2385,33 @@ TBranches and their interpretations with the ``show`` method:
 .. code-block:: python3
 
     events.show()
-
-.. parsed-literal::
-
-    Type                       (no streamer)              asstring()
-    Run                        (no streamer)              asdtype('>i4')
-    Event                      (no streamer)              asdtype('>i4')
-    E1                         (no streamer)              asdtype('>f8')
-    px1                        (no streamer)              asdtype('>f8')
-    py1                        (no streamer)              asdtype('>f8')
-    pz1                        (no streamer)              asdtype('>f8')
-    pt1                        (no streamer)              asdtype('>f8')
-    eta1                       (no streamer)              asdtype('>f8')
-    phi1                       (no streamer)              asdtype('>f8')
-    Q1                         (no streamer)              asdtype('>i4')
-    E2                         (no streamer)              asdtype('>f8')
-    px2                        (no streamer)              asdtype('>f8')
-    py2                        (no streamer)              asdtype('>f8')
-    pz2                        (no streamer)              asdtype('>f8')
-    pt2                        (no streamer)              asdtype('>f8')
-    eta2                       (no streamer)              asdtype('>f8')
-    phi2                       (no streamer)              asdtype('>f8')
-    Q2                         (no streamer)              asdtype('>i4')
-    M                          (no streamer)              asdtype('>f8')
+    # Type                       (no streamer)              asstring()
+    # Run                        (no streamer)              asdtype('>i4')
+    # Event                      (no streamer)              asdtype('>i4')
+    # E1                         (no streamer)              asdtype('>f8')
+    # px1                        (no streamer)              asdtype('>f8')
+    # py1                        (no streamer)              asdtype('>f8')
+    # pz1                        (no streamer)              asdtype('>f8')
+    # pt1                        (no streamer)              asdtype('>f8')
+    # eta1                       (no streamer)              asdtype('>f8')
+    # phi1                       (no streamer)              asdtype('>f8')
+    # Q1                         (no streamer)              asdtype('>i4')
+    # E2                         (no streamer)              asdtype('>f8')
+    # px2                        (no streamer)              asdtype('>f8')
+    # py2                        (no streamer)              asdtype('>f8')
+    # pz2                        (no streamer)              asdtype('>f8')
+    # pt2                        (no streamer)              asdtype('>f8')
+    # eta2                       (no streamer)              asdtype('>f8')
+    # phi2                       (no streamer)              asdtype('>f8')
+    # Q2                         (no streamer)              asdtype('>i4')
+    # M                          (no streamer)              asdtype('>f8')
 
 Every branch has a default interpretation, such as
 
 .. code-block:: python3
 
     events["E1"].interpretation
-
-.. parsed-literal::
-
-    asdtype('>f8')
+    # asdtype('>f8')
 
 meaning big-endian, 8-byte floating point numbers as a `Numpy
 dtype <https://docs.scipy.org/doc/numpy/reference/arrays.dtypes.html>`__.
@@ -2521,11 +2422,8 @@ but it wouldn’t be meaningful.
 .. code-block:: python3
 
     events["E1"].array(uproot.asdtype(">i8"))
-
-.. parsed-literal::
-
-    array([4635484859043618393, 4633971086021346367, 4633971086021346367, ...,
-           4635419294316473354, 4635419294316473354, 4635440129219414362])
+    # array([4635484859043618393, 4633971086021346367, 4633971086021346367, ...,
+    #        4635419294316473354, 4635419294316473354, 4635440129219414362])
 
 Instead of reading the values as floating point numbers, we’ve read them
 as integers. It’s unlikely that you’d ever want to do that, unless the
@@ -2546,10 +2444,7 @@ former fills a user-specified array.
     myarray = numpy.zeros(events.numentries, dtype=numpy.float32)    # (different size)
     reinterpretation = events["E1"].interpretation.toarray(myarray)
     reinterpretation
-
-.. parsed-literal::
-
-    asarray('>f8', <array float32 (2304,) at 0x7f36247ad990>)
+    # asarray('>f8', <array float32 (2304,) at 0x7f36247ad990>)
 
 Passing the new
 `uproot.asarray <https://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-numerical-asarray>`__
@@ -2558,11 +2453,8 @@ interpretation to the array-reading function
 .. code-block:: python3
 
     events["E1"].array(reinterpretation)
-
-.. parsed-literal::
-
-    array([82.201866, 62.34493 , 62.34493 , ..., 81.270134, 81.270134,
-           81.566216], dtype=float32)
+    # array([82.201866, 62.34493 , 62.34493 , ..., 81.270134, 81.270134,
+    #        81.566216], dtype=float32)
 
 fills and returns that array. When you look at my array object, you can
 see that it is now filled, overwriting whatever might have been in it
@@ -2571,11 +2463,8 @@ before.
 .. code-block:: python3
 
     myarray
-
-.. parsed-literal::
-
-    array([82.201866, 62.34493 , 62.34493 , ..., 81.270134, 81.270134,
-           81.566216], dtype=float32)
+    # array([82.201866, 62.34493 , 62.34493 , ..., 81.270134, 81.270134,
+    #        81.566216], dtype=float32)
 
 This is useful for speed-critical applications or ones in which the
 array is managed by an external system. The array could be
@@ -2599,10 +2488,7 @@ literally ``True``, not an object that Python would evaluate to
 
     events.arrays(lambda branch: isinstance(branch.interpretation, uproot.asdtype) and
                                  str(branch.interpretation.fromdtype) == ">f8").keys()
-
-.. parsed-literal::
-
-    dict_keys([b'E1', b'px1', b'py1', b'pz1', b'pt1', b'eta1', b'phi1', b'E2', b'px2', b'py2', b'pz2', b'pt2', b'eta2', b'phi2', b'M'])
+    # dict_keys([b'E1', b'px1', b'py1', b'pz1', b'pt1', b'eta1', b'phi1', b'E2', b'px2', b'py2', b'pz2', b'pt2', b'eta2', b'phi2', b'M'])
 
 This is because a function that returns objects selects branches and
 sets their interpretations in one pass.
@@ -2610,13 +2496,10 @@ sets their interpretations in one pass.
 .. code-block:: python3
 
     events.arrays(lambda branch: uproot.asdtype(">f8", "<f4") if branch.name.startswith(b"px") else None)
-
-.. parsed-literal::
-
-    {b'px1': array([-41.195286,  35.11805 ,  35.11805 , ...,  32.37749 ,  32.37749 ,
-             32.485394], dtype=float32),
-     b'px2': array([ 34.144436, -41.195286, -40.883324, ..., -68.041916, -68.794136,
-            -68.794136], dtype=float32)}
+    # {b'px1': array([-41.195286,  35.11805 ,  35.11805 , ...,  32.37749 ,  32.37749 ,
+    #          32.485394], dtype=float32),
+    #  b'px2': array([ 34.144436, -41.195286, -40.883324, ..., -68.041916, -68.794136,
+    #         -68.794136], dtype=float32)}
 
 The above selects TBranch names that start with ``"px"``,
 read-interprets them as big-endian 8-byte floats and writes them as
@@ -2631,13 +2514,10 @@ The same could have been said in a less functional way with a dict:
 
     events.arrays({"px1": uproot.asdtype(">f8", "<f4"),
                    "px2": uproot.asdtype(">f8", "<f4")})
-
-.. parsed-literal::
-
-    {b'px1': array([-41.195286,  35.11805 ,  35.11805 , ...,  32.37749 ,  32.37749 ,
-             32.485394], dtype=float32),
-     b'px2': array([ 34.144436, -41.195286, -40.883324, ..., -68.041916, -68.794136,
-            -68.794136], dtype=float32)}
+    # {b'px1': array([-41.195286,  35.11805 ,  35.11805 , ...,  32.37749 ,  32.37749 ,
+    #          32.485394], dtype=float32),
+    #  b'px2': array([ 34.144436, -41.195286, -40.883324, ..., -68.041916, -68.794136,
+    #         -68.794136], dtype=float32)}
 
 Multiple values per event: fixed size arrays
 --------------------------------------------
@@ -2655,29 +2535,26 @@ Here’s an artificial example:
     tree = uproot.open("http://scikit-hep.org/uproot/examples/nesteddirs.root")["one/two/tree"]
     array = tree.array("ArrayInt64", entrystop=20)
     array
-
-.. parsed-literal::
-
-    array([[ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-           [ 1,  1,  1,  1,  1,  1,  1,  1,  1,  1],
-           [ 2,  2,  2,  2,  2,  2,  2,  2,  2,  2],
-           [ 3,  3,  3,  3,  3,  3,  3,  3,  3,  3],
-           [ 4,  4,  4,  4,  4,  4,  4,  4,  4,  4],
-           [ 5,  5,  5,  5,  5,  5,  5,  5,  5,  5],
-           [ 6,  6,  6,  6,  6,  6,  6,  6,  6,  6],
-           [ 7,  7,  7,  7,  7,  7,  7,  7,  7,  7],
-           [ 8,  8,  8,  8,  8,  8,  8,  8,  8,  8],
-           [ 9,  9,  9,  9,  9,  9,  9,  9,  9,  9],
-           [10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
-           [11, 11, 11, 11, 11, 11, 11, 11, 11, 11],
-           [12, 12, 12, 12, 12, 12, 12, 12, 12, 12],
-           [13, 13, 13, 13, 13, 13, 13, 13, 13, 13],
-           [14, 14, 14, 14, 14, 14, 14, 14, 14, 14],
-           [15, 15, 15, 15, 15, 15, 15, 15, 15, 15],
-           [16, 16, 16, 16, 16, 16, 16, 16, 16, 16],
-           [17, 17, 17, 17, 17, 17, 17, 17, 17, 17],
-           [18, 18, 18, 18, 18, 18, 18, 18, 18, 18],
-           [19, 19, 19, 19, 19, 19, 19, 19, 19, 19]])
+    # array([[ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
+    #        [ 1,  1,  1,  1,  1,  1,  1,  1,  1,  1],
+    #        [ 2,  2,  2,  2,  2,  2,  2,  2,  2,  2],
+    #        [ 3,  3,  3,  3,  3,  3,  3,  3,  3,  3],
+    #        [ 4,  4,  4,  4,  4,  4,  4,  4,  4,  4],
+    #        [ 5,  5,  5,  5,  5,  5,  5,  5,  5,  5],
+    #        [ 6,  6,  6,  6,  6,  6,  6,  6,  6,  6],
+    #        [ 7,  7,  7,  7,  7,  7,  7,  7,  7,  7],
+    #        [ 8,  8,  8,  8,  8,  8,  8,  8,  8,  8],
+    #        [ 9,  9,  9,  9,  9,  9,  9,  9,  9,  9],
+    #        [10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
+    #        [11, 11, 11, 11, 11, 11, 11, 11, 11, 11],
+    #        [12, 12, 12, 12, 12, 12, 12, 12, 12, 12],
+    #        [13, 13, 13, 13, 13, 13, 13, 13, 13, 13],
+    #        [14, 14, 14, 14, 14, 14, 14, 14, 14, 14],
+    #        [15, 15, 15, 15, 15, 15, 15, 15, 15, 15],
+    #        [16, 16, 16, 16, 16, 16, 16, 16, 16, 16],
+    #        [17, 17, 17, 17, 17, 17, 17, 17, 17, 17],
+    #        [18, 18, 18, 18, 18, 18, 18, 18, 18, 18],
+    #        [19, 19, 19, 19, 19, 19, 19, 19, 19, 19]])
 
 The resulting array has a non-trivial `Numpy
 shape <https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.shape.html>`__,
@@ -2690,10 +2567,7 @@ objects).
 .. code-block:: python3
 
     array.shape
-
-.. parsed-literal::
-
-    (20, 10)
+    # (20, 10)
 
 All but the first dimension of the shape parameter (the “length”) is
 known before reading the array: it’s the `dtype
@@ -2702,18 +2576,12 @@ shape <https://docs.scipy.org/doc/numpy/reference/generated/numpy.dtype.shape.ht
 .. code-block:: python3
 
     tree["ArrayInt64"].interpretation
-
-.. parsed-literal::
-
-    asdtype("('>i8', (10,))")
+    # asdtype("('>i8', (10,))")
 
 .. code-block:: python3
 
     tree["ArrayInt64"].interpretation.todtype.shape
-
-.. parsed-literal::
-
-    (10,)
+    # (10,)
 
 The `dtype
 shape <https://docs.scipy.org/doc/numpy/reference/generated/numpy.dtype.shape.html>`__
@@ -2723,10 +2591,7 @@ an empty tuple.
 .. code-block:: python3
 
     tree["Int64"].interpretation.todtype.shape
-
-.. parsed-literal::
-
-    ()
+    # ()
 
 Fixed-width arrays are exploded into one column per element when viewed
 as a
@@ -2739,20 +2604,7 @@ as a
 .. raw:: html
 
     <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
-    
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-    
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
+    <table border="0" class="dataframe">
       <thead>
         <tr style="text-align: right;">
           <th></th>
@@ -3068,11 +2920,8 @@ or without padding).
     tree = uproot.open("http://scikit-hep.org/uproot/examples/leaflist.root")["tree"]
     array = tree.array("leaflist")
     array
-
-.. parsed-literal::
-
-    array([(1.1, 1,  97), (2.2, 2,  98), (3.3, 3,  99), (4. , 4, 100),
-           (5.5, 5, 101)], dtype=[('x', '<f8'), ('y', '<i4'), ('z', 'i1')])
+    # array([(1.1, 1,  97), (2.2, 2,  98), (3.3, 3,  99), (4. , 4, 100),
+    #        (5.5, 5, 101)], dtype=[('x', '<f8'), ('y', '<i4'), ('z', 'i1')])
 
 This array is presented as an array of tuples, though it’s actually a
 contiguous block of memory with floating point numbers (``"x"``),
@@ -3082,34 +2931,22 @@ other.
 .. code-block:: python3
 
     array[0]
-
-.. parsed-literal::
-
-    (1.1, 1, 97)
+    # (1.1, 1, 97)
 
 .. code-block:: python3
 
     array["x"]
-
-.. parsed-literal::
-
-    array([1.1, 2.2, 3.3, 4. , 5.5])
+    # array([1.1, 2.2, 3.3, 4. , 5.5])
 
 .. code-block:: python3
 
     array["y"]
-
-.. parsed-literal::
-
-    array([1, 2, 3, 4, 5], dtype=int32)
+    # array([1, 2, 3, 4, 5], dtype=int32)
 
 .. code-block:: python3
 
     array["z"]
-
-.. parsed-literal::
-
-    array([ 97,  98,  99, 100, 101], dtype=int8)
+    # array([ 97,  98,  99, 100, 101], dtype=int8)
 
 The
 `dtype <https://docs.scipy.org/doc/numpy/reference/arrays.dtypes.html>`__
@@ -3121,18 +2958,12 @@ are.
 .. code-block:: python3
 
     array.dtype
-
-.. parsed-literal::
-
-    dtype([('x', '<f8'), ('y', '<i4'), ('z', 'i1')])
+    # dtype([('x', '<f8'), ('y', '<i4'), ('z', 'i1')])
 
 .. code-block:: python3
 
     array.dtype.itemsize
-
-.. parsed-literal::
-
-    13
+    # 13
 
 ROOT TBranches may have multiple values per event *and* a leaf-list
 structure, and `Numpy
@@ -3152,20 +2983,7 @@ as a
 .. raw:: html
 
     <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
-    
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-    
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
+    <table border="0" class="dataframe">
       <thead>
         <tr style="text-align: right;">
           <th></th>
@@ -3245,10 +3063,7 @@ awkward-array library, like ``ChunkedArray`` and ``VirtualArray``).
     tree = uproot.open("http://scikit-hep.org/uproot/examples/nesteddirs.root")["one/two/tree"]
     array = tree.array("SliceInt64", entrystop=20)
     array
-
-.. parsed-literal::
-
-    <JaggedArray [[] [1] [2 2] ... [17 17 17 ... 17 17 17] [18 18 18 ... 18 18 18] [19 19 19 ... 19 19 19]] at 0x7f3624769898>
+    # <JaggedArray [[] [1] [2 2] ... [17 17 17 ... 17 17 17] [18 18 18 ... 18 18 18] [19 19 19 ... 19 19 19]] at 0x7f3624769898>
 
 These ``JaggedArrays`` are made of `Numpy
 arrays <https://docs.scipy.org/doc/numpy/reference/generated/numpy.array.html>`__
@@ -3263,39 +3078,27 @@ its documentation <https://github.com/scikit-hep/awkward-array>`__.
 .. code-block:: python3
 
     array.counts
-
-.. parsed-literal::
-
-    array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+    # array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
 
 .. code-block:: python3
 
     array.flatten()
-
-.. parsed-literal::
-
-    array([ 1,  2,  2,  3,  3,  3,  4,  4,  4,  4,  5,  5,  5,  5,  5,  6,  6,
-            6,  6,  6,  6,  7,  7,  7,  7,  7,  7,  7,  8,  8,  8,  8,  8,  8,
-            8,  8,  9,  9,  9,  9,  9,  9,  9,  9,  9, 11, 12, 12, 13, 13, 13,
-           14, 14, 14, 14, 15, 15, 15, 15, 15, 16, 16, 16, 16, 16, 16, 17, 17,
-           17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 18, 18, 18, 19, 19, 19, 19,
-           19, 19, 19, 19, 19])
+    # array([ 1,  2,  2,  3,  3,  3,  4,  4,  4,  4,  5,  5,  5,  5,  5,  6,  6,
+    #         6,  6,  6,  6,  7,  7,  7,  7,  7,  7,  7,  8,  8,  8,  8,  8,  8,
+    #         8,  8,  9,  9,  9,  9,  9,  9,  9,  9,  9, 11, 12, 12, 13, 13, 13,
+    #        14, 14, 14, 14, 15, 15, 15, 15, 15, 16, 16, 16, 16, 16, 16, 17, 17,
+    #        17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 18, 18, 18, 19, 19, 19, 19,
+    #        19, 19, 19, 19, 19])
 
 .. code-block:: python3
 
     array[:6]
-
-.. parsed-literal::
-
-    <JaggedArray [[] [1] [2 2] [3 3 3] [4 4 4 4] [5 5 5 5 5]] at 0x7f362476e4e0>
+    # <JaggedArray [[] [1] [2 2] [3 3 3] [4 4 4 4] [5 5 5 5 5]] at 0x7f362476e4e0>
 
 .. code-block:: python3
 
     array[array.counts > 1, 0]
-
-.. parsed-literal::
-
-    array([ 2,  3,  4,  5,  6,  7,  8,  9, 12, 13, 14, 15, 16, 17, 18, 19])
+    # array([ 2,  3,  4,  5,  6,  7,  8,  9, 12, 13, 14, 15, 16, 17, 18, 19])
 
 Here is an example of ``JaggedArrays`` in physics data:
 
@@ -3307,63 +3110,42 @@ Here is an example of ``JaggedArrays`` in physics data:
 
     E, px, py, pz = events2.arrays(["Muon_E", "Muon_P[xyz]"], outputtype=tuple)
     E
-
-.. parsed-literal::
-
-    <JaggedArray [[54.7795 39.401695] [31.690445] [54.739788 47.488857] ... [62.39516] [174.20863] [69.55621]] at 0x7f362476e748>
+    # <JaggedArray [[54.7795 39.401695] [31.690445] [54.739788 47.488857] ... [62.39516] [174.20863] [69.55621]] at 0x7f362476e748>
 
 .. code-block:: python3
 
     pt = numpy.sqrt(px**2 + py**2)
     p = numpy.sqrt(px**2 + py**2 + pz**2)
     p
-
-.. parsed-literal::
-
-    <JaggedArray [[54.7794 39.401554] [31.69027] [54.739685 47.48874] ... [62.395073] [174.2086] [69.55613]] at 0x7f3624738c88>
+    # <JaggedArray [[54.7794 39.401554] [31.69027] [54.739685 47.48874] ... [62.395073] [174.2086] [69.55613]] at 0x7f3624738c88>
 
 .. code-block:: python3
 
     eta = numpy.log((p + pz)/(p - pz))/2
     eta
-
-.. parsed-literal::
-
-    <JaggedArray [[-0.15009263 -0.29527554] [0.7538137] [0.20692922 1.0412954] ... [-1.2350467] [1.6653312] [1.0626991]] at 0x7f362476e2e8>
+    # <JaggedArray [[-0.15009263 -0.29527554] [0.7538137] [0.20692922 1.0412954] ... [-1.2350467] [1.6653312] [1.0626991]] at 0x7f362476e2e8>
 
 .. code-block:: python3
 
     phi = numpy.arctan2(py, px)
     phi
-
-.. parsed-literal::
-
-    <JaggedArray [[-2.9247396 0.01837404] [-1.6042395] [-0.41738483 1.5430332] ... [-2.666572] [1.552847] [-0.980149]] at 0x7f36246d6b38>
+    # <JaggedArray [[-2.9247396 0.01837404] [-1.6042395] [-0.41738483 1.5430332] ... [-2.666572] [1.552847] [-0.980149]] at 0x7f36246d6b38>
 
 .. code-block:: python3
 
     pt.counts
-
-.. parsed-literal::
-
-    array([2, 1, 2, ..., 1, 1, 1])
+    # array([2, 1, 2, ..., 1, 1, 1])
 
 .. code-block:: python3
 
     pt.flatten()
-
-.. parsed-literal::
-
-    array([54.168106, 37.744152, 24.417913, ..., 33.461536, 63.619816,
-           42.93995 ], dtype=float32)
+    # array([54.168106, 37.744152, 24.417913, ..., 33.461536, 63.619816,
+    #        42.93995 ], dtype=float32)
 
 .. code-block:: python3
 
     pt[:6]
-
-.. parsed-literal::
-
-    <JaggedArray [[54.168106 37.744152] [24.417913] [53.58827 29.811996] [88.63194 77.951485] [81.011406 47.175045] [41.591053 30.844215]] at 0x7f36246d1240>
+    # <JaggedArray [[54.168106 37.744152] [24.417913] [53.58827 29.811996] [88.63194 77.951485] [81.011406 47.175045] [41.591053 30.844215]] at 0x7f36246d1240>
 
 To select elements of inner lists (Pandas’s
 `DataFrame.xs <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.xs.html>`__),
@@ -3372,11 +3154,8 @@ first require the list to have at least that many elements.
 .. code-block:: python3
 
     pt[pt.counts > 1, 0]
-
-.. parsed-literal::
-
-    array([54.168106, 53.58827 , 88.63194 , ..., 58.38824 , 61.645054,
-           44.971596], dtype=float32)
+    # array([54.168106, 53.58827 , 88.63194 , ..., 58.38824 , 61.645054,
+    #        44.971596], dtype=float32)
 
 ``JaggedArrays`` of booleans select from inner lists (i.e. put a cut on
 particles):
@@ -3384,18 +3163,12 @@ particles):
 .. code-block:: python3
 
     pt > 50
-
-.. parsed-literal::
-
-    <JaggedArray [[True False] [False] [True False] ... [False] [True] [False]] at 0x7f36246d1c18>
+    # <JaggedArray [[True False] [False] [True False] ... [False] [True] [False]] at 0x7f36246d1c18>
 
 .. code-block:: python3
 
     eta[pt > 50]
-
-.. parsed-literal::
-
-    <JaggedArray [[-0.15009263] [] [0.20692922] ... [] [1.6653312] []] at 0x7f36246d6ef0>
+    # <JaggedArray [[-0.15009263] [] [0.20692922] ... [] [1.6653312] []] at 0x7f36246d6ef0>
 
 And Numpy arrays of booleans select from outer lists (i.e. put a cut on
 events):
@@ -3403,10 +3176,7 @@ events):
 .. code-block:: python3
 
     eta[pt.max() > 50]
-
-.. parsed-literal::
-
-    <JaggedArray [[-0.15009263 -0.29527554] [0.20692922 1.0412954] [2.2215228 2.1647348] ... [0.23674133 0.49973577] [-0.38897678 -0.013611517] [1.6653312]] at 0x7f36246d1748>
+    # <JaggedArray [[-0.15009263 -0.29527554] [0.20692922 1.0412954] [2.2215228 2.1647348] ... [0.23674133 0.49973577] [-0.38897678 -0.013611517] [1.6653312]] at 0x7f36246d1748>
 
 Reducers like ``count``, ``sum``, ``min``, ``max``, ``any`` (boolean),
 or ``all`` (boolean) apply per-event, turning a ``JaggedArray`` into a
@@ -3415,11 +3185,8 @@ Numpy array.
 .. code-block:: python3
 
     pt.max()
-
-.. parsed-literal::
-
-    array([54.168106, 24.417913, 53.58827 , ..., 33.461536, 63.619816,
-           42.93995 ], dtype=float32)
+    # array([54.168106, 24.417913, 53.58827 , ..., 33.461536, 63.619816,
+    #        42.93995 ], dtype=float32)
 
 You can even do combinatorics, such as ``a.cross(b)`` to compute the
 Cartesian product of ``a`` and ``b`` per event, or ``a.choose(n)`` to
@@ -3428,10 +3195,7 @@ choose ``n`` distinct combinations of elements per event.
 .. code-block:: python3
 
     pt.choose(2)
-
-.. parsed-literal::
-
-    <JaggedArray [[(54.168106, 37.744152)] [] [(53.58827, 29.811996)] ... [] [] []] at 0x7f36246d1518>
+    # <JaggedArray [[(54.168106, 37.744152)] [] [(53.58827, 29.811996)] ... [] [] []] at 0x7f36246d1518>
 
 Some of these functions have “arg” versions that return integers, which
 can be used in indexing.
@@ -3439,30 +3203,21 @@ can be used in indexing.
 .. code-block:: python3
 
     abs(eta).argmax()
-
-.. parsed-literal::
-
-    <JaggedArray [[1] [0] [1] ... [0] [0] [0]] at 0x7f36246d6470>
+    # <JaggedArray [[1] [0] [1] ... [0] [0] [0]] at 0x7f36246d6470>
 
 .. code-block:: python3
 
     pairs = pt.argchoose(2)
     pairs
-
-.. parsed-literal::
-
-    <JaggedArray [[(0, 1)] [] [(0, 1)] ... [] [] []] at 0x7f36246d6f98>
+    # <JaggedArray [[(0, 1)] [] [(0, 1)] ... [] [] []] at 0x7f36246d6f98>
 
 .. code-block:: python3
 
     left  = pairs.i0
     right = pairs.i1
     left, right
-
-.. parsed-literal::
-
-    (<JaggedArray [[0] [] [0] ... [] [] []] at 0x7f36441b7630>,
-     <JaggedArray [[1] [] [1] ... [] [] []] at 0x7f36441b75f8>)
+    # (<JaggedArray [[0] [] [0] ... [] [] []] at 0x7f36441b7630>,
+    #  <JaggedArray [[1] [] [1] ... [] [] []] at 0x7f36441b75f8>)
 
 Masses of unique pairs of muons, for events that have them:
 
@@ -3471,10 +3226,7 @@ Masses of unique pairs of muons, for events that have them:
     masses = numpy.sqrt((E[left] + E[right])**2 - (px[left] + px[right])**2 -
                         (py[left] + py[right])**2 - (pz[left] + pz[right])**2)
     masses
-
-.. parsed-literal::
-
-    <JaggedArray [[90.227806] [] [74.746544] ... [] [] []] at 0x7f364401bc50>
+    # <JaggedArray [[90.227806] [] [74.746544] ... [] [] []] at 0x7f364401bc50>
 
 .. code-block:: python3
 
@@ -3503,27 +3255,18 @@ representing structure via ``offsets`` (random access) or ``counts``.
 .. code-block:: python3
 
     masses.content
-
-.. parsed-literal::
-
-    array([90.227806, 74.746544, 89.75766 , ..., 92.06495 , 85.44384 ,
-           75.96062 ], dtype=float32)
+    # array([90.227806, 74.746544, 89.75766 , ..., 92.06495 , 85.44384 ,
+    #        75.96062 ], dtype=float32)
 
 .. code-block:: python3
 
     masses.offsets
-
-.. parsed-literal::
-
-    array([   0,    1,    1, ..., 1521, 1521, 1521])
+    # array([   0,    1,    1, ..., 1521, 1521, 1521])
 
 .. code-block:: python3
 
     masses.counts
-
-.. parsed-literal::
-
-    array([1, 0, 1, ..., 0, 0, 0])
+    # array([1, 0, 1, ..., 0, 0, 0])
 
 Fortunately, ROOT files are themselves structured this way, with
 variable-width data represented by contents and offsets in a TBasket.
@@ -3558,10 +3301,7 @@ One of these classes is ``TLorentzVectorArray``, which defines an
 
     muons = events3.array("muonp4")
     muons
-
-.. parsed-literal::
-
-    <JaggedArrayMethods [[TLorentzVector(-52.899, -11.655, -8.1608, 54.779) TLorentzVector(37.738, 0.69347, -11.308, 39.402)] [TLorentzVector(-0.81646, -24.404, 20.2, 31.69)] [TLorentzVector(48.988, -21.723, 11.168, 54.74) TLorentzVector(0.82757, 29.801, 36.965, 47.489)] ... [TLorentzVector(-29.757, -15.304, -52.664, 62.395)] [TLorentzVector(1.1419, 63.61, 162.18, 174.21)] [TLorentzVector(23.913, -35.665, 54.719, 69.556)]] at 0x7f36246d6c50>
+    # <JaggedArrayMethods [[TLorentzVector(-52.899, -11.655, -8.1608, 54.779) TLorentzVector(37.738, 0.69347, -11.308, 39.402)] [TLorentzVector(-0.81646, -24.404, 20.2, 31.69)] [TLorentzVector(48.988, -21.723, 11.168, 54.74) TLorentzVector(0.82757, 29.801, 36.965, 47.489)] ... [TLorentzVector(-29.757, -15.304, -52.664, 62.395)] [TLorentzVector(1.1419, 63.61, 162.18, 174.21)] [TLorentzVector(23.913, -35.665, 54.719, 69.556)]] at 0x7f36246d6c50>
 
 In the print-out, these appear to be Python objects, but they’re
 high-performance arrays that are only turned into objects when you look
@@ -3571,29 +3311,20 @@ at individuals.
 
     muon = muons[0, 0]
     type(muon), muon
-
-.. parsed-literal::
-
-    (uproot_methods.classes.TLorentzVector.TLorentzVector,
-     TLorentzVector(-52.899, -11.655, -8.1608, 54.779))
+    # (uproot_methods.classes.TLorentzVector.TLorentzVector,
+    #  TLorentzVector(-52.899, -11.655, -8.1608, 54.779))
 
 This object has all the usual kinematics methods,
 
 .. code-block:: python3
 
     muon.mass
-
-.. parsed-literal::
-
-    0.10559298741436905
+    # 0.10559298741436905
 
 .. code-block:: python3
 
     muons[0, 0].delta_phi(muons[0, 1])
-
-.. parsed-literal::
-
-    -2.9431136434497858
+    # -2.9431136434497858
 
 But an array of Lorentz vectors also has these methods, and they are
 computed in bulk (faster than creating each object and calling the
@@ -3602,15 +3333,9 @@ method on each).
 .. code-block:: python3
 
     muons.mass   # some mass**2 are slightly negative, hence the Numpy warning about negative square roots
-
-.. parsed-literal::
-
-    /home/pivarski/miniconda3/lib/python3.7/site-packages/uproot_methods-0.6.1-py3.7.egg/uproot_methods/classes/TLorentzVector.py:189: RuntimeWarning: invalid value encountered in sqrt
-      return self._trymemo("mass", lambda self: self.awkward.numpy.sqrt(self.mag2))
-
-.. parsed-literal::
-
-    <JaggedArray [[0.10559298741436905 0.10545247041042287] [0.105499240400313] [0.10696309110601164 0.10513788128369116] ... [0.1054382466674704] [0.0975059956172863] [0.10447224169767522]] at 0x7f36246f8080>
+    # /home/pivarski/miniconda3/lib/python3.7/site-packages/uproot_methods-0.6.1-py3.7.egg/uproot_methods/classes/TLorentzVector.py:189: RuntimeWarning: invalid value encountered in sqrt
+    #   return self._trymemo("mass", lambda self: self.awkward.numpy.sqrt(self.mag2))
+    # <JaggedArray [[0.10559298741436905 0.10545247041042287] [0.105499240400313] [0.10696309110601164 0.10513788128369116] ... [0.1054382466674704] [0.0975059956172863] [0.10447224169767522]] at 0x7f36246f8080>
 
 (**Note:** if you don’t want to see Numpy warnings, use
 `numpy.seterr <https://docs.scipy.org/doc/numpy/reference/generated/numpy.seterr.html>`__.)
@@ -3621,10 +3346,7 @@ method on each).
     lefts  = pairs.i0
     rights = pairs.i1
     lefts.delta_r(rights)
-
-.. parsed-literal::
-
-    <JaggedArray [[2.9466923822257822] [] [2.1305881273993306] ... [] [] []] at 0x7f3624738dd8>
+    # <JaggedArray [[2.9466923822257822] [] [2.1305881273993306] ... [] [] []] at 0x7f3624738dd8>
 
 TBranches with C++ class ``TLorentzVector`` are automatically converted
 into ``TLorentzVectorArrays``. Although they’re in wide use, the C++
@@ -3649,10 +3371,7 @@ need to use a special constructor to build the object from its branches.
     
     array = uproot_methods.TLorentzVectorArray.from_cartesian(px, py, pz, E)
     array
-
-.. parsed-literal::
-
-    <JaggedArrayMethods [[TLorentzVector(-52.899, -11.655, -8.1608, 54.779) TLorentzVector(37.738, 0.69347, -11.308, 39.402)] [TLorentzVector(-0.81646, -24.404, 20.2, 31.69)] [TLorentzVector(48.988, -21.723, 11.168, 54.74) TLorentzVector(0.82757, 29.801, 36.965, 47.489)] ... [TLorentzVector(-29.757, -15.304, -52.664, 62.395)] [TLorentzVector(1.1419, 63.61, 162.18, 174.21)] [TLorentzVector(23.913, -35.665, 54.719, 69.556)]] at 0x7f36441c3470>
+    # <JaggedArrayMethods [[TLorentzVector(-52.899, -11.655, -8.1608, 54.779) TLorentzVector(37.738, 0.69347, -11.308, 39.402)] [TLorentzVector(-0.81646, -24.404, 20.2, 31.69)] [TLorentzVector(48.988, -21.723, 11.168, 54.74) TLorentzVector(0.82757, 29.801, 36.965, 47.489)] ... [TLorentzVector(-29.757, -15.304, -52.664, 62.395)] [TLorentzVector(1.1419, 63.61, 162.18, 174.21)] [TLorentzVector(23.913, -35.665, 54.719, 69.556)]] at 0x7f36441c3470>
 
 There are constructors for different coordinate systems. Internally,
 ``TLorentzVectorArray`` uses the coordinates you give it and only
@@ -3661,16 +3380,13 @@ converts to other systems on demand.
 .. code-block:: python3
 
     [x for x in dir(uproot_methods.TLorentzVectorArray) if x.startswith("from_")]
-
-.. parsed-literal::
-
-    ['from_cartesian',
-     'from_cylindrical',
-     'from_p3',
-     'from_ptetaphi',
-     'from_ptetaphim',
-     'from_spherical',
-     'from_xyzm']
+    # ['from_cartesian',
+    #  'from_cylindrical',
+    #  'from_p3',
+    #  'from_ptetaphi',
+    #  'from_ptetaphim',
+    #  'from_spherical',
+    #  'from_xyzm']
 
 Variable-width values: strings
 ------------------------------
@@ -3683,10 +3399,7 @@ demand) to the same Python string type.
 
     branch = uproot.open("http://scikit-hep.org/uproot/examples/sample-6.14.00-zlib.root")["sample"]["str"]
     branch.array()
-
-.. parsed-literal::
-
-    <ObjectArray [b'hey-0' b'hey-1' b'hey-2' ... b'hey-27' b'hey-28' b'hey-29'] at 0x7f364412ef28>
+    # <ObjectArray [b'hey-0' b'hey-1' b'hey-2' ... b'hey-27' b'hey-28' b'hey-29'] at 0x7f364412ef28>
 
 As with most strings from ROOT, they are unencoded bytestrings (see the
 ``b`` before each quote). Since they’re not names, there’s no
@@ -3696,39 +3409,36 @@ method.
 .. code-block:: python3
 
     [x.decode("utf-8") for x in branch.array()]
-
-.. parsed-literal::
-
-    ['hey-0',
-     'hey-1',
-     'hey-2',
-     'hey-3',
-     'hey-4',
-     'hey-5',
-     'hey-6',
-     'hey-7',
-     'hey-8',
-     'hey-9',
-     'hey-10',
-     'hey-11',
-     'hey-12',
-     'hey-13',
-     'hey-14',
-     'hey-15',
-     'hey-16',
-     'hey-17',
-     'hey-18',
-     'hey-19',
-     'hey-20',
-     'hey-21',
-     'hey-22',
-     'hey-23',
-     'hey-24',
-     'hey-25',
-     'hey-26',
-     'hey-27',
-     'hey-28',
-     'hey-29']
+    # ['hey-0',
+    #  'hey-1',
+    #  'hey-2',
+    #  'hey-3',
+    #  'hey-4',
+    #  'hey-5',
+    #  'hey-6',
+    #  'hey-7',
+    #  'hey-8',
+    #  'hey-9',
+    #  'hey-10',
+    #  'hey-11',
+    #  'hey-12',
+    #  'hey-13',
+    #  'hey-14',
+    #  'hey-15',
+    #  'hey-16',
+    #  'hey-17',
+    #  'hey-18',
+    #  'hey-19',
+    #  'hey-20',
+    #  'hey-21',
+    #  'hey-22',
+    #  'hey-23',
+    #  'hey-24',
+    #  'hey-25',
+    #  'hey-26',
+    #  'hey-27',
+    #  'hey-28',
+    #  'hey-29']
 
 Arbitrary objects in TTrees
 ---------------------------
@@ -3754,78 +3464,75 @@ split into ``fTracks.fUniqueID``, ``fTracks.fBits``, ``fTracks.fPx``,
 
     tree = uproot.open("http://scikit-hep.org/uproot/examples/Event.root")["T"]
     tree.show()
-
-.. parsed-literal::
-
-    event                      TStreamerInfo              None
-    TObject                    TStreamerInfo              None
-    fUniqueID                  TStreamerBasicType         asdtype('>u4')
-    fBits                      TStreamerBasicType         asdtype('>u4')
-    
-    fType[20]                  TStreamerBasicType         asdtype("('i1', (20,))")
-    fEventName                 TStreamerBasicType         asstring(4)
-    fNtrack                    TStreamerBasicType         asdtype('>i4')
-    fNseg                      TStreamerBasicType         asdtype('>i4')
-    fNvertex                   TStreamerBasicType         asdtype('>u4')
-    fFlag                      TStreamerBasicType         asdtype('>u4')
-    fTemperature               TStreamerBasicType         asdtype('>f4', 'float64')
-    fMeasures[10]              TStreamerBasicType         asdtype("('>i4', (10,))")
-    fMatrix[4][4]              TStreamerBasicType         asdtype("('>f4', (4, 4))", "('<f8', (4, 4))")
-    fClosestDistance           TStreamerBasicPointer      None
-    fEvtHdr                    TStreamerObjectAny         None
-    fEvtHdr.fEvtNum            TStreamerBasicType         asdtype('>i4')
-    fEvtHdr.fRun               TStreamerBasicType         asdtype('>i4')
-    fEvtHdr.fDate              TStreamerBasicType         asdtype('>i4')
-    
-    fTracks                    TStreamerObjectPointer     None
-    fTracks.fUniqueID          TStreamerBasicType         asjagged(asdtype('>u4'))
-    fTracks.fBits              TStreamerBasicType         asjagged(asdtype('>u4'))
-    fTracks.fPx                TStreamerBasicType         asjagged(asdtype('>f4'))
-    fTracks.fPy                TStreamerBasicType         asjagged(asdtype('>f4'))
-    fTracks.fPz                TStreamerBasicType         asjagged(asdtype('>f4'))
-    fTracks.fRandom            TStreamerBasicType         asjagged(asdtype('>f4'))
-    fTracks.fMass2             TStreamerBasicType         asjagged(asfloat16(0.0, 0.0, 8, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
-    fTracks.fBx                TStreamerBasicType         asjagged(asfloat16(0.0, 0.0, 10, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
-    fTracks.fBy                TStreamerBasicType         asjagged(asfloat16(0.0, 0.0, 10, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
-    fTracks.fMeanCharge        TStreamerBasicType         asjagged(asdtype('>f4'))
-    fTracks.fXfirst            TStreamerBasicType         asjagged(asfloat16(0, 0, 12, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
-    fTracks.fXlast             TStreamerBasicType         asjagged(asfloat16(0, 0, 12, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
-    fTracks.fYfirst            TStreamerBasicType         asjagged(asfloat16(0, 0, 12, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
-    fTracks.fYlast             TStreamerBasicType         asjagged(asfloat16(0, 0, 12, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
-    fTracks.fZfirst            TStreamerBasicType         asjagged(asfloat16(0, 0, 12, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
-    fTracks.fZlast             TStreamerBasicType         asjagged(asfloat16(0, 0, 12, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
-    fTracks.fCharge            TStreamerBasicType         asjagged(asdouble32(-1.0, 1.0, 2, dtype('>u4'), dtype('float64')))
-    fTracks.fVertex[3]         TStreamerBasicType         asjagged(asdouble32(-30.0, 30.0, 16, dtype(('>u4', (3,))), dtype(('<f8', (3,)))))
-    fTracks.fNpoint            TStreamerBasicType         asjagged(asdtype('>i4'))
-    fTracks.fValid             TStreamerBasicType         asjagged(asdtype('>i2'))
-    fTracks.fNsp               TStreamerBasicType         asjagged(asdtype('>u4'))
-    fTracks.fPointValue        TStreamerBasicPointer      None
-    fTracks.fTriggerBits.fUniqueID
-                               TStreamerBasicType         asjagged(asdtype('>u4'))
-    fTracks.fTriggerBits.fBits TStreamerBasicType         asjagged(asdtype('>u4'))
-    fTracks.fTriggerBits.fNbits
-                               TStreamerBasicType         asjagged(asdtype('>u4'))
-    fTracks.fTriggerBits.fNbytes
-                               TStreamerBasicType         asjagged(asdtype('>u4'))
-    fTracks.fTriggerBits.fAllBits
-                               TStreamerBasicPointer      asjagged(asdtype('uint8'), 1)
-    fTracks.fTArray[3]         TStreamerBasicType         asjagged(asdtype("('>f4', (3,))"))
-    
-    fHighPt                    TStreamerObjectPointer     asgenobj(TRefArray)
-    fMuons                     TStreamerObjectPointer     asgenobj(TRefArray)
-    fLastTrack                 TStreamerInfo              asgenobj(TRef)
-    fWebHistogram              TStreamerInfo              asgenobj(TRef)
-    fH                         TStreamerObjectPointer     asgenobj(TH1F)
-    fTriggerBits               TStreamerInfo              None
-    fTriggerBits.TObject       (no streamer)              None
-    fTriggerBits.fUniqueID     (no streamer)              asdtype('>u4')
-    fTriggerBits.fBits         (no streamer)              asdtype('>u4')
-    
-    fTriggerBits.fNbits        TStreamerBasicType         asdtype('>u4')
-    fTriggerBits.fNbytes       TStreamerBasicType         asdtype('>u4')
-    fTriggerBits.fAllBits      TStreamerBasicPointer      asjagged(asdtype('uint8'), 1)
-    
-    fIsValid                   TStreamerBasicType         asdtype('bool')
+    # event                      TStreamerInfo              None
+    # TObject                    TStreamerInfo              None
+    # fUniqueID                  TStreamerBasicType         asdtype('>u4')
+    # fBits                      TStreamerBasicType         asdtype('>u4')
+    # 
+    # fType[20]                  TStreamerBasicType         asdtype("('i1', (20,))")
+    # fEventName                 TStreamerBasicType         asstring(4)
+    # fNtrack                    TStreamerBasicType         asdtype('>i4')
+    # fNseg                      TStreamerBasicType         asdtype('>i4')
+    # fNvertex                   TStreamerBasicType         asdtype('>u4')
+    # fFlag                      TStreamerBasicType         asdtype('>u4')
+    # fTemperature               TStreamerBasicType         asdtype('>f4', 'float64')
+    # fMeasures[10]              TStreamerBasicType         asdtype("('>i4', (10,))")
+    # fMatrix[4][4]              TStreamerBasicType         asdtype("('>f4', (4, 4))", "('<f8', (4, 4))")
+    # fClosestDistance           TStreamerBasicPointer      None
+    # fEvtHdr                    TStreamerObjectAny         None
+    # fEvtHdr.fEvtNum            TStreamerBasicType         asdtype('>i4')
+    # fEvtHdr.fRun               TStreamerBasicType         asdtype('>i4')
+    # fEvtHdr.fDate              TStreamerBasicType         asdtype('>i4')
+    # 
+    # fTracks                    TStreamerObjectPointer     None
+    # fTracks.fUniqueID          TStreamerBasicType         asjagged(asdtype('>u4'))
+    # fTracks.fBits              TStreamerBasicType         asjagged(asdtype('>u4'))
+    # fTracks.fPx                TStreamerBasicType         asjagged(asdtype('>f4'))
+    # fTracks.fPy                TStreamerBasicType         asjagged(asdtype('>f4'))
+    # fTracks.fPz                TStreamerBasicType         asjagged(asdtype('>f4'))
+    # fTracks.fRandom            TStreamerBasicType         asjagged(asdtype('>f4'))
+    # fTracks.fMass2             TStreamerBasicType         asjagged(asfloat16(0.0, 0.0, 8, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    # fTracks.fBx                TStreamerBasicType         asjagged(asfloat16(0.0, 0.0, 10, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    # fTracks.fBy                TStreamerBasicType         asjagged(asfloat16(0.0, 0.0, 10, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    # fTracks.fMeanCharge        TStreamerBasicType         asjagged(asdtype('>f4'))
+    # fTracks.fXfirst            TStreamerBasicType         asjagged(asfloat16(0, 0, 12, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    # fTracks.fXlast             TStreamerBasicType         asjagged(asfloat16(0, 0, 12, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    # fTracks.fYfirst            TStreamerBasicType         asjagged(asfloat16(0, 0, 12, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    # fTracks.fYlast             TStreamerBasicType         asjagged(asfloat16(0, 0, 12, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    # fTracks.fZfirst            TStreamerBasicType         asjagged(asfloat16(0, 0, 12, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    # fTracks.fZlast             TStreamerBasicType         asjagged(asfloat16(0, 0, 12, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    # fTracks.fCharge            TStreamerBasicType         asjagged(asdouble32(-1.0, 1.0, 2, dtype('>u4'), dtype('float64')))
+    # fTracks.fVertex[3]         TStreamerBasicType         asjagged(asdouble32(-30.0, 30.0, 16, dtype(('>u4', (3,))), dtype(('<f8', (3,)))))
+    # fTracks.fNpoint            TStreamerBasicType         asjagged(asdtype('>i4'))
+    # fTracks.fValid             TStreamerBasicType         asjagged(asdtype('>i2'))
+    # fTracks.fNsp               TStreamerBasicType         asjagged(asdtype('>u4'))
+    # fTracks.fPointValue        TStreamerBasicPointer      None
+    # fTracks.fTriggerBits.fUniqueID
+    #                            TStreamerBasicType         asjagged(asdtype('>u4'))
+    # fTracks.fTriggerBits.fBits TStreamerBasicType         asjagged(asdtype('>u4'))
+    # fTracks.fTriggerBits.fNbits
+    #                            TStreamerBasicType         asjagged(asdtype('>u4'))
+    # fTracks.fTriggerBits.fNbytes
+    #                            TStreamerBasicType         asjagged(asdtype('>u4'))
+    # fTracks.fTriggerBits.fAllBits
+    #                            TStreamerBasicPointer      asjagged(asdtype('uint8'), 1)
+    # fTracks.fTArray[3]         TStreamerBasicType         asjagged(asdtype("('>f4', (3,))"))
+    # 
+    # fHighPt                    TStreamerObjectPointer     asgenobj(TRefArray)
+    # fMuons                     TStreamerObjectPointer     asgenobj(TRefArray)
+    # fLastTrack                 TStreamerInfo              asgenobj(TRef)
+    # fWebHistogram              TStreamerInfo              asgenobj(TRef)
+    # fH                         TStreamerObjectPointer     asgenobj(TH1F)
+    # fTriggerBits               TStreamerInfo              None
+    # fTriggerBits.TObject       (no streamer)              None
+    # fTriggerBits.fUniqueID     (no streamer)              asdtype('>u4')
+    # fTriggerBits.fBits         (no streamer)              asdtype('>u4')
+    # 
+    # fTriggerBits.fNbits        TStreamerBasicType         asdtype('>u4')
+    # fTriggerBits.fNbytes       TStreamerBasicType         asdtype('>u4')
+    # fTriggerBits.fAllBits      TStreamerBasicPointer      asjagged(asdtype('uint8'), 1)
+    # 
+    # fIsValid                   TStreamerBasicType         asdtype('bool')
 
 In this view, many of the attributes are *not* special classes and can
 be read as arrays of numbers,
@@ -3833,71 +3540,59 @@ be read as arrays of numbers,
 .. code-block:: python3
 
     tree.array("fTemperature", entrystop=20)
-
-.. parsed-literal::
-
-    array([20.28261757, 20.47114182, 20.5931778 , 20.5848484 , 20.80287933,
-           20.2972393 , 20.30301666, 20.87490845, 20.56552505, 20.67128181,
-           20.74524879, 20.85200119, 20.26188469, 20.82903862, 20.02412415,
-           20.97918129, 20.71551132, 20.60189629, 20.11310196, 20.53161049])
+    # array([20.28261757, 20.47114182, 20.5931778 , 20.5848484 , 20.80287933,
+    #        20.2972393 , 20.30301666, 20.87490845, 20.56552505, 20.67128181,
+    #        20.74524879, 20.85200119, 20.26188469, 20.82903862, 20.02412415,
+    #        20.97918129, 20.71551132, 20.60189629, 20.11310196, 20.53161049])
 
 as arrays of fixed-width matrices,
 
 .. code-block:: python3
 
     tree.array("fMatrix[4][4]", entrystop=6)
-
-.. parsed-literal::
-
-    array([[[ 1.54053164,  0.09474282,  1.52469206,  0.        ],
-            [-0.13630907,  0.80078429,  1.70623565,  0.        ],
-            [-1.16029346,  2.012362  ,  4.02206421,  0.        ],
-            [ 0.        ,  0.        ,  0.        ,  0.        ]],
-    
-           [[ 0.41865557,  1.60363352, -0.56923842,  0.        ],
-            [ 0.06950195,  0.79105824,  2.0322361 ,  0.        ],
-            [ 0.05688119,  2.52811217,  3.91394544,  0.        ],
-            [ 0.        ,  0.        ,  0.        ,  0.        ]],
-    
-           [[-1.24031985,  2.3477006 , -0.67482847,  0.        ],
-            [ 1.22933233,  1.39499295,  2.17524433,  0.        ],
-            [ 0.18559125,  2.40421987,  4.56326485,  0.        ],
-            [ 0.        ,  0.        ,  0.        ,  0.        ]],
-    
-           [[-0.43785933, -0.05061727,  0.28988785,  0.        ],
-            [-0.90204114,  0.88527524,  2.34751844,  0.        ],
-            [ 0.3241719 ,  0.79971647,  4.13229847,  0.        ],
-            [ 0.        ,  0.        ,  0.        ,  0.        ]],
-    
-           [[-0.98912323,  0.97513503,  1.03762376,  0.        ],
-            [-0.96955669, -0.05892833,  3.02420664,  0.        ],
-            [ 1.10181248,  3.31268907,  6.04244947,  0.        ],
-            [ 0.        ,  0.        ,  0.        ,  0.        ]],
-    
-           [[ 1.1283927 ,  1.20095801,  0.7379719 ,  0.        ],
-            [ 0.32370013,  1.08198583,  2.96736264,  0.        ],
-            [ 1.19329214,  2.01726198,  3.93975949,  0.        ],
-            [ 0.        ,  0.        ,  0.        ,  0.        ]]])
+    # array([[[ 1.54053164,  0.09474282,  1.52469206,  0.        ],
+    #         [-0.13630907,  0.80078429,  1.70623565,  0.        ],
+    #         [-1.16029346,  2.012362  ,  4.02206421,  0.        ],
+    #         [ 0.        ,  0.        ,  0.        ,  0.        ]],
+    # 
+    #        [[ 0.41865557,  1.60363352, -0.56923842,  0.        ],
+    #         [ 0.06950195,  0.79105824,  2.0322361 ,  0.        ],
+    #         [ 0.05688119,  2.52811217,  3.91394544,  0.        ],
+    #         [ 0.        ,  0.        ,  0.        ,  0.        ]],
+    # 
+    #        [[-1.24031985,  2.3477006 , -0.67482847,  0.        ],
+    #         [ 1.22933233,  1.39499295,  2.17524433,  0.        ],
+    #         [ 0.18559125,  2.40421987,  4.56326485,  0.        ],
+    #         [ 0.        ,  0.        ,  0.        ,  0.        ]],
+    # 
+    #        [[-0.43785933, -0.05061727,  0.28988785,  0.        ],
+    #         [-0.90204114,  0.88527524,  2.34751844,  0.        ],
+    #         [ 0.3241719 ,  0.79971647,  4.13229847,  0.        ],
+    #         [ 0.        ,  0.        ,  0.        ,  0.        ]],
+    # 
+    #        [[-0.98912323,  0.97513503,  1.03762376,  0.        ],
+    #         [-0.96955669, -0.05892833,  3.02420664,  0.        ],
+    #         [ 1.10181248,  3.31268907,  6.04244947,  0.        ],
+    #         [ 0.        ,  0.        ,  0.        ,  0.        ]],
+    # 
+    #        [[ 1.1283927 ,  1.20095801,  0.7379719 ,  0.        ],
+    #         [ 0.32370013,  1.08198583,  2.96736264,  0.        ],
+    #         [ 1.19329214,  2.01726198,  3.93975949,  0.        ],
+    #         [ 0.        ,  0.        ,  0.        ,  0.        ]]])
 
 as jagged arrays (of ROOT’s “Float16_t” encoding),
 
 .. code-block:: python3
 
     tree.array("fTracks.fMass2", entrystop=6)
-
-.. parsed-literal::
-
-    <JaggedArray [[4.5 4.5 4.5 ... 4.5 4.5 4.5] [4.5 4.5 4.5 ... 4.5 4.5 4.5] [8.90625 8.90625 8.90625 ... 8.90625 8.90625 8.90625] [8.90625 8.90625 8.90625 ... 8.90625 8.90625 8.90625] [8.90625 8.90625 8.90625 ... 8.90625 8.90625 8.90625] [4.5 4.5 4.5 ... 4.5 4.5 4.5]] at 0x7f36841a8208>
+    # <JaggedArray [[4.5 4.5 4.5 ... 4.5 4.5 4.5] [4.5 4.5 4.5 ... 4.5 4.5 4.5] [8.90625 8.90625 8.90625 ... 8.90625 8.90625 8.90625] [8.90625 8.90625 8.90625 ... 8.90625 8.90625 8.90625] [8.90625 8.90625 8.90625 ... 8.90625 8.90625 8.90625] [4.5 4.5 4.5 ... 4.5 4.5 4.5]] at 0x7f36841a8208>
 
 or as jagged arrays of fixed arrays (of ROOT’s “Double32_t” encoding),
 
 .. code-block:: python3
 
     tree.array("fTracks.fTArray[3]", entrystop=6)
-
-.. parsed-literal::
-
-    <JaggedArray [[[8.783523 17.513435 29.286354] [12.712547 18.882881 32.797363] [11.507339 19.916798 30.246092] ... [10.574707 18.890305 33.728233] [12.15555 18.71774 27.312075] [9.859776 19.74885 29.493528]] [[11.219862 21.20887 30.624903] [11.040182 24.79719 31.77871] [10.012672 20.93199 30.9403] ... [11.168169 23.217058 32.748943] [9.50235 21.121288 31.071629] [10.8550205 16.183943 26.904243]] [[8.624067 18.600851 26.04787] [10.689135 20.227545 29.83834] [11.296425 21.689695 27.481518] ... [10.669026 17.53861 27.396368] [10.695017 21.800402 29.768854] [9.190737 19.556316 30.239576]] [[10.730627 21.374237 29.189438] [10.917027 17.502947 24.684587] [10.719291 15.140461 30.947819] ... [11.342936 21.652617 30.104565] [10.155848 19.01908 31.161093] [9.246191 18.550188 29.727875]] [[11.012184 18.038168 25.433424] [9.5870495 19.802078 30.07635] [10.900804 19.059767 28.11974] ... [10.958439 19.644995 24.516222] [9.493415 19.871706 30.69776] [9.26706 21.658216 36.870094]] [[10.6818 23.174397 32.048332] [9.386814 19.217764 30.706171] [11.497931 16.519543 29.432865] ... [11.120119 20.196941 29.856403] [12.256461 21.39977 27.87131] [10.704875 20.647184 29.791487]]] at 0x7f36441e9518>
+    # <JaggedArray [[[8.783523 17.513435 29.286354] [12.712547 18.882881 32.797363] [11.507339 19.916798 30.246092] ... [10.574707 18.890305 33.728233] [12.15555 18.71774 27.312075] [9.859776 19.74885 29.493528]] [[11.219862 21.20887 30.624903] [11.040182 24.79719 31.77871] [10.012672 20.93199 30.9403] ... [11.168169 23.217058 32.748943] [9.50235 21.121288 31.071629] [10.8550205 16.183943 26.904243]] [[8.624067 18.600851 26.04787] [10.689135 20.227545 29.83834] [11.296425 21.689695 27.481518] ... [10.669026 17.53861 27.396368] [10.695017 21.800402 29.768854] [9.190737 19.556316 30.239576]] [[10.730627 21.374237 29.189438] [10.917027 17.502947 24.684587] [10.719291 15.140461 30.947819] ... [11.342936 21.652617 30.104565] [10.155848 19.01908 31.161093] [9.246191 18.550188 29.727875]] [[11.012184 18.038168 25.433424] [9.5870495 19.802078 30.07635] [10.900804 19.059767 28.11974] ... [10.958439 19.644995 24.516222] [9.493415 19.871706 30.69776] [9.26706 21.658216 36.870094]] [[10.6818 23.174397 32.048332] [9.386814 19.217764 30.706171] [11.497931 16.519543 29.432865] ... [11.120119 20.196941 29.856403] [12.256461 21.39977 27.87131] [10.704875 20.647184 29.791487]]] at 0x7f36441e9518>
 
 However, some types are not fully split by ROOT and have to be
 deserialized individually (not vectorally). This example includes
@@ -3907,10 +3602,7 @@ they cannot be split.
 .. code-block:: python3
 
     tree.array("fH", entrystop=6)
-
-.. parsed-literal::
-
-    <ObjectArray [<b'TH1F' b'hstat' 0x7f364424a2c8> <b'TH1F' b'hstat' 0x7f364424ac28> <b'TH1F' b'hstat' 0x7f364424a048> <b'TH1F' b'hstat' 0x7f364424a2c8> <b'TH1F' b'hstat' 0x7f364424ac28> <b'TH1F' b'hstat' 0x7f364424a048>] at 0x7f364414f3c8>
+    # <ObjectArray [<b'TH1F' b'hstat' 0x7f364424a2c8> <b'TH1F' b'hstat' 0x7f364424ac28> <b'TH1F' b'hstat' 0x7f364424a048> <b'TH1F' b'hstat' 0x7f364424a2c8> <b'TH1F' b'hstat' 0x7f364424ac28> <b'TH1F' b'hstat' 0x7f364424a048>] at 0x7f364414f3c8>
 
 Each of those is a standard histogram object, something that would
 ordinarily be in a ``TDirectory``, not a ``TTree``. It has histogram
@@ -3926,50 +3618,48 @@ convenience methods (see below).
         print(histogram.title)
         print(histogram.values)
 
-.. parsed-literal::
-
-    b'Event Histogram'
-    [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
-     0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
-     0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
-     0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
-     0. 0. 0. 0.]
-    b'Event Histogram'
-    [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
-     0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1.
-     0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
-     0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
-     0. 0. 0. 0.]
-    b'Event Histogram'
-    [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
-     0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1.
-     0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
-     0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
-     0. 0. 0. 0.]
-    
-    ...
-    
-    b'Event Histogram'
-    [14. 18. 14. 11. 15. 13. 12. 13.  8.  8.  9. 10. 10.  7.  7. 10.  8. 12.
-      6.  8.  7.  9. 10. 12. 10. 11. 10. 10. 10.  8. 14. 13.  9.  7. 12. 10.
-      7.  6.  9. 13. 11.  8. 10.  9.  7.  4.  7. 10.  8.  8.  9.  9.  7. 12.
-     11.  9. 10.  7. 10. 13. 13. 11.  9.  9.  8.  8. 10. 12.  7.  5.  9. 10.
-     12. 13. 10. 14. 10. 10.  8. 12. 12. 11. 16. 12.  8. 12.  7.  9.  8.  7.
-     10.  7. 11. 11.  8. 13.  9.  8. 14. 16.]
-    b'Event Histogram'
-    [14. 18. 14. 11. 15. 13. 12. 13.  8.  8.  9. 10. 10.  7.  8. 10.  8. 12.
-      6.  8.  7.  9. 10. 12. 10. 11. 10. 10. 10.  8. 14. 13.  9.  7. 12. 10.
-      7.  6.  9. 13. 11.  8. 10.  9.  7.  4.  7. 10.  8.  8.  9.  9.  7. 12.
-     11.  9. 10.  7. 10. 13. 13. 11.  9.  9.  8.  8. 10. 12.  7.  5.  9. 10.
-     12. 13. 10. 14. 10. 10.  8. 12. 12. 11. 16. 12.  8. 12.  7.  9.  8.  7.
-     10.  7. 11. 11.  8. 13.  9.  8. 14. 16.]
-    b'Event Histogram'
-    [14. 18. 14. 11. 15. 13. 12. 13.  8.  8.  9. 10. 10.  7.  8. 10.  8. 12.
-      6.  8.  7.  9. 10. 12. 10. 11. 10. 10. 10.  8. 14. 13.  9.  7. 12. 10.
-      7.  6.  9. 13. 11.  8. 10.  9.  7.  4.  7. 10.  8.  8.  9.  9.  7. 12.
-     11.  9. 10.  7. 10. 13. 13. 11.  9.  9.  8.  8. 10. 12.  7.  5.  9. 10.
-     12. 13. 10. 14. 10. 10.  8. 12. 12. 11. 16. 12.  8. 12.  7.  9.  9.  7.
-     10.  7. 11. 11.  8. 13.  9.  8. 14. 16.]
+    # b'Event Histogram'
+    # [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
+    #  0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
+    #  0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
+    #  0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
+    #  0. 0. 0. 0.]
+    # b'Event Histogram'
+    # [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
+    #  0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1.
+    #  0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
+    #  0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
+    #  0. 0. 0. 0.]
+    # b'Event Histogram'
+    # [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
+    #  0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1.
+    #  0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
+    #  0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
+    #  0. 0. 0. 0.]
+    # 
+    # ...
+    # 
+    # b'Event Histogram'
+    # [14. 18. 14. 11. 15. 13. 12. 13.  8.  8.  9. 10. 10.  7.  7. 10.  8. 12.
+    #   6.  8.  7.  9. 10. 12. 10. 11. 10. 10. 10.  8. 14. 13.  9.  7. 12. 10.
+    #   7.  6.  9. 13. 11.  8. 10.  9.  7.  4.  7. 10.  8.  8.  9.  9.  7. 12.
+    #  11.  9. 10.  7. 10. 13. 13. 11.  9.  9.  8.  8. 10. 12.  7.  5.  9. 10.
+    #  12. 13. 10. 14. 10. 10.  8. 12. 12. 11. 16. 12.  8. 12.  7.  9.  8.  7.
+    #  10.  7. 11. 11.  8. 13.  9.  8. 14. 16.]
+    # b'Event Histogram'
+    # [14. 18. 14. 11. 15. 13. 12. 13.  8.  8.  9. 10. 10.  7.  8. 10.  8. 12.
+    #   6.  8.  7.  9. 10. 12. 10. 11. 10. 10. 10.  8. 14. 13.  9.  7. 12. 10.
+    #   7.  6.  9. 13. 11.  8. 10.  9.  7.  4.  7. 10.  8.  8.  9.  9.  7. 12.
+    #  11.  9. 10.  7. 10. 13. 13. 11.  9.  9.  8.  8. 10. 12.  7.  5.  9. 10.
+    #  12. 13. 10. 14. 10. 10.  8. 12. 12. 11. 16. 12.  8. 12.  7.  9.  8.  7.
+    #  10.  7. 11. 11.  8. 13.  9.  8. 14. 16.]
+    # b'Event Histogram'
+    # [14. 18. 14. 11. 15. 13. 12. 13.  8.  8.  9. 10. 10.  7.  8. 10.  8. 12.
+    #   6.  8.  7.  9. 10. 12. 10. 11. 10. 10. 10.  8. 14. 13.  9.  7. 12. 10.
+    #   7.  6.  9. 13. 11.  8. 10.  9.  7.  4.  7. 10.  8.  8.  9.  9.  7. 12.
+    #  11.  9. 10.  7. 10. 13. 13. 11.  9.  9.  8.  8. 10. 12.  7.  5.  9. 10.
+    #  12. 13. 10. 14. 10. 10.  8. 12. 12. 11. 16. 12.  8. 12.  7.  9.  9.  7.
+    #  10.  7. 11. 11.  8. 13.  9.  8. 14. 16.]
 
 The criteria for whether an object can be read vectorially in Numpy
 (fast) or individually in Python (slow) is whether it has a fixed
@@ -3985,19 +3675,13 @@ between
 
     # TLorentzVectors all have the same number of fixed width components, so they can be read vectorially.
     events3["muonp4"].interpretation
-
-.. parsed-literal::
-
-    asjagged(asobj(<uproot_methods.classes.TLorentzVector.Methods>), 10)
+    # asjagged(asobj(<uproot_methods.classes.TLorentzVector.Methods>), 10)
 
 .. code-block:: python3
 
     # Histograms contain name strings and variable length lists, so they must be read as Python objects.
     tree["fH"].interpretation
-
-.. parsed-literal::
-
-    asgenobj(TH1F)
+    # asgenobj(TH1F)
 
 Doubly nested jagged arrays (i.e. ``std::vector<std::vector<T>>``)
 ------------------------------------------------------------------
@@ -4012,27 +3696,18 @@ such as ``std::vector<std::vector<T>>``.
 
     branch = uproot.open("http://scikit-hep.org/uproot/examples/vectorVectorDouble.root")["t"]["x"]
     branch.interpretation
-
-.. parsed-literal::
-
-    asgenobj(STLVector(STLVector(asdtype('>f8'))))
+    # asgenobj(STLVector(STLVector(asdtype('>f8'))))
 
 .. code-block:: python3
 
     branch._streamer._fTypeName
-
-.. parsed-literal::
-
-    b'vector<vector<double> >'
+    # b'vector<vector<double> >'
 
 .. code-block:: python3
 
     array = branch.array()
     array
-
-.. parsed-literal::
-
-    <ObjectArray [[] [[], []] [[10.0], [], [10.0, 20.0]] [[20.0, -21.0, -22.0]] [[200.0], [-201.0], [202.0]]] at 0x7f3644225fd0>
+    # <ObjectArray [[] [[], []] [[10.0], [], [10.0, 20.0]] [[20.0, -21.0, -22.0]] [[200.0], [-201.0], [202.0]]] at 0x7f3644225fd0>
 
 Although you see something that looks like a ``JaggedArray``, the type
 is ``ObjectArray``, meaning that you only have some bytes with an
@@ -4046,10 +3721,7 @@ usual ``JaggedArray`` slicing.
         array[array.counts > 0, 0]
     except Exception as err:
         print(type(err), err)
-
-.. parsed-literal::
-
-    <class 'AttributeError'> 'ObjectArray' object has no attribute 'counts'
+    # <class 'AttributeError'> 'ObjectArray' object has no attribute 'counts'
 
 To get ``JaggedArray`` semantics, use ``awkward.fromiter`` to convert
 the arbitrary Python objects into awkward-arrays.
@@ -4058,18 +3730,12 @@ the arbitrary Python objects into awkward-arrays.
 
     jagged = awkward.fromiter(array)
     jagged
-
-.. parsed-literal::
-
-    <JaggedArray [[] [[] []] [[10.0] [] [10.0 20.0]] [[20.0 -21.0 -22.0]] [[200.0] [-201.0] [202.0]]] at 0x7f3644225da0>
+    # <JaggedArray [[] [[] []] [[10.0] [] [10.0 20.0]] [[20.0 -21.0 -22.0]] [[200.0] [-201.0] [202.0]]] at 0x7f3644225da0>
 
 .. code-block:: python3
 
     jagged[jagged.counts > 0, 0]
-
-.. parsed-literal::
-
-    <JaggedArray [[] [10.0] [20.0 -21.0 -22.0] [200.0]] at 0x7f3644229c88>
+    # <JaggedArray [[] [10.0] [20.0 -21.0 -22.0] [200.0]] at 0x7f3644229c88>
 
 Doubly nested ``JaggedArrays`` are a native type in awkward-array: they
 can be any number of levels deep.
@@ -4077,34 +3743,22 @@ can be any number of levels deep.
 .. code-block:: python3
 
     jagged.flatten()
-
-.. parsed-literal::
-
-    <JaggedArray [[] [] [10.0] ... [200.0] [-201.0] [202.0]] at 0x7f3644229fd0>
+    # <JaggedArray [[] [] [10.0] ... [200.0] [-201.0] [202.0]] at 0x7f3644229fd0>
 
 .. code-block:: python3
 
     jagged.flatten().flatten()
-
-.. parsed-literal::
-
-    array([  10.,   10.,   20.,   20.,  -21.,  -22.,  200., -201.,  202.])
+    # array([  10.,   10.,   20.,   20.,  -21.,  -22.,  200., -201.,  202.])
 
 .. code-block:: python3
 
     jagged.sum()
-
-.. parsed-literal::
-
-    <JaggedArray [[] [0.0 0.0] [10.0 0.0 30.0] [-23.0] [200.0 -201.0 202.0]] at 0x7f36246a5048>
+    # <JaggedArray [[] [0.0 0.0] [10.0 0.0 30.0] [-23.0] [200.0 -201.0 202.0]] at 0x7f36246a5048>
 
 .. code-block:: python3
 
     jagged.sum().sum()
-
-.. parsed-literal::
-
-    array([  0.,   0.,  40., -23., 201.])
+    # array([  0.,   0.,  40., -23., 201.])
 
 Parallel array reading
 ======================
@@ -4132,10 +3786,7 @@ parallel. All of the array-reading functions have **executor** and
     
     result = tree.array("fTracks.fVertex[3]", executor=executor, blocking=False)
     result
-
-.. parsed-literal::
-
-    <function uproot.tree.TBranchMethods.array.<locals>.wait()>
+    # <function uproot.tree.TBranchMethods.array.<locals>.wait()>
 
 We can work on other things while the array is being read.
 
@@ -4143,10 +3794,7 @@ We can work on other things while the array is being read.
 
     # and now get the array (waiting, if necessary, for it to complete)
     result()
-
-.. parsed-literal::
-
-    <JaggedArray [[[-0.11444091796875 -0.11993408203125 -7.8790283203125] [0.032958984375 -0.0604248046875 -1.27349853515625] [0.13458251953125 0.0439453125 -1.783447265625] ... [0.194091796875 0.07049560546875 0.7598876953125] [-0.09521484375 0.106201171875 -6.62384033203125] [-0.025634765625 -0.010986328125 18.3343505859375]] [[-0.1080322265625 -0.1116943359375 -3.52203369140625] [-0.0732421875 0.24078369140625 3.39019775390625] [0.245361328125 0.029296875 -16.171875] ... [0.05126953125 0.07598876953125 12.0721435546875] [-0.1153564453125 -0.19500732421875 7.9541015625] [-0.18951416015625 -0.02838134765625 -6.5277099609375]] [[-0.091552734375 -0.0860595703125 3.54766845703125] [-0.11077880859375 -0.28564453125 -1.1297607421875] [0.05126953125 -0.2801513671875 -1.7523193359375] ... [-0.02197265625 0.05859375 -8.671875] [-0.0164794921875 -0.1409912109375 -0.22613525390625] [-0.03753662109375 -0.05767822265625 21.66046142578125]] ... [[-0.0128173828125 0.2215576171875 -3.21258544921875] [0.0054931640625 -0.25360107421875 0.53466796875] [-0.025634765625 -0.025634765625 6.6522216796875] ... [0.02105712890625 -0.16387939453125 -1.446533203125] [0.07232666015625 0.44952392578125 -16.16455078125] [0.0823974609375 -0.08056640625 9.9444580078125]] [[0.01373291015625 -0.06500244140625 -3.680419921875] [-0.05767822265625 -0.01922607421875 -2.92510986328125] [0.06317138671875 -0.20782470703125 -11.5118408203125] ... [0.00823974609375 -0.0311279296875 -11.839599609375] [-0.09063720703125 -0.047607421875 -10.6365966796875] [0.010986328125 -0.2984619140625 0.7855224609375]] [[0.113525390625 -0.07232666015625 4.2095947265625] [-0.142822265625 0.205078125 8.75152587890625] [0.04119873046875 0.02655029296875 2.4114990234375] ... [0.0531005859375 0.04486083984375 6.5423583984375] [0.09979248046875 0.15380859375 5.4840087890625] [-0.10162353515625 -0.54290771484375 -5.8502197265625]]] at 0x7f3624419f98>
+    # <JaggedArray [[[-0.11444091796875 -0.11993408203125 -7.8790283203125] [0.032958984375 -0.0604248046875 -1.27349853515625] [0.13458251953125 0.0439453125 -1.783447265625] ... [0.194091796875 0.07049560546875 0.7598876953125] [-0.09521484375 0.106201171875 -6.62384033203125] [-0.025634765625 -0.010986328125 18.3343505859375]] [[-0.1080322265625 -0.1116943359375 -3.52203369140625] [-0.0732421875 0.24078369140625 3.39019775390625] [0.245361328125 0.029296875 -16.171875] ... [0.05126953125 0.07598876953125 12.0721435546875] [-0.1153564453125 -0.19500732421875 7.9541015625] [-0.18951416015625 -0.02838134765625 -6.5277099609375]] [[-0.091552734375 -0.0860595703125 3.54766845703125] [-0.11077880859375 -0.28564453125 -1.1297607421875] [0.05126953125 -0.2801513671875 -1.7523193359375] ... [-0.02197265625 0.05859375 -8.671875] [-0.0164794921875 -0.1409912109375 -0.22613525390625] [-0.03753662109375 -0.05767822265625 21.66046142578125]] ... [[-0.0128173828125 0.2215576171875 -3.21258544921875] [0.0054931640625 -0.25360107421875 0.53466796875] [-0.025634765625 -0.025634765625 6.6522216796875] ... [0.02105712890625 -0.16387939453125 -1.446533203125] [0.07232666015625 0.44952392578125 -16.16455078125] [0.0823974609375 -0.08056640625 9.9444580078125]] [[0.01373291015625 -0.06500244140625 -3.680419921875] [-0.05767822265625 -0.01922607421875 -2.92510986328125] [0.06317138671875 -0.20782470703125 -11.5118408203125] ... [0.00823974609375 -0.0311279296875 -11.839599609375] [-0.09063720703125 -0.047607421875 -10.6365966796875] [0.010986328125 -0.2984619140625 0.7855224609375]] [[0.113525390625 -0.07232666015625 4.2095947265625] [-0.142822265625 0.205078125 8.75152587890625] [0.04119873046875 0.02655029296875 2.4114990234375] ... [0.0531005859375 0.04486083984375 6.5423583984375] [0.09979248046875 0.15380859375 5.4840087890625] [-0.10162353515625 -0.54290771484375 -5.8502197265625]]] at 0x7f3624419f98>
 
 The **executor** and **blocking** parameters are often used together,
 but they do not have to be. You can collect data in parallel but let the
@@ -4155,10 +3803,7 @@ array-reading function block until it is finished:
 .. code-block:: python3
 
     tree.array("fTracks.fVertex[3]", executor=executor)
-
-.. parsed-literal::
-
-    <JaggedArray [[[-0.11444091796875 -0.11993408203125 -7.8790283203125] [0.032958984375 -0.0604248046875 -1.27349853515625] [0.13458251953125 0.0439453125 -1.783447265625] ... [0.194091796875 0.07049560546875 0.7598876953125] [-0.09521484375 0.106201171875 -6.62384033203125] [-0.025634765625 -0.010986328125 18.3343505859375]] [[-0.1080322265625 -0.1116943359375 -3.52203369140625] [-0.0732421875 0.24078369140625 3.39019775390625] [0.245361328125 0.029296875 -16.171875] ... [0.05126953125 0.07598876953125 12.0721435546875] [-0.1153564453125 -0.19500732421875 7.9541015625] [-0.18951416015625 -0.02838134765625 -6.5277099609375]] [[-0.091552734375 -0.0860595703125 3.54766845703125] [-0.11077880859375 -0.28564453125 -1.1297607421875] [0.05126953125 -0.2801513671875 -1.7523193359375] ... [-0.02197265625 0.05859375 -8.671875] [-0.0164794921875 -0.1409912109375 -0.22613525390625] [-0.03753662109375 -0.05767822265625 21.66046142578125]] ... [[-0.0128173828125 0.2215576171875 -3.21258544921875] [0.0054931640625 -0.25360107421875 0.53466796875] [-0.025634765625 -0.025634765625 6.6522216796875] ... [0.02105712890625 -0.16387939453125 -1.446533203125] [0.07232666015625 0.44952392578125 -16.16455078125] [0.0823974609375 -0.08056640625 9.9444580078125]] [[0.01373291015625 -0.06500244140625 -3.680419921875] [-0.05767822265625 -0.01922607421875 -2.92510986328125] [0.06317138671875 -0.20782470703125 -11.5118408203125] ... [0.00823974609375 -0.0311279296875 -11.839599609375] [-0.09063720703125 -0.047607421875 -10.6365966796875] [0.010986328125 -0.2984619140625 0.7855224609375]] [[0.113525390625 -0.07232666015625 4.2095947265625] [-0.142822265625 0.205078125 8.75152587890625] [0.04119873046875 0.02655029296875 2.4114990234375] ... [0.0531005859375 0.04486083984375 6.5423583984375] [0.09979248046875 0.15380859375 5.4840087890625] [-0.10162353515625 -0.54290771484375 -5.8502197265625]]] at 0x7f36246b5550>
+    # <JaggedArray [[[-0.11444091796875 -0.11993408203125 -7.8790283203125] [0.032958984375 -0.0604248046875 -1.27349853515625] [0.13458251953125 0.0439453125 -1.783447265625] ... [0.194091796875 0.07049560546875 0.7598876953125] [-0.09521484375 0.106201171875 -6.62384033203125] [-0.025634765625 -0.010986328125 18.3343505859375]] [[-0.1080322265625 -0.1116943359375 -3.52203369140625] [-0.0732421875 0.24078369140625 3.39019775390625] [0.245361328125 0.029296875 -16.171875] ... [0.05126953125 0.07598876953125 12.0721435546875] [-0.1153564453125 -0.19500732421875 7.9541015625] [-0.18951416015625 -0.02838134765625 -6.5277099609375]] [[-0.091552734375 -0.0860595703125 3.54766845703125] [-0.11077880859375 -0.28564453125 -1.1297607421875] [0.05126953125 -0.2801513671875 -1.7523193359375] ... [-0.02197265625 0.05859375 -8.671875] [-0.0164794921875 -0.1409912109375 -0.22613525390625] [-0.03753662109375 -0.05767822265625 21.66046142578125]] ... [[-0.0128173828125 0.2215576171875 -3.21258544921875] [0.0054931640625 -0.25360107421875 0.53466796875] [-0.025634765625 -0.025634765625 6.6522216796875] ... [0.02105712890625 -0.16387939453125 -1.446533203125] [0.07232666015625 0.44952392578125 -16.16455078125] [0.0823974609375 -0.08056640625 9.9444580078125]] [[0.01373291015625 -0.06500244140625 -3.680419921875] [-0.05767822265625 -0.01922607421875 -2.92510986328125] [0.06317138671875 -0.20782470703125 -11.5118408203125] ... [0.00823974609375 -0.0311279296875 -11.839599609375] [-0.09063720703125 -0.047607421875 -10.6365966796875] [0.010986328125 -0.2984619140625 0.7855224609375]] [[0.113525390625 -0.07232666015625 4.2095947265625] [-0.142822265625 0.205078125 8.75152587890625] [0.04119873046875 0.02655029296875 2.4114990234375] ... [0.0531005859375 0.04486083984375 6.5423583984375] [0.09979248046875 0.15380859375 5.4840087890625] [-0.10162353515625 -0.54290771484375 -5.8502197265625]]] at 0x7f36246b5550>
 
 The other case, non-blocking return without parallel processing
 (**executor=None** and **blocking=False**) is not very useful because
@@ -4225,42 +3870,30 @@ useful:
 
     file = uproot.open("http://scikit-hep.org/uproot/examples/Event.root")
     dict(file.classes())
-
-.. parsed-literal::
-
-    {b'ProcessID0;1': uproot.rootio.TProcessID,
-     b'htime;1': uproot.rootio.TH1F,
-     b'T;1': uproot.rootio.TTree,
-     b'hstat;1': uproot.rootio.TH1F}
+    # {b'ProcessID0;1': uproot.rootio.TProcessID,
+    #  b'htime;1': uproot.rootio.TH1F,
+    #  b'T;1': uproot.rootio.TTree,
+    #  b'hstat;1': uproot.rootio.TH1F}
 
 .. code-block:: python3
 
     processid = file["ProcessID0"]
     processid
-
-.. parsed-literal::
-
-    <TProcessID b'ProcessID0' at 0x7f36242a3f28>
+    # <TProcessID b'ProcessID0' at 0x7f36242a3f28>
 
 What is a ``TProcessID``?
 
 .. code-block:: python3
 
     processid._members()
-
-.. parsed-literal::
-
-    ['fName', 'fTitle']
+    # ['fName', 'fTitle']
 
 Something with an ``fName`` and ``fTitle``\ …
 
 .. code-block:: python3
 
     processid._fName, processid._fTitle     # note the underscore; these are private members
-
-.. parsed-literal::
-
-    (b'ProcessID0', b'3ec87674-3aa2-11e9-bb02-0301a8c0beef')
+    # (b'ProcessID0', b'3ec87674-3aa2-11e9-bb02-0301a8c0beef')
 
 Some C++ classes have Pythonic overloads to make them more useful in
 Python. Here’s a way to find out which ones have been defined so far:
@@ -4270,19 +3903,16 @@ Python. Here’s a way to find out which ones have been defined so far:
     import pkgutil
     
     [modname for importer, modname, ispkg in pkgutil.walk_packages(uproot_methods.classes.__path__)]
-
-.. parsed-literal::
-
-    ['TGraph',
-     'TGraphAsymmErrors',
-     'TGraphErrors',
-     'TH1',
-     'TH2',
-     'TH3',
-     'THnSparse',
-     'TLorentzVector',
-     'TVector2',
-     'TVector3']
+    # ['TGraph',
+    #  'TGraphAsymmErrors',
+    #  'TGraphErrors',
+    #  'TH1',
+    #  'TH2',
+    #  'TH3',
+    #  'THnSparse',
+    #  'TLorentzVector',
+    #  'TVector2',
+    #  'TVector3']
 
 This file contains ``TH1F`` objects, which is a subclass of ``TH1``. The
 ``TH1`` methods will extend it.
@@ -4290,42 +3920,34 @@ This file contains ``TH1F`` objects, which is a subclass of ``TH1``. The
 .. code-block:: python3
 
     file["htime"].edges
-
-.. parsed-literal::
-
-    array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.])
+    # array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.])
 
 .. code-block:: python3
 
     file["htime"].values
-
-.. parsed-literal::
-
-    array([0.33352208, 0.30402994, 0.32451916, 0.3509729 , 0.36894202,
-           0.30728292, 0.30681205, 0.341563  , 0.16150808, 0.        ],
-          dtype=float32)
+    # array([0.33352208, 0.30402994, 0.32451916, 0.3509729 , 0.36894202,
+    #        0.30728292, 0.30681205, 0.341563  , 0.16150808, 0.        ],
+    #       dtype=float32)
 
 .. code-block:: python3
 
     file["htime"].show()
 
-.. parsed-literal::
-
-                       0                                                     0.38739
-                       +-----------------------------------------------------------+
-    [-inf, 0) 0.021839 |***                                                        |
-    [0, 1)    0.33352  |***************************************************        |
-    [1, 2)    0.30403  |**********************************************             |
-    [2, 3)    0.32452  |*************************************************          |
-    [3, 4)    0.35097  |*****************************************************      |
-    [4, 5)    0.36894  |********************************************************   |
-    [5, 6)    0.30728  |***********************************************            |
-    [6, 7)    0.30681  |***********************************************            |
-    [7, 8)    0.34156  |****************************************************       |
-    [8, 9)    0.16151  |*************************                                  |
-    [9, 10)   0        |                                                           |
-    [10, inf] 0        |                                                           |
-                       +-----------------------------------------------------------+
+    #                    0                                                     0.38739
+    #                    +-----------------------------------------------------------+
+    # [-inf, 0) 0.021839 |***                                                        |
+    # [0, 1)    0.33352  |***************************************************        |
+    # [1, 2)    0.30403  |**********************************************             |
+    # [2, 3)    0.32452  |*************************************************          |
+    # [3, 4)    0.35097  |*****************************************************      |
+    # [4, 5)    0.36894  |********************************************************   |
+    # [5, 6)    0.30728  |***********************************************            |
+    # [6, 7)    0.30681  |***********************************************            |
+    # [7, 8)    0.34156  |****************************************************       |
+    # [8, 9)    0.16151  |*************************                                  |
+    # [9, 10)   0        |                                                           |
+    # [10, inf] 0        |                                                           |
+    #                    +-----------------------------------------------------------+
 
 The purpose of most of these methods is to extract data, which includes
 conversion to common Python formats.
@@ -4334,20 +3956,18 @@ conversion to common Python formats.
 
     uproot.open("http://scikit-hep.org/uproot/examples/issue33.root")["cutflow"].show()
 
-.. parsed-literal::
-
-                               0                                               41529
-                               +---------------------------------------------------+
-    (underflow)          0     |                                                   |
-    Dijet                39551 |*************************************************  |
-    MET                  27951 |**********************************                 |
-    MuonVeto             27911 |**********************************                 |
-    IsoMuonTrackVeto     27861 |**********************************                 |
-    ElectronVeto         27737 |**********************************                 |
-    IsoElectronTrackVeto 27460 |**********************************                 |
-    IsoPionTrackVeto     26751 |*********************************                  |
-    (overflow)           0     |                                                   |
-                               +---------------------------------------------------+
+    #                            0                                               41529
+    #                            +---------------------------------------------------+
+    # (underflow)          0     |                                                   |
+    # Dijet                39551 |*************************************************  |
+    # MET                  27951 |**********************************                 |
+    # MuonVeto             27911 |**********************************                 |
+    # IsoMuonTrackVeto     27861 |**********************************                 |
+    # ElectronVeto         27737 |**********************************                 |
+    # IsoElectronTrackVeto 27460 |**********************************                 |
+    # IsoPionTrackVeto     26751 |*********************************                  |
+    # (overflow)           0     |                                                   |
+    #                            +---------------------------------------------------+
 
 .. code-block:: python3
 
@@ -4356,20 +3976,7 @@ conversion to common Python formats.
 .. raw:: html
 
     <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
-    
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-    
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
+    <table border="0" class="dataframe">
       <thead>
         <tr style="text-align: right;">
           <th></th>
@@ -4441,55 +4048,53 @@ conversion to common Python formats.
 
     print(file["htime"].hepdata())
 
-.. parsed-literal::
-
-    dependent_variables:
-    - header: {name: counts, units: null}
-      qualifiers: []
-      values:
-      - errors:
-        - {label: stat, symerror: 0.33352208137512207}
-        value: 0.33352208137512207
-      - errors:
-        - {label: stat, symerror: 0.3040299415588379}
-        value: 0.3040299415588379
-      - errors:
-        - {label: stat, symerror: 0.32451915740966797}
-        value: 0.32451915740966797
-      - errors:
-        - {label: stat, symerror: 0.35097289085388184}
-        value: 0.35097289085388184
-      - errors:
-        - {label: stat, symerror: 0.3689420223236084}
-        value: 0.3689420223236084
-      - errors:
-        - {label: stat, symerror: 0.3072829246520996}
-        value: 0.3072829246520996
-      - errors:
-        - {label: stat, symerror: 0.306812047958374}
-        value: 0.306812047958374
-      - errors:
-        - {label: stat, symerror: 0.34156298637390137}
-        value: 0.34156298637390137
-      - errors:
-        - {label: stat, symerror: 0.16150808334350586}
-        value: 0.16150808334350586
-      - errors:
-        - {label: stat, symerror: 0.0}
-        value: 0.0
-    independent_variables:
-    - header: {name: Real-Time to write versus time, units: null}
-      values:
-      - {high: 1.0, low: 0.0}
-      - {high: 2.0, low: 1.0}
-      - {high: 3.0, low: 2.0}
-      - {high: 4.0, low: 3.0}
-      - {high: 5.0, low: 4.0}
-      - {high: 6.0, low: 5.0}
-      - {high: 7.0, low: 6.0}
-      - {high: 8.0, low: 7.0}
-      - {high: 9.0, low: 8.0}
-      - {high: 10.0, low: 9.0}
+    # dependent_variables:
+    # - header: {name: counts, units: null}
+    #   qualifiers: []
+    #   values:
+    #   - errors:
+    #     - {label: stat, symerror: 0.33352208137512207}
+    #     value: 0.33352208137512207
+    #   - errors:
+    #     - {label: stat, symerror: 0.3040299415588379}
+    #     value: 0.3040299415588379
+    #   - errors:
+    #     - {label: stat, symerror: 0.32451915740966797}
+    #     value: 0.32451915740966797
+    #   - errors:
+    #     - {label: stat, symerror: 0.35097289085388184}
+    #     value: 0.35097289085388184
+    #   - errors:
+    #     - {label: stat, symerror: 0.3689420223236084}
+    #     value: 0.3689420223236084
+    #   - errors:
+    #     - {label: stat, symerror: 0.3072829246520996}
+    #     value: 0.3072829246520996
+    #   - errors:
+    #     - {label: stat, symerror: 0.306812047958374}
+    #     value: 0.306812047958374
+    #   - errors:
+    #     - {label: stat, symerror: 0.34156298637390137}
+    #     value: 0.34156298637390137
+    #   - errors:
+    #     - {label: stat, symerror: 0.16150808334350586}
+    #     value: 0.16150808334350586
+    #   - errors:
+    #     - {label: stat, symerror: 0.0}
+    #     value: 0.0
+    # independent_variables:
+    # - header: {name: Real-Time to write versus time, units: null}
+    #   values:
+    #   - {high: 1.0, low: 0.0}
+    #   - {high: 2.0, low: 1.0}
+    #   - {high: 3.0, low: 2.0}
+    #   - {high: 4.0, low: 3.0}
+    #   - {high: 5.0, low: 4.0}
+    #   - {high: 6.0, low: 5.0}
+    #   - {high: 7.0, low: 6.0}
+    #   - {high: 8.0, low: 7.0}
+    #   - {high: 9.0, low: 8.0}
+    #   - {high: 10.0, low: 9.0}
 
 Numpy histograms, used as a common format through the scientific Python
 ecosystem, are just a tuple of counts/bin contents and edge positions.
@@ -4498,35 +4103,29 @@ ecosystem, are just a tuple of counts/bin contents and edge positions.
 .. code-block:: python3
 
     file["htime"].numpy()
-
-.. parsed-literal::
-
-    (array([0.33352208, 0.30402994, 0.32451916, 0.3509729 , 0.36894202,
-            0.30728292, 0.30681205, 0.341563  , 0.16150808, 0.        ],
-           dtype=float32),
-     array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.]))
+    # (array([0.33352208, 0.30402994, 0.32451916, 0.3509729 , 0.36894202,
+    #         0.30728292, 0.30681205, 0.341563  , 0.16150808, 0.        ],
+    #        dtype=float32),
+    #  array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.]))
 
 .. code-block:: python3
 
     uproot.open("http://scikit-hep.org/uproot/examples/hepdata-example.root")["hpxpy"].numpy()
-
-.. parsed-literal::
-
-    (array([[0., 0., 0., ..., 0., 0., 0.],
-            [0., 0., 0., ..., 0., 0., 0.],
-            [0., 0., 0., ..., 0., 0., 0.],
-            ...,
-            [0., 0., 0., ..., 0., 0., 0.],
-            [0., 0., 0., ..., 0., 0., 0.],
-            [0., 0., 0., ..., 0., 0., 0.]], dtype=float32),
-     [(array([-4. , -3.8, -3.6, -3.4, -3.2, -3. , -2.8, -2.6, -2.4, -2.2, -2. ,
-              -1.8, -1.6, -1.4, -1.2, -1. , -0.8, -0.6, -0.4, -0.2,  0. ,  0.2,
-               0.4,  0.6,  0.8,  1. ,  1.2,  1.4,  1.6,  1.8,  2. ,  2.2,  2.4,
-               2.6,  2.8,  3. ,  3.2,  3.4,  3.6,  3.8,  4. ]),
-       array([-4. , -3.8, -3.6, -3.4, -3.2, -3. , -2.8, -2.6, -2.4, -2.2, -2. ,
-              -1.8, -1.6, -1.4, -1.2, -1. , -0.8, -0.6, -0.4, -0.2,  0. ,  0.2,
-               0.4,  0.6,  0.8,  1. ,  1.2,  1.4,  1.6,  1.8,  2. ,  2.2,  2.4,
-               2.6,  2.8,  3. ,  3.2,  3.4,  3.6,  3.8,  4. ]))])
+    # (array([[0., 0., 0., ..., 0., 0., 0.],
+    #         [0., 0., 0., ..., 0., 0., 0.],
+    #         [0., 0., 0., ..., 0., 0., 0.],
+    #         ...,
+    #         [0., 0., 0., ..., 0., 0., 0.],
+    #         [0., 0., 0., ..., 0., 0., 0.],
+    #         [0., 0., 0., ..., 0., 0., 0.]], dtype=float32),
+    #  [(array([-4. , -3.8, -3.6, -3.4, -3.2, -3. , -2.8, -2.6, -2.4, -2.2, -2. ,
+    #           -1.8, -1.6, -1.4, -1.2, -1. , -0.8, -0.6, -0.4, -0.2,  0. ,  0.2,
+    #            0.4,  0.6,  0.8,  1. ,  1.2,  1.4,  1.6,  1.8,  2. ,  2.2,  2.4,
+    #            2.6,  2.8,  3. ,  3.2,  3.4,  3.6,  3.8,  4. ]),
+    #    array([-4. , -3.8, -3.6, -3.4, -3.2, -3. , -2.8, -2.6, -2.4, -2.2, -2. ,
+    #           -1.8, -1.6, -1.4, -1.2, -1. , -0.8, -0.6, -0.4, -0.2,  0. ,  0.2,
+    #            0.4,  0.6,  0.8,  1. ,  1.2,  1.4,  1.6,  1.8,  2. ,  2.2,  2.4,
+    #            2.6,  2.8,  3. ,  3.2,  3.4,  3.6,  3.8,  4. ]))])
 
 Creating and writing data to ROOT files
 =======================================
@@ -4573,21 +4172,12 @@ read the data, like this:
 
    root [0] auto file = TFile::Open("tmp.root");
    root [1] file->ls();
-
-::
-
    TFile**     tmp.root    
     TFile*     tmp.root    
      KEY: TObjString   name;1  Collectable string class
-
-.. code:: cpp
-
    root [2] TObjString* data;
    root [3] file->GetObject("name", data);
    root [4] data->GetString()
-
-::
-
    (const TString &) "Some object, like a TObjString."[31]
 
 We can also read it back in uproot, like this:
@@ -4595,26 +4185,17 @@ We can also read it back in uproot, like this:
 .. code-block:: python3
 
     file.keys()
-
-.. parsed-literal::
-
-    [b'name;1']
+    # [b'name;1']
 
 .. code-block:: python3
 
     dict(file.classes())
-
-.. parsed-literal::
-
-    {b'name;1': uproot.rootio.TObjString}
+    # {b'name;1': uproot.rootio.TObjString}
 
 .. code-block:: python3
 
     file["name"]
-
-.. parsed-literal::
-
-    b'Some object, like a TObjString.'
+    # b'Some object, like a TObjString.'
 
 (Notice that it lost its encoding—it is now a bytestring.)
 
@@ -4636,38 +4217,36 @@ from another file and modified,
         
     file["normalized"] = histogram
 
-.. parsed-literal::
-
-                      0                                                       2410.8
-                      +------------------------------------------------------------+
-    [-inf, -3)   0    |                                                            |
-    [-3, -2.4)   68   |**                                                          |
-    [-2.4, -1.8) 285  |*******                                                     |
-    [-1.8, -1.2) 755  |*******************                                         |
-    [-1.2, -0.6) 1580 |***************************************                     |
-    [-0.6, 0)    2296 |*********************************************************   |
-    [0, 0.6)     2286 |*********************************************************   |
-    [0.6, 1.2)   1570 |***************************************                     |
-    [1.2, 1.8)   795  |********************                                        |
-    [1.8, 2.4)   289  |*******                                                     |
-    [2.4, 3)     76   |**                                                          |
-    [3, inf]     0    |                                                            |
-                      +------------------------------------------------------------+
-                        0                                                    0.24108
-                        +----------------------------------------------------------+
-    [-inf, -3)   0      |                                                          |
-    [-3, -2.4)   0.0068 |**                                                        |
-    [-2.4, -1.8) 0.0285 |*******                                                   |
-    [-1.8, -1.2) 0.0755 |******************                                        |
-    [-1.2, -0.6) 0.158  |**************************************                    |
-    [-0.6, 0)    0.2296 |*******************************************************   |
-    [0, 0.6)     0.2286 |*******************************************************   |
-    [0.6, 1.2)   0.157  |**************************************                    |
-    [1.2, 1.8)   0.0795 |*******************                                       |
-    [1.8, 2.4)   0.0289 |*******                                                   |
-    [2.4, 3)     0.0076 |**                                                        |
-    [3, inf]     0      |                                                          |
-                        +----------------------------------------------------------+
+    #                   0                                                       2410.8
+    #                   +------------------------------------------------------------+
+    # [-inf, -3)   0    |                                                            |
+    # [-3, -2.4)   68   |**                                                          |
+    # [-2.4, -1.8) 285  |*******                                                     |
+    # [-1.8, -1.2) 755  |*******************                                         |
+    # [-1.2, -0.6) 1580 |***************************************                     |
+    # [-0.6, 0)    2296 |*********************************************************   |
+    # [0, 0.6)     2286 |*********************************************************   |
+    # [0.6, 1.2)   1570 |***************************************                     |
+    # [1.2, 1.8)   795  |********************                                        |
+    # [1.8, 2.4)   289  |*******                                                     |
+    # [2.4, 3)     76   |**                                                          |
+    # [3, inf]     0    |                                                            |
+    #                   +------------------------------------------------------------+
+    #                     0                                                    0.24108
+    #                     +----------------------------------------------------------+
+    # [-inf, -3)   0      |                                                          |
+    # [-3, -2.4)   0.0068 |**                                                        |
+    # [-2.4, -1.8) 0.0285 |*******                                                   |
+    # [-1.8, -1.2) 0.0755 |******************                                        |
+    # [-1.2, -0.6) 0.158  |**************************************                    |
+    # [-0.6, 0)    0.2296 |*******************************************************   |
+    # [0, 0.6)     0.2286 |*******************************************************   |
+    # [0.6, 1.2)   0.157  |**************************************                    |
+    # [1.2, 1.8)   0.0795 |*******************                                       |
+    # [1.8, 2.4)   0.0289 |*******                                                   |
+    # [2.4, 3)     0.0076 |**                                                        |
+    # [3, inf]     0      |                                                          |
+    #                     +----------------------------------------------------------+
 
 or it may be created entirely in Python.
 
@@ -4695,23 +4274,21 @@ or it may be created entirely in Python.
 
     file["synthetic"].show()
 
-.. parsed-literal::
-
-                          0                                                     1.05
-                          +--------------------------------------------------------+
-    [-inf, -5)          0 |                                                        |
-    [-5, -4.1667)       1 |*****************************************************   |
-    [-4.1667, -3.3333)  1 |*****************************************************   |
-    [-3.3333, -2.5)     1 |*****************************************************   |
-    [-2.5, -1.6667)     1 |*****************************************************   |
-    [-1.6667, -0.83333) 1 |*****************************************************   |
-    [-0.83333, 0)       1 |*****************************************************   |
-    [0, 0.83333)        1 |*****************************************************   |
-    [0.83333, 1.6667)   1 |*****************************************************   |
-    [1.6667, 2.5)       1 |*****************************************************   |
-    [2.5, 3.3333)       1 |*****************************************************   |
-    [5, inf]            0 |                                                        |
-                          +--------------------------------------------------------+
+    #                       0                                                     1.05
+    #                       +--------------------------------------------------------+
+    # [-inf, -5)          0 |                                                        |
+    # [-5, -4.1667)       1 |*****************************************************   |
+    # [-4.1667, -3.3333)  1 |*****************************************************   |
+    # [-3.3333, -2.5)     1 |*****************************************************   |
+    # [-2.5, -1.6667)     1 |*****************************************************   |
+    # [-1.6667, -0.83333) 1 |*****************************************************   |
+    # [-0.83333, 0)       1 |*****************************************************   |
+    # [0, 0.83333)        1 |*****************************************************   |
+    # [0.83333, 1.6667)   1 |*****************************************************   |
+    # [1.6667, 2.5)       1 |*****************************************************   |
+    # [2.5, 3.3333)       1 |*****************************************************   |
+    # [5, inf]            0 |                                                        |
+    #                       +--------------------------------------------------------+
 
 But it is particularly useful that uproot recognizes `Numpy
 histograms <https://docs.scipy.org/doc/numpy/reference/generated/numpy.histogram.html>`__,
@@ -4725,23 +4302,21 @@ which may have come from other libraries.
 
     file["from_numpy"].show()
 
-.. parsed-literal::
-
-                             0                                                2993.6
-                             +-----------------------------------------------------+
-    [-inf, -3.6179)     0    |                                                     |
-    [-3.6179, -2.8738)  22   |                                                     |
-    [-2.8738, -2.1296)  127  |**                                                   |
-    [-2.1296, -1.3854)  632  |***********                                          |
-    [-1.3854, -0.64124) 1814 |********************************                     |
-    [-0.64124, 0.10294) 2851 |**************************************************   |
-    [0.10294, 0.84711)  2602 |**********************************************       |
-    [0.84711, 1.5913)   1391 |*************************                            |
-    [1.5913, 2.3355)    464  |********                                             |
-    [2.3355, 3.0796)    85   |**                                                   |
-    [3.0796, 3.8238)    12   |                                                     |
-    [3.8238, inf]       0    |                                                     |
-                             +-----------------------------------------------------+
+    #                          0                                                2993.6
+    #                          +-----------------------------------------------------+
+    # [-inf, -3.6179)     0    |                                                     |
+    # [-3.6179, -2.8738)  22   |                                                     |
+    # [-2.8738, -2.1296)  127  |**                                                   |
+    # [-2.1296, -1.3854)  632  |***********                                          |
+    # [-1.3854, -0.64124) 1814 |********************************                     |
+    # [-0.64124, 0.10294) 2851 |**************************************************   |
+    # [0.10294, 0.84711)  2602 |**********************************************       |
+    # [0.84711, 1.5913)   1391 |*************************                            |
+    # [1.5913, 2.3355)    464  |********                                             |
+    # [2.3355, 3.0796)    85   |**                                                   |
+    # [3.0796, 3.8238)    12   |                                                     |
+    # [3.8238, inf]       0    |                                                     |
+    #                          +-----------------------------------------------------+
 
 .. code-block:: python3
 
@@ -4750,25 +4325,22 @@ which may have come from other libraries.
 .. code-block:: python3
 
     file["from_numpy2d"].numpy()
-
-.. parsed-literal::
-
-    (array([[  0.,   0.,   0.,   0.,   1.,   4.,   2.,   0.,   0.,   0.],
-            [  0.,   2.,   4.,  10.,  15.,  17.,   9.,   3.,   1.,   0.],
-            [  0.,   3.,  14.,  50.,  90.,  86.,  58.,  23.,   4.,   1.],
-            [  2.,  10.,  53., 174., 348., 337., 239.,  68.,  12.,   0.],
-            [  2.,  26., 136., 367., 675., 740., 461., 141.,  32.,   5.],
-            [  4.,  19., 146., 466., 790., 873., 503., 154.,  30.,   4.],
-            [  1.,  20.,  91., 294., 515., 531., 299., 132.,  21.,   2.],
-            [  0.,   2.,  32., 109., 195., 193., 131.,  42.,   5.,   0.],
-            [  1.,   2.,   8.,  22.,  42.,  42.,  25.,   9.,   2.,   0.],
-            [  0.,   0.,   0.,   3.,   8.,   2.,   5.,   0.,   0.,   0.]]),
-     [(array([-4.06785591, -3.29187021, -2.51588451, -1.7398988 , -0.9639131 ,
-              -0.1879274 ,  0.5880583 ,  1.36404401,  2.14002971,  2.91601541,
-               3.69200111]),
-       array([-3.87804614, -3.1115391 , -2.34503205, -1.578525  , -0.81201795,
-              -0.0455109 ,  0.72099614,  1.48750319,  2.25401024,  3.02051729,
-               3.78702434]))])
+    # (array([[  0.,   0.,   0.,   0.,   1.,   4.,   2.,   0.,   0.,   0.],
+    #         [  0.,   2.,   4.,  10.,  15.,  17.,   9.,   3.,   1.,   0.],
+    #         [  0.,   3.,  14.,  50.,  90.,  86.,  58.,  23.,   4.,   1.],
+    #         [  2.,  10.,  53., 174., 348., 337., 239.,  68.,  12.,   0.],
+    #         [  2.,  26., 136., 367., 675., 740., 461., 141.,  32.,   5.],
+    #         [  4.,  19., 146., 466., 790., 873., 503., 154.,  30.,   4.],
+    #         [  1.,  20.,  91., 294., 515., 531., 299., 132.,  21.,   2.],
+    #         [  0.,   2.,  32., 109., 195., 193., 131.,  42.,   5.,   0.],
+    #         [  1.,   2.,   8.,  22.,  42.,  42.,  25.,   9.,   2.,   0.],
+    #         [  0.,   0.,   0.,   3.,   8.,   2.,   5.,   0.,   0.,   0.]]),
+    #  [(array([-4.06785591, -3.29187021, -2.51588451, -1.7398988 , -0.9639131 ,
+    #           -0.1879274 ,  0.5880583 ,  1.36404401,  2.14002971,  2.91601541,
+    #            3.69200111]),
+    #    array([-3.87804614, -3.1115391 , -2.34503205, -1.578525  , -0.81201795,
+    #           -0.0455109 ,  0.72099614,  1.48750319,  2.25401024,  3.02051729,
+    #            3.78702434]))])
 
 Writing TTrees
 --------------
