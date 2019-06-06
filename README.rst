@@ -189,11 +189,11 @@ automatically installed if you installed uproot with conda.)
 
 .. code-block:: python3
 
-    >>> import uproot
-    >>> 
-    >>> file = uproot.open("http://scikit-hep.org/uproot/examples/nesteddirs.root")
-    >>> file
-    <ROOTDirectory b'tests/nesteddirs.root' at 0x7f37504ecc50>
+    import uproot
+    
+    file = uproot.open("http://scikit-hep.org/uproot/examples/nesteddirs.root")
+    file
+    # → <ROOTDirectory b'tests/nesteddirs.root' at 0x7f37504ecc50>
 
 `uproot.open <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-open>`__
 returns a
@@ -203,10 +203,10 @@ key-value access with square brackets.
 
 .. code-block:: python3
 
-    >>> file.keys()
-    [b'one;1', b'three;1']
-    >>> file["one"]
-    <ROOTDirectory b'one' at 0x7f3750588710>
+    file.keys()
+    # → [b'one;1', b'three;1']
+    file["one"]
+    # → <ROOTDirectory b'one' at 0x7f3750588710>
 
 Subdirectories also have type
 `ROOTDirectory <https://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootdirectory>`__,
