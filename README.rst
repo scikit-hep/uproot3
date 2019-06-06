@@ -46,13 +46,13 @@ Install uproot like any other Python package:
 
 .. code-block:: bash
 
-    pip install uproot                        # maybe with sudo or --user, or in virtualenv
+    pip install uproot                       # maybe with sudo or --user, or in virtualenv
 
 or install with `conda <https://conda.io/en/latest/miniconda.html>`__:
 
 .. code-block:: bash
 
-    conda config --add channels conda-forge   # if you haven't added conda-forge already
+    conda config --add channels conda-forge  # if you haven't added conda-forge already
     conda install uproot
 
 The pip installer automatically installs strict dependencies; the conda installer also installs optional dependencies (except for Pandas).
@@ -83,7 +83,7 @@ Tutorial
 
 Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?urlpath=lab/tree/binder%2Ftutorial.ipynb>`__ on Binder.
 
-**Table of contents:**
+**Tutorial contents:**
 
 * `Introduction <#introduction>`__
 * `What is uproot? <#what-is-uproot>`__
