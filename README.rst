@@ -88,7 +88,7 @@ Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?urlpath=
 * `Introduction <#introduction>`__
 * `What is uproot? <#what-is-uproot>`__
 * `Exploring a file <#exploring-a-file>`__
-* `Compressed objects in ROOT files <#compressed-objects-in-root-files>`__
+  - `Compressed objects in ROOT files <#compressed-objects-in-root-files>`__
 
   - `Exploring a TTree <#exploring-a-ttree>`__
   - `Some terminology <#some-terminology>`__
@@ -332,7 +332,7 @@ and must include the cycle number.
     # <TTree b'tree' at 0x7f37504f85f8>
 
 Compressed objects in ROOT files
-================================
+--------------------------------
 
 Objects in ROOT files can be uncompressed, compressed with ZLIB,
 compressed with LZMA, or compressed with LZ4. Uproot picks the right
