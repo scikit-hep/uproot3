@@ -870,7 +870,8 @@ Before performing a calculation, the cache is empty.
 
     numpy.sqrt((data["E1"] + data["E2"])**2 - (data["px1"] + data["px2"])**2 -
                (data["py1"] + data["py2"])**2 - (data["pz1"] + data["pz2"])**2)
-    # <ChunkedArray [82.46269155513643 83.62620400526137 83.30846466680981 82.14937288090277 90.46912303551746 89.75766317061574 89.77394317215372 ...] at 0x7f3739b9eda0>
+    # <ChunkedArray [82.46269155513643 83.62620400526137 83.30846466680981 82.14937288090277
+    #                90.46912303551746 89.75766317061574 89.77394317215372 ...] at 0x7f3739b9eda0>
 
 After performing the calculation, the cache contains only as many chunks
 as it could hold.
