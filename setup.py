@@ -48,8 +48,8 @@ Run `that tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?urlpath=
 * `Introduction <https://github.com/scikit-hep/uproot#introduction>`__
 * `What is uproot? <https://github.com/scikit-hep/uproot#what-is-uproot>`__
 * `Exploring a file <https://github.com/scikit-hep/uproot#exploring-a-file>`__
-  - `Compressed objects in ROOT files <https://github.com/scikit-hep/uproot#compressed-objects-in-root-files>`__
 
+  - `Compressed objects in ROOT files <https://github.com/scikit-hep/uproot#compressed-objects-in-root-files>`__
   - `Exploring a TTree <https://github.com/scikit-hep/uproot#exploring-a-ttree>`__
   - `Some terminology <https://github.com/scikit-hep/uproot#some-terminology>`__
 
