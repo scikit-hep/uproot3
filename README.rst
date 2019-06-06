@@ -829,6 +829,7 @@ shortcut method (which reads less data than normal file-opening):
         "sample",
         # total=True adds all values; total=False leaves them as a dict
         total=False))
+
     # {'http://scikit-hep.org/uproot/examples/sample-5.23.02-zlib.root': 30,
     #  'http://scikit-hep.org/uproot/examples/sample-5.24.00-zlib.root': 30,
     #  'http://scikit-hep.org/uproot/examples/sample-5.25.02-zlib.root': 30,
@@ -918,14 +919,10 @@ original ROOT filenames—don’t move them!).
 
     data2 = awkward.load("derived-feature.awkd")
 
-.. code-block:: python3
-
     # reads from derived-feature.awkd
     data2["mass"]
     # <ChunkedArray [82.46269155513643 83.62620400526137 83.30846466680981 ...
     #                95.96547966432459 96.49594381502096 96.6567276548945] at 0x7f3739bafc88>
-
-.. code-block:: python3
 
     # reads from the original ROOT flies
     data2["E1"]
