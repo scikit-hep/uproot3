@@ -150,7 +150,7 @@ In short, you should never see a segmentation fault.
 
 .. raw:: html
 
-   <center><img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/abstraction-layers.png" width="75%"></center>
+   <p align="center"><img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/abstraction-layers.png" width="75%"></p>
 
 Uproot is strictly concerned with file I/O only—all other functionality
 is handled by other libraries:
@@ -172,7 +172,7 @@ MAGIC (gamma ray astronomy), and IceCube (neutrino astronomy).
 
 .. raw:: html
 
-   <center><img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/all_file_project.png" width="75%"></center>
+   <p align="center"><img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/all_file_project.png" width="75%"></p>
 
 Exploring a file
 ================
@@ -456,7 +456,7 @@ hides this level of granularity unless you dig into the details.
 
 .. raw:: html
 
-   <center><img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/terminology.png" width="75%"></center>
+   <p align="center"><img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/terminology.png" width="75%"></p>
 
 Reading arrays from a TTree
 ===========================
@@ -3731,7 +3731,7 @@ awkward-array can be fast, despite being written in Python.
 
 .. raw:: html
 
-   <center><img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/logscales.png" width="75%"></center>
+   <p align="center"><img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/logscales.png" width="75%"></p>
 
 Special physics objects: Lorentz vectors
 ----------------------------------------
@@ -4387,7 +4387,7 @@ with the number of threads.
 
 .. raw:: html
 
-   <center><img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/scaling.png" width="75%"></center>
+   <p align="center"><img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/scaling.png" width="75%"></p>
 
 If, on the other other hand, processing time is dominated by your
 analysis code and not file-reading, then parallelizing the file-reading
