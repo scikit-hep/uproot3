@@ -215,7 +215,7 @@ is handled by other libraries:
    arrays.
 
 In the past year, uproot has become one of the most widely used Python
-packages for particle physics, with users in all four LHC experiments,
+packages made for particle physics, with users in all four LHC experiments,
 theory, neutrino experiments, XENON-nT (dark matter direct detection),
 MAGIC (gamma ray astronomy), and IceCube (neutrino astronomy).
 
