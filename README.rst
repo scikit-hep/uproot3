@@ -2430,8 +2430,7 @@ interpretation to the array-reading function
 .. code-block:: python3
 
     events["E1"].array(reinterpretation)
-    # array([82.201866, 62.34493 , 62.34493 , ..., 81.270134, 81.270134,
-    #        81.566216], dtype=float32)
+    # array([82.201866, 62.34493 , 62.34493 , ..., 81.270134, 81.270134, 81.566216], dtype=float32)
 
 fills and returns that array. When you look at my array object, you can
 see that it is now filled, overwriting whatever might have been in it
@@ -2440,8 +2439,7 @@ before.
 .. code-block:: python3
 
     myarray
-    # array([82.201866, 62.34493 , 62.34493 , ..., 81.270134, 81.270134,
-    #        81.566216], dtype=float32)
+    # array([82.201866, 62.34493 , 62.34493 , ..., 81.270134, 81.270134, 81.566216], dtype=float32)
 
 This is useful for speed-critical applications or ones in which the
 array is managed by an external system. The array could be
