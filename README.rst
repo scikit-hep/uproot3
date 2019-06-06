@@ -86,44 +86,44 @@ Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?urlpath=
 **Table of contents:**
 
 * `Introduction <#introduction>`__
-* `What is uproot? <#https://github.com/scikit-hep/uproot#what-is-uproot>`__
-* `Exploring a file <#https://github.com/scikit-hep/uproot#exploring-a-file>`__
-* `Compressed objects in ROOT files <#https://github.com/scikit-hep/uproot#compressed-objects-in-root-files>`__
-  - `Exploring a TTree <#https://github.com/scikit-hep/uproot#exploring-a-ttree>`__
-  - `Some terminology <#https://github.com/scikit-hep/uproot#some-terminology>`__
-* `Reading arrays from a TTree <#https://github.com/scikit-hep/uproot#reading-arrays-from-a-ttree>`__
-* `Caching data <#https://github.com/scikit-hep/uproot#caching-data>`__
-  - `Automatically managed caches <#https://github.com/scikit-hep/uproot#automatically-managed-caches>`__
-  - `Caching at all levels of abstraction <#https://github.com/scikit-hep/uproot#caching-at-all-levels-of-abstraction>`__
-* `Lazy arrays <#https://github.com/scikit-hep/uproot#lazy-arrays>`__
-  - `Lazy array of many files <#https://github.com/scikit-hep/uproot#lazy-array-of-many-files>`__
-  - `Lazy arrays with caching <#https://github.com/scikit-hep/uproot#lazy-arrays-with-caching>`__
-  - `Lazy arrays as lightweight skims <#https://github.com/scikit-hep/uproot#lazy-arrays-as-lightweight-skims>`__
-  - `Lazy arrays in Dask <#https://github.com/scikit-hep/uproot#lazy-arrays-in-dask>`__
-* `Iteration <#https://github.com/scikit-hep/uproot#iteration>`__
-  - `Filenames and entry numbers while iterating <#https://github.com/scikit-hep/uproot#filenames-and-entry-numbers-while-iterating>`__
-  - `Limiting the number of entries to be read <#https://github.com/scikit-hep/uproot#limiting-the-number-of-entries-to-be-read>`__
-  - `Controlling lazy chunk and iteration step sizes <#https://github.com/scikit-hep/uproot#controlling-lazy-chunk-and-iteration-step-sizes>`__
-  - `Caching and iteration <#https://github.com/scikit-hep/uproot#caching-and-iteration>`__
-* `Changing the output container type <#https://github.com/scikit-hep/uproot#changing-the-output-container-type>`__
-* `Filling Pandas DataFrames <#https://github.com/scikit-hep/uproot#filling-pandas-dataframes>`__
-* `Selecting and interpreting branches <#https://github.com/scikit-hep/uproot#selecting-and-interpreting-branches>`__
-  - `TBranch interpretations <#https://github.com/scikit-hep/uproot#tbranch-interpretations>`__
-  - `Reading data into a preexisting array <#https://github.com/scikit-hep/uproot#reading-data-into-a-preexisting-array>`__
-  - `Passing many new interpretations in one call <#https://github.com/scikit-hep/uproot#passing-many-new-interpretations-in-one-call>`__
-  - `Multiple values per event: fixed size arrays <#https://github.com/scikit-hep/uproot#multiple-values-per-event-fixed-size-arrays>`__
-  - `Multiple values per event: leaf-lists <#https://github.com/scikit-hep/uproot#multiple-values-per-event-leaf-lists>`__
-  - `Multiple values per event: jagged arrays <#https://github.com/scikit-hep/uproot#multiple-values-per-event-jagged-arrays>`__
-  - `Jagged array performance <#https://github.com/scikit-hep/uproot#jagged-array-performance>`__
-  - `Special physics objects: Lorentz vectors <#https://github.com/scikit-hep/uproot#special-physics-objects-lorentz-vectors>`__
-  - `Variable-width values: strings <#https://github.com/scikit-hep/uproot#variable-width-values-strings>`__
-  - `Arbitrary objects in TTrees <#https://github.com/scikit-hep/uproot#arbitrary-objects-in-ttrees>`__
-  - `Doubly nested jagged arrays (i.e. ``std::vector<std::vector<T>>``) <#https://github.com/scikit-hep/uproot#doubly-nested-jagged-arrays-ie-stdvectorstdvectort>`__
-* `Parallel array reading <#https://github.com/scikit-hep/uproot#parallel-array-reading>`__
-* `Histograms, TProfiles, TGraphs, and others <#https://github.com/scikit-hep/uproot#histograms-tprofiles-tgraphs-and-others>`__
-* `Creating and writing data to ROOT files <#https://github.com/scikit-hep/uproot#creating-and-writing-data-to-root-files>`__
-  - `Writing histograms <#https://github.com/scikit-hep/uproot#writing-histograms>`__
-  - `Writing TTrees <#https://github.com/scikit-hep/uproot#writing-ttrees>`__
+* `What is uproot? <#what-is-uproot>`__
+* `Exploring a file <#exploring-a-file>`__
+* `Compressed objects in ROOT files <#compressed-objects-in-root-files>`__
+  - `Exploring a TTree <#exploring-a-ttree>`__
+  - `Some terminology <#some-terminology>`__
+* `Reading arrays from a TTree <#reading-arrays-from-a-ttree>`__
+* `Caching data <#caching-data>`__
+  - `Automatically managed caches <#automatically-managed-caches>`__
+  - `Caching at all levels of abstraction <#caching-at-all-levels-of-abstraction>`__
+* `Lazy arrays <#lazy-arrays>`__
+  - `Lazy array of many files <#lazy-array-of-many-files>`__
+  - `Lazy arrays with caching <#lazy-arrays-with-caching>`__
+  - `Lazy arrays as lightweight skims <#lazy-arrays-as-lightweight-skims>`__
+  - `Lazy arrays in Dask <#lazy-arrays-in-dask>`__
+* `Iteration <#iteration>`__
+  - `Filenames and entry numbers while iterating <#filenames-and-entry-numbers-while-iterating>`__
+  - `Limiting the number of entries to be read <#limiting-the-number-of-entries-to-be-read>`__
+  - `Controlling lazy chunk and iteration step sizes <#controlling-lazy-chunk-and-iteration-step-sizes>`__
+  - `Caching and iteration <#caching-and-iteration>`__
+* `Changing the output container type <#changing-the-output-container-type>`__
+* `Filling Pandas DataFrames <#filling-pandas-dataframes>`__
+* `Selecting and interpreting branches <#selecting-and-interpreting-branches>`__
+  - `TBranch interpretations <#tbranch-interpretations>`__
+  - `Reading data into a preexisting array <#reading-data-into-a-preexisting-array>`__
+  - `Passing many new interpretations in one call <#passing-many-new-interpretations-in-one-call>`__
+  - `Multiple values per event: fixed size arrays <#multiple-values-per-event-fixed-size-arrays>`__
+  - `Multiple values per event: leaf-lists <#multiple-values-per-event-leaf-lists>`__
+  - `Multiple values per event: jagged arrays <#multiple-values-per-event-jagged-arrays>`__
+  - `Jagged array performance <#jagged-array-performance>`__
+  - `Special physics objects: Lorentz vectors <#special-physics-objects-lorentz-vectors>`__
+  - `Variable-width values: strings <#variable-width-values-strings>`__
+  - `Arbitrary objects in TTrees <#arbitrary-objects-in-ttrees>`__
+  - `Doubly nested jagged arrays (i.e. ``std::vector<std::vector<T>>``) <#doubly-nested-jagged-arrays-ie-stdvectorstdvectort>`__
+* `Parallel array reading <#parallel-array-reading>`__
+* `Histograms, TProfiles, TGraphs, and others <#histograms-tprofiles-tgraphs-and-others>`__
+* `Creating and writing data to ROOT files <#creating-and-writing-data-to-root-files>`__
+  - `Writing histograms <#writing-histograms>`__
+  - `Writing TTrees <#writing-ttrees>`__
 
 Reference documentation
 =======================
