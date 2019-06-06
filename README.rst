@@ -976,7 +976,7 @@ functions.
 
     <div><strong>Dask DataFrame Structure:</strong></div>
     <div>
-    <table border="solid 1px gray" class="dataframe">
+    <table border="0" class="dataframe">
       <thead>
         <tr style="text-align: right;">
           <th></th>
