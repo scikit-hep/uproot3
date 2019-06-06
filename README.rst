@@ -939,11 +939,7 @@ as a lightweight skim.
     selected
     # <ChunkedArray [<Row 16> <Row 17> <Row 18> <Row 19> <Row 47> <Row 48> <Row 49> ...] at 0x7f3739b3e7f0>
 
-.. code-block:: python3
-
     awkward.save("selected-events.awkd", selected, mode="w")
-
-.. code-block:: python3
 
     data3 = awkward.load("selected-events.awkd")
     data3
@@ -1720,7 +1716,8 @@ the DataFrame itself.
 
 .. code-block:: python3
 
-    for df in uproot.pandas.iterate("http://scikit-hep.org/uproot/examples/Zmumu.root", "events", "p[xyz]1", entrysteps=500):
+    for df in uproot.pandas.iterate("http://scikit-hep.org/uproot/examples/Zmumu.root", "events", "p[xyz]1",
+                                    entrysteps=500):
         print(df[:3])
 
     #              px1        py1        pz1
