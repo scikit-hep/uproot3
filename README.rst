@@ -190,7 +190,7 @@ automatically installed if you installed uproot with conda.)
 .. code-block:: python3
 
     import uproot
-    
+
     file = uproot.open("http://scikit-hep.org/uproot/examples/nesteddirs.root")
     file
     # <ROOTDirectory b'tests/nesteddirs.root' at 0x7f37504ecc50>
@@ -468,7 +468,7 @@ documentation <https://docs.scipy.org/doc/numpy/>`__ for details.
 .. code-block:: python3
 
     import numpy
-    
+
     numpy.log(a)
     # array([4.40917801, 4.13268234, 4.13268234, ..., 4.39777861, 4.39777861,
     #        4.40141517])
@@ -566,10 +566,10 @@ caches do).
 .. code-block:: python3
 
     mycache = {}
-    
+
     # first time: reads from file
     events.arrays(["p[xyz]*"], cache=mycache);
-    
+
     # any other time: reads from cache
     events.arrays(["p[xyz]*"], cache=mycache);
 
@@ -633,7 +633,7 @@ drops old data when the data usage reaches a limit, specified in bytes.
 
     mycache = uproot.ArrayCache("100 kB")
     events.arrays("*", cache=mycache);
-    
+
     len(mycache), len(events.keys())
     # (6, 20)
 
@@ -855,7 +855,7 @@ This is caching, and the caching mechanism is the same as before:
 .. code-block:: python3
 
     mycache = uproot.cache.ArrayCache(100*1024)   # 100 kB
-    
+
     data = events.lazyarrays(entrysteps=500, cache=mycache)
     data
     # <ChunkedArray [<Row 0> <Row 1> <Row 2> ... <Row 2301> <Row 2302> <Row 2303>] at 0x7f3739b90f28>
@@ -898,7 +898,7 @@ and add a derived feature:
 .. code-block:: python3
 
     data = events.lazyarrays(["E*", "p[xyz]*"], persistvirtual=True)
-    
+
     data["mass"] = numpy.sqrt((data["E1"] + data["E2"])**2 - (data["px1"] + data["px2"])**2 -
                               (data["py1"] + data["py2"])**2 - (data["pz1"] + data["pz2"])**2)
 
@@ -907,7 +907,7 @@ and save the whole thing to an awkward-array file (``.awkd``).
 .. code-block:: python3
 
     import awkward
-    
+
     awkward.save("derived-feature.awkd", data, mode="w")
 
 When we read it back, the derived features come from the awkward-array
@@ -1090,12 +1090,12 @@ events*, not *single events*.
 .. code-block:: python3
 
     histogram = None
-    
+
     for data in events.iterate(["E*", "p[xyz]*"], namedecode="utf-8"):
         # operate on a batch of data in the loop
         mass = numpy.sqrt((data["E1"] + data["E2"])**2 - (data["px1"] + data["px2"])**2 -
                           (data["py1"] + data["py2"])**2 - (data["pz1"] + data["pz2"])**2)
-    
+
         # accumulate results
         counts, edges = numpy.histogram(mass, bins=120, range=(0, 120))
         if histogram is None:
@@ -1106,9 +1106,9 @@ events*, not *single events*.
 .. code-block:: python3
 
     import matplotlib.pyplot
-    
+
     counts, edges = histogram
-    
+
     matplotlib.pyplot.step(x=edges, y=numpy.append(counts, 0), where="post");
     matplotlib.pyplot.xlim(edges[0], edges[-1]);
     matplotlib.pyplot.ylim(0, counts.max() * 1.1);
@@ -1406,7 +1406,7 @@ everything into a single object, but the fields are accessible by name.
 .. code-block:: python3
 
     import collections    # from the Python standard library
-    
+
     a = events.arrays("p[xyz]1", outputtype=collections.namedtuple)
 
 .. code-block:: python3
@@ -1424,7 +1424,7 @@ You can also use your own classes.
             self.p = numpy.sqrt(px**2 + py**2 + pz**2)
         def __repr__(self):
             return "<Stuff %r>" % self.p
-    
+
     events.arrays("p[xyz]1", outputtype=Stuff)
     # <Stuff array([82.20179848, 62.34483942, 62.34483942, ..., 81.27006689,
     #        81.27006689, 81.56614892])>
@@ -1435,7 +1435,7 @@ And perhaps most importantly, you can pass in
 .. code-block:: python3
 
     import pandas
-    
+
     events.arrays("p[xyz]1", outputtype=pandas.DataFrame, entrystop=10)
 
 .. raw:: html
@@ -1721,27 +1721,27 @@ the DataFrame itself.
         print(df[:3])
 
     #              px1        py1        pz1
-    # entry                                 
+    # entry
     # 0     -41.195288  17.433244 -68.964962
     # 1      35.118050 -16.570362 -48.775247
     # 2      35.118050 -16.570362 -48.775247
     #              px1        py1        pz1
-    # entry                                 
+    # entry
     # 500    39.163212 -19.185280 -13.979333
     # 501    39.094970 -19.152964 -13.936115
     # 502    -7.656437 -33.431880  91.840257
     #              px1        py1       pz1
-    # entry                                
+    # entry
     # 1000   26.043759 -17.618814 -0.567176
     # 1001   26.043759 -17.618814 -0.567176
     # 1002   25.996204 -17.585241 -0.568920
     #              px1        py1        pz1
-    # entry                                 
+    # entry
     # 1500   82.816840  13.262734  27.797909
     # 1501  -11.416911  39.815352  32.349893
     # 1502  -11.416911  39.815352  32.349893
     #              px1        py1       pz1
-    # entry                                
+    # entry
     # 2000  -43.378378 -15.235422  3.019698
     # 2001  -43.378378 -15.235422  3.019698
     # 2002  -43.244422 -15.187402  3.003985
@@ -2482,7 +2482,8 @@ literally ``True``, not an object that Python would evaluate to
 
     events.arrays(lambda branch: isinstance(branch.interpretation, uproot.asdtype) and
                                  str(branch.interpretation.fromdtype) == ">f8").keys()
-    # dict_keys([b'E1', b'px1', b'py1', b'pz1', b'pt1', b'eta1', b'phi1', b'E2', b'px2', b'py2', b'pz2', b'pt2', b'eta2', b'phi2', b'M'])
+    # dict_keys([b'E1', b'px1', b'py1', b'pz1', b'pt1', b'eta1', b'phi1',
+    #            b'E2', b'px2', b'py2', b'pz2', b'pt2', b'eta2', b'phi2', b'M'])
 
 This is because a function that returns objects selects branches and
 sets their interpretations in one pass.
@@ -2571,8 +2572,6 @@ shape <https://docs.scipy.org/doc/numpy/reference/generated/numpy.dtype.shape.ht
 
     tree["ArrayInt64"].interpretation
     # asdtype("('>i8', (10,))")
-
-.. code-block:: python3
 
     tree["ArrayInt64"].interpretation.todtype.shape
     # (10,)
@@ -2927,17 +2926,11 @@ other.
     array[0]
     # (1.1, 1, 97)
 
-.. code-block:: python3
-
     array["x"]
     # array([1.1, 2.2, 3.3, 4. , 5.5])
 
-.. code-block:: python3
-
     array["y"]
     # array([1, 2, 3, 4, 5], dtype=int32)
-
-.. code-block:: python3
 
     array["z"]
     # array([ 97,  98,  99, 100, 101], dtype=int8)
@@ -2953,8 +2946,6 @@ are.
 
     array.dtype
     # dtype([('x', '<f8'), ('y', '<i4'), ('z', 'i1')])
-
-.. code-block:: python3
 
     array.dtype.itemsize
     # 13
@@ -3057,7 +3048,8 @@ awkward-array library, like ``ChunkedArray`` and ``VirtualArray``).
     tree = uproot.open("http://scikit-hep.org/uproot/examples/nesteddirs.root")["one/two/tree"]
     array = tree.array("SliceInt64", entrystop=20)
     array
-    # <JaggedArray [[] [1] [2 2] ... [17 17 17 ... 17 17 17] [18 18 18 ... 18 18 18] [19 19 19 ... 19 19 19]] at 0x7f3624769898>
+    # <JaggedArray [[] [1] [2 2] ... [17 17 17 ... 17 17 17] [18 18 18 ... 18 18 18]
+    #               [19 19 19 ... 19 19 19]] at 0x7f3624769898>
 
 These ``JaggedArrays`` are made of `Numpy
 arrays <https://docs.scipy.org/doc/numpy/reference/generated/numpy.array.html>`__
@@ -3100,46 +3092,37 @@ Here is an example of ``JaggedArrays`` in physics data:
 
     events2 = uproot.open("http://scikit-hep.org/uproot/examples/HZZ.root")["events"]
 
-.. code-block:: python3
-
     E, px, py, pz = events2.arrays(["Muon_E", "Muon_P[xyz]"], outputtype=tuple)
     E
-    # <JaggedArray [[54.7795 39.401695] [31.690445] [54.739788 47.488857] ... [62.39516] [174.20863] [69.55621]] at 0x7f362476e748>
-
-.. code-block:: python3
+    # <JaggedArray [[54.7795 39.401695] [31.690445] [54.739788 47.488857] ...
+    #               [62.39516] [174.20863] [69.55621]] at 0x7f362476e748>
 
     pt = numpy.sqrt(px**2 + py**2)
     p = numpy.sqrt(px**2 + py**2 + pz**2)
     p
-    # <JaggedArray [[54.7794 39.401554] [31.69027] [54.739685 47.48874] ... [62.395073] [174.2086] [69.55613]] at 0x7f3624738c88>
-
-.. code-block:: python3
+    # <JaggedArray [[54.7794 39.401554] [31.69027] [54.739685 47.48874] ...
+    #               [62.395073] [174.2086] [69.55613]] at 0x7f3624738c88>
 
     eta = numpy.log((p + pz)/(p - pz))/2
     eta
-    # <JaggedArray [[-0.15009263 -0.29527554] [0.7538137] [0.20692922 1.0412954] ... [-1.2350467] [1.6653312] [1.0626991]] at 0x7f362476e2e8>
-
-.. code-block:: python3
+    # <JaggedArray [[-0.15009263 -0.29527554] [0.7538137] [0.20692922 1.0412954] ...
+    #               [-1.2350467] [1.6653312] [1.0626991]] at 0x7f362476e2e8>
 
     phi = numpy.arctan2(py, px)
     phi
-    # <JaggedArray [[-2.9247396 0.01837404] [-1.6042395] [-0.41738483 1.5430332] ... [-2.666572] [1.552847] [-0.980149]] at 0x7f36246d6b38>
-
-.. code-block:: python3
+    # <JaggedArray [[-2.9247396 0.01837404] [-1.6042395] [-0.41738483 1.5430332] ...
+    #               [-2.666572] [1.552847] [-0.980149]] at 0x7f36246d6b38>
 
     pt.counts
     # array([2, 1, 2, ..., 1, 1, 1])
-
-.. code-block:: python3
 
     pt.flatten()
     # array([54.168106, 37.744152, 24.417913, ..., 33.461536, 63.619816,
     #        42.93995 ], dtype=float32)
 
-.. code-block:: python3
-
     pt[:6]
-    # <JaggedArray [[54.168106 37.744152] [24.417913] [53.58827 29.811996] [88.63194 77.951485] [81.011406 47.175045] [41.591053 30.844215]] at 0x7f36246d1240>
+    # <JaggedArray [[54.168106 37.744152] [24.417913] [53.58827 29.811996] [88.63194 77.951485]
+    #               [81.011406 47.175045] [41.591053 30.844215]] at 0x7f36246d1240>
 
 To select elements of inner lists (Pandas’s
 `DataFrame.xs <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.xs.html>`__),
@@ -3159,8 +3142,6 @@ particles):
     pt > 50
     # <JaggedArray [[True False] [False] [True False] ... [False] [True] [False]] at 0x7f36246d1c18>
 
-.. code-block:: python3
-
     eta[pt > 50]
     # <JaggedArray [[-0.15009263] [] [0.20692922] ... [] [1.6653312] []] at 0x7f36246d6ef0>
 
@@ -3170,7 +3151,8 @@ events):
 .. code-block:: python3
 
     eta[pt.max() > 50]
-    # <JaggedArray [[-0.15009263 -0.29527554] [0.20692922 1.0412954] [2.2215228 2.1647348] ... [0.23674133 0.49973577] [-0.38897678 -0.013611517] [1.6653312]] at 0x7f36246d1748>
+    # <JaggedArray [[-0.15009263 -0.29527554] [0.20692922 1.0412954] [2.2215228 2.1647348] ...
+    #               [0.23674133 0.49973577] [-0.38897678 -0.013611517] [1.6653312]] at 0x7f36246d1748>
 
 Reducers like ``count``, ``sum``, ``min``, ``max``, ``any`` (boolean),
 or ``all`` (boolean) apply per-event, turning a ``JaggedArray`` into a
@@ -3199,13 +3181,9 @@ can be used in indexing.
     abs(eta).argmax()
     # <JaggedArray [[1] [0] [1] ... [0] [0] [0]] at 0x7f36246d6470>
 
-.. code-block:: python3
-
     pairs = pt.argchoose(2)
     pairs
     # <JaggedArray [[(0, 1)] [] [(0, 1)] ... [] [] []] at 0x7f36246d6f98>
-
-.. code-block:: python3
 
     left  = pairs.i0
     right = pairs.i1
@@ -3222,10 +3200,8 @@ Masses of unique pairs of muons, for events that have them:
     masses
     # <JaggedArray [[90.227806] [] [74.746544] ... [] [] []] at 0x7f364401bc50>
 
-.. code-block:: python3
-
     counts, edges = numpy.histogram(masses.flatten(), bins=120, range=(0, 120))
-    
+
     matplotlib.pyplot.step(x=edges, y=numpy.append(counts, 0), where="post");
     matplotlib.pyplot.xlim(edges[0], edges[-1]);
     matplotlib.pyplot.ylim(0, counts.max() * 1.1);
@@ -3252,12 +3228,8 @@ representing structure via ``offsets`` (random access) or ``counts``.
     # array([90.227806, 74.746544, 89.75766 , ..., 92.06495 , 85.44384 ,
     #        75.96062 ], dtype=float32)
 
-.. code-block:: python3
-
     masses.offsets
     # array([   0,    1,    1, ..., 1521, 1521, 1521])
-
-.. code-block:: python3
 
     masses.counts
     # array([1, 0, 1, ..., 0, 0, 0])
@@ -3295,7 +3267,14 @@ One of these classes is ``TLorentzVectorArray``, which defines an
 
     muons = events3.array("muonp4")
     muons
-    # <JaggedArrayMethods [[TLorentzVector(-52.899, -11.655, -8.1608, 54.779) TLorentzVector(37.738, 0.69347, -11.308, 39.402)] [TLorentzVector(-0.81646, -24.404, 20.2, 31.69)] [TLorentzVector(48.988, -21.723, 11.168, 54.74) TLorentzVector(0.82757, 29.801, 36.965, 47.489)] ... [TLorentzVector(-29.757, -15.304, -52.664, 62.395)] [TLorentzVector(1.1419, 63.61, 162.18, 174.21)] [TLorentzVector(23.913, -35.665, 54.719, 69.556)]] at 0x7f36246d6c50>
+    # <JaggedArrayMethods [[TLorentzVector(-52.899, -11.655, -8.1608, 54.779)
+    #                       TLorentzVector(37.738, 0.69347, -11.308, 39.402)]
+    #                      [TLorentzVector(-0.81646, -24.404, 20.2, 31.69)]
+    #                      [TLorentzVector(48.988, -21.723, 11.168, 54.74)
+    #                       TLorentzVector(0.82757, 29.801, 36.965, 47.489)] ...
+    #                      [TLorentzVector(-29.757, -15.304, -52.664, 62.395)]
+    #                      [TLorentzVector(1.1419, 63.61, 162.18, 174.21)]
+    #                      [TLorentzVector(23.913, -35.665, 54.719, 69.556)]] at 0x7f36246d6c50>
 
 In the print-out, these appear to be Python objects, but they’re
 high-performance arrays that are only turned into objects when you look
@@ -3327,9 +3306,12 @@ method on each).
 .. code-block:: python3
 
     muons.mass   # some mass**2 are slightly negative, hence the Numpy warning about negative square roots
-    # /home/pivarski/miniconda3/lib/python3.7/site-packages/uproot_methods-0.6.1-py3.7.egg/uproot_methods/classes/TLorentzVector.py:189: RuntimeWarning: invalid value encountered in sqrt
+    # /home/pivarski/miniconda3/lib/python3.7/site-packages/uproot_methods-0.6.1-py3.7.egg/uproot_methods/
+    #                         classes/TLorentzVector.py:189: RuntimeWarning: invalid value encountered in sqrt
     #   return self._trymemo("mass", lambda self: self.awkward.numpy.sqrt(self.mag2))
-    # <JaggedArray [[0.10559298741436905 0.10545247041042287] [0.105499240400313] [0.10696309110601164 0.10513788128369116] ... [0.1054382466674704] [0.0975059956172863] [0.10447224169767522]] at 0x7f36246f8080>
+    # <JaggedArray [[0.10559298741436905 0.10545247041042287] [0.105499240400313]
+    #               [0.10696309110601164 0.10513788128369116] ... [0.1054382466674704] [0.0975059956172863]
+    #               [0.10447224169767522]] at 0x7f36246f8080>
 
 (**Note:** if you don’t want to see Numpy warnings, use
 `numpy.seterr <https://docs.scipy.org/doc/numpy/reference/generated/numpy.seterr.html>`__.)
@@ -3362,10 +3344,17 @@ need to use a special constructor to build the object from its branches.
 .. code-block:: python3
 
     import uproot_methods
-    
+
     array = uproot_methods.TLorentzVectorArray.from_cartesian(px, py, pz, E)
     array
-    # <JaggedArrayMethods [[TLorentzVector(-52.899, -11.655, -8.1608, 54.779) TLorentzVector(37.738, 0.69347, -11.308, 39.402)] [TLorentzVector(-0.81646, -24.404, 20.2, 31.69)] [TLorentzVector(48.988, -21.723, 11.168, 54.74) TLorentzVector(0.82757, 29.801, 36.965, 47.489)] ... [TLorentzVector(-29.757, -15.304, -52.664, 62.395)] [TLorentzVector(1.1419, 63.61, 162.18, 174.21)] [TLorentzVector(23.913, -35.665, 54.719, 69.556)]] at 0x7f36441c3470>
+    # <JaggedArrayMethods [[TLorentzVector(-52.899, -11.655, -8.1608, 54.779)
+    #                       TLorentzVector(37.738, 0.69347, -11.308, 39.402)]
+    #                      [TLorentzVector(-0.81646, -24.404, 20.2, 31.69)]
+    #                      [TLorentzVector(48.988, -21.723, 11.168, 54.74)
+    #                       TLorentzVector(0.82757, 29.801, 36.965, 47.489)] ...
+    #                      [TLorentzVector(-29.757, -15.304, -52.664, 62.395)]
+    #                      [TLorentzVector(1.1419, 63.61, 162.18, 174.21)]
+    #                      [TLorentzVector(23.913, -35.665, 54.719, 69.556)]] at 0x7f36441c3470>
 
 There are constructors for different coordinate systems. Internally,
 ``TLorentzVectorArray`` uses the coordinates you give it and only
@@ -3462,7 +3451,7 @@ split into ``fTracks.fUniqueID``, ``fTracks.fBits``, ``fTracks.fPx``,
     # TObject                    TStreamerInfo              None
     # fUniqueID                  TStreamerBasicType         asdtype('>u4')
     # fBits                      TStreamerBasicType         asdtype('>u4')
-    # 
+    #
     # fType[20]                  TStreamerBasicType         asdtype("('i1', (20,))")
     # fEventName                 TStreamerBasicType         asstring(4)
     # fNtrack                    TStreamerBasicType         asdtype('>i4')
@@ -3477,7 +3466,7 @@ split into ``fTracks.fUniqueID``, ``fTracks.fBits``, ``fTracks.fPx``,
     # fEvtHdr.fEvtNum            TStreamerBasicType         asdtype('>i4')
     # fEvtHdr.fRun               TStreamerBasicType         asdtype('>i4')
     # fEvtHdr.fDate              TStreamerBasicType         asdtype('>i4')
-    # 
+    #
     # fTracks                    TStreamerObjectPointer     None
     # fTracks.fUniqueID          TStreamerBasicType         asjagged(asdtype('>u4'))
     # fTracks.fBits              TStreamerBasicType         asjagged(asdtype('>u4'))
@@ -3485,18 +3474,28 @@ split into ``fTracks.fUniqueID``, ``fTracks.fBits``, ``fTracks.fPx``,
     # fTracks.fPy                TStreamerBasicType         asjagged(asdtype('>f4'))
     # fTracks.fPz                TStreamerBasicType         asjagged(asdtype('>f4'))
     # fTracks.fRandom            TStreamerBasicType         asjagged(asdtype('>f4'))
-    # fTracks.fMass2             TStreamerBasicType         asjagged(asfloat16(0.0, 0.0, 8, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
-    # fTracks.fBx                TStreamerBasicType         asjagged(asfloat16(0.0, 0.0, 10, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    # fTracks.fMass2             TStreamerBasicType         asjagged(asfloat16(0.0, 0.0, 8,
+    #                                    dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    # fTracks.fBx                TStreamerBasicType         asjagged(asfloat16(0.0, 0.0, 10,
+    #                                    dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
     # fTracks.fBy                TStreamerBasicType         asjagged(asfloat16(0.0, 0.0, 10, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
     # fTracks.fMeanCharge        TStreamerBasicType         asjagged(asdtype('>f4'))
-    # fTracks.fXfirst            TStreamerBasicType         asjagged(asfloat16(0, 0, 12, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
-    # fTracks.fXlast             TStreamerBasicType         asjagged(asfloat16(0, 0, 12, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
-    # fTracks.fYfirst            TStreamerBasicType         asjagged(asfloat16(0, 0, 12, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
-    # fTracks.fYlast             TStreamerBasicType         asjagged(asfloat16(0, 0, 12, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
-    # fTracks.fZfirst            TStreamerBasicType         asjagged(asfloat16(0, 0, 12, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
-    # fTracks.fZlast             TStreamerBasicType         asjagged(asfloat16(0, 0, 12, dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
-    # fTracks.fCharge            TStreamerBasicType         asjagged(asdouble32(-1.0, 1.0, 2, dtype('>u4'), dtype('float64')))
-    # fTracks.fVertex[3]         TStreamerBasicType         asjagged(asdouble32(-30.0, 30.0, 16, dtype(('>u4', (3,))), dtype(('<f8', (3,)))))
+    # fTracks.fXfirst            TStreamerBasicType         asjagged(asfloat16(0, 0, 12,
+    #                                    dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    # fTracks.fXlast             TStreamerBasicType         asjagged(asfloat16(0, 0, 12,
+    #                                    dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    # fTracks.fYfirst            TStreamerBasicType         asjagged(asfloat16(0, 0, 12,
+    #                                    dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    # fTracks.fYlast             TStreamerBasicType         asjagged(asfloat16(0, 0, 12,
+    #                                    dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    # fTracks.fZfirst            TStreamerBasicType         asjagged(asfloat16(0, 0, 12,
+    #                                    dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    # fTracks.fZlast             TStreamerBasicType         asjagged(asfloat16(0, 0, 12,
+    #                                    dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    # fTracks.fCharge            TStreamerBasicType         asjagged(asdouble32(-1.0, 1.0, 2,
+    #                                    dtype('>u4'), dtype('float64')))
+    # fTracks.fVertex[3]         TStreamerBasicType         asjagged(asdouble32(-30.0, 30.0, 16,
+    #                                    dtype(('>u4', (3,))), dtype(('<f8', (3,)))))
     # fTracks.fNpoint            TStreamerBasicType         asjagged(asdtype('>i4'))
     # fTracks.fValid             TStreamerBasicType         asjagged(asdtype('>i2'))
     # fTracks.fNsp               TStreamerBasicType         asjagged(asdtype('>u4'))
@@ -3511,7 +3510,7 @@ split into ``fTracks.fUniqueID``, ``fTracks.fBits``, ``fTracks.fPx``,
     # fTracks.fTriggerBits.fAllBits
     #                            TStreamerBasicPointer      asjagged(asdtype('uint8'), 1)
     # fTracks.fTArray[3]         TStreamerBasicType         asjagged(asdtype("('>f4', (3,))"))
-    # 
+    #
     # fHighPt                    TStreamerObjectPointer     asgenobj(TRefArray)
     # fMuons                     TStreamerObjectPointer     asgenobj(TRefArray)
     # fLastTrack                 TStreamerInfo              asgenobj(TRef)
@@ -3521,11 +3520,11 @@ split into ``fTracks.fUniqueID``, ``fTracks.fBits``, ``fTracks.fPx``,
     # fTriggerBits.TObject       (no streamer)              None
     # fTriggerBits.fUniqueID     (no streamer)              asdtype('>u4')
     # fTriggerBits.fBits         (no streamer)              asdtype('>u4')
-    # 
+    #
     # fTriggerBits.fNbits        TStreamerBasicType         asdtype('>u4')
     # fTriggerBits.fNbytes       TStreamerBasicType         asdtype('>u4')
     # fTriggerBits.fAllBits      TStreamerBasicPointer      asjagged(asdtype('uint8'), 1)
-    # 
+    #
     # fIsValid                   TStreamerBasicType         asdtype('bool')
 
 In this view, many of the attributes are *not* special classes and can
@@ -3548,27 +3547,27 @@ as arrays of fixed-width matrices,
     #         [-0.13630907,  0.80078429,  1.70623565,  0.        ],
     #         [-1.16029346,  2.012362  ,  4.02206421,  0.        ],
     #         [ 0.        ,  0.        ,  0.        ,  0.        ]],
-    # 
+    #
     #        [[ 0.41865557,  1.60363352, -0.56923842,  0.        ],
     #         [ 0.06950195,  0.79105824,  2.0322361 ,  0.        ],
     #         [ 0.05688119,  2.52811217,  3.91394544,  0.        ],
     #         [ 0.        ,  0.        ,  0.        ,  0.        ]],
-    # 
+    #
     #        [[-1.24031985,  2.3477006 , -0.67482847,  0.        ],
     #         [ 1.22933233,  1.39499295,  2.17524433,  0.        ],
     #         [ 0.18559125,  2.40421987,  4.56326485,  0.        ],
     #         [ 0.        ,  0.        ,  0.        ,  0.        ]],
-    # 
+    #
     #        [[-0.43785933, -0.05061727,  0.28988785,  0.        ],
     #         [-0.90204114,  0.88527524,  2.34751844,  0.        ],
     #         [ 0.3241719 ,  0.79971647,  4.13229847,  0.        ],
     #         [ 0.        ,  0.        ,  0.        ,  0.        ]],
-    # 
+    #
     #        [[-0.98912323,  0.97513503,  1.03762376,  0.        ],
     #         [-0.96955669, -0.05892833,  3.02420664,  0.        ],
     #         [ 1.10181248,  3.31268907,  6.04244947,  0.        ],
     #         [ 0.        ,  0.        ,  0.        ,  0.        ]],
-    # 
+    #
     #        [[ 1.1283927 ,  1.20095801,  0.7379719 ,  0.        ],
     #         [ 0.32370013,  1.08198583,  2.96736264,  0.        ],
     #         [ 1.19329214,  2.01726198,  3.93975949,  0.        ],
@@ -3579,14 +3578,35 @@ as jagged arrays (of ROOT’s “Float16_t” encoding),
 .. code-block:: python3
 
     tree.array("fTracks.fMass2", entrystop=6)
-    # <JaggedArray [[4.5 4.5 4.5 ... 4.5 4.5 4.5] [4.5 4.5 4.5 ... 4.5 4.5 4.5] [8.90625 8.90625 8.90625 ... 8.90625 8.90625 8.90625] [8.90625 8.90625 8.90625 ... 8.90625 8.90625 8.90625] [8.90625 8.90625 8.90625 ... 8.90625 8.90625 8.90625] [4.5 4.5 4.5 ... 4.5 4.5 4.5]] at 0x7f36841a8208>
+    # <JaggedArray [[4.5 4.5 4.5 ... 4.5 4.5 4.5] [4.5 4.5 4.5 ... 4.5 4.5 4.5]
+    #               [8.90625 8.90625 8.90625 ... 8.90625 8.90625 8.90625]
+    #               [8.90625 8.90625 8.90625 ... 8.90625 8.90625 8.90625]
+    #               [8.90625 8.90625 8.90625 ... 8.90625 8.90625 8.90625]
+    #               [4.5 4.5 4.5 ... 4.5 4.5 4.5]] at 0x7f36841a8208>
 
 or as jagged arrays of fixed arrays (of ROOT’s “Double32_t” encoding),
 
 .. code-block:: python3
 
     tree.array("fTracks.fTArray[3]", entrystop=6)
-    # <JaggedArray [[[8.783523 17.513435 29.286354] [12.712547 18.882881 32.797363] [11.507339 19.916798 30.246092] ... [10.574707 18.890305 33.728233] [12.15555 18.71774 27.312075] [9.859776 19.74885 29.493528]] [[11.219862 21.20887 30.624903] [11.040182 24.79719 31.77871] [10.012672 20.93199 30.9403] ... [11.168169 23.217058 32.748943] [9.50235 21.121288 31.071629] [10.8550205 16.183943 26.904243]] [[8.624067 18.600851 26.04787] [10.689135 20.227545 29.83834] [11.296425 21.689695 27.481518] ... [10.669026 17.53861 27.396368] [10.695017 21.800402 29.768854] [9.190737 19.556316 30.239576]] [[10.730627 21.374237 29.189438] [10.917027 17.502947 24.684587] [10.719291 15.140461 30.947819] ... [11.342936 21.652617 30.104565] [10.155848 19.01908 31.161093] [9.246191 18.550188 29.727875]] [[11.012184 18.038168 25.433424] [9.5870495 19.802078 30.07635] [10.900804 19.059767 28.11974] ... [10.958439 19.644995 24.516222] [9.493415 19.871706 30.69776] [9.26706 21.658216 36.870094]] [[10.6818 23.174397 32.048332] [9.386814 19.217764 30.706171] [11.497931 16.519543 29.432865] ... [11.120119 20.196941 29.856403] [12.256461 21.39977 27.87131] [10.704875 20.647184 29.791487]]] at 0x7f36441e9518>
+    # <JaggedArray [[[8.783523 17.513435 29.286354] [12.712547 18.882881 32.797363]
+    #                [11.507339 19.916798 30.246092] ... [10.574707 18.890305 33.728233]
+    #                [12.15555 18.71774 27.312075] [9.859776 19.74885 29.493528]]
+    #               [[11.219862 21.20887 30.624903] [11.040182 24.79719 31.77871]
+    #                [10.012672 20.93199 30.9403] ... [11.168169 23.217058 32.748943]
+    #                [9.50235 21.121288 31.071629] [10.8550205 16.183943 26.904243]]
+    #               [[8.624067 18.600851 26.04787] [10.689135 20.227545 29.83834]
+    #                [11.296425 21.689695 27.481518] ... [10.669026 17.53861 27.396368]
+    #                [10.695017 21.800402 29.768854] [9.190737 19.556316 30.239576]]
+    #               [[10.730627 21.374237 29.189438] [10.917027 17.502947 24.684587]
+    #                [10.719291 15.140461 30.947819] ... [11.342936 21.652617 30.104565]
+    #                [10.155848 19.01908 31.161093] [9.246191 18.550188 29.727875]]
+    #               [[11.012184 18.038168 25.433424] [9.5870495 19.802078 30.07635]
+    #                [10.900804 19.059767 28.11974] ... [10.958439 19.644995 24.516222]
+    #                [9.493415 19.871706 30.69776] [9.26706 21.658216 36.870094]]
+    #               [[10.6818 23.174397 32.048332] [9.386814 19.217764 30.706171]
+    #                [11.497931 16.519543 29.432865] ... [11.120119 20.196941 29.856403]
+    #                [12.256461 21.39977 27.87131] [10.704875 20.647184 29.791487]]] at 0x7f36441e9518>
 
 However, some types are not fully split by ROOT and have to be
 deserialized individually (not vectorally). This example includes
@@ -3596,7 +3616,9 @@ they cannot be split.
 .. code-block:: python3
 
     tree.array("fH", entrystop=6)
-    # <ObjectArray [<b'TH1F' b'hstat' 0x7f364424a2c8> <b'TH1F' b'hstat' 0x7f364424ac28> <b'TH1F' b'hstat' 0x7f364424a048> <b'TH1F' b'hstat' 0x7f364424a2c8> <b'TH1F' b'hstat' 0x7f364424ac28> <b'TH1F' b'hstat' 0x7f364424a048>] at 0x7f364414f3c8>
+    # <ObjectArray [<b'TH1F' b'hstat' 0x7f364424a2c8> <b'TH1F' b'hstat' 0x7f364424ac28>
+    #               <b'TH1F' b'hstat' 0x7f364424a048> <b'TH1F' b'hstat' 0x7f364424a2c8>
+    #               <b'TH1F' b'hstat' 0x7f364424ac28> <b'TH1F' b'hstat' 0x7f364424a048>] at 0x7f364414f3c8>
 
 Each of those is a standard histogram object, something that would
 ordinarily be in a ``TDirectory``, not a ``TTree``. It has histogram
@@ -3630,9 +3652,9 @@ convenience methods (see below).
     #  0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
     #  0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
     #  0. 0. 0. 0.]
-    # 
+    #
     # ...
-    # 
+    #
     # b'Event Histogram'
     # [14. 18. 14. 11. 15. 13. 12. 13.  8.  8.  9. 10. 10.  7.  7. 10.  8. 12.
     #   6.  8.  7.  9. 10. 12. 10. 11. 10. 10. 10.  8. 14. 13.  9.  7. 12. 10.
@@ -3701,7 +3723,8 @@ such as ``std::vector<std::vector<T>>``.
 
     array = branch.array()
     array
-    # <ObjectArray [[] [[], []] [[10.0], [], [10.0, 20.0]] [[20.0, -21.0, -22.0]] [[200.0], [-201.0], [202.0]]] at 0x7f3644225fd0>
+    # <ObjectArray [[] [[], []] [[10.0], [], [10.0, 20.0]] [[20.0, -21.0, -22.0]]
+    #               [[200.0], [-201.0], [202.0]]] at 0x7f3644225fd0>
 
 Although you see something that looks like a ``JaggedArray``, the type
 is ``ObjectArray``, meaning that you only have some bytes with an
@@ -3724,7 +3747,8 @@ the arbitrary Python objects into awkward-arrays.
 
     jagged = awkward.fromiter(array)
     jagged
-    # <JaggedArray [[] [[] []] [[10.0] [] [10.0 20.0]] [[20.0 -21.0 -22.0]] [[200.0] [-201.0] [202.0]]] at 0x7f3644225da0>
+    # <JaggedArray [[] [[] []] [[10.0] [] [10.0 20.0]] [[20.0 -21.0 -22.0]]
+    #               [[200.0] [-201.0] [202.0]]] at 0x7f3644225da0>
 
 .. code-block:: python3
 
@@ -3773,11 +3797,11 @@ parallel. All of the array-reading functions have **executor** and
 .. code-block:: python3
 
     import concurrent.futures
-    
+
     # ThreadPoolExecutor divides work among multiple threads.
-    # Avoid ProcessPoolExecutor because the finalized arrays would have to be reserialized to pass between processes.
+    # Avoid ProcessPoolExecutor because finalized arrays would be reserialized to pass between processes.
     executor = concurrent.futures.ThreadPoolExecutor()
-    
+
     result = tree.array("fTracks.fVertex[3]", executor=executor, blocking=False)
     result
     # <function uproot.tree.TBranchMethods.array.<locals>.wait()>
@@ -3788,7 +3812,43 @@ We can work on other things while the array is being read.
 
     # and now get the array (waiting, if necessary, for it to complete)
     result()
-    # <JaggedArray [[[-0.11444091796875 -0.11993408203125 -7.8790283203125] [0.032958984375 -0.0604248046875 -1.27349853515625] [0.13458251953125 0.0439453125 -1.783447265625] ... [0.194091796875 0.07049560546875 0.7598876953125] [-0.09521484375 0.106201171875 -6.62384033203125] [-0.025634765625 -0.010986328125 18.3343505859375]] [[-0.1080322265625 -0.1116943359375 -3.52203369140625] [-0.0732421875 0.24078369140625 3.39019775390625] [0.245361328125 0.029296875 -16.171875] ... [0.05126953125 0.07598876953125 12.0721435546875] [-0.1153564453125 -0.19500732421875 7.9541015625] [-0.18951416015625 -0.02838134765625 -6.5277099609375]] [[-0.091552734375 -0.0860595703125 3.54766845703125] [-0.11077880859375 -0.28564453125 -1.1297607421875] [0.05126953125 -0.2801513671875 -1.7523193359375] ... [-0.02197265625 0.05859375 -8.671875] [-0.0164794921875 -0.1409912109375 -0.22613525390625] [-0.03753662109375 -0.05767822265625 21.66046142578125]] ... [[-0.0128173828125 0.2215576171875 -3.21258544921875] [0.0054931640625 -0.25360107421875 0.53466796875] [-0.025634765625 -0.025634765625 6.6522216796875] ... [0.02105712890625 -0.16387939453125 -1.446533203125] [0.07232666015625 0.44952392578125 -16.16455078125] [0.0823974609375 -0.08056640625 9.9444580078125]] [[0.01373291015625 -0.06500244140625 -3.680419921875] [-0.05767822265625 -0.01922607421875 -2.92510986328125] [0.06317138671875 -0.20782470703125 -11.5118408203125] ... [0.00823974609375 -0.0311279296875 -11.839599609375] [-0.09063720703125 -0.047607421875 -10.6365966796875] [0.010986328125 -0.2984619140625 0.7855224609375]] [[0.113525390625 -0.07232666015625 4.2095947265625] [-0.142822265625 0.205078125 8.75152587890625] [0.04119873046875 0.02655029296875 2.4114990234375] ... [0.0531005859375 0.04486083984375 6.5423583984375] [0.09979248046875 0.15380859375 5.4840087890625] [-0.10162353515625 -0.54290771484375 -5.8502197265625]]] at 0x7f3624419f98>
+    # <JaggedArray [[[-0.11444091796875 -0.11993408203125 -7.8790283203125]
+    #                [0.032958984375 -0.0604248046875 -1.27349853515625]
+    #                [0.13458251953125 0.0439453125 -1.783447265625] ...
+    #                [0.194091796875 0.07049560546875 0.7598876953125]
+    #                [-0.09521484375 0.106201171875 -6.62384033203125]
+    #                [-0.025634765625 -0.010986328125 18.3343505859375]]
+    #               [[-0.1080322265625 -0.1116943359375 -3.52203369140625]
+    #                [-0.0732421875 0.24078369140625 3.39019775390625]
+    #                [0.245361328125 0.029296875 -16.171875] ...
+    #                [0.05126953125 0.07598876953125 12.0721435546875]
+    #                [-0.1153564453125 -0.19500732421875 7.9541015625]
+    #                [-0.18951416015625 -0.02838134765625 -6.5277099609375]]
+    #               [[-0.091552734375 -0.0860595703125 3.54766845703125]
+    #                [-0.11077880859375 -0.28564453125 -1.1297607421875]
+    #                [0.05126953125 -0.2801513671875 -1.7523193359375] ...
+    #                [-0.02197265625 0.05859375 -8.671875]
+    #                [-0.0164794921875 -0.1409912109375 -0.22613525390625]
+    #                [-0.03753662109375 -0.05767822265625 21.66046142578125]] ...
+    #               [[-0.0128173828125 0.2215576171875 -3.21258544921875]
+    #                [0.0054931640625 -0.25360107421875 0.53466796875]
+    #                [-0.025634765625 -0.025634765625 6.6522216796875] ...
+    #                [0.02105712890625 -0.16387939453125 -1.446533203125]
+    #                [0.07232666015625 0.44952392578125 -16.16455078125]
+    #                [0.0823974609375 -0.08056640625 9.9444580078125]]
+    #               [[0.01373291015625 -0.06500244140625 -3.680419921875]
+    #                [-0.05767822265625 -0.01922607421875 -2.92510986328125]
+    #                [0.06317138671875 -0.20782470703125 -11.5118408203125] ...
+    #                [0.00823974609375 -0.0311279296875 -11.839599609375]
+    #                [-0.09063720703125 -0.047607421875 -10.6365966796875]
+    #                [0.010986328125 -0.2984619140625 0.7855224609375]]
+    #               [[0.113525390625 -0.07232666015625 4.2095947265625]
+    #                [-0.142822265625 0.205078125 8.75152587890625]
+    #                [0.04119873046875 0.02655029296875 2.4114990234375] ...
+    #                [0.0531005859375 0.04486083984375 6.5423583984375]
+    #                [0.09979248046875 0.15380859375 5.4840087890625]
+    #                [-0.10162353515625 -0.54290771484375 -5.8502197265625]]
+    #               ] at 0x7f3624419f98>
 
 The **executor** and **blocking** parameters are often used together,
 but they do not have to be. You can collect data in parallel but let the
@@ -3797,7 +3857,43 @@ array-reading function block until it is finished:
 .. code-block:: python3
 
     tree.array("fTracks.fVertex[3]", executor=executor)
-    # <JaggedArray [[[-0.11444091796875 -0.11993408203125 -7.8790283203125] [0.032958984375 -0.0604248046875 -1.27349853515625] [0.13458251953125 0.0439453125 -1.783447265625] ... [0.194091796875 0.07049560546875 0.7598876953125] [-0.09521484375 0.106201171875 -6.62384033203125] [-0.025634765625 -0.010986328125 18.3343505859375]] [[-0.1080322265625 -0.1116943359375 -3.52203369140625] [-0.0732421875 0.24078369140625 3.39019775390625] [0.245361328125 0.029296875 -16.171875] ... [0.05126953125 0.07598876953125 12.0721435546875] [-0.1153564453125 -0.19500732421875 7.9541015625] [-0.18951416015625 -0.02838134765625 -6.5277099609375]] [[-0.091552734375 -0.0860595703125 3.54766845703125] [-0.11077880859375 -0.28564453125 -1.1297607421875] [0.05126953125 -0.2801513671875 -1.7523193359375] ... [-0.02197265625 0.05859375 -8.671875] [-0.0164794921875 -0.1409912109375 -0.22613525390625] [-0.03753662109375 -0.05767822265625 21.66046142578125]] ... [[-0.0128173828125 0.2215576171875 -3.21258544921875] [0.0054931640625 -0.25360107421875 0.53466796875] [-0.025634765625 -0.025634765625 6.6522216796875] ... [0.02105712890625 -0.16387939453125 -1.446533203125] [0.07232666015625 0.44952392578125 -16.16455078125] [0.0823974609375 -0.08056640625 9.9444580078125]] [[0.01373291015625 -0.06500244140625 -3.680419921875] [-0.05767822265625 -0.01922607421875 -2.92510986328125] [0.06317138671875 -0.20782470703125 -11.5118408203125] ... [0.00823974609375 -0.0311279296875 -11.839599609375] [-0.09063720703125 -0.047607421875 -10.6365966796875] [0.010986328125 -0.2984619140625 0.7855224609375]] [[0.113525390625 -0.07232666015625 4.2095947265625] [-0.142822265625 0.205078125 8.75152587890625] [0.04119873046875 0.02655029296875 2.4114990234375] ... [0.0531005859375 0.04486083984375 6.5423583984375] [0.09979248046875 0.15380859375 5.4840087890625] [-0.10162353515625 -0.54290771484375 -5.8502197265625]]] at 0x7f36246b5550>
+    # <JaggedArray [[[-0.11444091796875 -0.11993408203125 -7.8790283203125]
+    #                [0.032958984375 -0.0604248046875 -1.27349853515625]
+    #                [0.13458251953125 0.0439453125 -1.783447265625] ...
+    #                [0.194091796875 0.07049560546875 0.7598876953125]
+    #                [-0.09521484375 0.106201171875 -6.62384033203125]
+    #                [-0.025634765625 -0.010986328125 18.3343505859375]]
+    #               [[-0.1080322265625 -0.1116943359375 -3.52203369140625]
+    #                [-0.0732421875 0.24078369140625 3.39019775390625]
+    #                [0.245361328125 0.029296875 -16.171875] ...
+    #                [0.05126953125 0.07598876953125 12.0721435546875]
+    #                [-0.1153564453125 -0.19500732421875 7.9541015625]
+    #                [-0.18951416015625 -0.02838134765625 -6.5277099609375]]
+    #               [[-0.091552734375 -0.0860595703125 3.54766845703125]
+    #                [-0.11077880859375 -0.28564453125 -1.1297607421875]
+    #                [0.05126953125 -0.2801513671875 -1.7523193359375] ...
+    #                [-0.02197265625 0.05859375 -8.671875]
+    #                [-0.0164794921875 -0.1409912109375 -0.22613525390625]
+    #                [-0.03753662109375 -0.05767822265625 21.66046142578125]] ...
+    #               [[-0.0128173828125 0.2215576171875 -3.21258544921875]
+    #                [0.0054931640625 -0.25360107421875 0.53466796875]
+    #                [-0.025634765625 -0.025634765625 6.6522216796875] ...
+    #                [0.02105712890625 -0.16387939453125 -1.446533203125]
+    #                [0.07232666015625 0.44952392578125 -16.16455078125]
+    #                [0.0823974609375 -0.08056640625 9.9444580078125]]
+    #               [[0.01373291015625 -0.06500244140625 -3.680419921875]
+    #                [-0.05767822265625 -0.01922607421875 -2.92510986328125]
+    #                [0.06317138671875 -0.20782470703125 -11.5118408203125] ...
+    #                [0.00823974609375 -0.0311279296875 -11.839599609375]
+    #                [-0.09063720703125 -0.047607421875 -10.6365966796875]
+    #                [0.010986328125 -0.2984619140625 0.7855224609375]]
+    #               [[0.113525390625 -0.07232666015625 4.2095947265625]
+    #                [-0.142822265625 0.205078125 8.75152587890625]
+    #                [0.04119873046875 0.02655029296875 2.4114990234375] ...
+    #                [0.0531005859375 0.04486083984375 6.5423583984375]
+    #                [0.09979248046875 0.15380859375 5.4840087890625]
+    #                [-0.10162353515625 -0.54290771484375 -5.8502197265625]]
+    #               ] at 0x7f3624419f98>
 
 The other case, non-blocking return without parallel processing
 (**executor=None** and **blocking=False**) is not very useful because
@@ -3895,7 +3991,7 @@ Python. Here’s a way to find out which ones have been defined so far:
 .. code-block:: python3
 
     import pkgutil
-    
+
     [modname for importer, modname, ispkg in pkgutil.walk_packages(uproot_methods.classes.__path__)]
     # ['TGraph',
     #  'TGraphAsymmErrors',
@@ -4166,8 +4262,8 @@ read the data, like this:
 
    root [0] auto file = TFile::Open("tmp.root");
    root [1] file->ls();
-   TFile**     tmp.root    
-    TFile*     tmp.root    
+   TFile**     tmp.root
+    TFile*     tmp.root
      KEY: TObjString   name;1  Collectable string class
    root [2] TObjString* data;
    root [3] file->GetObject("name", data);
@@ -4208,7 +4304,7 @@ from another file and modified,
     for i in range(len(histogram)):
         histogram[i] /= norm
     histogram.show()
-        
+
     file["normalized"] = histogram
 
     #                   0                                                       2410.8
@@ -4248,7 +4344,7 @@ or it may be created entirely in Python.
 
     import types
     import uproot_methods.classes.TH1
-    
+
     class MyTH1(uproot_methods.classes.TH1.Methods, list):
         def __init__(self, low, high, values, title=""):
             self._fXaxis = types.SimpleNamespace()
@@ -4259,9 +4355,9 @@ or it may be created entirely in Python.
                 self.append(float(x))
             self._fTitle = title
             self._classname = "TH1F"
-            
+
     histogram = MyTH1(-5, 5, [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0])
-    
+
     file["synthetic"] = histogram
 
 .. code-block:: python3
