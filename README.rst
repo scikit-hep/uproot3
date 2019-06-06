@@ -751,8 +751,8 @@ mathematics.
 .. code-block:: python3
 
     numpy.log(data["E1"])
-    # <ChunkedArray [4.409178007248409 4.132682336791151 4.132682336791151 4.104655794838432 3.733527454020269
-                     3.891440776178839 3.891440776178839 ...] at 0x7f37504560b8>
+    # <ChunkedArray [4.409178007248409 4.132682336791151 4.132682336791151 4.104655794838432
+    #                3.733527454020269 3.891440776178839 3.891440776178839 ...] at 0x7f37504560b8>
 
 Now all of the chunks have been read, because the values were needed to
 compute ``log(E1)`` for all ``E1``.
