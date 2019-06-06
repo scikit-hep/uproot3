@@ -611,7 +611,7 @@ Now the same line of code reads from the file again.
 .. code-block:: python3
 
     # not in cache: reads from file
-    events.arrays(["p[xyz]*"], cache=mycache);
+    events.arrays(["p[xyz]*"], cache=mycache)
 
 Automatically managed caches
 ----------------------------
@@ -690,10 +690,7 @@ able to load at least one chunk!
 .. code-block:: python3
 
     uproot.open("http://scikit-hep.org/uproot/examples/Zmumu.root", limitbytes="16 kB", chunkbytes="4 kB")
-
-.. parsed-literal::
-
-    <ROOTDirectory b'Zmumu.root' at 0x7f375041f278>
+    # <ROOTDirectory b'Zmumu.root' at 0x7f375041f278>
 
 By default (unless **localsource** is overridden), local files are
 memory-mapped, so the operating system manages its byte-level cache.
@@ -723,10 +720,7 @@ objects, rather than Numpy arrays.
 
     data = events.lazyarrays("*")
     data
-
-.. parsed-literal::
-
-    <ChunkedArray [<Row 0> <Row 1> <Row 2> ... <Row 2301> <Row 2302> <Row 2303>] at 0x7f375041fa20>
+    # <ChunkedArray [<Row 0> <Row 1> <Row 2> ... <Row 2301> <Row 2302> <Row 2303>] at 0x7f375041fa20>
 
 This ``ChunkedArray`` represents all the data in the file in chunks
 specified by ROOT’s internal baskets (specifically, the places where the
@@ -737,10 +731,7 @@ baskets align, called “clusters”). Each chunk contains a
 
     data = events.lazyarrays(entrysteps=500)   # chunks of 500 events each
     data["E1"]
-
-.. parsed-literal::
-
-    <ChunkedArray [82.2018663875 62.3449289481 62.3449289481 ... 81.2701355756 81.2701355756 81.5662173543] at 0x7f3750467400>
+    # <ChunkedArray [82.2018663875 62.3449289481 62.3449289481 ... 81.2701355756 81.2701355756 81.5662173543] at 0x7f3750467400>
 
 Requesting ``"E1"`` through all the chunks and printing it (above) has
 caused the first and last chunks of the array to be read, because that’s
@@ -749,10 +740,7 @@ all that got written to the screen. (See the ``...``?)
 .. code-block:: python3
 
     [chunk["E1"].ismaterialized for chunk in data.chunks]
-
-.. parsed-literal::
-
-    [True, False, False, False, True]
+    # [True, False, False, False, True]
 
 These arrays can be used with `Numpy’s universal
 functions <https://docs.scipy.org/doc/numpy/reference/ufuncs.html>`__
@@ -762,10 +750,7 @@ mathematics.
 .. code-block:: python3
 
     numpy.log(data["E1"])
-
-.. parsed-literal::
-
-    <ChunkedArray [4.409178007248409 4.132682336791151 4.132682336791151 4.104655794838432 3.733527454020269 3.891440776178839 3.891440776178839 ...] at 0x7f37504560b8>
+    # <ChunkedArray [4.409178007248409 4.132682336791151 4.132682336791151 4.104655794838432 3.733527454020269 3.891440776178839 3.891440776178839 ...] at 0x7f37504560b8>
 
 Now all of the chunks have been read, because the values were needed to
 compute ``log(E1)`` for all ``E1``.
@@ -773,10 +758,7 @@ compute ``log(E1)`` for all ``E1``.
 .. code-block:: python3
 
     [chunk["E1"].ismaterialized for chunk in data.chunks]
-
-.. parsed-literal::
-
-    [True, True, True, True, True]
+    # [True, True, True, True, True]
 
 (**Note:** only ufuncs recognize these lazy arrays because Numpy
 provides a `mechanism to override
@@ -791,11 +773,8 @@ contiguous whole.)
 .. code-block:: python3
 
     numpy.array(data["E1"])
-
-.. parsed-literal::
-
-    array([82.20186639, 62.34492895, 62.34492895, ..., 81.27013558,
-           81.27013558, 81.56621735])
+    # array([82.20186639, 62.34492895, 62.34492895, ..., 81.27013558,
+    #        81.27013558, 81.56621735])
 
 Lazy array of many files
 ------------------------
@@ -827,10 +806,7 @@ single array.
         # branch(s) in each file for lazyarray(s)
         "f8")
     data
-
-.. parsed-literal::
-
-    <ChunkedArray [-14.9 -13.9 -12.9 ... 12.1 13.1 14.1] at 0x7f3739bc37f0>
+    # <ChunkedArray [-14.9 -13.9 -12.9 ... 12.1 13.1 14.1] at 0x7f3739bc37f0>
 
 This ``data`` represents the entire set of files, and the only up-front
 processing that had to be done was to find out how many entries each
@@ -851,20 +827,17 @@ shortcut method (which reads less data than normal file-opening):
         "sample",
         # total=True adds all values; total=False leaves them as a dict
         total=False))
-
-.. parsed-literal::
-
-    {'http://scikit-hep.org/uproot/examples/sample-5.23.02-zlib.root': 30,
-     'http://scikit-hep.org/uproot/examples/sample-5.24.00-zlib.root': 30,
-     'http://scikit-hep.org/uproot/examples/sample-5.25.02-zlib.root': 30,
-     'http://scikit-hep.org/uproot/examples/sample-5.26.00-zlib.root': 30,
-     'http://scikit-hep.org/uproot/examples/sample-5.27.02-zlib.root': 30,
-     'http://scikit-hep.org/uproot/examples/sample-5.28.00-zlib.root': 30,
-     'http://scikit-hep.org/uproot/examples/sample-5.29.02-zlib.root': 30,
-     'http://scikit-hep.org/uproot/examples/sample-5.30.00-zlib.root': 30,
-     'http://scikit-hep.org/uproot/examples/sample-6.08.04-zlib.root': 30,
-     'http://scikit-hep.org/uproot/examples/sample-6.10.05-zlib.root': 30,
-     'http://scikit-hep.org/uproot/examples/sample-6.14.00-zlib.root': 30}
+    # {'http://scikit-hep.org/uproot/examples/sample-5.23.02-zlib.root': 30,
+    #  'http://scikit-hep.org/uproot/examples/sample-5.24.00-zlib.root': 30,
+    #  'http://scikit-hep.org/uproot/examples/sample-5.25.02-zlib.root': 30,
+    #  'http://scikit-hep.org/uproot/examples/sample-5.26.00-zlib.root': 30,
+    #  'http://scikit-hep.org/uproot/examples/sample-5.27.02-zlib.root': 30,
+    #  'http://scikit-hep.org/uproot/examples/sample-5.28.00-zlib.root': 30,
+    #  'http://scikit-hep.org/uproot/examples/sample-5.29.02-zlib.root': 30,
+    #  'http://scikit-hep.org/uproot/examples/sample-5.30.00-zlib.root': 30,
+    #  'http://scikit-hep.org/uproot/examples/sample-6.08.04-zlib.root': 30,
+    #  'http://scikit-hep.org/uproot/examples/sample-6.10.05-zlib.root': 30,
+    #  'http://scikit-hep.org/uproot/examples/sample-6.14.00-zlib.root': 30}
 
 Lazy arrays with caching
 ------------------------
@@ -882,29 +855,20 @@ This is caching, and the caching mechanism is the same as before:
     
     data = events.lazyarrays(entrysteps=500, cache=mycache)
     data
-
-.. parsed-literal::
-
-    <ChunkedArray [<Row 0> <Row 1> <Row 2> ... <Row 2301> <Row 2302> <Row 2303>] at 0x7f3739b90f28>
+    # <ChunkedArray [<Row 0> <Row 1> <Row 2> ... <Row 2301> <Row 2302> <Row 2303>] at 0x7f3739b90f28>
 
 Before performing a calculation, the cache is empty.
 
 .. code-block:: python3
 
     len(mycache)
-
-.. parsed-literal::
-
-    0
+    # 0
 
 .. code-block:: python3
 
     numpy.sqrt((data["E1"] + data["E2"])**2 - (data["px1"] + data["px2"])**2 -
                (data["py1"] + data["py2"])**2 - (data["pz1"] + data["pz2"])**2)
-
-.. parsed-literal::
-
-    <ChunkedArray [82.46269155513643 83.62620400526137 83.30846466680981 82.14937288090277 90.46912303551746 89.75766317061574 89.77394317215372 ...] at 0x7f3739b9eda0>
+    # <ChunkedArray [82.46269155513643 83.62620400526137 83.30846466680981 82.14937288090277 90.46912303551746 89.75766317061574 89.77394317215372 ...] at 0x7f3739b9eda0>
 
 After performing the calculation, the cache contains only as many chunks
 as it could hold.
@@ -913,10 +877,7 @@ as it could hold.
 
     # chunks in cache  chunks touched to compute (E1 + E2)**2 - (px1 + px2)**2 - (py1 + py2)**2 - (pz1 + pz2)**2
     len(mycache),      len(data.chunks) * 8
-
-.. parsed-literal::
-
-    (28, 40)
+    # (28, 40)
 
 Lazy arrays as lightweight skims
 --------------------------------
@@ -958,19 +919,13 @@ original ROOT filenames—don’t move them!).
 
     # reads from derived-feature.awkd
     data2["mass"]
-
-.. parsed-literal::
-
-    <ChunkedArray [82.46269155513643 83.62620400526137 83.30846466680981 ... 95.96547966432459 96.49594381502096 96.6567276548945] at 0x7f3739bafc88>
+    # <ChunkedArray [82.46269155513643 83.62620400526137 83.30846466680981 ... 95.96547966432459 96.49594381502096 96.6567276548945] at 0x7f3739bafc88>
 
 .. code-block:: python3
 
     # reads from the original ROOT flies
     data2["E1"]
-
-.. parsed-literal::
-
-    <ChunkedArray [82.2018663875 62.3449289481 62.3449289481 ... 81.2701355756 81.2701355756 81.5662173543] at 0x7f3739b3e400>
+    # <ChunkedArray [82.2018663875 62.3449289481 62.3449289481 ... 81.2701355756 81.2701355756 81.5662173543] at 0x7f3739b3e400>
 
 Similarly, a dataset with a cut applied saves the identities of the
 selected events but only pointers to the original ROOT data. This acts
@@ -980,10 +935,7 @@ as a lightweight skim.
 
     selected = data[data["mass"] < 80]
     selected
-
-.. parsed-literal::
-
-    <ChunkedArray [<Row 16> <Row 17> <Row 18> <Row 19> <Row 47> <Row 48> <Row 49> ...] at 0x7f3739b3e7f0>
+    # <ChunkedArray [<Row 16> <Row 17> <Row 18> <Row 19> <Row 47> <Row 48> <Row 49> ...] at 0x7f3739b3e7f0>
 
 .. code-block:: python3
 
@@ -993,10 +945,7 @@ as a lightweight skim.
 
     data3 = awkward.load("selected-events.awkd")
     data3
-
-.. parsed-literal::
-
-    <ChunkedArray [<Row 16> <Row 17> <Row 18> ... <Row 2297> <Row 2298> <Row 2299>] at 0x7f3739b1e048>
+    # <ChunkedArray [<Row 16> <Row 17> <Row 18> ... <Row 2297> <Row 2298> <Row 2299>] at 0x7f3739b1e048>
 
 Lazy arrays in Dask
 -------------------
@@ -1012,10 +961,7 @@ functions.
 .. code-block:: python3
 
     uproot.daskarray("http://scikit-hep.org/uproot/examples/Zmumu.root", "events", "E1")
-
-.. parsed-literal::
-
-    dask.array<array, shape=(2304,), dtype=float64, chunksize=(2304,)>
+    # dask.array<array, shape=(2304,), dtype=float64, chunksize=(2304,)>
 
 .. code-block:: python3
 
