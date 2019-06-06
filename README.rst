@@ -3494,28 +3494,28 @@ split into ``fTracks.fUniqueID``, ``fTracks.fBits``, ``fTracks.fPx``,
     # fTracks.fPz                TStreamerBasicType         asjagged(asdtype('>f4'))
     # fTracks.fRandom            TStreamerBasicType         asjagged(asdtype('>f4'))
     # fTracks.fMass2             TStreamerBasicType         asjagged(asfloat16(0.0, 0.0, 8,
-    #                                    dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    #                                   dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
     # fTracks.fBx                TStreamerBasicType         asjagged(asfloat16(0.0, 0.0, 10,
-    #                                    dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    #                                   dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
     # fTracks.fBy                TStreamerBasicType         asjagged(asfloat16(0.0, 0.0, 10,
-    #                                    dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    #                                   dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
     # fTracks.fMeanCharge        TStreamerBasicType         asjagged(asdtype('>f4'))
     # fTracks.fXfirst            TStreamerBasicType         asjagged(asfloat16(0, 0, 12,
-    #                                    dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    #                                   dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
     # fTracks.fXlast             TStreamerBasicType         asjagged(asfloat16(0, 0, 12,
-    #                                    dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    #                                   dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
     # fTracks.fYfirst            TStreamerBasicType         asjagged(asfloat16(0, 0, 12,
-    #                                    dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    #                                   dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
     # fTracks.fYlast             TStreamerBasicType         asjagged(asfloat16(0, 0, 12,
-    #                                    dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    #                                   dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
     # fTracks.fZfirst            TStreamerBasicType         asjagged(asfloat16(0, 0, 12,
-    #                                    dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    #                                   dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
     # fTracks.fZlast             TStreamerBasicType         asjagged(asfloat16(0, 0, 12,
-    #                                    dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
+    #                                   dtype([('exponent', 'u1'), ('mantissa', '>u2')]), dtype('float32')))
     # fTracks.fCharge            TStreamerBasicType         asjagged(asdouble32(-1.0, 1.0, 2,
-    #                                    dtype('>u4'), dtype('float64')))
+    #                                   dtype('>u4'), dtype('float64')))
     # fTracks.fVertex[3]         TStreamerBasicType         asjagged(asdouble32(-30.0, 30.0, 16,
-    #                                    dtype(('>u4', (3,))), dtype(('<f8', (3,)))))
+    #                                   dtype(('>u4', (3,))), dtype(('<f8', (3,)))))
     # fTracks.fNpoint            TStreamerBasicType         asjagged(asdtype('>i4'))
     # fTracks.fValid             TStreamerBasicType         asjagged(asdtype('>i2'))
     # fTracks.fNsp               TStreamerBasicType         asjagged(asdtype('>u4'))
