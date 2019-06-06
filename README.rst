@@ -878,7 +878,7 @@ as it could hold.
 
 .. code-block:: python3
 
-    # chunks in cache  chunks touched to compute (E1 + E2)**2 - (px1 + px2)**2 - (py1 + py2)**2 - (pz1 + pz2)**2
+    # chunks in cache  chunks touched to compute mass
     len(mycache),      len(data.chunks) * 8
     # (28, 40)
 
