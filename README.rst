@@ -219,14 +219,14 @@ so they behave like Python dicts, too.
     file["one"].values()
     # [<ROOTDirectory b'two' at 0x7f3750588fd0>, <TTree b'tree' at 0x7f3750588cc0>]
 
-**What’s the ``b`` before each object name?** Python 3 distinguishes
+**What’s the `b` before each object name?** Python 3 distinguishes
 between bytestrings and encoded strings. ROOT object names have no
 encoding, such as Latin-1 or Unicode, so uproot presents them as raw
 bytestrings. However, if you enter a Python string (no ``b``) and it
 matches an object name (interpreted as plain ASCII), it will count as a
 match, as ``"one"`` does above.
 
-**What’s the ``;1`` after each object name?** ROOT objects are versioned
+**What’s the `;1` after each object name?** ROOT objects are versioned
 with a “cycle number.” If multiple objects are written to the ROOT file
 with the same name, they will have different cycle numbers, with the
 largest value being last. If you don’t specify a cycle number, you’ll
