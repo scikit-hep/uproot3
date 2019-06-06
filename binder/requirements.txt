@@ -9,4 +9,3 @@ pandas
 requests
 dask[array]
 dask[dataframe]
-h5py
