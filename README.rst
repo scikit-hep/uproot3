@@ -1112,7 +1112,6 @@ events*, not *single events*.
 
 .. code-block:: python3
 
-    %matplotlib inline
     import matplotlib.pyplot
     
     counts, edges = histogram
@@ -1162,20 +1161,28 @@ information.
         "f8",
          reportpath=True, reportfile=True, reportentries=True):
         print(path, file, start, stop, len(arrays))
-
-.. parsed-literal::
-
-    http://scikit-hep.org/uproot/examples/sample-5.23.02-zlib.root <ROOTDirectory b'sample-5.23.02-zlib.root' at 0x7f36441c3c50> 0 30 1
-    http://scikit-hep.org/uproot/examples/sample-5.24.00-zlib.root <ROOTDirectory b'sample-5.24.00-zlib.root' at 0x7f364418e8d0> 30 60 1
-    http://scikit-hep.org/uproot/examples/sample-5.25.02-zlib.root <ROOTDirectory b'sample-5.25.02-zlib.root' at 0x7f36441034e0> 60 90 1
-    http://scikit-hep.org/uproot/examples/sample-5.26.00-zlib.root <ROOTDirectory b'sample-5.26.00-zlib.root' at 0x7f3644095f98> 90 120 1
-    http://scikit-hep.org/uproot/examples/sample-5.27.02-zlib.root <ROOTDirectory b'sample-5.27.02-zlib.root' at 0x7f36440c4c88> 120 150 1
-    http://scikit-hep.org/uproot/examples/sample-5.28.00-zlib.root <ROOTDirectory b'sample-5.28.00-zlib.root' at 0x7f3644083898> 150 180 1
-    http://scikit-hep.org/uproot/examples/sample-5.29.02-zlib.root <ROOTDirectory b'sample-5.29.02-zlib.root' at 0x7f36440765c0> 180 210 1
-    http://scikit-hep.org/uproot/examples/sample-5.30.00-zlib.root <ROOTDirectory b'sample-5.30.00-zlib.root' at 0x7f36440dec88> 210 240 1
-    http://scikit-hep.org/uproot/examples/sample-6.08.04-zlib.root <ROOTDirectory b'sample-6.08.04-zlib.root' at 0x7f364418e550> 240 270 1
-    http://scikit-hep.org/uproot/examples/sample-6.10.05-zlib.root <ROOTDirectory b'sample-6.10.05-zlib.root' at 0x7f36441b76a0> 270 300 1
-    http://scikit-hep.org/uproot/examples/sample-6.14.00-zlib.root <ROOTDirectory b'sample-6.14.00-zlib.root' at 0x7f3644128cf8> 300 330 1
+    # http://scikit-hep.org/uproot/examples/sample-5.23.02-zlib.root
+    #     <ROOTDirectory b'sample-5.23.02-zlib.root' at 0x7f36441c3c50> 0 30 1
+    # http://scikit-hep.org/uproot/examples/sample-5.24.00-zlib.root
+    #     <ROOTDirectory b'sample-5.24.00-zlib.root' at 0x7f364418e8d0> 30 60 1
+    # http://scikit-hep.org/uproot/examples/sample-5.25.02-zlib.root
+    #     <ROOTDirectory b'sample-5.25.02-zlib.root' at 0x7f36441034e0> 60 90 1
+    # http://scikit-hep.org/uproot/examples/sample-5.26.00-zlib.root
+    #     <ROOTDirectory b'sample-5.26.00-zlib.root' at 0x7f3644095f98> 90 120 1
+    # http://scikit-hep.org/uproot/examples/sample-5.27.02-zlib.root
+    #     <ROOTDirectory b'sample-5.27.02-zlib.root' at 0x7f36440c4c88> 120 150 1
+    # http://scikit-hep.org/uproot/examples/sample-5.28.00-zlib.root
+    #     <ROOTDirectory b'sample-5.28.00-zlib.root' at 0x7f3644083898> 150 180 1
+    # http://scikit-hep.org/uproot/examples/sample-5.29.02-zlib.root
+    #     <ROOTDirectory b'sample-5.29.02-zlib.root' at 0x7f36440765c0> 180 210 1
+    # http://scikit-hep.org/uproot/examples/sample-5.30.00-zlib.root
+    #     <ROOTDirectory b'sample-5.30.00-zlib.root' at 0x7f36440dec88> 210 240 1
+    # http://scikit-hep.org/uproot/examples/sample-6.08.04-zlib.root
+    #     <ROOTDirectory b'sample-6.08.04-zlib.root' at 0x7f364418e550> 240 270 1
+    # http://scikit-hep.org/uproot/examples/sample-6.10.05-zlib.root
+    #     <ROOTDirectory b'sample-6.10.05-zlib.root' at 0x7f36441b76a0> 270 300 1
+    # http://scikit-hep.org/uproot/examples/sample-6.14.00-zlib.root
+    #     <ROOTDirectory b'sample-6.14.00-zlib.root' at 0x7f3644128cf8> 300 330 1
 
 Limiting the number of entries to be read
 -----------------------------------------
