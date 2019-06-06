@@ -390,26 +390,8 @@ method, which prints the branches and their interpretations as arrays.
 .. code-block:: python3
 
     events.keys()
-    # [b'Type',
-    #  b'Run',
-    #  b'Event',
-    #  b'E1',
-    #  b'px1',
-    #  b'py1',
-    #  b'pz1',
-    #  b'pt1',
-    #  b'eta1',
-    #  b'phi1',
-    #  b'Q1',
-    #  b'E2',
-    #  b'px2',
-    #  b'py2',
-    #  b'pz2',
-    #  b'pt2',
-    #  b'eta2',
-    #  b'phi2',
-    #  b'Q2',
-    #  b'M']
+    # [b'Type', b'Run', b'Event', b'E1', b'px1', b'py1', b'pz1', b'pt1', b'eta1', b'phi1', b'Q1',
+    #  b'E2', b'px2', b'py2', b'pz2', b'pt2', b'eta2', b'phi2', b'Q2', b'M']
 
 .. code-block:: python3
 
