@@ -89,25 +89,34 @@ Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?urlpath=
 * `What is uproot? <#what-is-uproot>`__
 * `Exploring a file <#exploring-a-file>`__
 * `Compressed objects in ROOT files <#compressed-objects-in-root-files>`__
+
   - `Exploring a TTree <#exploring-a-ttree>`__
   - `Some terminology <#some-terminology>`__
+
 * `Reading arrays from a TTree <#reading-arrays-from-a-ttree>`__
 * `Caching data <#caching-data>`__
+
   - `Automatically managed caches <#automatically-managed-caches>`__
   - `Caching at all levels of abstraction <#caching-at-all-levels-of-abstraction>`__
+
 * `Lazy arrays <#lazy-arrays>`__
+
   - `Lazy array of many files <#lazy-array-of-many-files>`__
   - `Lazy arrays with caching <#lazy-arrays-with-caching>`__
   - `Lazy arrays as lightweight skims <#lazy-arrays-as-lightweight-skims>`__
   - `Lazy arrays in Dask <#lazy-arrays-in-dask>`__
+
 * `Iteration <#iteration>`__
+
   - `Filenames and entry numbers while iterating <#filenames-and-entry-numbers-while-iterating>`__
   - `Limiting the number of entries to be read <#limiting-the-number-of-entries-to-be-read>`__
   - `Controlling lazy chunk and iteration step sizes <#controlling-lazy-chunk-and-iteration-step-sizes>`__
   - `Caching and iteration <#caching-and-iteration>`__
+
 * `Changing the output container type <#changing-the-output-container-type>`__
 * `Filling Pandas DataFrames <#filling-pandas-dataframes>`__
 * `Selecting and interpreting branches <#selecting-and-interpreting-branches>`__
+
   - `TBranch interpretations <#tbranch-interpretations>`__
   - `Reading data into a preexisting array <#reading-data-into-a-preexisting-array>`__
   - `Passing many new interpretations in one call <#passing-many-new-interpretations-in-one-call>`__
@@ -119,9 +128,11 @@ Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?urlpath=
   - `Variable-width values: strings <#variable-width-values-strings>`__
   - `Arbitrary objects in TTrees <#arbitrary-objects-in-ttrees>`__
   - `Doubly nested jagged arrays (i.e. ``std::vector<std::vector<T>>``) <#doubly-nested-jagged-arrays-ie-stdvectorstdvectort>`__
+
 * `Parallel array reading <#parallel-array-reading>`__
 * `Histograms, TProfiles, TGraphs, and others <#histograms-tprofiles-tgraphs-and-others>`__
 * `Creating and writing data to ROOT files <#creating-and-writing-data-to-root-files>`__
+
   - `Writing histograms <#writing-histograms>`__
   - `Writing TTrees <#writing-ttrees>`__
 
