@@ -3404,36 +3404,9 @@ method.
 .. code-block:: python3
 
     [x.decode("utf-8") for x in branch.array()]
-    # ['hey-0',
-    #  'hey-1',
-    #  'hey-2',
-    #  'hey-3',
-    #  'hey-4',
-    #  'hey-5',
-    #  'hey-6',
-    #  'hey-7',
-    #  'hey-8',
-    #  'hey-9',
-    #  'hey-10',
-    #  'hey-11',
-    #  'hey-12',
-    #  'hey-13',
-    #  'hey-14',
-    #  'hey-15',
-    #  'hey-16',
-    #  'hey-17',
-    #  'hey-18',
-    #  'hey-19',
-    #  'hey-20',
-    #  'hey-21',
-    #  'hey-22',
-    #  'hey-23',
-    #  'hey-24',
-    #  'hey-25',
-    #  'hey-26',
-    #  'hey-27',
-    #  'hey-28',
-    #  'hey-29']
+    # ['hey-0', 'hey-1', 'hey-2', 'hey-3', 'hey-4', 'hey-5', 'hey-6', 'hey-7', 'hey-8', 'hey-9', 'hey-10',
+    #  'hey-11', 'hey-12', 'hey-13', 'hey-14', 'hey-15', 'hey-16', 'hey-17', 'hey-18', 'hey-19', 'hey-20',
+    #  'hey-21', 'hey-22', 'hey-23', 'hey-24', 'hey-25', 'hey-26', 'hey-27', 'hey-28', 'hey-29']
 
 Arbitrary objects in TTrees
 ---------------------------
