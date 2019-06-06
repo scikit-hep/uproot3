@@ -215,18 +215,9 @@ so they behave like Python dicts, too.
 .. code-block:: python3
 
     file["one"].keys()
-
-.. parsed-literal::
-
-    [b'two;1', b'tree;1']
-
-.. code-block:: python3
-
+    # [b'two;1', b'tree;1']
     file["one"].values()
-
-.. parsed-literal::
-
-    [<ROOTDirectory b'two' at 0x7f3750588fd0>, <TTree b'tree' at 0x7f3750588cc0>]
+    # [<ROOTDirectory b'two' at 0x7f3750588fd0>, <TTree b'tree' at 0x7f3750588cc0>]
 
 **What’s the ``b`` before each object name?** Python 3 distinguishes
 between bytestrings and encoded strings. ROOT object names have no
@@ -246,20 +237,14 @@ This file is deeply nested, so while you could find the TTree with
 .. code-block:: python3
 
     file["one"]["two"]["tree"]
-
-.. parsed-literal::
-
-    <TTree b'tree' at 0x7f37581297f0>
+    # <TTree b'tree' at 0x7f37581297f0>
 
 you can also find it using a directory path, with slashes.
 
 .. code-block:: python3
 
     file["one/two/tree"]
-
-.. parsed-literal::
-
-    <TTree b'tree' at 0x7f37504e4748>
+    # <TTree b'tree' at 0x7f37504e4748>
 
 Here are a few more tricks for finding your way around a file:
 
@@ -274,10 +259,7 @@ Here’s how you would search the subdirectories to find all TTrees:
 .. code-block:: python3
 
     file.allkeys(filterclass=lambda cls: issubclass(cls, uproot.tree.TTreeMethods))
-
-.. parsed-literal::
-
-    [b'one/two/tree;1', b'one/tree;1', b'three/tree;1']
+    # [b'one/two/tree;1', b'one/tree;1', b'three/tree;1']
 
 Or get a Python dict of them:
 
@@ -285,12 +267,9 @@ Or get a Python dict of them:
 
     all_ttrees = dict(file.allitems(filterclass=lambda cls: issubclass(cls, uproot.tree.TTreeMethods)))
     all_ttrees
-
-.. parsed-literal::
-
-    {b'one/two/tree;1': <TTree b'tree' at 0x7f37504f85f8>,
-     b'one/tree;1': <TTree b'tree' at 0x7f37504f8710>,
-     b'three/tree;1': <TTree b'tree' at 0x7f37504f8470>}
+    # {b'one/two/tree;1': <TTree b'tree' at 0x7f37504f85f8>,
+    #  b'one/tree;1': <TTree b'tree' at 0x7f37504f8710>,
+    #  b'three/tree;1': <TTree b'tree' at 0x7f37504f8470>}
 
 Be careful: Python 3 is not as forgiving about matching key names.
 ``all_ttrees`` is a plain Python dict, so the key must be a bytestring
@@ -299,10 +278,7 @@ and must include the cycle number.
 .. code-block:: python3
 
     all_ttrees[b"one/two/tree;1"]
-
-.. parsed-literal::
-
-    <TTree b'tree' at 0x7f37504f85f8>
+    # <TTree b'tree' at 0x7f37504f85f8>
 
 Compressed objects in ROOT files
 ================================
@@ -328,10 +304,7 @@ algorithm and level associated with this file,
 .. code-block:: python3
 
     file.compression
-
-.. parsed-literal::
-
-    <Compression 'zlib' 1>
+    # <Compression 'zlib' 1>
 
 but any object can be compressed with any algorithm at any level—this is
 only the default compression for the file. Some ROOT files are written
@@ -354,10 +327,7 @@ so that they get the same data-reading methods.)
 
     events = uproot.open("http://scikit-hep.org/uproot/examples/Zmumu.root")["events"]
     events
-
-.. parsed-literal::
-
-    <TTree b'events' at 0x7f375051fc18>
+    # <TTree b'events' at 0x7f375051fc18>
 
 Although
 `TTreeMethods <https://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__
@@ -369,56 +339,50 @@ method, which prints the branches and their interpretations as arrays.
 .. code-block:: python3
 
     events.keys()
-
-.. parsed-literal::
-
-    [b'Type',
-     b'Run',
-     b'Event',
-     b'E1',
-     b'px1',
-     b'py1',
-     b'pz1',
-     b'pt1',
-     b'eta1',
-     b'phi1',
-     b'Q1',
-     b'E2',
-     b'px2',
-     b'py2',
-     b'pz2',
-     b'pt2',
-     b'eta2',
-     b'phi2',
-     b'Q2',
-     b'M']
+    # [b'Type',
+    #  b'Run',
+    #  b'Event',
+    #  b'E1',
+    #  b'px1',
+    #  b'py1',
+    #  b'pz1',
+    #  b'pt1',
+    #  b'eta1',
+    #  b'phi1',
+    #  b'Q1',
+    #  b'E2',
+    #  b'px2',
+    #  b'py2',
+    #  b'pz2',
+    #  b'pt2',
+    #  b'eta2',
+    #  b'phi2',
+    #  b'Q2',
+    #  b'M']
 
 .. code-block:: python3
 
     events.show()
-
-.. parsed-literal::
-
-    Type                       (no streamer)              asstring()
-    Run                        (no streamer)              asdtype('>i4')
-    Event                      (no streamer)              asdtype('>i4')
-    E1                         (no streamer)              asdtype('>f8')
-    px1                        (no streamer)              asdtype('>f8')
-    py1                        (no streamer)              asdtype('>f8')
-    pz1                        (no streamer)              asdtype('>f8')
-    pt1                        (no streamer)              asdtype('>f8')
-    eta1                       (no streamer)              asdtype('>f8')
-    phi1                       (no streamer)              asdtype('>f8')
-    Q1                         (no streamer)              asdtype('>i4')
-    E2                         (no streamer)              asdtype('>f8')
-    px2                        (no streamer)              asdtype('>f8')
-    py2                        (no streamer)              asdtype('>f8')
-    pz2                        (no streamer)              asdtype('>f8')
-    pt2                        (no streamer)              asdtype('>f8')
-    eta2                       (no streamer)              asdtype('>f8')
-    phi2                       (no streamer)              asdtype('>f8')
-    Q2                         (no streamer)              asdtype('>i4')
-    M                          (no streamer)              asdtype('>f8')
+    # Type                       (no streamer)              asstring()
+    # Run                        (no streamer)              asdtype('>i4')
+    # Event                      (no streamer)              asdtype('>i4')
+    # E1                         (no streamer)              asdtype('>f8')
+    # px1                        (no streamer)              asdtype('>f8')
+    # py1                        (no streamer)              asdtype('>f8')
+    # pz1                        (no streamer)              asdtype('>f8')
+    # pt1                        (no streamer)              asdtype('>f8')
+    # eta1                       (no streamer)              asdtype('>f8')
+    # phi1                       (no streamer)              asdtype('>f8')
+    # Q1                         (no streamer)              asdtype('>i4')
+    # E2                         (no streamer)              asdtype('>f8')
+    # px2                        (no streamer)              asdtype('>f8')
+    # py2                        (no streamer)              asdtype('>f8')
+    # pz2                        (no streamer)              asdtype('>f8')
+    # pt2                        (no streamer)              asdtype('>f8')
+    # eta2                       (no streamer)              asdtype('>f8')
+    # phi2                       (no streamer)              asdtype('>f8')
+    # Q2                         (no streamer)              asdtype('>i4')
+    # M                          (no streamer)              asdtype('>f8')
 
 Basic information about the TTree, such as its number of entries, are
 available as properties.
@@ -426,10 +390,7 @@ available as properties.
 .. code-block:: python3
 
     events.name, events.title, events.numentries
-
-.. parsed-literal::
-
-    (b'events', b'Z -> mumu events', 2304)
+    # (b'events', b'Z -> mumu events', 2304)
 
 Some terminology
 ----------------
@@ -486,11 +447,8 @@ Let’s start with the simplest.
 
     a = events.array("E1")
     a
-
-.. parsed-literal::
-
-    array([82.20186639, 62.34492895, 62.34492895, ..., 81.27013558,
-           81.27013558, 81.56621735])
+    # array([82.20186639, 62.34492895, 62.34492895, ..., 81.27013558,
+    #        81.27013558, 81.56621735])
 
 Since ``array`` is singular, you specify one branch name and get one
 array back. This is a `Numpy
@@ -502,10 +460,7 @@ specified by the ``"E1"`` branch’s interpretation.
 .. code-block:: python3
 
     events["E1"].interpretation
-
-.. parsed-literal::
-
-    asdtype('>f8')
+    # asdtype('>f8')
 
 We can use this array in Numpy calculations; see the `Numpy
 documentation <https://docs.scipy.org/doc/numpy/>`__ for details.
@@ -515,11 +470,8 @@ documentation <https://docs.scipy.org/doc/numpy/>`__ for details.
     import numpy
     
     numpy.log(a)
-
-.. parsed-literal::
-
-    array([4.40917801, 4.13268234, 4.13268234, ..., 4.39777861, 4.39777861,
-           4.40141517])
+    # array([4.40917801, 4.13268234, 4.13268234, ..., 4.39777861, 4.39777861,
+    #        4.40141517])
 
 Numpy arrays are also the standard container for entering data into
 machine learning frameworks; see this `Keras
@@ -541,13 +493,10 @@ Sometimes one is more convenient, sometimes the other.
 .. code-block:: python3
 
     events.array("E1"), events["E1"].array()
-
-.. parsed-literal::
-
-    (array([82.20186639, 62.34492895, 62.34492895, ..., 81.27013558,
-            81.27013558, 81.56621735]),
-     array([82.20186639, 62.34492895, 62.34492895, ..., 81.27013558,
-            81.27013558, 81.56621735]))
+    # (array([82.20186639, 62.34492895, 62.34492895, ..., 81.27013558,
+    #         81.27013558, 81.56621735]),
+    #  array([82.20186639, 62.34492895, 62.34492895, ..., 81.27013558,
+    #         81.27013558, 81.56621735]))
 
 The plural ``arrays`` method is different. Whereas singular ``array``
 could only return one array, plural ``arrays`` takes a list of names
@@ -556,34 +505,26 @@ could only return one array, plural ``arrays`` takes a list of names
 .. code-block:: python3
 
     events.arrays(["px1", "py1", "pz1"])
-
-.. parsed-literal::
-
-    {b'px1': array([-41.19528764,  35.11804977,  35.11804977, ...,  32.37749196,
-             32.37749196,  32.48539387]),
-     b'py1': array([ 17.4332439 , -16.57036233, -16.57036233, ...,   1.19940578,
-              1.19940578,   1.2013503 ]),
-     b'pz1': array([-68.96496181, -48.77524654, -48.77524654, ..., -74.53243061,
-            -74.53243061, -74.80837247])}
-
-.. code-block:: python3
+    # {b'px1': array([-41.19528764,  35.11804977,  35.11804977, ...,  32.37749196,
+    #          32.37749196,  32.48539387]),
+    #  b'py1': array([ 17.4332439 , -16.57036233, -16.57036233, ...,   1.19940578,
+    #           1.19940578,   1.2013503 ]),
+    #  b'pz1': array([-68.96496181, -48.77524654, -48.77524654, ..., -74.53243061,
+    #         -74.53243061, -74.80837247])}
 
     events.arrays(["p[xyz]*"])
-
-.. parsed-literal::
-
-    {b'px1': array([-41.19528764,  35.11804977,  35.11804977, ...,  32.37749196,
-             32.37749196,  32.48539387]),
-     b'py1': array([ 17.4332439 , -16.57036233, -16.57036233, ...,   1.19940578,
-              1.19940578,   1.2013503 ]),
-     b'pz1': array([-68.96496181, -48.77524654, -48.77524654, ..., -74.53243061,
-            -74.53243061, -74.80837247]),
-     b'px2': array([ 34.14443725, -41.19528764, -40.88332344, ..., -68.04191497,
-            -68.79413604, -68.79413604]),
-     b'py2': array([-16.11952457,  17.4332439 ,  17.29929704, ..., -26.10584737,
-            -26.39840043, -26.39840043]),
-     b'pz2': array([ -47.42698439,  -68.96496181,  -68.44725519, ..., -152.2350181 ,
-            -153.84760383, -153.84760383])}
+    # {b'px1': array([-41.19528764,  35.11804977,  35.11804977, ...,  32.37749196,
+    #          32.37749196,  32.48539387]),
+    #  b'py1': array([ 17.4332439 , -16.57036233, -16.57036233, ...,   1.19940578,
+    #           1.19940578,   1.2013503 ]),
+    #  b'pz1': array([-68.96496181, -48.77524654, -48.77524654, ..., -74.53243061,
+    #         -74.53243061, -74.80837247]),
+    #  b'px2': array([ 34.14443725, -41.19528764, -40.88332344, ..., -68.04191497,
+    #         -68.79413604, -68.79413604]),
+    #  b'py2': array([-16.11952457,  17.4332439 ,  17.29929704, ..., -26.10584737,
+    #         -26.39840043, -26.39840043]),
+    #  b'pz2': array([ -47.42698439,  -68.96496181,  -68.44725519, ..., -152.2350181 ,
+    #         -153.84760383, -153.84760383])}
 
 As with all ROOT object names, the TBranch names are bytestrings
 (prepended by ``b``). If you know the encoding or it doesn’t matter
@@ -593,21 +534,18 @@ keys that are strings.
 .. code-block:: python3
 
     events.arrays(["p[xyz]*"], namedecode="utf-8")
-
-.. parsed-literal::
-
-    {'px1': array([-41.19528764,  35.11804977,  35.11804977, ...,  32.37749196,
-             32.37749196,  32.48539387]),
-     'py1': array([ 17.4332439 , -16.57036233, -16.57036233, ...,   1.19940578,
-              1.19940578,   1.2013503 ]),
-     'pz1': array([-68.96496181, -48.77524654, -48.77524654, ..., -74.53243061,
-            -74.53243061, -74.80837247]),
-     'px2': array([ 34.14443725, -41.19528764, -40.88332344, ..., -68.04191497,
-            -68.79413604, -68.79413604]),
-     'py2': array([-16.11952457,  17.4332439 ,  17.29929704, ..., -26.10584737,
-            -26.39840043, -26.39840043]),
-     'pz2': array([ -47.42698439,  -68.96496181,  -68.44725519, ..., -152.2350181 ,
-            -153.84760383, -153.84760383])}
+    # {'px1': array([-41.19528764,  35.11804977,  35.11804977, ...,  32.37749196,
+    #          32.37749196,  32.48539387]),
+    #  'py1': array([ 17.4332439 , -16.57036233, -16.57036233, ...,   1.19940578,
+    #           1.19940578,   1.2013503 ]),
+    #  'pz1': array([-68.96496181, -48.77524654, -48.77524654, ..., -74.53243061,
+    #         -74.53243061, -74.80837247]),
+    #  'px2': array([ 34.14443725, -41.19528764, -40.88332344, ..., -68.04191497,
+    #         -68.79413604, -68.79413604]),
+    #  'py2': array([-16.11952457,  17.4332439 ,  17.29929704, ..., -26.10584737,
+    #         -26.39840043, -26.39840043]),
+    #  'pz2': array([ -47.42698439,  -68.96496181,  -68.44725519, ..., -152.2350181 ,
+    #         -153.84760383, -153.84760383])}
 
 These array-reading functions have many parameters, but most of them
 have the same names and meanings across all the functions. Rather than
