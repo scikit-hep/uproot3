@@ -90,9 +90,9 @@ def write(context, cursor, givenbytes, compression, key, keycursor):
         except ImportError:
             raise ImportError("Install lz4 package with:\n    pip install lz4\nor\n    conda install -c anaconda lz4")
         if level >= 4:
-            compressedbytes = len(lz4.block.compress(givenbytes, compression=level, mode="high_compression")) + 8
+            compressedbytes = len(lz4.block.compress(givenbytes, compression=level, mode="high_compression", store_size=False)) + 8
         else:
-            compressedbytes = len(lz4.block.compress(givenbytes)) + 8
+            compressedbytes = len(lz4.block.compress(givenbytes, store_size=False)) + 8
         if compressedbytes < uncompressedbytes:
             c1 = (compressedbytes >> 0) & 0xff
             c2 = (compressedbytes >> 8) & 0xff
@@ -102,9 +102,9 @@ def write(context, cursor, givenbytes, compression, key, keycursor):
             cursor.write_fields(context._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
             cursor.write_data(context._sink, checksum)
             if level >= 4:
-                cursor.write_data(context._sink, lz4.block.compress(givenbytes, compression=level, mode="high_compression"))
+                cursor.write_data(context._sink, lz4.block.compress(givenbytes, compression=level, mode="high_compression", store_size=False))
             else:
-                cursor.write_data(context._sink, lz4.block.compress(givenbytes))
+                cursor.write_data(context._sink, lz4.block.compress(givenbytes, store_size=False))
             key.fNbytes = compressedbytes + key.fKeylen + 9
             key.write(keycursor, context._sink)
         else:
