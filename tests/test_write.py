@@ -35,12 +35,12 @@ def test_zlib(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
     with uproot.recreate(filename, compression=uproot.ZLIB(1)) as f:
-        f["hello"] = "world"
+        f["hello"] = "a"*2000
 
     f = ROOT.TFile.Open(filename)
     assert f.GetCompressionAlgorithm() == uproot.const.kZLIB
     assert f.GetCompressionLevel() == 1
-    assert str(f.Get("hello")) == "world"
+    assert str(f.Get("hello")) == "a"*2000
     f.Close()
 
 def test_compresschange(tmp_path):
@@ -48,7 +48,7 @@ def test_compresschange(tmp_path):
 
     with uproot.recreate(filename, compression=uproot.ZLIB(2)) as f:
         f.compression = uproot.ZLIB(3)
-        f["hello"] = "world"
+        f["hello"] = "a"*2000
 
     f = ROOT.TFile.Open(filename)
     assert f.GetCompressionAlgorithm() == uproot.const.kZLIB
@@ -58,55 +58,45 @@ def test_nocompress(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
     with uproot.recreate(filename, compression=None) as f:
-        f["hello"] = "world"
+        f["hello"] = "a"*2000
 
     f = ROOT.TFile.Open(filename)
     assert f.GetCompressionFactor() == 1
-    assert str(f.Get("hello")) == "world"
+    assert str(f.Get("hello")) == "a"*2000
     f.Close()
 
 def test_lzma(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
     with uproot.recreate(filename, compression=uproot.LZMA(1)) as f:
-        f["hello"] = "world"
+        f["hello"] = "a"*2000
 
     f = ROOT.TFile.Open(filename)
     assert f.GetCompressionAlgorithm() == uproot.const.kLZMA
     assert f.GetCompressionLevel() == 1
-    assert str(f.Get("hello")) == "world"
+    assert str(f.Get("hello")) == "a"*2000
     f.Close()
 
 def test_lz4_leveldown(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
     with uproot.recreate(filename, compression=uproot.LZ4(5)) as f:
-        f["hello"] = "world"
+        f["hello"] = "a"*2000
 
     f = ROOT.TFile.Open(filename)
     assert (f.GetCompressionAlgorithm()) == uproot.const.kLZ4
-    assert str(f.Get("hello")) == "world"
+    assert str(f.Get("hello")) == "a"*2000
     f.Close()
 
 def test_lz4_levelup(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
     with uproot.recreate(filename, compression=uproot.LZ4(5)) as f:
-        f["hello"] = "world"
+        f["hello"] = "a"*2000
 
     f = ROOT.TFile.Open(filename)
     assert (f.GetCompressionAlgorithm()) == uproot.const.kLZ4
     assert (f.GetCompressionLevel()) == 5
-    assert str(f.Get("hello")) == "world"
-    f.Close()
-
-def test_compressed_TObjString(tmp_path):
-    filename = join(str(tmp_path), "example.root")
-
-    with uproot.recreate(filename, compression=uproot.ZLIB(1)) as f:
-        f["hello"] = "a"*2000
-
-    f = ROOT.TFile.Open(filename)
     assert str(f.Get("hello")) == "a"*2000
     f.Close()
 
