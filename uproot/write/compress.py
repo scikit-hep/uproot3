@@ -69,14 +69,15 @@ def write(context, cursor, givenbytes, compression, key, keycursor):
     if algorithm == uproot.const.kZLIB:
         algo = b"ZL"
         import zlib
-        compressedbytes = len(zlib.compress(givenbytes, level))
+        after_compressed = zlib.compress(givenbytes, level)
+        compressedbytes = len(after_compressed)
         if compressedbytes < uncompressedbytes:
             c1 = (compressedbytes >> 0) & 0xff
             c2 = (compressedbytes >> 8) & 0xff
             c3 = (compressedbytes >> 16) & 0xff
             method = 8
             cursor.write_fields(context._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
-            cursor.write_data(context._sink, zlib.compress(givenbytes, level))
+            cursor.write_data(context._sink, after_compressed)
             key.fNbytes = compressedbytes + key.fKeylen + 9
             key.write(keycursor, context._sink)
         else:
@@ -90,21 +91,19 @@ def write(context, cursor, givenbytes, compression, key, keycursor):
         except ImportError:
             raise ImportError("Install lz4 package with:\n    pip install lz4\nor\n    conda install -c anaconda lz4")
         if level >= 4:
-            compressedbytes = len(lz4.block.compress(givenbytes, compression=level, mode="high_compression", store_size=False)) + 8
+            after_compressed = lz4.block.compress(givenbytes, compression=level, mode="high_compression", store_size=False)
         else:
-            compressedbytes = len(lz4.block.compress(givenbytes, store_size=False)) + 8
+            after_compressed = lz4.block.compress(givenbytes, store_size=False)
+        compressedbytes = len(after_compressed) + 8
+        checksum = xxhash.xxh64(after_compressed).digest()
         if compressedbytes < uncompressedbytes:
             c1 = (compressedbytes >> 0) & 0xff
             c2 = (compressedbytes >> 8) & 0xff
             c3 = (compressedbytes >> 16) & 0xff
             method = lz4.library_version_number() // (100 * 100)
-            checksum = xxhash.xxh64(givenbytes).digest()
             cursor.write_fields(context._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
             cursor.write_data(context._sink, checksum)
-            if level >= 4:
-                cursor.write_data(context._sink, lz4.block.compress(givenbytes, compression=level, mode="high_compression", store_size=False))
-            else:
-                cursor.write_data(context._sink, lz4.block.compress(givenbytes, store_size=False))
+            cursor.write_data(context._sink, after_compressed)
             key.fNbytes = compressedbytes + key.fKeylen + 9
             key.write(keycursor, context._sink)
         else:
@@ -120,14 +119,15 @@ def write(context, cursor, givenbytes, compression, key, keycursor):
             except ImportError:
                 raise ImportError(
                     "Install lzma package with:\n    pip install backports.lzma\nor\n    conda install -c conda-forge backports.lzma\n(or just use Python >= 3.3).")
-        compressedbytes = len(lzma.compress(givenbytes, preset=level))
+        after_compressed = lzma.compress(givenbytes, preset=level)
+        compressedbytes = len(after_compressed)
         if compressedbytes < uncompressedbytes:
             c1 = (compressedbytes >> 0) & 0xff
             c2 = (compressedbytes >> 8) & 0xff
             c3 = (compressedbytes >> 16) & 0xff
             method = 0
             cursor.write_fields(context._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
-            cursor.write_data(context._sink, lzma.compress(givenbytes, preset=level))
+            cursor.write_data(context._sink, after_compressed)
             key.fNbytes = compressedbytes + key.fKeylen + 9
             key.write(keycursor, context._sink)
         else:
