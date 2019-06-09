@@ -84,8 +84,11 @@ def write(context, cursor, givenbytes, compression, key, keycursor):
             cursor.write_data(context._sink, givenbytes)
 
     elif algorithm == uproot.const.kLZ4:
-        import xxhash
         algo = b"L4"
+        try:
+            import xxhash
+        except ImportError:
+            raise ImportError("Install xxhash package with:\n    pip install xxhash\nor\n    conda install -c conda-forge python-xxhash")
         try:
             import lz4.block
         except ImportError:
