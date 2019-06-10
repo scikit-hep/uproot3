@@ -43,6 +43,8 @@ branch accessors
 
 .. automethod:: uproot.tree.TTreeMethods.clusters
 
+.. automethod:: uproot.tree.TTreeMethods.mempartitions
+
 array
 ^^^^^
 
@@ -118,6 +120,8 @@ branch information
 .. automethod:: uproot.tree.TBranchMethods.compressionratio
 
 .. automethod:: uproot.tree.TBranchMethods.numitems
+
+.. automethod:: uproot.tree.TBranchMethods.mempartitions
 
 basket information
 ^^^^^^^^^^^^^^^^^^

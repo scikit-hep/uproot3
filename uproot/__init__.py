@@ -123,6 +123,8 @@ from uproot.source.file import FileSource
 from uproot.source.xrootd import XRootDSource
 from uproot.source.http import HTTPSource
 
+from uproot.cache import ArrayCache, ThreadSafeArrayCache
+
 from uproot.interp.auto import interpret
 from uproot.interp.numerical import asdtype
 from uproot.interp.numerical import asarray
@@ -152,4 +154,4 @@ from uproot.version import __version__
 # don't expose uproot.uproot; it's ugly
 del uproot
 
-__all__ = ["open", "xrootd", "http", "iterate", "numentries", "lazyarray", "lazyarrays", "daskarray", "daskframe", "create", "recreate", "update", "ZLIB", "LZMA", "LZ4", "MemmapSource", "FileSource", "XRootDSource", "HTTPSource", "interpret", "asdtype", "asarray", "asdouble32", "asstlbitset", "asjagged", "astable", "asobj", "asgenobj", "asstring", "asdebug", "SimpleArray", "STLVector", "STLMap", "STLString", "pandas", "__version__"]
+__all__ = ["open", "xrootd", "http", "iterate", "numentries", "lazyarray", "lazyarrays", "daskarray", "daskframe", "create", "recreate", "update", "ZLIB", "LZMA", "LZ4", "MemmapSource", "FileSource", "XRootDSource", "HTTPSource", "ArrayCache", "ThreadSafeArrayCache", "interpret", "asdtype", "asarray", "asdouble32", "asstlbitset", "asjagged", "astable", "asobj", "asgenobj", "asstring", "asdebug", "SimpleArray", "STLVector", "STLMap", "STLString", "pandas", "__version__"]

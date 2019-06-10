@@ -7,3 +7,8 @@ lz4
 backports.lzma;python_version<"3.3"
 pandas
 requests
+matplotlib
+dask[array]
+dask[dataframe]
+cloudpickle
+pyyaml

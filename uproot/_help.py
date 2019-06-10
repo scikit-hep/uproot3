@@ -420,12 +420,12 @@ tree_fragments = {
         entry at which reading stops (exclusive). If ``None`` *(default)*, stop at the end of the branch.""",
 
     # entrysteps
-    "entrysteps": u"""entrysteps : ``None``, positive int, ``float("inf")``, or iterable of *(int, int)* pairs
-        if ``None`` *(default)*, iterate in steps of TTree clusters (number of entries for which all branches' baskets align); if an integer, iterate in steps of equal numbers of entries (except at the end of a file); if infinite, take file-sized steps; otherwise, iterate in explicit, user-specified *(start, stop)* intervals ("start" is inclusive and "stop" is exclusive).""",
+    "entrysteps": u"""entrysteps : ``None``, positive int, ``float("inf")``, string matching number + /[kMGTPEZY]?B/i, or iterable of *(int, int)* pairs
+        if ``None`` *(default)*, iterate in steps of TTree clusters (number of entries for which all branches' baskets align); if an integer, iterate in steps of equal numbers of entries (except at the end of a file); if infinite, take file-sized steps; if a string, iterate in steps of approximately equal memory, given by a memory size string; otherwise, iterate in explicit, user-specified *(start, stop)* intervals ("start" is inclusive and "stop" is exclusive).""",
 
     # entrysteps_tree
-    "entrysteps_tree": u"""entrysteps : ``None``, positive int, ``float("inf")``, or iterable of *(int, int)* pairs
-        if ``None`` *(default)*, iterate in steps of TTree clusters (number of entries for which all branches' baskets align); if an integer, iterate in steps of equal numbers of entries; if infinite, iterate over the whole file in one step; otherwise, iterate in explicit, user-specified *(start, stop)* intervals ("start" is inclusive and "stop" is exclusive).""",
+    "entrysteps_tree": u"""entrysteps : ``None``, positive int, ``float("inf")``, string matching number + /[kMGTPEZY]?B/i, or iterable of *(int, int)* pairs
+        if ``None`` *(default)*, iterate in steps of TTree clusters (number of entries for which all branches' baskets align); if an integer, iterate in steps of equal numbers of entries; if infinite, iterate over the whole file in one step; if a string, iterate in steps of approximately equal memory, given by a memory size string; otherwise, iterate in explicit, user-specified *(start, stop)* intervals ("start" is inclusive and "stop" is exclusive).""",
 
     # branch
     "branch": u"""branch : str
@@ -438,10 +438,11 @@ tree_fragments = {
     # branches
     "branches": u"""branches
         - if ``None`` *(default)*, select all *interpretable* branches;
-        - if a function :py:class:`TBranchMethods <uproot.tree.TBranchMethods>` \u21d2 ``None`` or :py:class:`Interpretation <uproot.interp.interp.Interpretation>`, select branches for which the function does not return ``None`` and use the interpretation it returns otherwise;
-        - if a ``dict`` of str \u2192 :py:class:`Interpretation <uproot.interp.interp.Interpretation>`, select branches named by keys and use interpretations from the associated values;
         - if a list of str, select branches by name;
-        - if a single str, select a single branch. The selection by string can include filename-like glob characters (``*``, ``?``, ``[...]``) or it can be a full regular expression (Python flavored) if surrounded by slashes, like ``/pattern/i`` (where ``i`` is an optional `Python re flag <https://docs.python.org/2/library/re.html>`_).""",
+        - if a single str, select a single branch (though the return value is still a container type, not a single array). The selection by string can include filename-like glob characters (``*``, ``?``, ``[...]``) or it can be a full regular expression (Python flavored) if surrounded by slashes, like ``/pattern/i`` (where ``i`` is an optional `Python re flag <https://docs.python.org/2/library/re.html>`_);
+        - if a function :py:class:`TBranchMethods <uproot.tree.TBranchMethods>` \u21d2 ``True`` or ``False``, select branches that return ``True``;
+        - if a function :py:class:`TBranchMethods <uproot.tree.TBranchMethods>` \u21d2 ``None`` or :py:class:`Interpretation <uproot.interp.interp.Interpretation>`, select branches for which the function does not return ``None`` and use the interpretation it returns otherwise;
+        - if a ``dict`` of str \u2192 :py:class:`Interpretation <uproot.interp.interp.Interpretation>`, select branches named by keys and use interpretations from the associated values.""",
 
     # outputtype
     "outputtype": u"""outputtype : type
@@ -662,7 +663,8 @@ u"""Adds array reading methods to TTree objects that have been streamed from a R
     - :py:meth:`allkeys <uproot.tree.TTreeMethods.allkeys>` return branch names at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`keys <uproot.tree.TTreeMethods.keys>`).
     - :py:meth:`allvalues <uproot.tree.TTreeMethods.allvalues>` return branches at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`values <uproot.tree.TTreeMethods.values>`).
     - :py:meth:`allitems <uproot.tree.TTreeMethods.allitems>` return *(branch name, branch)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`items <uproot.tree.TTreeMethods.items>`).
-    - :py:meth:`clusters <uproot.tree.TTreeMethods.clusters>` iterate over *(int, int)* pairs representing cluster entry starts and stops in this TTree *(not implemented)*.
+    - :py:meth:`clusters <uproot.tree.TTreeMethods.clusters>` iterate over *(int, int)* pairs representing cluster entry starts and stops in this TTree.
+    - :py:meth:`mempartitions <uproot.tree.TTreeMethods.mempartitions>` iterate over *(int, int)* pairs representing entry starts and stops that attempt to maintain a constant memory footprint.
 
     **Methods for reading array data:**
 
@@ -840,14 +842,52 @@ u"""Return *(branch name, branch)* pairs at all levels of depth (shortcut for pa
 """.format(**tree_fragments)
 
 _method(uproot.tree.TTreeMethods.clusters).__doc__ = \
-u"""Return *(int, int)* pairs representing cluster entry starts and stops in this TTree.
+u"""Return entry starts and stops as *(int, int)* pairs representing clusters for a given set of branches this TTree.
 
-    .. todo:: Not implemented.
+    Rather than using ROOT's self-reported clusters (which don't exist in every ROOT file), this method finds the minimal step sizes in which a given set of branches have basket thresholds for the same entry number. For a single branch, this is exactly the basket boundaries. It is possible for a given set of branches to never line up, in which case, the cluster is the entire file.
+
+    Parameters
+    ----------
+    {branches}
+
+    {entrystart}
+
+    {entrystop}
+
+    strict : bool
+        if ``False`` *(default)*, the potential ``start, stop`` pair must satisfy ``entrystart < stop and start < entrystop``; if ``True``, the potential ``start, stop`` pair must satisfy ``entrystart <= start and stop <= entrystop``.
 
     Returns
     -------
     list of (int, int)
         start (inclusive) and stop (exclusive) pairs for each cluster.
+"""
+
+_method(uproot.tree.TTreeMethods.mempartitions).__doc__ = \
+u"""Return entry starts and stops as *(int, int)* pairs of (approximately) equal-memory partitions for a given set of branches in this TTree.
+
+    Similar to :py:meth:`clusters <uproot.tree.TTreeMethods.clusters>` in that it provides a list of (start, stop) entry pairs, but instead of fitting baskets, this method attempts to keep the memory use constant.
+
+    Parameters
+    ----------
+    numbytes : positive number (int or float) or string matching number + /[kMGTPEZY]?B/i
+        target number of bytes in each step (not an upper limit, but an average); if a string, parse the memory size
+
+    {branches}
+
+    {entrystart}
+
+    {entrystop}
+
+    {keycache}
+
+    linear : bool
+        if ``True`` *(default)*, the step size is uniform (same number of entries in each step); any variations in entry size as a function of entry number are averaged over. Non-linear steps (``False``), which would take into account bigger entry sizes at the beginning or end of the file, have not been implemented.
+
+    Returns
+    -------
+    list of (int, int)
+        start (inclusive) and stop (exclusive) pairs for each equal-memory partition.
 """
 
 _method(uproot.tree.TTreeMethods.array).__doc__ = \
@@ -1076,6 +1116,7 @@ u"""Adds array reading methods to TBranch objects that have been streamed from a
     - :py:meth:`basket_uncompressedbytes <uproot.tree.TBranchMethods.basket_uncompressedbytes>` the number of bytes contained in the basket (data and offsets; not including any key headers) *after* decompression, if applicable.
     - :py:meth:`basket_compressedbytes <uproot.tree.TBranchMethods.basket_compressedbytes>` the number of bytes contained in the basket (data and offsets; not including any key headers) *before* decompression, if applicable.
     - :py:meth:`basket_numitems <uproot.tree.TBranchMethods.basket_numitems>` the number of items in the basket, under a given interpretation.
+    - :py:meth:`mempartitions <uproot.tree.TBranchMethods.mempartitions>` iterate over *(int, int)* pairs representing entry starts and stops that attempt to maintain a constant memory footprint.
 
     **Methods for reading array data:**
 
@@ -1422,6 +1463,31 @@ u"""Read the branch into an array (or other object if provided an alternate *int
     array or other object, depending on *interpretation*
         branch data.
 """.format(**tree_fragments)
+
+_method(uproot.tree.TBranchMethods.mempartitions).__doc__ = \
+u"""Return entry starts and stops as *(int, int)* pairs of (approximately) equal-memory partitions in this TBranch.
+
+    Similar to :py:meth:`clusters <uproot.tree.TTreeMethods.clusters>` in that it provides a list of (start, stop) entry pairs, but instead of fitting baskets, this method attempts to keep the memory use constant.
+
+    Parameters
+    ----------
+    numbytes : positive number (int or float) or string matching number + /[kMGTPEZY]?B/i
+        target number of bytes in each step (not an upper limit, but an average); if a string, parse the memory size
+
+    {entrystart}
+
+    {entrystop}
+
+    {keycache}
+
+    linear : bool
+        if ``True`` *(default)*, the step size is uniform (same number of entries in each step); any variations in entry size as a function of entry number are averaged over. Non-linear steps (``False``), which would take into account bigger entry sizes at the beginning or end of the file, have not been implemented.
+
+    Returns
+    -------
+    list of (int, int)
+        start (inclusive) and stop (exclusive) pairs for each equal-memory partition.
+"""
 
 _method(uproot.tree.TBranchMethods.lazyarray).__doc__ = \
 u"""Create a lazy array that would read the branch as needed.
@@ -2328,10 +2394,10 @@ u"""Emulate a memory-mapped interface with traditional file handles, opening man
     path : str
         local file path of the input file (it must not be moved during reading!).
 
-    chunkbytes : int
+    chunkbytes : int or string matching number + /[kMGTPEZY]?B/i
         number of bytes per chunk.
 
-    limitbytes : int
+    limitbytes : int or string matching number + /[kMGTPEZY]?B/i
         maximum number of bytes to keep in the cache.
 
     Notes
@@ -2378,10 +2444,10 @@ u"""Emulate a memory-mapped interface with XRootD.
     path : str
         remote file URL.
 
-    chunkbytes : int
+    chunkbytes : int or string matching number + /[kMGTPEZY]?B/i
         number of bytes per chunk.
 
-    limitbytes : int
+    limitbytes : int or string matching number + /[kMGTPEZY]?B/i
         maximum number of bytes to keep in the cache.
 
     Notes
@@ -2439,4 +2505,34 @@ u"""A :py:class:`Source <uproot.source.source.Source>` for compressed data.
 
     uncompressedbytes : int
         number of bytes before compression.
+"""
+
+################################################################ uproot.cache.ArrayCache
+
+uproot.cache.ArrayCache.__doc__ = \
+u"""A cache (wrapping cachetools) whose eviction threshold is determined by total array size.
+
+    Uses the nbytes property of all values to determine total size. By default, cachetools only counts the number of objects, ignoring their sizes.
+
+    Parameters
+    ----------
+    limitbytes : int or string matching number + /[kMGTPEZY]?B/i
+        maximum number of bytes to keep in the cache.
+
+    method : "LRU" *(default)* or "LFU"
+        least recently used or least frequently used
+"""
+
+################################################################ uproot.cache.ThreadSafeArrayCache
+
+uproot.cache.ThreadSafeArrayCache.__doc__ = \
+u"""An :py:class:`ArrayCache <uproot.cache.ArrayCache>` with locks for thread safety.
+
+    Parameters
+    ----------
+    limitbytes : int or string matching number + /[kMGTPEZY]?B/i
+        maximum number of bytes to keep in the cache.
+
+    method : "LRU" *(default)* or "LFU"
+        least recently used or least frequently used
 """

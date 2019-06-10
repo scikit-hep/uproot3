@@ -18,7 +18,7 @@ class XRootDSource(uproot.source.chunked.ChunkedSource):
         self.timeout = timeout
         super(XRootDSource, self).__init__(path, *args, **kwds)
 
-    defaults = {"timeout": None, "chunkbytes": 32*1024, "limitbytes": 32*1024**2, "parallel": True}
+    defaults = {"timeout": None, "chunkbytes": 32*1024, "limitbytes": 32*1024**2, "parallel": False}
 
     def _open(self):
         try:
