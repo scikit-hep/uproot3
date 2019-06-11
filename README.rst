@@ -68,8 +68,9 @@ Strict dependencies:
 Optional dependencies:
 ----------------------
 
-- `lz4 <https://pypi.org/project/lz4>`__ to read lz4-compressed ROOT files
-- `lzma <https://pypi.org/project/backports.lzma>`__ to read lzma-compressed ROOT files in Python 2
+- `lz4 <https://pypi.org/project/lz4>`__ to read/write lz4-compressed ROOT files
+- `xxhash <https://pypi.org/project/xxhash/>`__ to write lz4-compressed ROOT files
+- `lzma <https://pypi.org/project/backports.lzma>`__ to read/write lzma-compressed ROOT files in Python 2
 - `xrootd <https://anaconda.org/conda-forge/xrootd>`__ to access remote files through XRootD
 - `requests <https://pypi.org/project/requests>`__ to access remote files through HTTP
 - `pandas <https://pandas.pydata.org>`__ to fill Pandas DataFrames instead of Numpy arrays
