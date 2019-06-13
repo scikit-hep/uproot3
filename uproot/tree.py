@@ -544,7 +544,7 @@ class TTreeMethods(object):
 
     def lazyarrays(self, branches=None, namedecode="utf-8", entrysteps=None, entrystart=None, entrystop=None, flatten=False, profile=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False):
         entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
-        entrysteps = self._normalize_entrysteps(entrysteps, branches, entrystart, entrystop, keycache)
+        entrysteps = list(self._normalize_entrysteps(entrysteps, branches, entrystart, entrystop, keycache))
         awkward = _normalize_awkwardlib(awkwardlib)
         branches = list(self._normalize_branches(branches, awkward))
 
