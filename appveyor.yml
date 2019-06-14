@@ -48,7 +48,7 @@ build_script:
   - "pip install %NUMPY%"
   - "pip install \"awkward>=0.11.0rc1\""
   - "python -c \"import awkward; print(awkward.__version__)\""
-  - "pip install \"uproot-methods>=0.7.0\""
+  - "pip install \"uproot-methods>=0.7.0rc1\""
   - "python -c \"import uproot_methods; print(uproot_methods.__version__)\""
   - "pip install cachetools"
   - "pip install -i https://pypi.anaconda.org/carlkl/simple backports.lzma"
