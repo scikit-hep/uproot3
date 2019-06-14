@@ -59,9 +59,9 @@ install:
   - pip install --upgrade setuptools-scm
   - pip install $NPY
   - python -c 'import numpy; print(numpy.__version__)'
-  - pip install "awkward>=0.10.0"
+  - pip install "awkward>=0.11.0rc1"
   - python -c 'import awkward; print(awkward.__version__)'
-  - pip install "uproot-methods>=0.6.0"
+  - pip install "uproot-methods>=0.7.0rc1"
   - python -c 'import uproot_methods; print(uproot_methods.__version__)'
   - pip install cachetools pkgconfig lz4 xxhash mock requests "pytest>=3.9" pytest-runner
   - pip install lz4 requests

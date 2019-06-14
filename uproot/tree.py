@@ -544,35 +544,32 @@ class TTreeMethods(object):
 
     def lazyarrays(self, branches=None, namedecode="utf-8", entrysteps=None, entrystart=None, entrystop=None, flatten=False, profile=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False):
         entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
-        entrysteps = self._normalize_entrysteps(entrysteps, branches, entrystart, entrystop, keycache)
+        entrysteps = list(self._normalize_entrysteps(entrysteps, branches, entrystart, entrystop, keycache))
         awkward = _normalize_awkwardlib(awkwardlib)
         branches = list(self._normalize_branches(branches, awkward))
 
         lazytree = _LazyTree(self._context.sourcepath, self._context.treename, self, dict((b.name, x) for b, x in branches), flatten, awkward.__name__, basketcache, keycache, executor)
 
-        chunks = []
-        counts = []
-        rowstart = 0
-        for start, stop in entrysteps:
-            numentries = stop - start
-            chunks.append(awkward.Table())
-            for branch, interpretation in branches:
-                inner = interpretation
-                while isinstance(inner, asjagged):
-                    inner = inner.content
-                if isinstance(inner, asobj) and getattr(inner.cls, "_arraymethods", None) is not None:
-                    virtualarray = awkward.Methods.mixin(inner.cls._arraymethods, awkward.VirtualArray)
-                elif isinstance(inner, asgenobj) and getattr(inner.generator.cls, "_arraymethods", None) is not None:
-                    virtualarray = awkward.Methods.mixin(inner.generator.cls._arraymethods, awkward.VirtualArray)
-                else:
-                    virtualarray = awkward.VirtualArray
-                name = branch.name if namedecode is None else branch.name.decode(namedecode)
-                chunks[-1][name] = virtualarray(lazytree, (branch.name, start, stop), cache=cache, type=awkward.type.ArrayType(numentries, interpretation.type), persistvirtual=persistvirtual)
-            chunks[-1].rowstart = rowstart
-            rowstart += numentries
-            counts.append(numentries)
+        out = awkward.Table()
+        for branch, interpretation in branches:
+            inner = interpretation
+            while isinstance(inner, asjagged):
+                inner = inner.content
+            if isinstance(inner, asobj) and getattr(inner.cls, "_arraymethods", None) is not None:
+                VirtualArray = awkward.Methods.mixin(inner.cls._arraymethods, awkward.VirtualArray)
+            elif isinstance(inner, asgenobj) and getattr(inner.generator.cls, "_arraymethods", None) is not None:
+                VirtualArray = awkward.Methods.mixin(inner.generator.cls._arraymethods, awkward.VirtualArray)
+            else:
+                VirtualArray = awkward.VirtualArray
 
-        out = awkward.ChunkedArray(chunks, counts)
+            chunks = []
+            counts = []
+            for start, stop in entrysteps:
+                chunks.append(VirtualArray(lazytree, (branch.name, start, stop), cache=cache, type=awkward.type.ArrayType(stop - start, interpretation.type), persistvirtual=persistvirtual))
+                counts.append(stop - start)
+            name = branch.name.decode("ascii") if namedecode is None else branch.name.decode(namedecode)
+            out[name] = awkward.ChunkedArray(chunks, counts)
+
         if profile is not None:
             out = uproot_methods.profiles.transformer(profile)(out)
         return out
@@ -1573,13 +1570,13 @@ class TBranchMethods(object):
         while isinstance(inner, asjagged):
             inner = inner.content
         if isinstance(inner, asobj) and getattr(inner.cls, "_arraymethods", None) is not None:
-            virtualarray = awkward.Methods.mixin(inner.cls._arraymethods, awkward.VirtualArray)
+            VirtualArray = awkward.Methods.mixin(inner.cls._arraymethods, awkward.VirtualArray)
             chunkedarray = awkward.Methods.mixin(inner.cls._arraymethods, awkward.ChunkedArray)
         elif isinstance(inner, asgenobj) and getattr(inner.generator.cls, "_arraymethods", None) is not None:
-            virtualarray = awkward.Methods.mixin(inner.generator.cls._arraymethods, awkward.VirtualArray)
+            VirtualArray = awkward.Methods.mixin(inner.generator.cls._arraymethods, awkward.VirtualArray)
             chunkedarray = awkward.Methods.mixin(inner.generator.cls._arraymethods, awkward.ChunkedArray)
         else:
-            virtualarray = awkward.VirtualArray
+            VirtualArray = awkward.VirtualArray
             chunkedarray = awkward.ChunkedArray
 
         lazybranch = _LazyBranch(self._context.sourcepath, self._context.treename, self.name, self, interpretation, flatten, awkward.__name__, basketcache, keycache, executor)
@@ -1588,7 +1585,7 @@ class TBranchMethods(object):
         counts = []
         for start, stop in entrysteps:
             numentries = stop - start
-            chunks.append(virtualarray(lazybranch, (start, stop), cache=cache, type=awkward.type.ArrayType(numentries, interpretation.type), persistvirtual=persistvirtual))
+            chunks.append(VirtualArray(lazybranch, (start, stop), cache=cache, type=awkward.type.ArrayType(numentries, interpretation.type), persistvirtual=persistvirtual))
             counts.append(numentries)
 
         return chunkedarray(chunks, counts)
@@ -1929,43 +1926,40 @@ def lazyarrays(path, treepath, branches=None, namedecode="utf-8", entrysteps=flo
 
     path2count = numentries(path, treepath, total=False, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, executor=executor, blocking=True)
 
-    listbranches = None
+    lazyfiles = _LazyFiles(paths, treepath, branches, entrysteps, flatten, awkward.__name__, basketcache, keycache, executor, persistvirtual, localsource, xrootdsource, httpsource, options)
+
     for path in paths:
         file = uproot.rootio.open(path, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)
         try:
             tree = file[treepath]
         except KeyError:
             continue
-        listbranches = list(tree._normalize_branches(branches, awkward))
+        branches = list(tree._normalize_branches(branches, awkward))
         break
 
-    if listbranches is None:
+    if branches is None:
         raise ValueError("no matching paths contained a tree named {0}".format(repr(treepath)))
 
-    lazyfiles = _LazyFiles(paths, treepath, branches, entrysteps, flatten, awkward.__name__, basketcache, keycache, executor, persistvirtual, localsource, xrootdsource, httpsource, options)
+    out = awkward.Table()
+    for branch, interpretation in branches:
+        inner = interpretation
+        while isinstance(inner, asjagged):
+            inner = inner.content
+        if isinstance(inner, asobj) and getattr(inner.cls, "_arraymethods", None) is not None:
+            VirtualArray = awkward.Methods.mixin(inner.cls._arraymethods, awkward.VirtualArray)
+        elif isinstance(inner, asgenobj) and getattr(inner.generator.cls, "_arraymethods", None) is not None:
+            VirtualArray = awkward.Methods.mixin(inner.generator.cls._arraymethods, awkward.VirtualArray)
+        else:
+            VirtualArray = awkward.VirtualArray
 
-    chunks = []
-    counts = []
-    rowstart = 0
-    for pathi, path in enumerate(paths):
-        chunks.append(awkward.Table())
-        for branch, interpretation in listbranches:
-            inner = interpretation
-            while isinstance(inner, asjagged):
-                inner = inner.content
-            if isinstance(inner, asobj) and getattr(inner.cls, "_arraymethods", None) is not None:
-                virtualarray = awkward.Methods.mixin(inner.cls._arraymethods, awkward.VirtualArray)
-            elif isinstance(inner, asgenobj) and getattr(inner.generator.cls, "_arraymethods", None) is not None:
-                virtualarray = awkward.Methods.mixin(inner.generator.cls._arraymethods, awkward.VirtualArray)
-            else:
-                virtualarray = awkward.VirtualArray
-            name = branch.name if namedecode is None else branch.name.decode(namedecode)
-            chunks[-1][name] = virtualarray(lazyfiles, (pathi, branch.name), cache=cache, type=awkward.type.ArrayType(path2count[path], interpretation.type), persistvirtual=persistvirtual)
-        chunks[-1].rowstart = rowstart
-        rowstart += path2count[path]
-        counts.append(path2count[path])
+        chunks = []
+        counts = []
+        for pathi, path in enumerate(paths):
+            chunks.append(VirtualArray(lazyfiles, (pathi, branch.name), cache=cache, type=awkward.type.ArrayType(path2count[path], interpretation.type), persistvirtual=persistvirtual))
+            counts.append(path2count[path])
+        name = branch.name.decode("ascii") if namedecode is None else branch.name.decode(namedecode)
+        out[name] = awkward.ChunkedArray(chunks, counts)
 
-    out = awkward.ChunkedArray(chunks, counts)
     if profile is not None:
         out = uproot_methods.profiles.transformer(profile)(out)
     return out
