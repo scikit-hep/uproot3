@@ -576,12 +576,13 @@ def test_taxis_axisbins(tmp_path):
     assert h.GetXaxis().GetFirst() == 1
     assert h.GetXaxis().GetLast() == 5
 
-def test_taxis_fTimeDisplay(tmp_path):
+def test_taxis_time(tmp_path):
     filename = join(str(tmp_path), "example.root")
     testfile = join(str(tmp_path), "test.root")
 
     f = ROOT.TFile.Open(testfile, "RECREATE")
     h = ROOT.TH1F("hvar", "title", 5, 1, 10)
+    h.GetXaxis().SetTimeDisplay(1)
     h.Write()
     f.Close()
 
@@ -592,7 +593,7 @@ def test_taxis_fTimeDisplay(tmp_path):
 
     f = ROOT.TFile.Open(filename)
     h = f.Get("test")
-    assert h.GetXaxis().GetTimeDisplay() == False
+    assert h.GetXaxis().GetTimeDisplay() == True
 
 def test_th1_binlabel(tmp_path):
     filename = join(str(tmp_path), "example.root")

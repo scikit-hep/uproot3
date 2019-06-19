@@ -265,7 +265,7 @@ class TH(object):
     def return_taxis(self, cursor, axis):
         cnt = numpy.int64(self.length_taxis(axis) - 4) | uproot.const.kByteCountMask
         vers = 10
-        if axis["_fTimeFormat"] != b"" or axis["_fLabels"] or axis["_fModLabs"]:
+        if axis["_fLabels"] or axis["_fModLabs"]:
             raise NotImplementedError
         return (cursor.return_fields(self._format_cntvers, cnt, vers) +
                 self.return_tnamed(cursor, axis["_fName"], axis["_fTitle"]) +
@@ -280,7 +280,8 @@ class TH(object):
                                     axis["_fLast"],
                                     axis["_fBits2"],
                                     axis["_fTimeDisplay"]) +
-                (b"\x00" * (20 - self._format_taxis_2.size)))
+                cursor.return_string(axis["_fTimeFormat"]) +
+                (b"\x00" * (20 - self._format_taxis_2.size - uproot.write.sink.cursor.Cursor.length_string(axis["_fTimeFormat"]))))
         # cursor.write_fields(sink, self._format_taxis_2,
         #                     axis["_fFirst"],
         #                     axis["_fLast"],
@@ -294,7 +295,10 @@ class TH(object):
                 self.length_tattaxis() +
                 self._format_taxis_1.size +
                 self.length_tarray(axis["_fXbins"]) +
-                20 + 6)
+                self._format_taxis_2.size +
+                uproot.write.sink.cursor.Cursor.length_string(axis["_fTimeFormat"]) +
+                (20 - self._format_taxis_2.size - uproot.write.sink.cursor.Cursor.length_string(axis["_fTimeFormat"])) +
+                self._format_cntvers.size)
                 # self._format_taxis_2.size +
                 # uproot.write.sink.cursor.Cursor.length_string(axis["_fTimeFormat"]) +
                 # self.length_tlist(axis["_fLabels"]) +
