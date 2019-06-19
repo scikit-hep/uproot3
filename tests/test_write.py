@@ -608,7 +608,7 @@ def test_tprofile3d_uproot(tmp_path):
 
     assert uproot.open(filename)["test"]._classname == b"TProfile3D"
 
-def test_tprofile3d(tmp_path):
+def test_compressed_tprofile3d(tmp_path):
     filename = join(str(tmp_path), "example.root")
     testfile = join(str(tmp_path), "test.root")
 
