@@ -171,7 +171,10 @@ class astable(uproot.interp.interp.Interpretation):
         return self.content.clip(destination, itemstart, itemstop, entrystart, entrystop)
 
     def finalize(self, destination, branch):
-        return self.awkward.Table.fromrec(self.content.finalize(destination, branch))
+        out = self.awkward.Table.fromrec(self.content.finalize(destination, branch))
+        if self.debug_reading:
+            print("reading {0}".format(repr(out)))
+        return out
 
 class asobj(uproot.interp.interp.Interpretation):
     # makes __doc__ attribute mutable before Python 3.3
@@ -222,12 +225,14 @@ class asobj(uproot.interp.interp.Interpretation):
 
     def finalize(self, destination, branch):
         if self.cls._arraymethods is None:
-            return self.awkward.ObjectArray(self.content.finalize(destination, branch), self.cls._fromrow)
+            out = self.awkward.ObjectArray(self.content.finalize(destination, branch), self.cls._fromrow)
         else:
             cls = self.awkward.Methods.mixin(self.cls._arraymethods, self.awkward.ObjectArray)
             out = cls.__new__(cls)
             out._initObjectArray(self.content.finalize(destination, branch))
-            return out
+        if self.debug_reading:
+            print("reading {0}".format(repr(out)))
+        return out
 
 class _variable(uproot.interp.interp.Interpretation):
     def __init__(self, content, generator, *args, **kwargs):
@@ -272,7 +277,10 @@ class _variable(uproot.interp.interp.Interpretation):
         return self.content.clip(destination, itemstart, itemstop, entrystart, entrystop)
 
     def finalize(self, destination, branch):
-        return self.awkward.ObjectArray(self.content.finalize(destination, branch), self.generator, *self.args, **self.kwargs)
+        out = self.awkward.ObjectArray(self.content.finalize(destination, branch), self.generator, *self.args, **self.kwargs)
+        if self.debug_reading:
+            print("reading {0}".format(repr(out)))
+        return out
 
 class asgenobj(_variable):
     # makes __doc__ attribute mutable before Python 3.3

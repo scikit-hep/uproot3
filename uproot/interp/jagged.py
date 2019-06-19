@@ -131,4 +131,6 @@ class asjagged(uproot.interp.interp.Interpretation):
 
         out = self.awkward.Methods.maybemixin(type(content), self.awkward.JaggedArray).fromcounts(destination.counts, content)
         out.leafcount = leafcount
+        if self.debug_reading:
+            print("reading {0}".format(repr(out)))
         return out

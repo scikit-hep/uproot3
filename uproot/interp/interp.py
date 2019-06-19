@@ -10,6 +10,8 @@ class Interpretation(object):
 
     awkward = awkward
 
+    debug_reading = False
+
     def awkwardlib(self, lib):
         cls = type(self)
         out = cls.__new__(cls)

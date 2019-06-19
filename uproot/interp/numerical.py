@@ -72,6 +72,8 @@ class _asnumeric(uproot.interp.interp.Interpretation):
         #     return destination[entrystart:entrystop]
 
     def finalize(self, destination, branch):
+        if self.debug_reading:
+            print("reading {0}".format(repr(destination)))
         return destination
 
 class asdtype(_asnumeric):
@@ -194,7 +196,10 @@ class asarray(asdtype):
 
     def finalize(self, destination, branch):
         array, stop = destination
-        return array[:stop]
+        out = array[:stop]
+        if self.debug_reading:
+            print("reading {0}".format(repr(out)))
+        return out
 
 class asdouble32(_asnumeric):
     # makes __doc__ attribute mutable before Python 3.3
@@ -365,4 +370,6 @@ class asstlbitset(uproot.interp.interp.Interpretation):
         return destination[itemstart:itemstop]
 
     def finalize(self, destination, branch):
+        if self.debug_reading:
+            print("reading {0}".format(repr(destination)))
         return destination
