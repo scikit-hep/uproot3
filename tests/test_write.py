@@ -555,6 +555,27 @@ def test_compressed_tprofile2d(tmp_path):
     assert h.GetNbinsX() == 5
     assert h.GetNbinsY() == 6
 
+def test_taxis_fFirst(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+    testfile = join(str(tmp_path), "test.root")
+
+    f = ROOT.TFile.Open(testfile, "RECREATE")
+    h = ROOT.TH1F("hvar", "title", 5, 1, 10)
+    h.Fill(1.0, 3)
+    h.Fill(3.0, 8)
+    h.Write()
+    f.Close()
+
+    t = uproot.open(testfile)
+    hist = t["hvar"]
+    with uproot.recreate(filename, compression=None) as f:
+        f["test"] = hist
+
+    f = ROOT.TFile.Open(filename)
+    h = f.Get("test")
+    assert h.GetXaxis().GetFirst() == 1
+    assert h.GetXaxis().GetLast() == 5
+
 def test_th1_binlabel(tmp_path):
     filename = join(str(tmp_path), "example.root")
     testfile = join(str(tmp_path), "test.root")

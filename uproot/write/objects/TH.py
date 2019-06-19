@@ -198,9 +198,10 @@ class TH(object):
         cnt = numpy.int64(self.length_tlist(values) - 4) | uproot.const.kByteCountMask
         vers = 5
         for value in values:
-            raise NotImplementedError
+            # Do something
+            pass
         return (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_tobject(cursor) +
-            cursor.return_string(b"") + cursor.return_fields(self._format_tlist, len(values)))
+            cursor.return_string(b"") + cursor.return_fields(self._format_tlist, len(values))) # Need to fix
     def length_tlist(self, values):
         return self.length_tobject() + uproot.write.sink.cursor.Cursor.length_string(b"") + self._format_tlist.size + sum(0 for x in values) + self._format_cntvers.size
 
@@ -264,7 +265,7 @@ class TH(object):
     def return_taxis(self, cursor, axis):
         cnt = numpy.int64(self.length_taxis(axis) - 4) | uproot.const.kByteCountMask
         vers = 10
-        if axis["_fFirst"] != 0 or axis["_fLast"] != 0 or axis["_fBits2"] != 0 or axis["_fTimeDisplay"] or axis["_fTimeFormat"] != b"" or axis["_fLabels"] or axis["_fModLabs"]:
+        if axis["_fTimeFormat"] != b"" or axis["_fLabels"] or axis["_fModLabs"]:
             raise NotImplementedError
         return (cursor.return_fields(self._format_cntvers, cnt, vers) +
                 self.return_tnamed(cursor, axis["_fName"], axis["_fTitle"]) +
@@ -274,7 +275,12 @@ class TH(object):
                             axis["_fXmin"],
                             axis["_fXmax"]) +
                 self.return_tarray(cursor, axis["_fXbins"]) +
-                (b"\x00" * 20))
+                cursor.return_fields(self._format_taxis_2,
+                                    axis["_fFirst"],
+                                    axis["_fLast"],
+                                    axis["_fBits2"],
+                                    axis["_fTimeDisplay"]) +
+                (b"\x00" * (20 - self._format_taxis_2.size)))
         # cursor.write_fields(sink, self._format_taxis_2,
         #                     axis["_fFirst"],
         #                     axis["_fLast"],
