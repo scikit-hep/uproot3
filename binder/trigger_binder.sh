@@ -3,7 +3,7 @@
 function trigger_binder() {
     local URL="${1}"
 
-    curl --connect-timeout 10 --max-time 30 "${URL}"
+    curl -L --connect-timeout 10 --max-time 30 "${URL}"
     curl_return=$?
 
     # Return code 28 is when the --max-time is reached
