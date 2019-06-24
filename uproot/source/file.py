@@ -18,6 +18,7 @@ class FileSource(uproot.source.chunked.ChunkedSource):
 
     def __init__(self, path, *args, **kwds):
         self._size = None
+        self._parallel = kwds['parallel']
         super(FileSource, self).__init__(os.path.expanduser(path), *args, **kwds)
 
     def size(self):
@@ -31,6 +32,7 @@ class FileSource(uproot.source.chunked.ChunkedSource):
         out._chunkbytes = self._chunkbytes
         out.cache = self.cache
         out._source = None             # local file connections are *not shared* among threads (they're *not* thread-safe)
+        out._setup_futures(self._parallel)
         return out
 
     def _open(self):
