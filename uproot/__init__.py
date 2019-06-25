@@ -110,6 +110,8 @@ By default, local files are read as memory-mapped arrays. Change this by setting
 The same procedure sets options for uproot.XRootDSource and uproot.HTTPSource.
 """
 
+from __future__ import absolute_import
+
 # high-level entry points
 from uproot.rootio import open, xrootd, http
 from uproot.tree import iterate, numentries, lazyarray, lazyarrays, daskarray, daskframe

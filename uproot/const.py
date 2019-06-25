@@ -3,6 +3,7 @@
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
 """ROOT constants used in deserialization."""
+from __future__ import absolute_import
 
 import numpy
 

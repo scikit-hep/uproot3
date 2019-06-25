@@ -3,6 +3,7 @@
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
 """Top-level functions for Pandas."""
+from __future__ import absolute_import
 
 import uproot.tree
 from uproot.source.memmap import MemmapSource
