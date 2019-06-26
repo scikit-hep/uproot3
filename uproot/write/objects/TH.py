@@ -281,12 +281,6 @@ class TH(object):
                                     axis["_fTimeDisplay"]) +
                 cursor.return_string(axis["_fTimeFormat"]) +
                 (b"\x00" * 8)) # duck typing
-        # cursor.write_fields(sink, self._format_taxis_2,
-        #                     axis["_fFirst"],
-        #                     axis["_fLast"],
-        #                     axis["_fBits2"],
-        #                     axis["_fTimeDisplay"])
-        # cursor.write_string(sink, axis["_fTimeFormat"])
         # self.write_tlist(cursor, sink, axis["_fLabels"])
         # self.write_tlist(cursor, sink, axis["_fModLabs"])
     def length_taxis(self, axis):
