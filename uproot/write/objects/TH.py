@@ -2,6 +2,8 @@
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
+from __future__ import absolute_import
+
 import struct
 
 import numpy
@@ -71,7 +73,7 @@ class TH(object):
         elif self.fClassName == b"TH3D":
             self.valuesarray = numpy.array(self.values, dtype=">f8").transpose()
         elif self.fClassName == b"TProfile3D":
-            raise NotImplementedError(self.fClassName)
+            self.valuesarray = numpy.array(self.values, dtype=">f8").transpose()
         else:
             raise ValueError("unrecognized histogram class name {0}".format(self.fClassName))
 
@@ -141,7 +143,11 @@ class TH(object):
                 "_fBinSumw2": [],
                 "_fErrorMode": 0,
                 "_fZmin": 0.0,
-                "_fZmax": 0.0}
+                "_fZmax": 0.0,
+                "_fTmin": 0.0,
+                "_fTmax": 0.0,
+                "_fTsumwt": 0.0,
+                "_fTsumwt2": 0.0}
 
     @staticmethod
     def emptyaxis(name, titleoffset):
@@ -408,6 +414,15 @@ class TH(object):
     def length_th2d(self, name):
         return self.length_th2(name) + self.length_tarray(self.valuesarray) + self._format_cntvers.size
 
+    def return_th3d(self, cursor, name):
+        cnt = numpy.int64(self.length_th3d(name) - 4) | uproot.const.kByteCountMask
+        vers = 3
+        return (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th3(cursor, name)
+                + self.return_tarray(cursor, self.valuesarray))
+
+    def length_th3d(self, name):
+        return self.length_th3(name) + self.length_tarray(self.valuesarray) + self._format_cntvers.size
+
     _format_tprofile = struct.Struct(">idddd")
     def write(self, context, cursor, name, compression, key, keycursor):
         givenbytes = 0
@@ -438,6 +453,13 @@ class TH(object):
                             cursor.return_fields(self._format_tprofile, self.fields["_fErrorMode"], self.fields["_fZmin"],
                             self.fields["_fZmax"], self.fields["_fTsumwz"], self.fields["_fTsumwz2"]) +
                             self.return_tarray(cursor, self.fields["_fBinSumw2"]))
+        elif "TProfile3D" == self.fClassName.decode("utf-8"):
+            vers = 7
+            givenbytes = (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th3d(cursor, name)
+                            + self.return_tarray(cursor, self.fields["_fBinEntries"]) +
+                            cursor.return_fields(self._format_tprofile, self.fields["_fErrorMode"], self.fields["_fTmin"],
+                            self.fields["_fTmax"], self.fields["_fTsumwt"], self.fields["_fTsumwt2"]) +
+                            self.return_tarray(cursor, self.fields["_fBinSumw2"]))
         uproot.write.compress.write(context, cursor, givenbytes, compression, key, keycursor)
 
     def length(self, name):
@@ -453,4 +475,6 @@ class TH(object):
         elif "TProfile2D" == self.fClassName.decode("utf-8"):
             return (self.length_th2d(name) + self.length_tarray(self.fields["_fBinEntries"]) + self._format_tprofile.size
                     + self.length_tarray(self.fields["_fBinSumw2"]) + self._format_cntvers.size)
-
+        elif "TProfile3D" == self.fClassName.decode("utf-8"):
+            return (self.length_th3d(name) + self.length_tarray(self.fields["_fBinEntries"]) + self._format_tprofile.size
+                    + self.length_tarray(self.fields["_fBinSumw2"]) + self._format_cntvers.size)
