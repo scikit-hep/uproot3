@@ -198,8 +198,7 @@ class TH(object):
         cnt = numpy.int64(self.length_tlist(values) - 4) | uproot.const.kByteCountMask
         vers = 5
         for value in values:
-            # Do something
-            pass
+            raise NotImplementedError
         return (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_tobject(cursor) +
             cursor.return_string(b"") + cursor.return_fields(self._format_tlist, len(values))) # Need to fix
     def length_tlist(self, values):
