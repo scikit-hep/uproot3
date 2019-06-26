@@ -206,7 +206,7 @@ class TH(object):
         for value in values:
             raise NotImplementedError
         return (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_tobject(cursor) +
-            cursor.return_string(b"") + cursor.return_fields(self._format_tlist, len(values))) # Need to fix
+            cursor.return_string(b"") + cursor.return_fields(self._format_tlist, len(values))) #FIXME
     def length_tlist(self, values):
         return self.length_tobject() + uproot.write.sink.cursor.Cursor.length_string(b"") + self._format_tlist.size + sum(0 for x in values) + self._format_cntvers.size
 
@@ -270,7 +270,7 @@ class TH(object):
     def return_taxis(self, cursor, axis):
         cnt = numpy.int64(self.length_taxis(axis) - 4) | uproot.const.kByteCountMask
         vers = 10
-        if axis["_fLabels"] or axis["_fModLabs"]:
+        if axis.get("_fLabels", None) != [] or axis.get("_fModLabs", None) != []:
             raise NotImplementedError
         return (cursor.return_fields(self._format_cntvers, cnt, vers) +
                 self.return_tnamed(cursor, axis["_fName"], axis["_fTitle"]) +
