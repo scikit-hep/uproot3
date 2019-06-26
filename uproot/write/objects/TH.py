@@ -270,7 +270,7 @@ class TH(object):
     def return_taxis(self, cursor, axis):
         cnt = numpy.int64(self.length_taxis(axis) - 4) | uproot.const.kByteCountMask
         vers = 10
-        if axis.get("_fLabels", None) != [] or axis.get("_fModLabs", None) != []:
+        if len(axis.get("_fLabels", [])) > 0 or len(axis.get("_fModLabs", [])) > 0:
             raise NotImplementedError
         return (cursor.return_fields(self._format_cntvers, cnt, vers) +
                 self.return_tnamed(cursor, axis["_fName"], axis["_fTitle"]) +
