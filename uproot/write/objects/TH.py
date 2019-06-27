@@ -208,7 +208,7 @@ class TH(object):
         for value in values:
             raise NotImplementedError
         return (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_tobject(cursor) +
-            cursor.return_string(b"") + cursor.return_fields(self._format_tlist, len(values)))
+            cursor.return_string(b"") + cursor.return_fields(self._format_tlist, len(values))) #FIXME
     def length_tlist(self, values):
         return self.length_tobject() + uproot.write.sink.cursor.Cursor.length_string(b"") + self._format_tlist.size + sum(0 for x in values) + self._format_cntvers.size
 
@@ -272,7 +272,7 @@ class TH(object):
     def return_taxis(self, cursor, axis):
         cnt = numpy.int64(self.length_taxis(axis) - 4) | uproot.const.kByteCountMask
         vers = 10
-        if axis["_fFirst"] != 0 or axis["_fLast"] != 0 or axis["_fBits2"] != 0 or axis["_fTimeDisplay"] or axis["_fTimeFormat"] != b"" or axis["_fLabels"] or axis["_fModLabs"]:
+        if len(axis.get("_fLabels", [])) > 0 or len(axis.get("_fModLabs", [])) > 0:
             raise NotImplementedError
         return (cursor.return_fields(self._format_cntvers, cnt, vers) +
                 self.return_tnamed(cursor, axis["_fName"], axis["_fTitle"]) +
@@ -282,13 +282,13 @@ class TH(object):
                             axis["_fXmin"],
                             axis["_fXmax"]) +
                 self.return_tarray(cursor, axis["_fXbins"]) +
-                (b"\x00" * 20))
-        # cursor.write_fields(sink, self._format_taxis_2,
-        #                     axis["_fFirst"],
-        #                     axis["_fLast"],
-        #                     axis["_fBits2"],
-        #                     axis["_fTimeDisplay"])
-        # cursor.write_string(sink, axis["_fTimeFormat"])
+                cursor.return_fields(self._format_taxis_2,
+                                    axis["_fFirst"],
+                                    axis["_fLast"],
+                                    axis["_fBits2"],
+                                    axis["_fTimeDisplay"]) +
+                cursor.return_string(axis["_fTimeFormat"]) +
+                (b"\x00" * 8)) # duck typing
         # self.write_tlist(cursor, sink, axis["_fLabels"])
         # self.write_tlist(cursor, sink, axis["_fModLabs"])
     def length_taxis(self, axis):
@@ -296,7 +296,10 @@ class TH(object):
                 self.length_tattaxis() +
                 self._format_taxis_1.size +
                 self.length_tarray(axis["_fXbins"]) +
-                20 + 6)
+                self._format_taxis_2.size +
+                uproot.write.sink.cursor.Cursor.length_string(axis["_fTimeFormat"]) +
+                8 + # Duck typing
+                self._format_cntvers.size)
                 # self._format_taxis_2.size +
                 # uproot.write.sink.cursor.Cursor.length_string(axis["_fTimeFormat"]) +
                 # self.length_tlist(axis["_fLabels"]) +
