@@ -102,7 +102,9 @@ class TH(object):
 
     @staticmethod
     def emptyfields():
-        return {"_fLineColor": 602,
+        return {"_fUniqueID": 1,
+                "_fBits": 0,
+                "_fLineColor": 602,
                 "_fLineStyle": 1,
                 "_fLineWidth": 1,
                 "_fFillColor": 0,
@@ -180,7 +182,7 @@ class TH(object):
 
     _format_tobject1 = struct.Struct(">HII")
     def return_tobject(self, cursor):
-        return cursor.return_fields(self._format_tobject1, 1, 0, uproot.const.kNotDeleted)
+        return cursor.return_fields(self._format_tobject1, self.fields["_fUniqueID"], self.fields["_fBits"], uproot.const.kNotDeleted)
     def length_tobject(self):
         return self._format_tobject1.size
 
