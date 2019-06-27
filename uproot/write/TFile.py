@@ -20,6 +20,7 @@ import uproot.write.streamers
 import uproot.write.TDirectory
 import uproot.write.TFree
 import uproot.write.TKey
+import uproot.write.convert
 from uproot.rootio import nofilter
 
 class TFileUpdate(object):
@@ -64,7 +65,10 @@ class TFileUpdate(object):
 
     def __setitem__(self, where, what):
         where, cycle = self._normalizewhere(where)
-        what = uproot_methods.convert.towriteable(what)
+        if what.__class__.__name__ == "TTree":
+            what = uproot.write.convert.ttree(what)
+        else:
+            what = uproot_methods.convert.towriteable(what)
         cursor = uproot.write.sink.cursor.Cursor(self._fSeekFree)
         newkey = uproot.write.TKey.TKey(fClassName = what.fClassName,
                                         fName      = where,
