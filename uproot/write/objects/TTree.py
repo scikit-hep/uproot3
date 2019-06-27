@@ -6,20 +6,16 @@ import struct
 
 import numpy
 
+import uproot
 import uproot.const
 import uproot.write.compress
 import uproot.write.sink.cursor
 
 class TTree(object):
 
-    def __init__(self, *branches, **options):
-        self.fTitle = self.fixstring(ttree._fTitle)
-        self.fClassName = self.fixstring(ttree._classname)
-
-        self.fields = self.emptyfields()
-        for n in list(self.fields):
-            if hasattr(ttree, n):
-                self.fields[n] = getattr(ttree, n)
+    def __init__(self, name, title, *branches, **options):
+        self.fName = self.fixstring(name)
+        self.fTitle = self.fixstring(title)
 
     @staticmethod
     def fixstring(string):
@@ -73,7 +69,7 @@ class TTree(object):
         return (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_tobject(cursor) +
                     cursor.return_string(name) + cursor.return_string(title))
     def length_tnamed(self, name, title):
-        return self.length_tobject() + uproot.write.sink.cursor.Cursor.length_strings([name, title]) + self._format_cntvers.
+        return self.length_tobject() + uproot.write.sink.cursor.Cursor.length_strings([name, title]) + self._format_cntvers.size
 
     _format_tattline = struct.Struct(">hhh")
     def return_tattline(self, cursor):
@@ -148,13 +144,13 @@ class TTree(object):
         vers = 20
         return (cursor.return_fields(self._format_cntvers, cnt, vers) +
                 self.return_tnamed(cursor, name, self.fTitle) +
-                self.return_tattline(cursor) +)
+                self.return_tattline(cursor)) #Incomplete
 
 class branch(object):
 
     # Need to think about appropriate defaultBasketSize
     # Need to look at ROOT's default branch compression
-    def __init__(self, type, name, title, defaultBasketSize=?, compression=uproot.ZLIB(4)):
+    def __init__(self, type, name, title, defaultBasketSize=0, compression=uproot.write.compress.ZLIB(4)): #Fix defaultBasketSize
         self.type = type
         self.name = name
         self.title = title
