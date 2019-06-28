@@ -126,3 +126,7 @@ class Test(unittest.TestCase):
     def test_6_16_00(self):
         for compression in "uncompressed", "zlib", "lzma", "lz4":
             self.compare(uproot.open("tests/samples/sample-6.16.00-{0}.root".format(compression))["sample"].arrays())
+
+    def test_6_18_00(self):
+        for compression in "uncompressed", "zlib", "lzma", "lz4":
+            self.compare(uproot.open("tests/samples/sample-6.18.00-{0}.root".format(compression))["sample"].arrays())
