@@ -208,7 +208,7 @@ class TFileRecreate(TFileUpdate):
 
     def _writeheader(self):
         cursor = uproot.write.sink.cursor.Cursor(0)
-        self._fVersion = self._fVersion = 1061404
+        self._fVersion = self._fVersion = 1061800
         self._fBEGIN = 100
         cursor.write_fields(self._sink, self._format1, b"root", self._fVersion, self._fBEGIN)
 
