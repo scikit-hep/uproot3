@@ -642,6 +642,17 @@ def test_compressed_tprofile3d(tmp_path):
     assert h.GetNbinsY() == 6
     assert h.GetNbinsZ() == 8
 
+def test_dir_allocation(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    with uproot.recreate(filename, compression=None) as f:
+        for i in range(1, 101):
+            f["a"*i] = "a"*i
+
+    f = ROOT.TFile.Open(filename)
+    assert str(f.Get("a"*100)) == "a"*100
+    f.Close()
+
 def test_taxis_axisbins(tmp_path):
     filename = join(str(tmp_path), "example.root")
     testfile = join(str(tmp_path), "test.root")
