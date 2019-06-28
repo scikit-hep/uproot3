@@ -109,5 +109,6 @@ jobs:
     before_install: skip
     install: skip
     script:
-    # Use Binder build API to trigger repo2docker to build image
-    - bash binder/trigger_binder.sh https://mybinder.org/build/gh/scikit-hep/uproot/"${TRAVIS_BRANCH}"
+    # Use Binder build API to trigger repo2docker to build image on GKE and OVH Binder Federation clusters
+    - bash binder/trigger_binder.sh https://gke.mybinder.org/build/gh/scikit-hep/uproot/"${TRAVIS_BRANCH}"
+    - bash binder/trigger_binder.sh https://ovh.mybinder.org/build/gh/scikit-hep/uproot/"${TRAVIS_BRANCH}"
