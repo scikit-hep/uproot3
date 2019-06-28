@@ -122,3 +122,7 @@ class Test(unittest.TestCase):
         # 2018-06-20, TTree version 20
         for compression in "uncompressed", "zlib", "lzma", "lz4":
             self.compare(uproot.open("tests/samples/sample-6.14.00-{0}.root".format(compression))["sample"].arrays())
+
+    def test_6_16_00(self):
+        for compression in "uncompressed", "zlib", "lzma", "lz4":
+            self.compare(uproot.open("tests/samples/sample-6.16.00-{0}.root".format(compression))["sample"].arrays())
