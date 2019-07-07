@@ -62,6 +62,9 @@ class Cursor(object):
         self.update_cstring(sink, data)
         self.index += len(data) + 1
 
+    def return_cstring(self, data):
+        return data + b"\x00"
+
     def update_data(self, sink, data):
         sink.write(data, self.index)
 

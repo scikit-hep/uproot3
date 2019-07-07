@@ -693,7 +693,7 @@ def test_taxis_time(tmp_path):
     h = f.Get("test")
     assert h.GetXaxis().GetTimeDisplay() == True
 
-def test_th1_binlabel(tmp_path):
+def test_th1_binlabel1(tmp_path):
     filename = join(str(tmp_path), "example.root")
     testfile = join(str(tmp_path), "test.root")
 
@@ -711,9 +711,32 @@ def test_th1_binlabel(tmp_path):
 
     f = ROOT.TFile.Open(filename)
     h = f.Get("test")
-    assert h.GetXaxis().GetBinLabel(1) == "Hi"
+    assert h.GetXaxis().GetBinLabel(1) == "Hi"\
 
-def test_th2_binlabel(tmp_path):
+def test_th1_binlabel2(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+    testfile = join(str(tmp_path), "test.root")
+
+    f = ROOT.TFile.Open(testfile, "RECREATE")
+    h = ROOT.TH1F("hvar", "title", 5, 1, 10)
+    h.Fill(1.0, 3)
+    h.Fill(2.0, 4)
+    h.GetXaxis().SetBinLabel(1, "Hi")
+    h.GetXaxis().SetBinLabel(2, "Hello")
+    h.Write()
+    f.Close()
+
+    t = uproot.open(testfile)
+    hist = t["hvar"]
+    with uproot.recreate(filename, compression=None) as f:
+        f["test"] = hist
+
+    f = ROOT.TFile.Open(filename)
+    h = f.Get("test")
+    assert h.GetXaxis().GetBinLabel(1) == "Hi"
+    assert h.GetXaxis().GetBinLabel(2) == "Hello"
+
+def test_th2_binlabel1(tmp_path):
     filename = join(str(tmp_path), "example.root")
     testfile = join(str(tmp_path), "test.root")
 
@@ -735,7 +758,7 @@ def test_th2_binlabel(tmp_path):
     assert h.GetXaxis().GetBinLabel(1) == "Hi1"
     assert h.GetYaxis().GetBinLabel(2) == "Hi2"
 
-def test_th3_binlabel(tmp_path):
+def test_th3_binlabel1(tmp_path):
     filename = join(str(tmp_path), "example.root")
     testfile = join(str(tmp_path), "test.root")
 
