@@ -21,6 +21,7 @@ class Cursor(object):
         self.index += format.size
 
     def return_fields(self, format, *args):
+        self.index += format.size
         return format.pack(*args)
 
     @staticmethod
@@ -45,6 +46,7 @@ class Cursor(object):
             sink.write(data, self.index + 5)
 
     def return_string(self, data):
+        self.index += self.length_string(data)
         if len(data) < 255:
             return self._format_byte.pack(len(data)) + data
         else:
@@ -63,6 +65,7 @@ class Cursor(object):
         self.index += len(data) + 1
 
     def return_cstring(self, data):
+        self.index += len(data) + 1
         return data + b"\x00"
 
     def update_data(self, sink, data):
@@ -73,6 +76,7 @@ class Cursor(object):
         self.index += len(data)
 
     def return_array(self, data):
+        self.index += data.nbytes
         return data.tostring()
 
     def update_array(self, sink, data):
