@@ -5,6 +5,7 @@
 from __future__ import absolute_import
 
 import struct
+from copy import copy
 
 import numpy
 
@@ -82,6 +83,9 @@ class TH(object):
         self.fields["_fSumw2"] = numpy.array(self.fields["_fSumw2"], dtype=">f8", copy=False)
         self.fields["_fBinEntries"] = numpy.array(self.fields["_fBinEntries"], dtype=">f8", copy=False)
         self.fields["_fBinSumw2"] = numpy.array(self.fields["_fBinSumw2"], dtype=">f8", copy=False)
+
+        #For _writeobjany
+        self._written = {}
 
     @staticmethod
     def fixstring(string):
@@ -199,16 +203,47 @@ class TH(object):
     def length_tarray(self, values):
         return self._format_tarray.size + values.nbytes
 
+    def return_tobjstring(self, cursor, name):
+        cnt = numpy.int64(self.length(name) - 4) | uproot.const.kByteCountMask
+        vers = 1
+        givenbytes = cursor.return_fields(self._format, cnt, vers, 1, 0, uproot.const.kNotDeleted) + cursor.return_string(self.value)
+
+    def _writeclass(self, cursor, obj):
+        beg = cursor.index
+        start = cursor.index + 4
+        objct, clsname = obj
+        buf = b"" #Make global?
+        if clsname in self._written:
+            pass
+        else:
+            buf += cursor.return_fields(self._format_writeobjany1, numpy.uint32(uproot.const.kNewClassTag))
+            buf += cursor.return_cstring(clsname)
+            if clsname == "THashList" or clsname == "TList":
+                buf += self.return_tlist(cursor, objct)
+            elif clsname == "TObjString":
+                buf += self.return_tobjstring(cursor, objct)
+        return len(buf), buf
+
+    _format_writeobjany1 = struct.Struct(">I")
+    def _writeobjany(self, cursor, obj):
+        bcnt, class_buf = self._writeclass(cursor, obj)
+        buf = cursor.return_fields(self._format_writeobjany1, bcnt)
+        buf += class_buf
+        return buf
+
     _format_tlist = struct.Struct(">i")
     def return_tlist(self, cursor, values):
         cnt = numpy.int64(self.length_tlist(values) - 4) | uproot.const.kByteCountMask
         vers = 5
+        buf = b""
         for value in values:
-            raise NotImplementedError
+            buf += self._writeobjany(cursor, (value, "TObjString"))
+            buf += b"" # cursor.bytes(source, n)
         return (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_tobject(cursor) +
-            cursor.return_string(b"") + cursor.return_fields(self._format_tlist, len(values))) #FIXME
+            cursor.return_string(b"") + cursor.return_fields(self._format_tlist, len(values)) + buf)
     def length_tlist(self, values):
-        return self.length_tobject() + uproot.write.sink.cursor.Cursor.length_string(b"") + self._format_tlist.size + sum(0 for x in values) + self._format_cntvers.size
+        return (self.length_tobject() + uproot.write.sink.cursor.Cursor.length_string(b"") + self._format_tlist.size +
+                sum(len(self._writeobjany(x)) for x in values) + self._format_cntvers.size) #FIXME
 
     _format_tattline = struct.Struct(">hhh")
     def return_tattline(self, cursor):
@@ -270,8 +305,6 @@ class TH(object):
     def return_taxis(self, cursor, axis):
         cnt = numpy.int64(self.length_taxis(axis) - 4) | uproot.const.kByteCountMask
         vers = 10
-        if len(axis.get("_fLabels", [])) > 0 or len(axis.get("_fModLabs", [])) > 0:
-            raise NotImplementedError
         return (cursor.return_fields(self._format_cntvers, cnt, vers) +
                 self.return_tnamed(cursor, axis["_fName"], axis["_fTitle"]) +
                 self.return_tattaxis(cursor, axis) +
@@ -286,9 +319,8 @@ class TH(object):
                                     axis["_fBits2"],
                                     axis["_fTimeDisplay"]) +
                 cursor.return_string(axis["_fTimeFormat"]) +
-                (b"\x00" * 8)) # duck typing
-        # self.write_tlist(cursor, sink, axis["_fLabels"])
-        # self.write_tlist(cursor, sink, axis["_fModLabs"])
+                self._writeobjany(cursor, (axis["_fLabels"], "THashList")) +
+                self._writeobjany(cursor, (axis["_fModLabs"], "TList")))
     def length_taxis(self, axis):
         return (self.length_tnamed(axis["_fName"], axis["_fTitle"]) +
                 self.length_tattaxis() +
@@ -296,12 +328,9 @@ class TH(object):
                 self.length_tarray(axis["_fXbins"]) +
                 self._format_taxis_2.size +
                 uproot.write.sink.cursor.Cursor.length_string(axis["_fTimeFormat"]) +
-                8 + # Duck typing
+                self.length_tlist(axis["_fLabels"]) +
+                self.length_tlist(axis["_fModLabs"]) +
                 self._format_cntvers.size)
-                # self._format_taxis_2.size +
-                # uproot.write.sink.cursor.Cursor.length_string(axis["_fTimeFormat"]) +
-                # self.length_tlist(axis["_fLabels"]) +
-                # self.length_tlist(axis["_fModLabs"]))
 
     _format_th1_1 = struct.Struct(">i")
     _format_th1_2 = struct.Struct(">hhdddddddd")
@@ -425,6 +454,7 @@ class TH(object):
 
     _format_tprofile = struct.Struct(">idddd")
     def write(self, context, cursor, name, compression, key, keycursor):
+        write_cursor = copy(cursor)
         givenbytes = 0
         cnt = numpy.int64(self.length(name) - 4) | uproot.const.kByteCountMask
         if "TH1" in self.fClassName.decode("utf-8"):
@@ -460,7 +490,7 @@ class TH(object):
                             cursor.return_fields(self._format_tprofile, self.fields["_fErrorMode"], self.fields["_fTmin"],
                             self.fields["_fTmax"], self.fields["_fTsumwt"], self.fields["_fTsumwt2"]) +
                             self.return_tarray(cursor, self.fields["_fBinSumw2"]))
-        uproot.write.compress.write(context, cursor, givenbytes, compression, key, keycursor)
+        uproot.write.compress.write(context, write_cursor, givenbytes, compression, key, keycursor)
 
     def length(self, name):
         if "TH1" in self.fClassName.decode("utf-8"):
