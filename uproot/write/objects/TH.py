@@ -209,7 +209,7 @@ class TH(object):
         vers = 1
         return cursor.return_fields(self._format_tobjstring, cnt, vers, 1, 0, uproot.const.kNotDeleted) + cursor.return_string(value)
     def length_tobjstring(self, value):
-        return self._format_tobjstring.size + len(value)
+        return self._format_tobjstring.size + uproot.write.sink.cursor.Cursor.length_string(value)
 
     def _returnclass(self, cursor, obj):
         beg = cursor.index
@@ -247,11 +247,17 @@ class TH(object):
             buff += self._returnobjany(cursor, (value, "TObjString"))
             buff += cursor.return_fields(self._format_tlist2, 0)
             buff += b"" # cursor.bytes(source, n)
-        return (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_tobject(cursor) +
-            cursor.return_string(b"") + cursor.return_fields(self._format_tlist1, len(values)) + buff)
+        return (cursor.return_fields(self._format_cntvers, cnt, vers) +
+                self.return_tobject(cursor) +
+                cursor.return_string(b"") +
+                cursor.return_fields(self._format_tlist1, len(values)) +
+                buff)
     def length_tlist(self, values):
-        return (self.length_tobject() + uproot.write.sink.cursor.Cursor.length_string(b"") + self._format_tlist1.size +
-                sum(len(self._returnobjany(uproot.write.sink.cursor.Cursor(0), (x, "TObjString"))) for x in values) + self._format_cntvers.size)
+        return (self.length_tobject() +
+                uproot.write.sink.cursor.Cursor.length_string(b"") +
+                self._format_tlist1.size +
+                sum(len(self._returnobjany(uproot.write.sink.cursor.Cursor(0), (x, "TObjString"))) for x in values) +
+                self._format_cntvers.size)
 
     _format_tattline = struct.Struct(">hhh")
     def return_tattline(self, cursor):
