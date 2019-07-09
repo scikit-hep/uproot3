@@ -237,18 +237,20 @@ class TH(object):
         buff += class_buf
         return buff
 
-    _format_tlist = struct.Struct(">i")
+    _format_tlist1 = struct.Struct(">i")
+    _format_tlist2 = struct.Struct(">B")
     def return_tlist(self, cursor, values):
         cnt = numpy.int64(self.length_tlist(values) - 4) | uproot.const.kByteCountMask
         vers = 5
         buff = b""
         for value in values:
             buff += self._returnobjany(cursor, (value, "TObjString"))
+            buff += cursor.return_fields(self._format_tlist2, 0)
             buff += b"" # cursor.bytes(source, n)
         return (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_tobject(cursor) +
-            cursor.return_string(b"") + cursor.return_fields(self._format_tlist, len(values)) + buff)
+            cursor.return_string(b"") + cursor.return_fields(self._format_tlist1, len(values)) + buff)
     def length_tlist(self, values):
-        return (self.length_tobject() + uproot.write.sink.cursor.Cursor.length_string(b"") + self._format_tlist.size +
+        return (self.length_tobject() + uproot.write.sink.cursor.Cursor.length_string(b"") + self._format_tlist1.size +
                 sum(len(self._returnobjany(uproot.write.sink.cursor.Cursor(0), (x, "TObjString"))) for x in values) + self._format_cntvers.size)
 
     _format_tattline = struct.Struct(">hhh")
