@@ -66,7 +66,7 @@ class Cursor(object):
 
     def return_cstring(self, data):
         self.index += len(data) + 1
-        return data + b"\x00"
+        return data.encode("utf-8") + b"\x00"
 
     def update_data(self, sink, data):
         sink.write(data, self.index)
