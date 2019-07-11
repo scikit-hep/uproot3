@@ -121,7 +121,7 @@ def futures2df(futures, outputtype, entrystart, entrystop, flatten, flatname, aw
                 if starts is None:
                     starts = array.starts
                     stops = array.stops
-                    index = array.index
+                    index = array.localindex
                 else:
                     if starts is not array.starts and not awkward.numpy.array_equal(starts, array.starts):
                         raise ValueError("cannot use flatten=True on branches with different jagged structure, such as electrons and muons (different, variable number of each per event); either explicitly select compatible branches, such as [\"MET_*\", \"Muon_*\"] (scalar and variable per event is okay), or set flatten=False")
