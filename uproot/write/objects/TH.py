@@ -233,7 +233,7 @@ class TH(object):
         objct, _ = obj
         if objct != []:
             class_buf = self._returnclass(cursor, obj)
-        buff = cursor.return_fields(struct.Struct(">I"), len(class_buf) | uproot.const.kByteCountMask)
+        buff = cursor.return_fields(self._format_returnobjany1, len(class_buf) | uproot.const.kByteCountMask)
         buff += class_buf
         return buff
 
@@ -257,7 +257,7 @@ class TH(object):
                 uproot.write.sink.cursor.Cursor.length_string(b"") +
                 self._format_tlist1.size +
                 sum(len(self._returnobjany(uproot.write.sink.cursor.Cursor(0), (x, "TObjString"))) for x in values) +
-                self._format_tlist2.size +
+                (0 if values == [] else self._format_tlist2.size) +
                 self._format_cntvers.size)
 
     _format_tattline = struct.Struct(">hhh")
