@@ -139,7 +139,6 @@ def write(context, cursor, givenbytes, compression, key, keycursor):
             cursor.write_fields(context._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
             cursor.write_data(context._sink, after_compressed)
             key.fObjlen = uncompressedbytes
-            print(uncompressedbytes)
             key.fNbytes = compressedbytes + key.fKeylen + 9
             key.write(keycursor, context._sink)
         else:
