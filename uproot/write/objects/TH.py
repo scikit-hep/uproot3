@@ -233,7 +233,9 @@ class TH(object):
         objct, _ = obj
         if objct != []:
             class_buf = self._returnclass(cursor, obj)
-        buff = cursor.return_fields(self._format_returnobjany1, len(class_buf) | uproot.const.kByteCountMask)
+            buff = cursor.return_fields(self._format_returnobjany1, len(class_buf) | uproot.const.kByteCountMask)
+        else:
+            buff = cursor.return_fields(self._format_returnobjany1, len(class_buf))
         buff += class_buf
         return buff
 
