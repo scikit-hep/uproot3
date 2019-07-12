@@ -69,7 +69,7 @@ class TFileUpdate(object):
         newkey = uproot.write.TKey.TKey(fClassName = what.fClassName,
                                         fName      = where,
                                         fTitle     = what.fTitle,
-                                        fObjlen    = what.length(where),
+                                        fObjlen    = 0,
                                         fSeekKey   = self._fSeekFree,
                                         fSeekPdir  = self._fBEGIN,
                                         fCycle     = cycle if cycle is not None else self._rootdir.newcycle(where))
