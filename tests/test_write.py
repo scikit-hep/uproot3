@@ -711,7 +711,7 @@ def test_th1_binlabel1(tmp_path):
 
     f = ROOT.TFile.Open(filename)
     h = f.Get("test")
-    assert h.GetXaxis().GetBinLabel(1) == "Hi"\
+    assert h.GetXaxis().GetBinLabel(1) == "Hi"
 
 def test_th1_binlabel2(tmp_path):
     filename = join(str(tmp_path), "example.root")

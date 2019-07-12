@@ -184,7 +184,7 @@ class TH(object):
 
     _format_tobject1 = struct.Struct(">HII")
     def return_tobject(self, cursor):
-        return cursor.return_fields(self._format_tobject1, 1, 0, uproot.const.kNotDeleted)
+        return cursor.return_fields(self._format_tobject1, 1, 0, numpy.uint32(0x03000000))
     def length_tobject(self):
         return self._format_tobject1.size
 
@@ -207,7 +207,7 @@ class TH(object):
     def return_tobjstring(self, cursor, value):
         cnt = numpy.int64(self.length_tobjstring(value) - 4) | uproot.const.kByteCountMask
         vers = 1
-        return cursor.return_fields(self._format_tobjstring, cnt, vers, 1, 0, uproot.const.kNotDeleted) + cursor.return_string(value)
+        return cursor.return_fields(self._format_tobjstring, cnt, vers, 1, 1, numpy.uint32(0x03000000)) + cursor.return_string(value)
     def length_tobjstring(self, value):
         return self._format_tobjstring.size + uproot.write.sink.cursor.Cursor.length_string(value)
 
@@ -219,7 +219,7 @@ class TH(object):
         if clsname in self._written:
             pass
         else:
-            buf += cursor.return_fields(self._format_returnobjany1, numpy.uint32(uproot.const.kNewClassTag))
+            buf += cursor.return_fields(self._format_returnobjany1, uproot.const.kNewClassTag)
             buf += cursor.return_cstring(clsname)
             if clsname == "THashList" or clsname == "TList":
                 buf += self.return_tlist(cursor, objct)
@@ -233,7 +233,7 @@ class TH(object):
         objct, _ = obj
         if objct != []:
             class_buf = self._returnclass(cursor, obj)
-        buff = cursor.return_fields(self._format_returnobjany1, len(class_buf))
+        buff = cursor.return_fields(struct.Struct(">I"), len(class_buf) | uproot.const.kByteCountMask)
         buff += class_buf
         return buff
 
@@ -257,6 +257,7 @@ class TH(object):
                 uproot.write.sink.cursor.Cursor.length_string(b"") +
                 self._format_tlist1.size +
                 sum(len(self._returnobjany(uproot.write.sink.cursor.Cursor(0), (x, "TObjString"))) for x in values) +
+                self._format_tlist2.size +
                 self._format_cntvers.size)
 
     _format_tattline = struct.Struct(">hhh")
