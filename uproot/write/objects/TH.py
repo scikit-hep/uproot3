@@ -185,31 +185,26 @@ class TH(object):
     _format_tobject1 = struct.Struct(">HII")
     def return_tobject(self, cursor):
         return cursor.return_fields(self._format_tobject1, 1, 0, numpy.uint32(0x03000000))
-    def length_tobject(self):
-        return self._format_tobject1.size
 
     def return_tnamed(self, cursor, name, title):
-        cnt = numpy.int64(self.length_tnamed(name, title) - 4) | uproot.const.kByteCountMask
         vers = 1
-        return (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_tobject(cursor) +
+        buff = (self.return_tobject(cursor) +
                     cursor.return_string(name) + cursor.return_string(title))
-    def length_tnamed(self, name, title):
-        return self.length_tobject() + uproot.write.sink.cursor.Cursor.length_strings([name, title]) + self._format_cntvers.size
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return cursor.return_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_tarray = struct.Struct(">i")
     def return_tarray(self, cursor, values):
         return cursor.return_fields(self._format_tarray, values.size) + cursor.return_array(values)
 
-    def length_tarray(self, values):
-        return self._format_tarray.size + values.nbytes
-
     _format_tobjstring = struct.Struct(">IHHII")
     def return_tobjstring(self, cursor, value):
-        cnt = numpy.int64(self.length_tobjstring(value) - 4) | uproot.const.kByteCountMask
         vers = 1
-        return cursor.return_fields(self._format_tobjstring, cnt, vers, 1, 1, numpy.uint32(0x03000000)) + cursor.return_string(value)
-    def length_tobjstring(self, value):
-        return self._format_tobjstring.size + uproot.write.sink.cursor.Cursor.length_string(value)
+        buff = cursor.return_string(value)
+        length = len(buff) + self._format_tobjstring.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return cursor.return_fields(self._format_tobjstring, cnt, vers, 1, 1, numpy.uint32(0x03000000)) + buff
 
     def _returnclass(self, cursor, obj):
         beg = cursor.index
@@ -242,67 +237,56 @@ class TH(object):
     _format_tlist1 = struct.Struct(">i")
     _format_tlist2 = struct.Struct(">B")
     def return_tlist(self, cursor, values):
-        cnt = numpy.int64(self.length_tlist(values) - 4) | uproot.const.kByteCountMask
         vers = 5
         buff = b""
         for value in values:
             buff += self._returnobjany(cursor, (value, "TObjString"))
             buff += cursor.return_fields(self._format_tlist2, 0)
             buff += b"" # cursor.bytes(source, n)
-        return (cursor.return_fields(self._format_cntvers, cnt, vers) +
-                self.return_tobject(cursor) +
+        givenbytes = (self.return_tobject(cursor) +
                 cursor.return_string(b"") +
                 cursor.return_fields(self._format_tlist1, len(values)) +
                 buff)
-    def length_tlist(self, values):
-        return (self.length_tobject() +
-                uproot.write.sink.cursor.Cursor.length_string(b"") +
-                self._format_tlist1.size +
-                sum(len(self._returnobjany(uproot.write.sink.cursor.Cursor(0), (x, "TObjString"))) for x in values) +
-                (0 if values == [] else self._format_tlist2.size) +
-                self._format_cntvers.size)
+        length = len(givenbytes) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return cursor.return_fields(self._format_cntvers, cnt, vers) + givenbytes
 
     _format_tattline = struct.Struct(">hhh")
     def return_tattline(self, cursor):
-        cnt = numpy.int64(self.length_tattline() - 4) | uproot.const.kByteCountMask
         vers = 2
-        return (cursor.return_fields(self._format_cntvers, cnt, vers) +
-                cursor.return_fields(self._format_tattline,
+        buff = (cursor.return_fields(self._format_tattline,
                             self.fields["_fLineColor"],
                             self.fields["_fLineStyle"],
                             self.fields["_fLineWidth"]))
-    def length_tattline(self):
-        return self._format_tattline.size + self._format_cntvers.size
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return cursor.return_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_tattfill = struct.Struct(">hh")
     def return_tattfill(self, cursor):
-        cnt = numpy.int64(self.length_tattfill() - 4) | uproot.const.kByteCountMask
         vers = 2
-        return (cursor.return_fields(self._format_cntvers, cnt, vers) +
-                cursor.return_fields(self._format_tattfill,
+        buff = (cursor.return_fields(self._format_tattfill,
                             self.fields["_fFillColor"],
                             self.fields["_fFillStyle"]))
-    def length_tattfill(self):
-        return self._format_tattfill.size + self._format_cntvers.size
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return cursor.return_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_tattmarker = struct.Struct(">hhf")
     def return_tattmarker(self, cursor):
-        cnt = numpy.int64(self.length_tattmarker() - 4) | uproot.const.kByteCountMask
         vers = 2
-        return (cursor.return_fields(self._format_cntvers, cnt, vers) +
-                cursor.return_fields(self._format_tattmarker,
+        buff = (cursor.return_fields(self._format_tattmarker,
                             self.fields["_fMarkerColor"],
                             self.fields["_fMarkerStyle"],
                             self.fields["_fMarkerSize"]))
-    def length_tattmarker(self):
-        return self._format_tattmarker.size + self._format_cntvers.size
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return cursor.return_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_tattaxis = struct.Struct(">ihhhfffffhh")
     def return_tattaxis(self, cursor, axis):
-        cnt = numpy.int64(self.length_tattaxis() - 4) | uproot.const.kByteCountMask
         vers = 4
-        return (cursor.return_fields(self._format_cntvers, cnt, vers) +
-                cursor.return_fields(self._format_tattaxis,
+        buff = (cursor.return_fields(self._format_tattaxis,
                             axis["_fNdivisions"],
                             axis["_fAxisColor"],
                             axis["_fLabelColor"],
@@ -314,16 +298,15 @@ class TH(object):
                             axis["_fTitleSize"],
                             axis["_fTitleColor"],
                             axis["_fTitleFont"]))
-    def length_tattaxis(self):
-        return self._format_tattaxis.size + self._format_cntvers.size
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return cursor.return_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_taxis_1 = struct.Struct(">idd")
     _format_taxis_2 = struct.Struct(">iiH?")
     def return_taxis(self, cursor, axis):
-        cnt = numpy.int64(self.length_taxis(axis) - 4) | uproot.const.kByteCountMask
         vers = 10
-        return (cursor.return_fields(self._format_cntvers, cnt, vers) +
-                self.return_tnamed(cursor, axis["_fName"], axis["_fTitle"]) +
+        buff = (self.return_tnamed(cursor, axis["_fName"], axis["_fTitle"]) +
                 self.return_tattaxis(cursor, axis) +
                 cursor.return_fields(self._format_taxis_1,
                             axis["_fNbins"],
@@ -338,27 +321,18 @@ class TH(object):
                 cursor.return_string(axis["_fTimeFormat"]) +
                 self._returnobjany(cursor, (axis["_fLabels"], "THashList")) +
                 self._returnobjany(cursor, (axis["_fModLabs"], "TList")))
-    def length_taxis(self, axis):
-        return (self.length_tnamed(axis["_fName"], axis["_fTitle"]) +
-                self.length_tattaxis() +
-                self._format_taxis_1.size +
-                self.length_tarray(axis["_fXbins"]) +
-                self._format_taxis_2.size +
-                uproot.write.sink.cursor.Cursor.length_string(axis["_fTimeFormat"]) +
-                len(self._returnobjany(uproot.write.sink.cursor.Cursor(0), (axis["_fLabels"], "THashList"))) +
-                len(self._returnobjany(uproot.write.sink.cursor.Cursor(0), (axis["_fModLabs"], "TList"))) +
-                self._format_cntvers.size)
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return cursor.return_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_th1_1 = struct.Struct(">i")
     _format_th1_2 = struct.Struct(">hhdddddddd")
     _format_th1_3 = struct.Struct(">iBii")
     def return_th1(self, cursor, name):
-        cnt = numpy.int64(self.length_th1(name) - 4) | uproot.const.kByteCountMask
         vers = 8
         if len(self.fields["_fBuffer"]) != 0:
             raise NotImplementedError
-        return (cursor.return_fields(self._format_cntvers, cnt, vers) +
-                self.return_tnamed(cursor, name, self.fTitle) +
+        buff = (self.return_tnamed(cursor, name, self.fTitle) +
                 self.return_tattline(cursor) +
                 self.return_tattfill(cursor) +
                 self.return_tattmarker(cursor) +
@@ -386,23 +360,27 @@ class TH(object):
                             0,     # FIXME: empty fBuffer
                             self.fields["_fBinStatErrOpt"],
                             self.fields["_fStatOverflows"]))
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return cursor.return_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_th2_1 = struct.Struct(">dddd")
     def return_th2(self, cursor, name):
-        cnt = numpy.int64(self.length_th2(name) - 4) | uproot.const.kByteCountMask
         vers = 5
-        return (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th1(cursor, name) +
+        buff = (self.return_th1(cursor, name) +
                 cursor.return_fields(self._format_th2_1,
                                      self.fields["_fScalefactor"],
                                      self.fields["_fTsumwy"],
                                      self.fields["_fTsumwy2"],
                                      self.fields["_fTsumwxy"]))
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return cursor.return_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_th3_1 = struct.Struct(">ddddddd")
     def return_th3(self, cursor, name):
-        cnt = numpy.int64(self.length_th3(name) - 4) | uproot.const.kByteCountMask
         vers = 6
-        return (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th1(cursor, name) +
+        buff = (self.return_th1(cursor, name) +
                 self.return_tatt3d(cursor) + cursor.return_fields(self._format_th3_1,
                                                                   self.fields["_fTsumwy"],
                                                                   self.fields["_fTsumwy2"],
@@ -411,117 +389,69 @@ class TH(object):
                                                                   self.fields["_fTsumwz2"],
                                                                   self.fields["_fTsumwxz"],
                                                                   self.fields["_fTsumwyz"]))
-
-    def length_th1(self, name):
-        return (self.length_tnamed(name, self.fTitle) +
-                self.length_tattline() +
-                self.length_tattfill() +
-                self.length_tattmarker() +
-                self._format_th1_1.size +
-                self.length_taxis(self.fXaxis) +
-                self.length_taxis(self.fYaxis) +
-                self.length_taxis(self.fZaxis) +
-                self._format_th1_2.size +
-                self.length_tarray(self.fields["_fContour"]) +
-                self.length_tarray(self.fields["_fSumw2"]) +
-                uproot.write.sink.cursor.Cursor.length_string(self.fields["_fOption"]) +
-                self.length_tlist(self.fields["_fFunctions"]) +
-                self._format_th1_3.size + self._format_cntvers.size)
-
-    def length_th2(self, name):
-        return self.length_th1(name) + self._format_th2_1.size + self._format_cntvers.size
-
-    def length_th3(self, name):
-        return self.length_th1(name) + self._format_th3_1.size + self.length_tatt3d() + self._format_cntvers.size
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return cursor.return_fields(self._format_cntvers, cnt, vers) + buff
 
     def return_tatt3d(self, cursor):
-        cnt = numpy.int64(self.length_tatt3d() - 4) | uproot.const.kByteCountMask
+        cnt = numpy.int64(self._format_cntvers.size - 4) | uproot.const.kByteCountMask
         vers = 1
         return cursor.return_fields(self._format_cntvers, cnt, vers)
 
-    def length_tatt3d(self):
-        return self._format_cntvers.size
-
     def return_th1d(self, cursor, name):
-        cnt = numpy.int64(self.length_th1d(name) - 4) | uproot.const.kByteCountMask
         vers = 3
-        return (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th1(cursor, name)
-                + self.return_tarray(cursor, self.valuesarray))
-
-    def length_th1d(self, name):
-        return self.length_th1(name) + self.length_tarray(self.valuesarray) + self._format_cntvers.size
+        buff = self.return_th1(cursor, name) + self.return_tarray(cursor, self.valuesarray)
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return cursor.return_fields(self._format_cntvers, cnt, vers) + buff
 
     def return_th2d(self, cursor, name):
-        cnt = numpy.int64(self.length_th2d(name) - 4) | uproot.const.kByteCountMask
         vers = 4
-        return (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th2(cursor, name)
-                + self.return_tarray(cursor, self.valuesarray))
-
-    def length_th2d(self, name):
-        return self.length_th2(name) + self.length_tarray(self.valuesarray) + self._format_cntvers.size
+        buff = self.return_th2(cursor, name) + self.return_tarray(cursor, self.valuesarray)
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return cursor.return_fields(self._format_cntvers, cnt, vers) + buff
 
     def return_th3d(self, cursor, name):
-        cnt = numpy.int64(self.length_th3d(name) - 4) | uproot.const.kByteCountMask
         vers = 4
-        return (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th3(cursor, name)
-                + self.return_tarray(cursor, self.valuesarray))
-
-    def length_th3d(self, name):
-        return self.length_th3(name) + self.length_tarray(self.valuesarray) + self._format_cntvers.size
+        buff = self.return_th3(cursor, name) + self.return_tarray(cursor, self.valuesarray)
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return cursor.return_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_tprofile = struct.Struct(">idddd")
     def write(self, context, cursor, name, compression, key, keycursor):
         write_cursor = copy(cursor)
-        givenbytes = 0
-        cnt = numpy.int64(self.length(name) - 4) | uproot.const.kByteCountMask
         if "TH1" in self.fClassName.decode("utf-8"):
             vers = 3
-            givenbytes = cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th1(cursor, name)
-            givenbytes += self.return_tarray(cursor, self.valuesarray)
+            buff = self.return_th1(cursor, name) + self.return_tarray(cursor, self.valuesarray)
         elif "TH2" in self.fClassName.decode("utf-8"):
             vers = 4
-            givenbytes = cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th2(cursor, name)
-            givenbytes += self.return_tarray(cursor, self.valuesarray)
+            buff = self.return_th2(cursor, name) + self.return_tarray(cursor, self.valuesarray)
         elif "TH3" in self.fClassName.decode("utf-8"):
             vers = 4
-            givenbytes = cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th3(cursor, name)
-            givenbytes += self.return_tarray(cursor, self.valuesarray)
+            buff = self.return_th3(cursor, name) + self.return_tarray(cursor, self.valuesarray)
         elif "TProfile" == self.fClassName.decode("utf-8"):
             vers = 7
-            givenbytes = (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th1d(cursor, name)
-                            + self.return_tarray(cursor, self.fields["_fBinEntries"]) +
+            buff = (self.return_th1d(cursor, name) + self.return_tarray(cursor, self.fields["_fBinEntries"]) +
                             cursor.return_fields(self._format_tprofile, self.fields["_fErrorMode"], self.fields["_fYmin"],
                             self.fields["_fYmax"], self.fields["_fTsumwy"], self.fields["_fTsumwy2"]) +
                             self.return_tarray(cursor, self.fields["_fBinSumw2"]))
         elif "TProfile2D" == self.fClassName.decode("utf-8"):
             vers = 8
-            givenbytes = (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th2d(cursor, name)
+            buff = (self.return_th2d(cursor, name)
                             + self.return_tarray(cursor, self.fields["_fBinEntries"]) +
                             cursor.return_fields(self._format_tprofile, self.fields["_fErrorMode"], self.fields["_fZmin"],
                             self.fields["_fZmax"], self.fields["_fTsumwz"], self.fields["_fTsumwz2"]) +
                             self.return_tarray(cursor, self.fields["_fBinSumw2"]))
         elif "TProfile3D" == self.fClassName.decode("utf-8"):
             vers = 8
-            givenbytes = (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_th3d(cursor, name)
+            buff = (self.return_th3d(cursor, name)
                             + self.return_tarray(cursor, self.fields["_fBinEntries"]) +
                             cursor.return_fields(self._format_tprofile, self.fields["_fErrorMode"], self.fields["_fTmin"],
                             self.fields["_fTmax"], self.fields["_fTsumwt"], self.fields["_fTsumwt2"]) +
                             self.return_tarray(cursor, self.fields["_fBinSumw2"]))
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        givenbytes = cursor.return_fields(self._format_cntvers, cnt, vers) + buff
         uproot.write.compress.write(context, write_cursor, givenbytes, compression, key, keycursor)
-
-    def length(self, name):
-        if "TH1" in self.fClassName.decode("utf-8"):
-            return self.length_th1(name) + self.length_tarray(self.valuesarray) + self._format_cntvers.size
-        elif "TH2" in self.fClassName.decode("utf-8"):
-            return self.length_th2(name) + self.length_tarray(self.valuesarray) + self._format_cntvers.size
-        elif "TH3" in self.fClassName.decode("utf-8"):
-            return self.length_th3(name) + self.length_tarray(self.valuesarray) + self._format_cntvers.size
-        elif "TProfile" == self.fClassName.decode("utf-8"):
-            return (self.length_th1d(name) + self.length_tarray(self.fields["_fBinEntries"]) + self._format_tprofile.size
-                    + self.length_tarray(self.fields["_fBinSumw2"]) + self._format_cntvers.size)
-        elif "TProfile2D" == self.fClassName.decode("utf-8"):
-            return (self.length_th2d(name) + self.length_tarray(self.fields["_fBinEntries"]) + self._format_tprofile.size
-                    + self.length_tarray(self.fields["_fBinSumw2"]) + self._format_cntvers.size)
-        elif "TProfile3D" == self.fClassName.decode("utf-8"):
-            return (self.length_th3d(name) + self.length_tarray(self.fields["_fBinEntries"]) + self._format_tprofile.size
-                    + self.length_tarray(self.fields["_fBinSumw2"]) + self._format_cntvers.size)
