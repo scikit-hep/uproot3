@@ -713,6 +713,26 @@ def test_th1_binlabel1(tmp_path):
     h = f.Get("test")
     assert h.GetXaxis().GetBinLabel(1) == "Hi"
 
+def test_th1_binlabel1_uproot(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+    testfile = join(str(tmp_path), "test.root")
+
+    f = ROOT.TFile.Open(testfile, "RECREATE")
+    h = ROOT.TH1F("hvar", "title", 5, 1, 10)
+    h.Fill(1.0, 3)
+    h.GetXaxis().SetBinLabel(1, "Hi")
+    h.Write()
+    f.Close()
+
+    t = uproot.open(testfile)
+    hist = t["hvar"]
+    with uproot.recreate(filename, compression=None) as f:
+        f["test"] = hist
+
+    f = uproot.open(filename)
+    h = f["test"]
+    assert h._fXaxis._fLabels[0] == b"Hi"
+
 def test_th1_binlabel2(tmp_path):
     filename = join(str(tmp_path), "example.root")
     testfile = join(str(tmp_path), "test.root")
@@ -735,6 +755,29 @@ def test_th1_binlabel2(tmp_path):
     h = f.Get("test")
     assert h.GetXaxis().GetBinLabel(1) == "Hi"
     assert h.GetXaxis().GetBinLabel(2) == "Hello"
+
+def test_th1_binlabel2_uproot(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+    testfile = join(str(tmp_path), "test.root")
+
+    f = ROOT.TFile.Open(testfile, "RECREATE")
+    h = ROOT.TH1F("hvar", "title", 5, 1, 10)
+    h.Fill(1.0, 3)
+    h.Fill(2.0, 4)
+    h.GetXaxis().SetBinLabel(1, "Hi")
+    h.GetXaxis().SetBinLabel(2, "Hello")
+    h.Write()
+    f.Close()
+
+    t = uproot.open(testfile)
+    hist = t["hvar"]
+    with uproot.recreate(filename, compression=None) as f:
+        f["test"] = hist
+
+    f = uproot.open(filename)
+    h = f["test"]
+    assert h._fXaxis._fLabels[0] == b"Hi"
+    assert h._fXaxis._fLabels[1] == b"Hello"
 
 def test_th2_binlabel1(tmp_path):
     filename = join(str(tmp_path), "example.root")
