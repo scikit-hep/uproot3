@@ -201,40 +201,47 @@ class TH(object):
         return cursor.return_fields(self._format_tarray, values.size) + cursor.return_array(values)
 
     _format_tobjstring = struct.Struct(">IHHII")
-    def return_tobjstring(self, cursor, value):
+    def return_tobjstring(self, cursor, value, bit=0):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_tobjstring.size)
         vers = 1
         buff = cursor.return_string(value)
         length = len(buff) + self._format_tobjstring.size
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
-        return copy_cursor.return_fields(self._format_tobjstring, cnt, vers, 1, 1, numpy.uint32(0x03000000)) + buff
+        return copy_cursor.return_fields(self._format_tobjstring, cnt, vers, 1, bit, numpy.uint32(0x03000000)) + buff
 
     def _returnclass(self, cursor, obj):
-        beg = cursor.index
-        start = cursor.index + 4
+        beg = cursor.index - self._format_returnobjany1.size
+        start = cursor.index
         buf = b""
         objct, clsname = obj
         if clsname in self._written:
-            pass
-        else:
-            buf += cursor.return_fields(self._format_returnobjany1, uproot.const.kNewClassTag)
-            buf += cursor.return_cstring(clsname)
+            buf += cursor.return_fields(self._format_returnobjany1, (self._written[clsname]) | uproot.const.kClassMask)
             if clsname == "THashList" or clsname == "TList":
                 buf += self.return_tlist(cursor, objct)
             elif clsname == "TObjString":
-                buf += self.return_tobjstring(cursor, objct)
+                buf += self.return_tobjstring(cursor, objct, 2)
+        else:
+            buf += cursor.return_fields(self._format_returnobjany1, uproot.const.kNewClassTag)
+            buf += cursor.return_cstring(clsname)
+            self._written[clsname] = (start + uproot.const.kMapOffset) | uproot.const.kClassMask
+            if clsname == "THashList" or clsname == "TList":
+                buf += self.return_tlist(cursor, objct)
+            elif clsname == "TObjString":
+                buf += self.return_tobjstring(cursor, objct, 1)
         return buf
 
     _format_returnobjany1 = struct.Struct(">I")
     def _returnobjany(self, cursor, obj):
+        copy_cursor = copy(cursor)
+        cursor.skip(self._format_returnobjany1.size)
         class_buf = b""
         objct, _ = obj
         if objct != []:
             class_buf = self._returnclass(cursor, obj)
-            buff = cursor.return_fields(self._format_returnobjany1, len(class_buf) | uproot.const.kByteCountMask)
+            buff = copy_cursor.return_fields(self._format_returnobjany1, len(class_buf) | uproot.const.kByteCountMask)
         else:
-            buff = cursor.return_fields(self._format_returnobjany1, len(class_buf))
+            buff = copy_cursor.return_fields(self._format_returnobjany1, len(class_buf))
         buff += class_buf
         return buff
 
@@ -319,6 +326,7 @@ class TH(object):
     _format_taxis_1 = struct.Struct(">idd")
     _format_taxis_2 = struct.Struct(">iiH?")
     def return_taxis(self, cursor, axis):
+        print(axis["_fName"])
         copy_cursor = copy(cursor)
         cursor.skip(self._format_cntvers.size)
         vers = 10
