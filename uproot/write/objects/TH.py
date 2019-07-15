@@ -224,10 +224,13 @@ class TH(object):
         else:
             buf += cursor.return_fields(self._format_returnobjany1, uproot.const.kNewClassTag)
             buf += cursor.return_cstring(clsname)
-            self._written[clsname] = (start + uproot.const.kMapOffset) | uproot.const.kClassMask
+            print(start)
             if clsname == "THashList" or clsname == "TList":
+                self._written[clsname] = (start + uproot.const.kMapOffset) | uproot.const.kClassMask
                 buf += self.return_tlist(cursor, objct)
             elif clsname == "TObjString":
+                start += self._format_returnobjany1.size
+                self._written[clsname] = (start + uproot.const.kMapOffset) | uproot.const.kClassMask
                 buf += self.return_tobjstring(cursor, objct, 1)
         return buf
 
@@ -243,6 +246,9 @@ class TH(object):
         else:
             buff = copy_cursor.return_fields(self._format_returnobjany1, len(class_buf))
         buff += class_buf
+        print(len(buff))
+        print(buff)
+        print(numpy.frombuffer(buff, numpy.dtype("uint8")))
         return buff
 
     _format_tlist1 = struct.Struct(">i")
@@ -252,14 +258,14 @@ class TH(object):
         cursor.skip(self._format_cntvers.size)
         vers = 5
         buff = b""
+        givenbytes = (self.return_tobject(cursor) +
+                      cursor.return_string(b"") +
+                      cursor.return_fields(self._format_tlist1, len(values)))
         for value in values:
             buff += self._returnobjany(cursor, (value, "TObjString"))
             buff += cursor.return_fields(self._format_tlist2, 0)
             buff += b"" # cursor.bytes(source, n)
-        givenbytes = (self.return_tobject(cursor) +
-                cursor.return_string(b"") +
-                cursor.return_fields(self._format_tlist1, len(values)) +
-                buff)
+        givenbytes += buff
         length = len(givenbytes) + self._format_cntvers.size
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
         return copy_cursor.return_fields(self._format_cntvers, cnt, vers) + givenbytes
