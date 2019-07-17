@@ -3,6 +3,7 @@
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
 import struct
+from copy import copy
 
 import numpy
 
@@ -58,74 +59,87 @@ class TTree(object):
     _format_cntvers = struct.Struct(">IH")
 
     _format_tobject1 = struct.Struct(">HII")
-    def return_tobject(self, cursor):
-        return cursor.return_fields(self._format_tobject1, 1, 0, uproot.const.kNotDeleted)
-    def length_tobject(self):
-        return self._format_tobject1.size
+    def put_tobject(self, cursor):
+        return cursor.put_fields(self._format_tobject1, 1, 0, numpy.uint32(0x03000000))
 
-    def return_tnamed(self, cursor, name, title):
-        cnt = numpy.int64(self.length_tnamed(name, title) - 4) | uproot.const.kByteCountMask
+    def put_tnamed(self, cursor, name, title):
+        copy_cursor = copy(cursor)
+        cursor.skip(self._format_cntvers.size)
         vers = 1
-        return (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_tobject(cursor) +
-                    cursor.return_string(name) + cursor.return_string(title))
-    def length_tnamed(self, name, title):
-        return self.length_tobject() + uproot.write.sink.cursor.Cursor.length_strings([name, title]) + self._format_cntvers.size
+        buff = (self.put_tobject(cursor) +
+                cursor.put_string(name) + cursor.put_string(title))
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_tattline = struct.Struct(">hhh")
-    def return_tattline(self, cursor):
-        cnt = numpy.int64(self.length_tattline() - 4) | uproot.const.kByteCountMask
+    def put_tattline(self, cursor):
+        copy_cursor = copy(cursor)
+        cursor.skip(self._format_cntvers.size)
         vers = 2
-        return (cursor.return_fields(self._format_cntvers, cnt, vers) +
-                cursor.return_fields(self._format_tattline,
-                                     self.fields["_fLineColor"],
-                                     self.fields["_fLineStyle"],
-                                     self.fields["_fLineWidth"]))
-    def length_tattline(self):
-        return self._format_tattline.size + self._format_cntvers.size
+        buff = (cursor.put_fields(self._format_tattline,
+                                  self.fields["_fLineColor"],
+                                  self.fields["_fLineStyle"],
+                                  self.fields["_fLineWidth"]))
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_tattfill = struct.Struct(">hh")
-    def return_tattfill(self, cursor):
-        cnt = numpy.int64(self.length_tattfill() - 4) | uproot.const.kByteCountMask
+    def put_tattfill(self, cursor):
+        copy_cursor = copy(cursor)
+        cursor.skip(self._format_cntvers.size)
         vers = 2
-        return (cursor.return_fields(self._format_cntvers, cnt, vers) +
-                cursor.return_fields(self._format_tattfill,
-                                     self.fields["_fFillColor"],
-                                     self.fields["_fFillStyle"]))
-    def length_tattfill(self):
-        return self._format_tattfill.size + self._format_cntvers.size
+        buff = (cursor.put_fields(self._format_tattfill,
+                                  self.fields["_fFillColor"],
+                                  self.fields["_fFillStyle"]))
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_tattmarker = struct.Struct(">hhf")
-    def return_tattmarker(self, cursor):
-        cnt = numpy.int64(self.length_tattmarker() - 4) | uproot.const.kByteCountMask
+    def put_tattmarker(self, cursor):
+        copy_cursor = copy(cursor)
+        cursor.skip(self._format_cntvers.size)
         vers = 2
-        return (cursor.return_fields(self._format_cntvers, cnt, vers) +
-                cursor.return_fields(self._format_tattmarker,
-                                     self.fields["_fMarkerColor"],
-                                     self.fields["_fMarkerStyle"],
-                                     self.fields["_fMarkerSize"]))
-    def length_tattmarker(self):
-        return self._format_tattmarker.size + self._format_cntvers.size
+        buff = (cursor.put_fields(self._format_tattmarker,
+                                  self.fields["_fMarkerColor"],
+                                  self.fields["_fMarkerStyle"],
+                                  self.fields["_fMarkerSize"]))
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_rootiofeatures = struct.Struct(">B")
-    def return_rootiofeatures(self, cursor):
-        cnt = numpy.int64(self.length_tattmarker() - 4) | uproot.const.kByteCountMask
+    def put_rootiofeatures(self, cursor):
+        copy_cursor = copy(cursor)
+        cursor.skip(self._format_cntvers.size)
         vers = 1
-        return (cursor.return_fields(self._format_cntvers, cnt, vers) +
-                cursor.return_fields(self._format_rootiofeatures, self.fields["_fIOBits"]))
-    def length_rootiofeatures(self):
-        return self._format_rootiofeatures.size + self._format_rootiofeatures.size
+        buff = cursor.put_fields(self._format_rootiofeatures, self.fields["_fIOBits"])
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
-    _format_tlist = struct.Struct(">i")
-    def return_tlist(self, cursor, values):
-        cnt = numpy.int64(self.length_tlist(values) - 4) | uproot.const.kByteCountMask
+    _format_tlist1 = struct.Struct(">i")
+    _format_tlist2 = struct.Struct(">B")
+    def put_tlist(self, cursor, values):
+        copy_cursor = copy(cursor)
+        cursor.skip(self._format_cntvers.size)
         vers = 5
+        buff = b""
+        givenbytes = (self.put_tobject(cursor) +
+                      cursor.put_string(b"") +
+                      cursor.put_fields(self._format_tlist1, len(values)))
         for value in values:
-            raise NotImplementedError
-        return (cursor.return_fields(self._format_cntvers, cnt, vers) + self.return_tobject(cursor) +
-            cursor.return_string(b"") + cursor.return_fields(self._format_tlist, len(values))) #FIXME
-    def length_tlist(self, values):
-        return self.length_tobject() + uproot.write.sink.cursor.Cursor.length_string(b"") + self._format_tlist.size + sum(0 for x in values) + self._format_cntvers.size
+            buff += self.util.put_objany(cursor, (value, "TObjString"), self.keycursor)
+            buff += cursor.put_fields(self._format_tlist2, 0)
+            buff += b"" # cursor.bytes(source, n)
+        givenbytes += buff
+        length = len(givenbytes) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + givenbytes
 
+    #FIXME
     _format_tobjarray = struct.Struct(">ii")
     def return_tobjarray(self, cursor):
         cnt = numpy.int64(self.length_tobjarray() - 4) | uproot.const.kByteCountMask
@@ -138,6 +152,7 @@ class TTree(object):
     def length_tobjarray(self):
         return self.le
 
+    #FIXME
     _format_ttree = struct.Struct(">qqqqqdiiiiiqqqqqq")
     def return_ttree(self, cursor, name):
         cnt = numpy.int64(self.length_ttree() - 4) | uproot.const.kByteCountMask
@@ -145,6 +160,11 @@ class TTree(object):
         return (cursor.return_fields(self._format_cntvers, cnt, vers) +
                 self.return_tnamed(cursor, name, self.fTitle) +
                 self.return_tattline(cursor)) #Incomplete
+
+    def write(self, context, cursor, name, compression, key, keycursor, util):
+        self.keycursor = keycursor
+        self.util = util
+        self.util.set_obj(self)
 
 class branch(object):
 

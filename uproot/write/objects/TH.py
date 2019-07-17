@@ -182,7 +182,6 @@ class TH(object):
     _format_cntvers = struct.Struct(">IH")
 
     _format_tobject1 = struct.Struct(">HII")
-
     def put_tobject(self, cursor):
         return cursor.put_fields(self._format_tobject1, 1, 0, numpy.uint32(0x03000000))
 
