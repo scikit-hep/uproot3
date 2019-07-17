@@ -20,7 +20,8 @@ class Cursor(object):
         self.update_fields(sink, format, *args)
         self.index += format.size
 
-    def return_fields(self, format, *args):
+    def put_fields(self, format, *args):
+        self.index += format.size
         return format.pack(*args)
 
     @staticmethod
@@ -44,15 +45,16 @@ class Cursor(object):
             sink.write(self._format_byteint.pack(255, len(data)), self.index)
             sink.write(data, self.index + 5)
 
-    def return_string(self, data):
+    def write_string(self, sink, data):
+        self.update_string(sink, data)
+        self.index += self.length_string(data)
+
+    def put_string(self, data):
+        self.index += self.length_string(data)
         if len(data) < 255:
             return self._format_byte.pack(len(data)) + data
         else:
             return self._format_byteint.pack(255, len(data)) + data
-
-    def write_string(self, sink, data):
-        self.update_string(sink, data)
-        self.index += self.length_string(data)
 
     def update_cstring(self, sink, data):
         sink.write(data, self.index)
@@ -62,6 +64,10 @@ class Cursor(object):
         self.update_cstring(sink, data)
         self.index += len(data) + 1
 
+    def put_cstring(self, data):
+        self.index += len(data) + 1
+        return data.encode("utf-8") + b"\x00"
+
     def update_data(self, sink, data):
         sink.write(data, self.index)
 
@@ -69,7 +75,8 @@ class Cursor(object):
         self.update_data(sink, data)
         self.index += len(data)
 
-    def return_array(self, data):
+    def put_array(self, data):
+        self.index += data.nbytes
         return data.tostring()
 
     def update_array(self, sink, data):

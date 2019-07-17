@@ -6,7 +6,7 @@ from __future__ import absolute_import
 
 import re
 
-__version__ = "3.7.2"
+__version__ = "3.8.1"
 version = __version__
 version_info = tuple(re.split(r"[-\.]", __version__))
 

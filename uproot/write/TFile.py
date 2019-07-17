@@ -22,6 +22,7 @@ import uproot.write.TFree
 import uproot.write.TKey
 import uproot.write.convert
 from uproot.rootio import nofilter
+from uproot.write.objects.util import Util
 
 class TFileUpdate(object):
     def __init__(self, path):
@@ -64,6 +65,7 @@ class TFileUpdate(object):
         return where, cycle
 
     def __setitem__(self, where, what):
+        self.util = Util()
         where, cycle = self._normalizewhere(where)
         if what.__class__.__name__ == "TTree":
             what = uproot.write.convert.ttree(what)
@@ -73,13 +75,13 @@ class TFileUpdate(object):
         newkey = uproot.write.TKey.TKey(fClassName = what.fClassName,
                                         fName      = where,
                                         fTitle     = what.fTitle,
-                                        fObjlen    = what.length(where),
+                                        fObjlen    = 0,
                                         fSeekKey   = self._fSeekFree,
                                         fSeekPdir  = self._fBEGIN,
                                         fCycle     = cycle if cycle is not None else self._rootdir.newcycle(where))
         newkeycursor = uproot.write.sink.cursor.Cursor(newkey.fSeekKey)
         newkey.write(cursor, self._sink)
-        what.write(self, cursor, where, self.compression, newkey, newkeycursor)
+        what.write(self, cursor, where, self.compression, newkey, newkeycursor, self.util)
         self._expandfile(cursor)
 
         self._rootdir.setkey(newkey)
@@ -212,7 +214,7 @@ class TFileRecreate(TFileUpdate):
 
     def _writeheader(self):
         cursor = uproot.write.sink.cursor.Cursor(0)
-        self._fVersion = self._fVersion = 1061404
+        self._fVersion = self._fVersion = 1061800
         self._fBEGIN = 100
         cursor.write_fields(self._sink, self._format1, b"root", self._fVersion, self._fBEGIN)
 

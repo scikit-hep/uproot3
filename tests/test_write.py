@@ -642,6 +642,17 @@ def test_compressed_tprofile3d(tmp_path):
     assert h.GetNbinsY() == 6
     assert h.GetNbinsZ() == 8
 
+def test_dir_allocation(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    with uproot.recreate(filename, compression=None) as f:
+        for i in range(1, 101):
+            f["a"*i] = "a"*i
+
+    f = ROOT.TFile.Open(filename)
+    assert str(f.Get("a"*100)) == "a"*100
+    f.Close()
+
 def test_taxis_axisbins(tmp_path):
     filename = join(str(tmp_path), "example.root")
     testfile = join(str(tmp_path), "test.root")
@@ -681,3 +692,181 @@ def test_taxis_time(tmp_path):
     f = ROOT.TFile.Open(filename)
     h = f.Get("test")
     assert h.GetXaxis().GetTimeDisplay() == True
+
+def test_th1_binlabel1(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+    testfile = join(str(tmp_path), "test.root")
+
+    f = ROOT.TFile.Open(testfile, "RECREATE")
+    h = ROOT.TH1F("hvar", "title", 5, 1, 10)
+    h.Fill(1.0, 3)
+    h.GetXaxis().SetBinLabel(1, "Hi")
+    h.Write()
+    f.Close()
+
+    t = uproot.open(testfile)
+    hist = t["hvar"]
+    with uproot.recreate(filename, compression=None) as f:
+        f["test"] = hist
+
+    f = ROOT.TFile.Open(filename)
+    h = f.Get("test")
+    assert h.GetXaxis().GetBinLabel(1) == "Hi"
+
+def test_th1_binlabel1_uproot(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+    testfile = join(str(tmp_path), "test.root")
+
+    f = ROOT.TFile.Open(testfile, "RECREATE")
+    h = ROOT.TH1F("hvar", "title", 5, 1, 10)
+    h.Fill(1.0, 3)
+    h.GetXaxis().SetBinLabel(1, "Hi")
+    h.Write()
+    f.Close()
+
+    t = uproot.open(testfile)
+    hist = t["hvar"]
+    with uproot.recreate(filename, compression=None) as f:
+        f["test"] = hist
+
+    f = uproot.open(filename)
+    h = f["test"]
+    assert h._fXaxis._fLabels[0] == b"Hi"
+
+def test_th1_binlabel2(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+    testfile = join(str(tmp_path), "test.root")
+
+    f = ROOT.TFile.Open(testfile, "RECREATE")
+    h = ROOT.TH1F("hvar", "title", 5, 1, 10)
+    h.Fill(1.0, 3)
+    h.Fill(2.0, 4)
+    h.GetXaxis().SetBinLabel(1, "Hi")
+    h.GetXaxis().SetBinLabel(2, "Hello")
+    h.Write()
+    f.Close()
+
+    t = uproot.open(testfile)
+    hist = t["hvar"]
+    with uproot.recreate(filename, compression=None) as f:
+        f["test"] = hist
+
+    f = ROOT.TFile.Open(filename)
+    h = f.Get("test")
+    assert h.GetXaxis().GetBinLabel(1) == "Hi"
+    assert h.GetXaxis().GetBinLabel(2) == "Hello"
+
+def test_th1_binlabel2_uproot(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+    testfile = join(str(tmp_path), "test.root")
+
+    f = ROOT.TFile.Open(testfile, "RECREATE")
+    h = ROOT.TH1F("hvar", "title", 5, 1, 10)
+    h.Fill(1.0, 3)
+    h.Fill(2.0, 4)
+    h.GetXaxis().SetBinLabel(1, "Hi")
+    h.GetXaxis().SetBinLabel(2, "Hello")
+    h.Write()
+    f.Close()
+
+    t = uproot.open(testfile)
+    hist = t["hvar"]
+    with uproot.recreate(filename, compression=None) as f:
+        f["test"] = hist
+
+    f = uproot.open(filename)
+    h = f["test"]
+    assert h._fXaxis._fLabels[0] == b"Hi"
+    assert h._fXaxis._fLabels[1] == b"Hello"
+
+def test_th2_binlabel1(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+    testfile = join(str(tmp_path), "test.root")
+
+    f = ROOT.TFile.Open(testfile, "RECREATE")
+    h = ROOT.TH2F("hvar", "title", 5, 1, 10, 6, 1, 20)
+    h.Fill(1.0, 5.0, 3)
+    h.GetXaxis().SetBinLabel(1, "Hi1")
+    h.GetYaxis().SetBinLabel(2, "Hi2")
+    h.Write()
+    f.Close()
+
+    t = uproot.open(testfile)
+    hist = t["hvar"]
+    with uproot.recreate(filename, compression=None) as f:
+        f["test"] = hist
+
+    f = ROOT.TFile.Open(filename)
+    h = f.Get("test")
+    assert h.GetXaxis().GetBinLabel(1) == "Hi1"
+    assert h.GetYaxis().GetBinLabel(2) == "Hi2"
+
+def test_th3_binlabel1(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+    testfile = join(str(tmp_path), "test.root")
+
+    f = ROOT.TFile.Open(testfile, "RECREATE")
+    h = ROOT.TH3F("hvar", "title", 5, 1, 10, 6, 1, 20, 7, 1, 30)
+    h.Fill(1.0, 5.0, 8.0, 3)
+    h.GetXaxis().SetBinLabel(1, "Hi1")
+    h.GetYaxis().SetBinLabel(2, "Hi2")
+    h.GetZaxis().SetBinLabel(3, "Hi3")
+    h.Write()
+    f.Close()
+
+    t = uproot.open(testfile)
+    hist = t["hvar"]
+    with uproot.recreate(filename, compression=None) as f:
+        f["test"] = hist
+
+    f = ROOT.TFile.Open(filename)
+    h = f.Get("test")
+    assert h.GetXaxis().GetBinLabel(1) == "Hi1"
+    assert h.GetYaxis().GetBinLabel(2) == "Hi2"
+    assert h.GetZaxis().GetBinLabel(3) == "Hi3"
+
+def test_objany_multihist(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+    testfile = join(str(tmp_path), "test.root")
+
+    f = ROOT.TFile.Open(testfile, "RECREATE")
+    h = ROOT.TH1F("hvar", "title", 5, 1, 10)
+    h.Fill(1.0, 3)
+    h.GetXaxis().SetBinLabel(1, "Hi")
+    h.Write()
+    f.Close()
+
+    t = uproot.open(testfile)
+    hist = t["hvar"]
+    with uproot.recreate(filename, compression=None) as f:
+        f["test"] = hist
+        f["test1"] = hist
+
+    f = ROOT.TFile.Open(filename)
+    h = f.Get("test")
+    h1 = f.Get("test1")
+    assert h.GetXaxis().GetBinLabel(1) == "Hi"
+    assert h1.GetXaxis().GetBinLabel(1) == "Hi"
+
+def test_objany_multihist_uproot(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+    testfile = join(str(tmp_path), "test.root")
+
+    f = ROOT.TFile.Open(testfile, "RECREATE")
+    h = ROOT.TH1F("hvar", "title", 5, 1, 10)
+    h.Fill(1.0, 3)
+    h.GetXaxis().SetBinLabel(1, "Hi")
+    h.Write()
+    f.Close()
+
+    t = uproot.open(testfile)
+    hist = t["hvar"]
+    with uproot.recreate(filename, compression=None) as f:
+        f["test"] = hist
+        f["test1"] = hist
+
+    f = uproot.open(filename)
+    h = f["test"]
+    h1 = f["test1"]
+    assert h._fXaxis._fLabels[0] == b"Hi"
+    assert h1._fXaxis._fLabels[0] == b"Hi"
