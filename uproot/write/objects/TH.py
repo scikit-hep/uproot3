@@ -183,7 +183,7 @@ class TH(object):
 
     _format_tobject1 = struct.Struct(">HII")
     def put_tobject(self, cursor):
-        return cursor.put_fields(self._format_tobject1, 1, 0, numpy.uint32(0x03000000))
+        return cursor.put_fields(self._format_tobject1, self.fields["_fUniqueID"], self.fields["_fBits"], numpy.uint32(0x03000000))
 
     def put_tnamed(self, cursor, name, title):
         copy_cursor = copy(cursor)
