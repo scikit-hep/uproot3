@@ -30,8 +30,8 @@ class TObjString(object):
         write_cursor = copy(cursor)
         cursor.skip(self._format.size)
         vers = 1
-        buff = cursor.return_string(self.value)
+        buff = cursor.put_string(self.value)
         length = len(buff) + self._format.size
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
-        givenbytes = copy_cursor.return_fields(self._format, cnt, vers, 1, 0, uproot.const.kNotDeleted) + buff
+        givenbytes = copy_cursor.put_fields(self._format, cnt, vers, 1, 0, uproot.const.kNotDeleted) + buff
         uproot.write.compress.write(context, write_cursor, givenbytes, compression, key, keycursor)
