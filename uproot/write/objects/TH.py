@@ -84,9 +84,6 @@ class TH(object):
         self.fields["_fBinEntries"] = numpy.array(self.fields["_fBinEntries"], dtype=">f8", copy=False)
         self.fields["_fBinSumw2"] = numpy.array(self.fields["_fBinSumw2"], dtype=">f8", copy=False)
 
-        #For _writeobjany
-        self._written = {}
-
     @staticmethod
     def fixstring(string):
         if isinstance(string, bytes):
@@ -182,43 +179,6 @@ class TH(object):
 
     _format_cntvers = struct.Struct(">IH")
 
-    def _putclass(self, cursor, obj):
-        #beg = cursor.index - self.keycursor.index - self._format_returnobjany1.size
-        start = cursor.index - self.keycursor.index
-        buf = b""
-        objct, clsname = obj
-        if clsname in self._written:
-            buf += cursor.put_fields(self._format_returnobjany1, (self._written[clsname]) | uproot.const.kClassMask)
-            if clsname == "THashList" or clsname == "TList":
-                buf += self.put_tlist(cursor, objct)
-            elif clsname == "TObjString":
-                self.tobjstring_count += 1
-                buf += self.put_tobjstring(cursor, objct, self.tobjstring_count)
-        else:
-            buf += cursor.put_fields(self._format_returnobjany1, uproot.const.kNewClassTag)
-            buf += cursor.put_cstring(clsname)
-            self._written[clsname] = (start + uproot.const.kMapOffset) | uproot.const.kClassMask
-            if clsname == "THashList" or clsname == "TList":
-                buf += self.put_tlist(cursor, objct)
-            elif clsname == "TObjString":
-                self.tobjstring_count = 1
-                buf += self.put_tobjstring(cursor, objct, self.tobjstring_count)
-        return buf
-
-    _format_returnobjany1 = struct.Struct(">I")
-    def _putobjany(self, cursor, obj):
-        copy_cursor = copy(cursor)
-        cursor.skip(self._format_returnobjany1.size)
-        class_buf = b""
-        objct, _ = obj
-        if objct != []:
-            class_buf = self._putclass(cursor, obj)
-            buff = copy_cursor.put_fields(self._format_returnobjany1, len(class_buf) | uproot.const.kByteCountMask)
-        else:
-            buff = copy_cursor.put_fields(self._format_returnobjany1, len(class_buf))
-        buff += class_buf
-        return buff
-    
     _format_tobject1 = struct.Struct(">HII")
     def put_tobject(self, cursor):
         return cursor.put_fields(self._format_tobject1, 1, 0, numpy.uint32(0x03000000))
@@ -258,7 +218,7 @@ class TH(object):
                       cursor.put_string(b"") +
                       cursor.put_fields(self._format_tlist1, len(values)))
         for value in values:
-            buff += self._putobjany(cursor, (value, "TObjString"))
+            buff += self.util.put_objany(cursor, (value, "TObjString"), self.keycursor)
             buff += cursor.put_fields(self._format_tlist2, 0)
             buff += b"" # cursor.bytes(source, n)
         givenbytes += buff
@@ -344,8 +304,8 @@ class TH(object):
                                   axis["_fBits2"],
                                   axis["_fTimeDisplay"]) +
                 cursor.put_string(axis["_fTimeFormat"]) +
-                self._putobjany(cursor, (axis["_fLabels"], "THashList")) +
-                self._putobjany(cursor, (axis["_fModLabs"], "TList")))
+                self.util.put_objany(cursor, (axis["_fLabels"], "THashList"), self.keycursor) +
+                self.util.put_objany(cursor, (axis["_fModLabs"], "TList"), self.keycursor))
         length = len(buff) + self._format_cntvers.size
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
@@ -459,7 +419,9 @@ class TH(object):
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_tprofile = struct.Struct(">idddd")
-    def write(self, context, cursor, name, compression, key, keycursor):
+    def write(self, context, cursor, name, compression, key, keycursor, util):
+        self.util = util
+        self.util.set_obj(self)
         copy_cursor = copy(cursor)
         write_cursor = copy(cursor)
         self.keycursor = keycursor

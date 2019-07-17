@@ -25,7 +25,7 @@ class TObjString(object):
 
     _format = struct.Struct(">IHHII")
 
-    def write(self, context, cursor, name, compression, key, keycursor):
+    def write(self, context, cursor, name, compression, key, keycursor, util):
         copy_cursor = copy(cursor)
         write_cursor = copy(cursor)
         cursor.skip(self._format.size)
