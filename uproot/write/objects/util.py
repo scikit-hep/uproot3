@@ -2,11 +2,11 @@ import struct
 from copy import copy
 
 import uproot
-from uproot.write.objects.TH import TH
 
 class Util(object):
 
-    _written = {}
+    def __init__(self):
+        self._written = {}
 
     _format_cntvers = struct.Struct(">IH")
 
@@ -17,19 +17,19 @@ class Util(object):
         if clsname in self._written:
             buf += cursor.put_fields(self._format_putobjany1, (self._written[clsname]) | uproot.const.kClassMask)
             if clsname == "THashList" or clsname == "TList":
-                buf += self.obj.put_tlist(cursor, objct)
+                buf += self.parent_obj.put_tlist(cursor, objct)
             elif clsname == "TObjString":
                 self.tobjstring_count += 1
-                buf += self.obj.put_tobjstring(cursor, objct, self.tobjstring_count)
+                buf += self.parent_obj.put_tobjstring(cursor, objct, self.tobjstring_count)
         else:
             buf += cursor.put_fields(self._format_putobjany1, uproot.const.kNewClassTag)
             buf += cursor.put_cstring(clsname)
             self._written[clsname] = (start + uproot.const.kMapOffset) | uproot.const.kClassMask
             if clsname == "THashList" or clsname == "TList":
-                buf += self.obj.put_tlist(cursor, objct)
+                buf += self.parent_obj.put_tlist(cursor, objct)
             elif clsname == "TObjString":
                 self.tobjstring_count = 1
-                buf += self.obj.put_tobjstring(cursor, objct, self.tobjstring_count)
+                buf += self.parent_obj.put_tobjstring(cursor, objct, self.tobjstring_count)
         return buf
 
     _format_putobjany1 = struct.Struct(">I")
@@ -46,5 +46,5 @@ class Util(object):
         buff += class_buf
         return buff
 
-    def set_obj(self, obj):
-        self.obj = obj
+    def set_obj(self, parent_obj):
+        self.parent_obj = parent_obj
