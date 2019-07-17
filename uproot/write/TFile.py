@@ -39,7 +39,6 @@ class TFileUpdate(object):
                  path = str(path)
 
         self.compression = compression
-        self.util = Util()
 
         self._sink = uproot.write.sink.file.FileSink(path)
         self._path = path
@@ -65,6 +64,7 @@ class TFileUpdate(object):
         return where, cycle
 
     def __setitem__(self, where, what):
+        self.util = Util()
         where, cycle = self._normalizewhere(where)
         what = uproot_methods.convert.towriteable(what)
         cursor = uproot.write.sink.cursor.Cursor(self._fSeekFree)
