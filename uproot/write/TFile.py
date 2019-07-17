@@ -21,6 +21,7 @@ import uproot.write.TDirectory
 import uproot.write.TFree
 import uproot.write.TKey
 from uproot.rootio import nofilter
+from uproot.write.objects.util import Util
 
 class TFileUpdate(object):
     def __init__(self, path):
@@ -63,19 +64,20 @@ class TFileUpdate(object):
         return where, cycle
 
     def __setitem__(self, where, what):
+        self.util = Util()
         where, cycle = self._normalizewhere(where)
         what = uproot_methods.convert.towriteable(what)
         cursor = uproot.write.sink.cursor.Cursor(self._fSeekFree)
         newkey = uproot.write.TKey.TKey(fClassName = what.fClassName,
                                         fName      = where,
                                         fTitle     = what.fTitle,
-                                        fObjlen    = what.length(where),
+                                        fObjlen    = 0,
                                         fSeekKey   = self._fSeekFree,
                                         fSeekPdir  = self._fBEGIN,
                                         fCycle     = cycle if cycle is not None else self._rootdir.newcycle(where))
         newkeycursor = uproot.write.sink.cursor.Cursor(newkey.fSeekKey)
         newkey.write(cursor, self._sink)
-        what.write(self, cursor, where, self.compression, newkey, newkeycursor)
+        what.write(self, cursor, where, self.compression, newkey, newkeycursor, self.util)
         self._expandfile(cursor)
 
         self._rootdir.setkey(newkey)

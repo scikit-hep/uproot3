@@ -5,6 +5,7 @@
 from __future__ import absolute_import
 
 import struct
+from copy import copy
 
 import numpy
 
@@ -24,11 +25,13 @@ class TObjString(object):
 
     _format = struct.Struct(">IHHII")
 
-    def write(self, context, cursor, name, compression, key, keycursor):
-        cnt = numpy.int64(self.length(name) - 4) | uproot.const.kByteCountMask
+    def write(self, context, cursor, name, compression, key, keycursor, util):
+        copy_cursor = copy(cursor)
+        write_cursor = copy(cursor)
+        cursor.skip(self._format.size)
         vers = 1
-        givenbytes = cursor.return_fields(self._format, cnt, vers, 1, 0, uproot.const.kNotDeleted) + cursor.return_string(self.value)
-        uproot.write.compress.write(context, cursor, givenbytes, compression, key, keycursor)
-
-    def length(self, name):
-        return self._format.size + uproot.write.sink.cursor.Cursor.length_string(self.value)
+        buff = cursor.put_string(self.value)
+        length = len(buff) + self._format.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        givenbytes = copy_cursor.put_fields(self._format, cnt, vers, 1, 0, uproot.const.kNotDeleted) + buff
+        uproot.write.compress.write(context, write_cursor, givenbytes, compression, key, keycursor)
