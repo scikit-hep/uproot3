@@ -139,6 +139,16 @@ class TTree(object):
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + givenbytes
 
+    _format_tleaf1 = struct.Struct('>iii??')
+    def put_tleaf(self, cursor, name, title):
+        vers = 2
+        buff = (self.put_tnamed(cursor, self.fName, self.fTitle) +
+                cursor.put_fields(self._format_tleaf1, self.fields["_fLen,"], self.fields["_fLenType"], self.fields["_fOffset"],
+                                  self.fields["_fIsRange"], self.fields["_fIsUnsigned"]))
+
+        #cnt =
+        pass
+
     #FIXME
     _format_tobjarray = struct.Struct(">ii")
     def return_tobjarray(self, cursor):
@@ -158,13 +168,15 @@ class TTree(object):
         cnt = numpy.int64(self.length_ttree() - 4) | uproot.const.kByteCountMask
         vers = 20
         return (cursor.return_fields(self._format_cntvers, cnt, vers) +
-                self.return_tnamed(cursor, name, self.fTitle) +
-                self.return_tattline(cursor)) #Incomplete
+                self.put_tnamed(cursor, name, self.fTitle) +
+                self.put_tattline(cursor)) #Incomplete
 
     def write(self, context, cursor, name, compression, key, keycursor, util):
         self.keycursor = keycursor
         self.util = util
         self.util.set_obj(self)
+
+
 
 class branch(object):
 
@@ -177,6 +189,8 @@ class branch(object):
         self.defaultBasketSize = defaultBasketSize
         self.compression = compression
 
+        self.fields = self.emptyfields()
+
     def append(self, item):
         self.extend(item)
 
@@ -185,3 +199,44 @@ class branch(object):
 
     def basket(self, items):
         raise NotImplementedError
+
+    @staticmethod
+    def emptyfields():
+        return {"fCompress" : 0,
+                "fBasketSize" : 0,
+                "fEntryOffsetLen": 0,
+                "fWriteBasket": 0,
+                "fEntryNumber": 0.0,
+                "fOffSet": 0,
+                "fMaxBaskets": 0,
+                "fSplitLevel": 0,
+                "fEntries": 0.0,
+                "fFirstEntry": 0.0,
+                "fTotBytes": 0.0,
+                "fZipBytes": 0.0,
+                "fBasketBytes": [],
+                "fBasketEntry": [],
+                "fBasketSeek": []}
+
+    _format_cntvers = struct.Struct(">IH")
+
+    branch_format1 = struct.Struct('>iiiiq')
+
+    _format_tobject1 = struct.Struct(">HII")
+    def put_tobject(self, cursor):
+        return cursor.put_fields(self._format_tobject1, 1, 0, numpy.uint32(0x03000000))
+
+    def put_tnamed(self, cursor, name, title):
+        copy_cursor = copy(cursor)
+        cursor.skip(self._format_cntvers.size)
+        vers = 1
+        buff = (self.put_tobject(cursor) +
+                cursor.put_string(name) + cursor.put_string(title))
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
+
+    def write(self):
+        
+
+
