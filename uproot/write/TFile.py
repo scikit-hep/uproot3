@@ -20,7 +20,6 @@ import uproot.write.streamers
 import uproot.write.TDirectory
 import uproot.write.TFree
 import uproot.write.TKey
-import uproot.write.convert
 from uproot.rootio import nofilter
 from uproot.write.objects.util import Util
 
