@@ -4,10 +4,10 @@
 
 from __future__ import absolute_import
 
+import sys
+
 import struct
-
 import numpy
-
 import xxhash
 from copy import copy
 
@@ -134,7 +134,12 @@ class CompressedSource(uproot.source.source.Source):
                     checksum = cursor.bytes(self._compressed, 8).tolist()
                     copy_cursor = copy(cursor)
                     after_compressed = copy_cursor.bytes(self._compressed, compressedbytes)
-                    if list(xxhash.xxh64(after_compressed).digest()) != checksum:
+                    if sys.version_info < (3,):
+                        def iterbytes(data):
+                            return (ord (char) for char in data)
+                    else:
+                        iterbytes = lambda x: iter(x)
+                    if [x for x in iterbytes(xxhash.xxh64(after_compressed).digest())] != checksum:
                         raise ValueError("LZ4 checksum didn't match")
                 elif algo == b"CS":
                     raise ValueError("unsupported compression algorithm: 'old' (according to ROOT comments, hasn't been used in 20+ years!)")
