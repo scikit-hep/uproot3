@@ -50,7 +50,7 @@ build_script:
   - "python -c \"import awkward; print(awkward.__version__)\""
   - "pip install \"uproot-methods>=0.7.0\""
   - "python -c \"import uproot_methods; print(uproot_methods.__version__)\""
-  - "pip install cachetools lz4 mock"
+  - "pip install cachetools lz4 mock xxhash"
   - "pip install -i https://pypi.anaconda.org/carlkl/simple backports.lzma"
   - "pip install pytest pytest-runner pandas requests"
   - "curl -fsS -o tests/samples/Event.root http://scikit-hep.org/uproot/examples/Event.root"
