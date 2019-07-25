@@ -4,12 +4,11 @@
 
 from __future__ import absolute_import
 
-import sys
-
 import struct
+from copy import copy
+
 import numpy
 import xxhash
-from copy import copy
 
 import uproot.const
 import uproot.source.source
