@@ -131,15 +131,10 @@ class CompressedSource(uproot.source.source.Source):
                 elif algo == b"L4":
                     compression = self.compression.copy(uproot.const.kLZ4)
                     compressedbytes -= 8
-                    checksum = cursor.bytes(self._compressed, 8).tolist()
+                    checksum = cursor.bytes(self._compressed, 8)
                     copy_cursor = copy(cursor)
                     after_compressed = copy_cursor.bytes(self._compressed, compressedbytes)
-                    if sys.version_info < (3,):
-                        def iterbytes(data):
-                            return (ord (char) for char in data)
-                    else:
-                        iterbytes = lambda x: iter(x)
-                    if [x for x in iterbytes(xxhash.xxh64(after_compressed).digest())] != checksum:
+                    if numpy.array_equal(numpy.frombuffer(xxhash.xxh64(after_compressed).digest(), checksum.dtype), checksum) is False:
                         raise ValueError("LZ4 checksum didn't match")
                 elif algo == b"CS":
                     raise ValueError("unsupported compression algorithm: 'old' (according to ROOT comments, hasn't been used in 20+ years!)")
