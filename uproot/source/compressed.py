@@ -107,6 +107,7 @@ class CompressedSource(uproot.source.source.Source):
         return self
 
     _header = struct.Struct("2sBBBBBBB")
+    _format_field0 = struct.Struct(">Q")
 
     def _prepare(self):
         if self._uncompressed is None:
@@ -130,7 +131,7 @@ class CompressedSource(uproot.source.source.Source):
                 elif algo == b"L4":
                     compression = self.compression.copy(uproot.const.kLZ4)
                     compressedbytes -= 8
-                    checksum = cursor.field(self._compressed, struct.Struct(">Q"))
+                    checksum = cursor.field(self._compressed, self._format_field0)
                     copy_cursor = copy(cursor)
                     after_compressed = copy_cursor.bytes(self._compressed, compressedbytes)
                     if xxhash.xxh64(after_compressed).intdigest() != checksum:
