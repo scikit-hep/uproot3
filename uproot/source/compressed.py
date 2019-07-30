@@ -8,7 +8,6 @@ import struct
 from copy import copy
 
 import numpy
-import xxhash
 
 import uproot.const
 import uproot.source.source
@@ -129,6 +128,10 @@ class CompressedSource(uproot.source.source.Source):
                 elif algo == b"XZ":
                     compression = self.compression.copy(uproot.const.kLZMA)
                 elif algo == b"L4":
+                    try:
+                        import xxhash
+                    except ImportError:
+                        raise ImportError("Install xxhash package with:\n    pip install xxhash\nor\n    conda install -c conda-forge python-xxhash")
                     compression = self.compression.copy(uproot.const.kLZ4)
                     compressedbytes -= 8
                     checksum = cursor.field(self._compressed, self._format_field0)
