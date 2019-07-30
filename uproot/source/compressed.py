@@ -5,8 +5,10 @@
 from __future__ import absolute_import
 
 import struct
+from copy import copy
 
 import numpy
+import xxhash
 
 import uproot.const
 import uproot.source.source
@@ -105,6 +107,7 @@ class CompressedSource(uproot.source.source.Source):
         return self
 
     _header = struct.Struct("2sBBBBBBB")
+    _format_field0 = struct.Struct(">Q")
 
     def _prepare(self):
         if self._uncompressed is None:
@@ -127,8 +130,12 @@ class CompressedSource(uproot.source.source.Source):
                     compression = self.compression.copy(uproot.const.kLZMA)
                 elif algo == b"L4":
                     compression = self.compression.copy(uproot.const.kLZ4)
-                    cursor.skip(8)        # FIXME: use this checksum!
                     compressedbytes -= 8
+                    checksum = cursor.field(self._compressed, self._format_field0)
+                    copy_cursor = copy(cursor)
+                    after_compressed = copy_cursor.bytes(self._compressed, compressedbytes)
+                    if xxhash.xxh64(after_compressed).intdigest() != checksum:
+                        raise ValueError("LZ4 checksum didn't match")
                 elif algo == b"CS":
                     raise ValueError("unsupported compression algorithm: 'old' (according to ROOT comments, hasn't been used in 20+ years!)")
                 else:
