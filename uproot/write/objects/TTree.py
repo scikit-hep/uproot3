@@ -17,6 +17,44 @@ class TTree(object):
     def __init__(self, name, title, *branches, **options):
         self.fName = self.fixstring(name)
         self.fTitle = self.fixstring(title)
+        self.branches = branches
+
+        self.fields = {"_fUniqueID": 1,
+                       "_fBits": 0,
+                       "_fLineColor": 602,
+                       "_fLineStyle": 1,
+                       "_fLineWidth": 1,
+                       "_fFillColor": 0,
+                       "_fFillStyle": 1001,
+                       "_fEntries": 0,
+                       "_fTotBytes": 0,
+                       "_fZipBytes": 0,
+                       "_fSavedBytes": 0,
+                       "_fFlushedBytes": 0,
+                       "_fWeight": 1.0,
+                       "_fTimerInterval": 0,
+                       "_fScanField": 25,
+                       "_fUpdate": 0,
+                       "_fDefaultEntryOffsetLen": 1000, #TODO: WHAT IS THIS?
+                       "_fNClusterRange": 0,
+                       "_fMaxEntries": 1000000000000, #TODO: HOW DOES THIS WORK?
+                       "_fMaxEntryLoop": 1000000000000, #Same as fMaxEntries?
+                       "_fMaxVirtualSize": 0,
+                       "_fAutoSave": -300000000,
+                       "_fAutoFlush": -300000000, #Same as fAutoSave?
+                       "_fEstimate": 1000000,
+                       "_fClusterRangeEnd": [],
+                       "_fClusterSize": [],
+                       "_fIOBits": "",
+                       "_fLowerBound": 0,
+                       "_fLast": 0,
+                       "_fBranches": [],
+                       "_fFriends": None,
+                       "_fTreeIndex": None,
+                       "_fIndex": [],
+                       "_fIndexValues": [],
+                       "_fAliases": None,
+                       "_fLeaves": []}
 
     @staticmethod
     def fixstring(string):
@@ -24,37 +62,6 @@ class TTree(object):
             return string
         else:
             return string.encode("utf-8")
-
-    @staticmethod
-    def emptyfields():
-        return {"_fUniqueID": 1,
-                "_fBits": 0,
-                "_fLineColor": 0,
-                "_fLineStyle": 0,
-                "_fLineWidth": 0,
-                "_fEntries": 0.0,
-                "_fTotBytes": 0.0,
-                "_fZipBytes": 0.0,
-                "_fSavedBytes": 0.0,
-                "_fFlushedBytes": 0.0,
-                "_fWeight": 0.0,
-                "_fTimerInterval": 0,
-                "_fScanField": 0,
-                "_fUpdate": 0,
-                "_fDefaultEntryOffsetLen": 0,
-                "_fNClusterRange": 0,
-                "_fMaxEntries": 0.0,
-                "_fMaxEntryLoop": 0.0,
-                "_fMaxVirtualSize": 0.0,
-                "_fAutoSave": 0.0,
-                "_fAutoFlush": 0.0,
-                "_fEstimate": 0.0,
-                "_fClusterRangeEnd": [], #Pointer value, have to handle differently
-                "_fClusterSize": [], #Pointer value, have to handle differently
-                "_fIOBits": "",
-                "_fLowerBound": 0,
-                "_fLast": 0,
-                }
 
     _format_cntvers = struct.Struct(">IH")
 
@@ -139,75 +146,119 @@ class TTree(object):
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + givenbytes
 
-    _format_tleaf1 = struct.Struct('>iii??')
-    def put_tleaf(self, cursor, name, title):
-        vers = 2
-        buff = (self.put_tnamed(cursor, self.fName, self.fTitle) +
-                cursor.put_fields(self._format_tleaf1, self.fields["_fLen,"], self.fields["_fLenType"], self.fields["_fOffset"],
-                                  self.fields["_fIsRange"], self.fields["_fIsUnsigned"]))
-
-        #cnt =
-        pass
-
-    #FIXME
-    _format_tobjarray = struct.Struct(">ii")
-    def return_tobjarray(self, cursor):
-        cnt = numpy.int64(self.length_tobjarray() - 4) | uproot.const.kByteCountMask
+    _format_tobjarray1 = struct.Struct(">ii")
+    def put_tobjarray(self, cursor, values):
+        copy_cursor = copy(cursor)
+        cursor.skip(self._format_cntvers.size)
         vers = 3
-        return (cursor.return_fields(self._format_cntvers, cnt, vers) +
-                self.return_tobject(cursor) +
-                cursor.return_string(b"") +
-                cursor.return_fields(self._format_tobjarray, self.fields["_fLowerBand"], self.fields["_fLast"]))
-                # _readobjany?
-    def length_tobjarray(self):
-        return self.le
+        self.fields["_size"] = len(values)
+        buff = (cursor.put_string("") + cursor.put_fields(self._format_TObjArray1, self.fields["_size"],
+                                                          self.fields["_low"]))
+        for value in values:
+            self.util.put_objany(cursor, (value, "TObjArray"), self.keycursor)
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
-    #FIXME
-    _format_ttree = struct.Struct(">qqqqqdiiiiiqqqqqq")
-    def return_ttree(self, cursor, name):
-        cnt = numpy.int64(self.length_ttree() - 4) | uproot.const.kByteCountMask
-        vers = 20
-        return (cursor.return_fields(self._format_cntvers, cnt, vers) +
-                self.put_tnamed(cursor, name, self.fTitle) +
-                self.put_tattline(cursor)) #Incomplete
+    _format_tarray = struct.Struct(">i")
+    def put_tarray(self, cursor, values):
+        return cursor.put_fields(self._format_tarray, values.size) + cursor.put_array(values)
 
     #FIXME: HAVE TO FIGURE OUT HOW KEYCURSOR AND UTIL MAP TO BRANCH
+    _format_ttree = struct.Struct(">qqqqqdiiiiiqqqqqq")
     def write(self, context, cursor, name, compression, key, keycursor, util):
-        self.keycursor = keycursor
         self.util = util
         self.util.set_obj(self)
+        copy_cursor = copy(cursor)
+        write_cursor = copy(cursor)
+        self.keycursor = keycursor
+        cursor.skip(self._format_cntvers.size)
+        vers = 20
+
+        self.fields["_fClusterRangeEnd"] = numpy.array(self.fields["_fClusterRangeEnd"], dtype=">i8", copy=False)
+        self.fields["_fClusterSize"] = numpy.array(self.fields["_fClusterSize"], dtype=">i8", copy=False)
+        self.fields["_fIndexValues"] = numpy.array(self.fields["_fIndexValues"], dtype=">f8", copy=False)
+        self.fields["_fIndex"] = numpy.array(self.fields["_fIndex"], dtype=">int8", copy=False)
+
+        for branch in self.branches:
+            self.fields["_fEntries"] += branch.fields["_fEntries"]
+            self.fields["_fTotBytes"] += branch.fields["_fTotBytes"]
+            self.fields["_fZipBytes"] += branch.fields["_fZipBytes"]
+            self.fields["_fLeaves"].append(branch.fields["_fLeaves"])
+            #TODO: HAVE TO WRITE BRANCH!
+            self.fields["_fBranches"].append(branch)
+
+        buff = (self.put_tnamed(cursor, name, self.fTitle) +
+                self.put_tattline(cursor) +
+                self.put_tattfill(cursor) +
+                self.put_tattmarker(cursor) +
+                cursor.put_fields(self._format_ttree, self.fields["_fEntries"],
+                                  self.fields["_fTotBytes"],
+                                  self.fields["_fZipBytes"],
+                                  self.fields["_fSavedBytes"],
+                                  self.fields["_fFlushedBytes"],
+                                  self.fields["_fWeight"],
+                                  self.fields["_fTimerInterval"],
+                                  self.fields["_fScanField"],
+                                  self.fields["_fUpdate"],
+                                  self.fields["_fDefaultEntryOffsetLen"],
+                                  self.fields["_fNClusterRange"],
+                                  self.fields["_fMaxEntries"],
+                                  self.fields["_fMaxEntryLoop"],
+                                  self.fields["_fMaxVirtualSize"],
+                                  self.fields["_fAutoSave"],
+                                  self.fields["_fEstimate"]) +
+                cursor.put_array(self.fields["_fClusterRangeEnd"]) +
+                cursor.put_array(self.fields["_fClusterSize"]) +
+                self.put_rootiofeatures(cursor) +
+                self.put_tobjarray(cursor, self.fields["_fBranches"]) +
+                self.put_tobjarray(cursor, self.fields["_fLeaves"]) +
+                self.put_tlist(cursor, self.fields["_fAliases"]) +
+                self.put_tarray(cursor, self.fields["_fIndexValues"]) +
+                self.put_tarray(cursor, self.fields["_fIndex"]) +
+                self.put_tlist(cursor, self.fields["_fTreeIndex"]) +
+                self.put_tlist(cursor, self.fields["_fFriends"]) +
+                self.util.put_objany(cursor, (0, "Undefined"), self.keycursor) + #TODO: PROBABLY WRONG
+                self.util.put_objany(cursor, (0, "Undefined"), self.keycursor))
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
 class branch(object):
 
     # Need to think about appropriate defaultBasketSize
     # Need to look at ROOT's default branch compression
-    def __init__(self, type, name, title, defaultBasketSize=0, compression=None): #Fix defaultBasketSize
+    def __init__(self, type, name, title, defaultBasketSize=0, compression=None):
         self.type = type
         self.name = name
         self.title = title
         self.defaultBasketSize = defaultBasketSize
         self.compression = compression
+        l = [0]*10 #10 is fMaxBaskets
+        l[0] = 81
+        l1 = [0]*10
+        l[1] = 2
 
-        self.fields = {"fCompress" : self.compression.code(),
-                       "fBasketSize" : 0,
-                       "fEntryOffsetLen": 0,
-                       "fWriteBasket": 0,
-                       "fEntryNumber": 0.0,
-                       "fOffSet": 0,
-                       "fMaxBaskets": 0,
-                       "fSplitLevel": 0,
-                       "fEntries": 0.0,
-                       "fFirstEntry": 0.0,
-                       "fTotBytes": 0.0,
-                       "fZipBytes": 0.0,
-                       "fBasketBytes": [],
-                       "fBasketEntry": [],
-                       "fBasketSeek": [],
-                       "fFileName": "",
-                       "fIOBits": 0,
-                       "size": 0,
-                       "low": 0,
-                       "fBranches": []}
+        self.fields = {"_fCompress" : self.compression.code(),
+                       "_fBasketSize" : self.defaultBasketSize,
+                       "_fEntryOffsetLen": 0,
+                       "_fWriteBasket": 1, #Number of baskets
+                       "_fEntryNumber": 2, #Number of values in the entire branch
+                       "_fOffSet": 0,
+                       "_fMaxBaskets": 10, #TODO: WHAT DOES THIS MEAN?!!! (IMPORTANT!!!)
+                       "_fSplitLevel": 0,
+                       "_fEntries": 2, #Number of values in the branch = fEntryNumber in our case
+                       "_fFirstEntry": 0, #First value in the branch
+                       "_fTotBytes": 81, #Number of bytes of the branch?
+                       "_fZipBytes": 81, #Same as fTotBytes when no compression
+                       "_fBasketBytes": l,
+                       "_fBasketEntry": l1, #TODO: WHAT DOES THIS MEAN?!!! (IMPORTANT!!!)
+                       "_fBasketSeek": [], #Number of entries = fMaxBaskets. Empty baskets = 0.
+                       "_fFileName": "",
+                       "_fIOBits": 0,
+                       "_size": 0,
+                       "_low": 0,
+                       "_fBranches": []}
 
     def append(self, item):
         self.extend(item)
@@ -253,7 +304,7 @@ class branch(object):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_cntvers.size)
         vers = 1
-        buff = cursor.put_data(b"\x1a\xa1/\x10") + cursor.put_fields(self._format_ROOT_3a3a_TIOFeatures, self.fields["fIOBits"])
+        buff = cursor.put_data(b"\x1a\xa1/\x10") + cursor.put_fields(self._format_ROOT_3a3a_TIOFeatures, self.fields["_fIOBits"])
         length = len(buff) + self._format_cntvers.size
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
@@ -263,8 +314,8 @@ class branch(object):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_cntvers.size)
         vers = 3
-        self.fields["size"] = len(values)
-        buff = (cursor.put_string("") + cursor.put_fields(self._format_TObjArray1, self.fields["size"], self.fields["low"]))
+        self.fields["_size"] = len(values)
+        buff = (cursor.put_string("") + cursor.put_fields(self._format_TObjArray1, self.fields["_size"], self.fields["_low"]))
         for value in values:
             self.util.put_objany(cursor, (value, "TObjArray"), self.keycursor)
         length = len(buff) + self._format_cntvers.size
