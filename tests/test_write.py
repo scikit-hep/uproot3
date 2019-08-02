@@ -5,7 +5,9 @@
 from os.path import join
 
 import pytest
+
 import uproot
+from uproot.write.objects.TTree import TTree
 
 ROOT = pytest.importorskip("ROOT")
 
@@ -870,3 +872,13 @@ def test_objany_multihist_uproot(tmp_path):
     h1 = f["test1"]
     assert h._fXaxis._fLabels[0] == b"Hi"
     assert h1._fXaxis._fLabels[0] == b"Hi"
+
+def test_ttree(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    tree = TTree("t", "")
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+
+    f = ROOT.TFile.Open(filename)
+    assert f.GetKey("t").GetClassName() == "TTree"
