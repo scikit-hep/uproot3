@@ -66,9 +66,7 @@ class TFileUpdate(object):
     def __setitem__(self, where, what):
         self.util = Util()
         where, cycle = self._normalizewhere(where)
-        if what.__class__.__name__ == "TTree":
-            what = uproot.write.convert.ttree(what)
-        else:
+        if what.__class__.__name__ != "TTree":
             what = uproot_methods.convert.towriteable(what)
         cursor = uproot.write.sink.cursor.Cursor(self._fSeekFree)
         newkey = uproot.write.TKey.TKey(fClassName = what.fClassName,

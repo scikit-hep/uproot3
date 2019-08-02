@@ -15,17 +15,19 @@ import uproot.write.sink.cursor
 class TTree(object):
 
     def __init__(self, name, title, *branches, **options):
+        self.fClassName = b"TTree"
         self.fName = self.fixstring(name)
         self.fTitle = self.fixstring(title)
         self.branches = branches
 
-        self.fields = {"_fUniqueID": 1,
-                       "_fBits": 0,
-                       "_fLineColor": 602,
+        self.fields = {"_fLineColor": 602,
                        "_fLineStyle": 1,
                        "_fLineWidth": 1,
                        "_fFillColor": 0,
                        "_fFillStyle": 1001,
+                       "_fMarkerColor": 1,
+                       "_fMarkerStyle": 1,
+                       "_fMarkerSize": 1.0,
                        "_fEntries": 0,
                        "_fTotBytes": 0,
                        "_fZipBytes": 0,
@@ -45,9 +47,6 @@ class TTree(object):
                        "_fEstimate": 1000000,
                        "_fClusterRangeEnd": [],
                        "_fClusterSize": [],
-                       "_fIOBits": "",
-                       "_fLowerBound": 0,
-                       "_fLast": 0,
                        "_fBranches": [],
                        "_fFriends": None,
                        "_fTreeIndex": None,
@@ -122,7 +121,8 @@ class TTree(object):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_cntvers.size)
         vers = 1
-        buff = cursor.put_fields(self._format_rootiofeatures, self.fields["_fIOBits"])
+        fIOBits = ""
+        buff = cursor.put_fields(self._format_rootiofeatures, fIOBits)
         length = len(buff) + self._format_cntvers.size
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
@@ -152,7 +152,7 @@ class TTree(object):
         cursor.skip(self._format_cntvers.size)
         vers = 3
         self.fields["_size"] = len(values)
-        buff = (cursor.put_string("") + cursor.put_fields(self._format_TObjArray1, self.fields["_size"],
+        buff = (cursor.put_string("") + cursor.put_fields(self._format_tobjarray1, self.fields["_size"],
                                                           self.fields["_low"]))
         for value in values:
             self.util.put_objany(cursor, (value, "TObjArray"), self.keycursor)
@@ -175,10 +175,10 @@ class TTree(object):
         cursor.skip(self._format_cntvers.size)
         vers = 20
 
-        self.fields["_fClusterRangeEnd"] = numpy.array(self.fields["_fClusterRangeEnd"], dtype=">i8", copy=False)
-        self.fields["_fClusterSize"] = numpy.array(self.fields["_fClusterSize"], dtype=">i8", copy=False)
+        self.fields["_fClusterRangeEnd"] = numpy.array(self.fields["_fClusterRangeEnd"], dtype="int64", copy=False)
+        self.fields["_fClusterSize"] = numpy.array(self.fields["_fClusterSize"], dtype="int64", copy=False)
         self.fields["_fIndexValues"] = numpy.array(self.fields["_fIndexValues"], dtype=">f8", copy=False)
-        self.fields["_fIndex"] = numpy.array(self.fields["_fIndex"], dtype=">int8", copy=False)
+        self.fields["_fIndex"] = numpy.array(self.fields["_fIndex"], dtype=">i8", copy=False)
 
         for branch in self.branches:
             self.fields["_fEntries"] += branch.fields["_fEntries"]
@@ -222,7 +222,8 @@ class TTree(object):
                 self.util.put_objany(cursor, (0, "Undefined"), self.keycursor))
         length = len(buff) + self._format_cntvers.size
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
-        return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
+        givenbytes = copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
+        uproot.write.compress.write(context, write_cursor, givenbytes, compression, key, keycursor)
 
 class branch(object):
 
