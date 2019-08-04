@@ -882,3 +882,13 @@ def test_ttree(tmp_path):
 
     f = ROOT.TFile.Open(filename)
     assert f.GetKey("t").GetClassName() == "TTree"
+
+def test_ttree_uproot(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    tree = TTree("t", "")
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+
+    f = uproot.open(filename)
+    assert f["t"]._classname == b"TTree"
