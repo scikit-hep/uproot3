@@ -34,7 +34,7 @@ class Util(object):
         cursor.skip(self._format_putobjany1.size)
         class_buf = b""
         objct, _ = obj
-        if objct != [] or objct != None:
+        if objct != [] and objct != None:
             class_buf = self._putclass(cursor, obj, keycursor)
             buff = copy_cursor.put_fields(self._format_putobjany1, len(class_buf) | uproot.const.kByteCountMask)
         else:
