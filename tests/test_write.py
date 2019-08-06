@@ -883,6 +883,18 @@ def test_ttree(tmp_path):
     f = ROOT.TFile.Open(filename)
     assert f.GetKey("t").GetClassName() == "TTree"
 
+def test_ttree_multiple(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    tree = TTree("t", "")
+    with uproot.recreate(filename, compression=None) as f:
+        for i in range(100):
+            f["t"*(i+1)] = tree
+
+    f = ROOT.TFile.Open(filename)
+    for i in range(100):
+        assert f.GetKey("t"*(i+1)).GetClassName() == "TTree"
+
 def test_ttree_uproot(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
@@ -892,3 +904,15 @@ def test_ttree_uproot(tmp_path):
 
     f = uproot.open(filename)
     assert f["t"]._classname == b"TTree"
+
+def test_ttree_multiple_uproot(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    tree = TTree("t", "")
+    with uproot.recreate(filename, compression=None) as f:
+        for i in range(100):
+            f["t"*(i+1)] = tree
+
+    f = uproot.open(filename)
+    for i in range(100):
+        assert f["t"*(i+1)]._classname == b"TTree"
