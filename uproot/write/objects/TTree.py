@@ -43,7 +43,7 @@ class TTree(object):
                        "_fMaxEntryLoop": 1000000000000, #Same as fMaxEntries?
                        "_fMaxVirtualSize": 0,
                        "_fAutoSave": -300000000,
-                       "_fAutoFlush": -300000000, #Same as fAutoSave?
+                       "_fAutoFlush": -30000000,
                        "_fEstimate": 1000000,
                        "_fClusterRangeEnd": [],
                        "_fClusterSize": [],
@@ -53,7 +53,9 @@ class TTree(object):
                        "_fIndex": [],
                        "_fIndexValues": [],
                        "_fAliases": None,
-                       "_fLeaves": []}
+                       "_fLeaves": [],
+                       "_fUserInfo": None,
+                       "_fBranchRef": None}
 
     @staticmethod
     def fixstring(string):
@@ -120,8 +122,9 @@ class TTree(object):
     def put_rootiofeatures(self, cursor):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_cntvers.size)
-        vers = 1
+        vers = 0
         fIOBits = 0
+        cursor.skip(4)
         buff = b"\x1a\xa1/\x10" + cursor.put_fields(self._format_rootiofeatures, fIOBits)
         length = len(buff) + self._format_cntvers.size
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
@@ -147,18 +150,28 @@ class TTree(object):
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + givenbytes
 
     _format_tobjarray1 = struct.Struct(">ii")
-    def put_tobjarray(self, cursor, values):
+    def put_tobjarray(self, cursor, values, fBits = 50331648):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_cntvers.size)
+        buff = self._skiptobj(cursor, fBits)
         vers = 3
         size = len(values)
         low = 0
-        buff = cursor.put_string(b"") + cursor.put_fields(self._format_tobjarray1, size, low)
+        buff += cursor.put_string(b"") + cursor.put_fields(self._format_tobjarray1, size, low)
         for value in values:
             self.util.put_objany(cursor, (value, "TObjArray"), self.keycursor)
         length = len(buff) + self._format_cntvers.size
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
+
+    _format_skiptobj1 = struct.Struct(">h")
+    _format_skiptobj2 = struct.Struct(">II")
+    def _skiptobj(self, cursor, fBits):
+        version = 1
+        buff = cursor.put_fields(self._format_skiptobj1, version)
+        fUniqueID = 0
+        buff += cursor.put_fields(self._format_skiptobj2, fUniqueID, fBits)
+        return buff
 
     _format_tarray = struct.Struct(">i")
     def put_tarray(self, cursor, values):
@@ -209,19 +222,20 @@ class TTree(object):
                                   self.fields["_fAutoSave"],
                                   self.fields["_fAutoFlush"],
                                   self.fields["_fEstimate"]) +
-                cursor.put_array(self.fields["_fClusterRangeEnd"]) +
-                cursor.put_array(self.fields["_fClusterSize"]) +
+                #cursor.put_array(self.fields["_fClusterRangeEnd"]) +
+                b"\x00" +
+                #cursor.put_array(self.fields["_fClusterSize"]) +
+                b"\x00" +
                 self.put_rootiofeatures(cursor) +
                 self.put_tobjarray(cursor, self.fields["_fBranches"]) +
                 self.put_tobjarray(cursor, self.fields["_fLeaves"]) +
-                #self.put_tlist(cursor, self.fields["_fAliases"]) +
+                self.util.put_objany(cursor, (self.fields["_fAliases"], "TList"), self.keycursor) +
                 self.put_tarray(cursor, self.fields["_fIndexValues"]) +
                 self.put_tarray(cursor, self.fields["_fIndex"]) +
-                #self.put_tlist(cursor, self.fields["_fTreeIndex"]) +
-                self.util.put_objany(cursor, (self.fields["_fTreeIndex"], "TVirtualIndex"), self.keycursor))
-                #self.put_tlist(cursor, self.fields["_fFriends"]) +
-                #self.util.put_objany(cursor, (0, "Undefined"), self.keycursor) + #TODO: PROBABLY WRONG
-                #self.util.put_objany(cursor, (0, "Undefined"), self.keycursor))
+                self.util.put_objany(cursor, (self.fields["_fTreeIndex"], "TVirtualIndex"), self.keycursor) +
+                self.util.put_objany(cursor, (self.fields["_fFriends"], "TList"), self.keycursor) +
+                self.util.put_objany(cursor, (self.fields["_fUserInfo"], "TList"), self.keycursor) +
+                self.util.put_objany(cursor, (self.fields["_fBranchRef"], "TBranchRef"), self.keycursor))
         length = len(buff) + self._format_cntvers.size
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
         givenbytes = copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
