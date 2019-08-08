@@ -130,27 +130,8 @@ class TTree(object):
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
-    _format_tlist1 = struct.Struct(">i")
-    _format_tlist2 = struct.Struct(">B")
-    def put_tlist(self, cursor, values):
-        copy_cursor = copy(cursor)
-        cursor.skip(self._format_cntvers.size)
-        vers = 5
-        buff = b""
-        givenbytes = (self.put_tobject(cursor) +
-                      cursor.put_string(b"") +
-                      cursor.put_fields(self._format_tlist1, len(values)))
-        for value in values:
-            buff += self.util.put_objany(cursor, (value, "TObjString"), self.keycursor)
-            buff += cursor.put_fields(self._format_tlist2, 0)
-            buff += b"" # cursor.bytes(source, n)
-        givenbytes += buff
-        length = len(givenbytes) + self._format_cntvers.size
-        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
-        return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + givenbytes
-
     _format_tobjarray1 = struct.Struct(">ii")
-    def put_tobjarray(self, cursor, values, fBits = 50331648):
+    def put_tobjarray(self, cursor, values, classname = "TObjArray", fBits = 50331648):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_cntvers.size)
         buff = self._skiptobj(cursor, fBits)
@@ -159,7 +140,7 @@ class TTree(object):
         low = 0
         buff += cursor.put_string(b"") + cursor.put_fields(self._format_tobjarray1, size, low)
         for value in values:
-            self.util.put_objany(cursor, (value, "TObjArray"), self.keycursor)
+            self.util.put_objany(cursor, (value, classname), self.keycursor)
         length = len(buff) + self._format_cntvers.size
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
@@ -199,6 +180,8 @@ class TTree(object):
             self.fields["_fZipBytes"] += branch.fields["_fZipBytes"]
             self.fields["_fLeaves"].append(branch.fields["_fLeaves"])
             #TODO: HAVE TO WRITE BRANCH!
+            branch.util = self.util
+            branch.keycursor = self.keycursor
             self.fields["_fBranches"].append(branch)
 
         buff = (self.put_tnamed(cursor, name, self.fTitle) +
@@ -227,8 +210,8 @@ class TTree(object):
                 #cursor.put_array(self.fields["_fClusterSize"]) +
                 b"\x00" +
                 self.put_rootiofeatures(cursor) +
-                self.put_tobjarray(cursor, self.fields["_fBranches"]) +
-                self.put_tobjarray(cursor, self.fields["_fLeaves"]) +
+                self.put_tobjarray(cursor, self.fields["_fBranches"], "TBranch") +
+                self.put_tobjarray(cursor, self.fields["_fLeaves"], "TLeaf") +
                 self.util.put_objany(cursor, (self.fields["_fAliases"], "TList"), self.keycursor) +
                 self.put_tarray(cursor, self.fields["_fIndexValues"]) +
                 self.put_tarray(cursor, self.fields["_fIndex"]) +
@@ -245,37 +228,43 @@ class branch(object):
 
     # Need to think about appropriate defaultBasketSize
     # Need to look at ROOT's default branch compression
-    def __init__(self, type, name, title, defaultBasketSize=0, compression=None):
+    def __init__(self, type, name, title, defaultBasketSize=32000, compression=None):
         self.type = type
-        self.name = name
-        self.title = title
+        self.name = self.fixstring(name)
+        self.title = self.fixstring(name) + b"/I"
         self.defaultBasketSize = defaultBasketSize
         self.compression = compression
-        l = [0]*10 #10 is fMaxBaskets
-        l[0] = 81
-        l1 = [0]*10
-        l[1] = 2
+        self.util = None
+        self.keycursor = None
 
-        self.fields = {"_fCompress" : self.compression.code(),
+        self.fields = {"_fCompress" : 100,
                        "_fBasketSize" : self.defaultBasketSize,
                        "_fEntryOffsetLen": 0,
-                       "_fWriteBasket": 1, #Number of baskets
-                       "_fEntryNumber": 2, #Number of values in the entire branch
-                       "_fOffSet": 0,
+                       "_fWriteBasket": 0, #Number of baskets
+                       "_fEntry        self.put_tleaf(cursor)Number": 0, #Number of values in the entire branch
+                       "_fOffset": 0,
                        "_fMaxBaskets": 10, #TODO: WHAT DOES THIS MEAN?!!! (IMPORTANT!!!)
                        "_fSplitLevel": 0,
-                       "_fEntries": 2, #Number of values in the branch = fEntryNumber in our case
+                       "_fEntries": 0, #Number of values in the branch = fEntryNumber in our case
                        "_fFirstEntry": 0, #First value in the branch
-                       "_fTotBytes": 81, #Number of bytes of the branch?
-                       "_fZipBytes": 81, #Same as fTotBytes when no compression
-                       "_fBasketBytes": l,
-                       "_fBasketEntry": l1, #TODO: WHAT DOES THIS MEAN?!!! (IMPORTANT!!!)
-                       "_fBasketSeek": [], #Number of entries = fMaxBaskets. Empty baskets = 0.
-                       "_fFileName": "",
-                       "_fIOBits": 0,
-                       "_size": 0,
-                       "_low": 0,
-                       "_fBranches": []}
+                       "_fTotBytes": 0, #Number of bytes of the branch?
+                       "_fZipBytes": 0, #Same as fTotBytes when no compression
+                       "_fBasketBytes": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                       "_fBasketEntry": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], #TODO: WHAT DOES THIS MEAN?!!! (IMPORTANT!!!)
+                       "_fBasketSeek": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], #Number of entries = fMaxBaskets. Empty baskets = 0.
+                       "_fFileName": b"",
+                       "_fBranches": [],
+                       "_fLeaves": [],
+                       "_fFillColor": 0,
+                       "_fFillStyle": 1001,
+                       "_fEntryNumber": 0}
+
+        if self.type == "int":
+            self.fields["_fLeaves"] = ["TLeafI"]
+
+        self.fields["_fBasketBytes"] = numpy.array(self.fields["_fBasketBytes"], dtype=">i4", copy=False)
+        self.fields["_fBasketEntry"] = numpy.array(self.fields["_fBasketEntry"], dtype=">i8", copy=False)
+        self.fields["_fBasketSeek"] = numpy.array(self.fields["_fBasketSeek"], dtype=">i8", copy=False)
 
     def append(self, item):
         self.extend(item)
@@ -286,13 +275,20 @@ class branch(object):
     def basket(self, items):
         raise NotImplementedError
 
+    @staticmethod
+    def fixstring(string):
+        if isinstance(string, bytes):
+            return string
+        else:
+            return string.encode("utf-8")
+
     _format_cntvers = struct.Struct(">IH")
 
     branch_format1 = struct.Struct('>iiiiq')
 
     _format_tobject1 = struct.Struct(">HII")
     def put_tobject(self, cursor):
-        return cursor.put_fields(self._format_tobject1, 1, 0, numpy.uint32(0x03000000))
+        return cursor.put_fields(self._format_tobject1, 1, 0, numpy.uint32(0x03400000))
 
     def put_tnamed(self, cursor, name, title):
         copy_cursor = copy(cursor)
@@ -316,28 +312,76 @@ class branch(object):
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
-    _format_ROOT_3a3a_TIOFeatures = struct.Struct(">B")
-    def put_ROOT_3a3a_TIOFeatures(self, cursor):
+    _format_rootiofeatures = struct.Struct(">B")
+
+    def put_rootiofeatures(self, cursor):
+        copy_cursor = copy(cursor)
+        cursor.skip(self._format_cntvers.size)
+        vers = 0
+        fIOBits = 0
+        cursor.skip(4)
+        buff = b"\x1a\xa1/\x10" + cursor.put_fields(self._format_rootiofeatures, fIOBits)
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
+
+    _format_tleaf1 = struct.Struct('>iii??')
+    def put_tleaf(self, cursor):
+        copy_cursor = copy(cursor)
+        cursor.skip(self._format_cntvers.size)
+        vers = 2
+        fLen = 1
+        fLenType = 4
+        fOffset = 0
+        fIsRange = False
+        fIsUnsigned = False
+        fLeafCount = None
+        buff = (self.put_tnamed(cursor, self.name, self.title) +
+                cursor.put_fields(self._format_tleaf1, fLen, fLenType, fOffset, fIsRange, fIsUnsigned) +
+                self.util.put_objany(cursor, (fLeafCount, "TLeaf"), self.keycursor))
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
+
+    _format_tleafI1 = struct.Struct('>ii')
+    def put_tleafI(self, cursor):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_cntvers.size)
         vers = 1
-        buff = cursor.put_data(b"\x1a\xa1/\x10") + cursor.put_fields(self._format_ROOT_3a3a_TIOFeatures, self.fields["_fIOBits"])
+        fMinimum = 0
+        fMaximum = 0
+        buff = self.put_tleaf(cursor) + cursor.put_fields(self._format_tleafI1, fMinimum, fMaximum)
         length = len(buff) + self._format_cntvers.size
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_tobjarray1 = struct.Struct(">ii")
-    def put_tobjarray(self, cursor, values):
+    def put_tobjarray(self, cursor, values, classname="TObjArray", fBits=50331648):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_cntvers.size)
+        buff = self._skiptobj(cursor, fBits)
         vers = 3
-        self.fields["_size"] = len(values)
-        buff = (cursor.put_string("") + cursor.put_fields(self._format_TObjArray1, self.fields["_size"], self.fields["_low"]))
+        try:
+            size = len(values)
+        except TypeError:
+            size = 1
+            values = [values]
+        low = 0
+        buff += cursor.put_string(b"") + cursor.put_fields(self._format_tobjarray1, size, low)
         for value in values:
-            self.util.put_objany(cursor, (value, "TObjArray"), self.keycursor)
+            self.util.put_objany(cursor, (value, classname), self.keycursor)
         length = len(buff) + self._format_cntvers.size
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
+
+    _format_skiptobj1 = struct.Struct(">h")
+    _format_skiptobj2 = struct.Struct(">II")
+    def _skiptobj(self, cursor, fBits):
+        version = 1
+        buff = cursor.put_fields(self._format_skiptobj1, version)
+        fUniqueID = 0
+        buff += cursor.put_fields(self._format_skiptobj2, fUniqueID, fBits)
+        return buff
 
     _format_tbranch1 = struct.Struct('>iiiiq')
     _format_tbranch2 = struct.Struct('>iIiqqqq')
@@ -353,7 +397,7 @@ class branch(object):
                                   self.fields["fEntryOffsetLen"],
                                   self.fields["fWriteBasket"],
                                   self.fields["fEntryNumber"]) +
-                self.put_ROOT_3a3a_TIOFeatures(cursor) +
+                self.put_rootiofeatures(cursor) +
                 cursor.put_fields(self._format_tbranch2,
                                   self.fields["fOffset"],
                                   self.fields["fMaxBaskets"],
@@ -362,9 +406,11 @@ class branch(object):
                                   self.fields["fFirstEntry"],
                                   self.fields["fTotBytes"],
                                   self.fields["fZipBytes"]) +
-                self.put_tobjarray(cursor, self.fields["fBranches"]) +
-                self.put_tobjarray(cursor, self.fields["fLeaves"]) +
-                self.put_tobjarray(cursor, self.fields["fBaskets"]) +
+                self.put_tobjarray(cursor, self.fields["_fBranches"], classname="TBranch") +
+                self.put_tobjarray(cursor, self, classname=self.fields["_fLeaves"][0]) +
+                #self.put_tobjarray(cursor, self.fields["fBaskets"]) +
+                b"@\x00\x00\x15\x00\x03\x00\x01\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" +
+                b"\x01" +
                 cursor.put_data(self.fields["fBasketBytes"]) +
                 cursor.put_data(self.fields["fBasketEntry"]) +
                 cursor.put_data(self.fields["fBasketSeek"]) +

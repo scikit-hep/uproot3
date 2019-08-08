@@ -26,6 +26,10 @@ class Util(object):
         elif clsname == "TObjString":
             self.tobjstring_count += 1
             buf += self.parent_obj.put_tobjstring(cursor, objct, self.tobjstring_count)
+        elif clsname == "TBranch":
+            buf += objct.write(cursor)
+        elif clsname == "TLeafI":
+            buf += objct.put_tleafI(cursor)
         return buf
 
     _format_putobjany1 = struct.Struct(">I")
