@@ -45,7 +45,7 @@ class Util(object):
         if id(objct) in self._written and clsname in self._written:
             class_buf = self._putclass(cursor, obj, keycursor)
             buff = b""
-        if objct != [] and objct != None:
+        elif objct != [] and objct != None:
             class_buf = self._putclass(cursor, obj, keycursor)
             buff = copy_cursor.put_fields(self._format_putobjany1, len(class_buf) | uproot.const.kByteCountMask)
         else:
