@@ -15,12 +15,16 @@ class Util(object):
         start = cursor.index - keycursor.index
         buf = b""
         objct, clsname = obj
+        if id(objct) in self._written and clsname in self._written:
+            buf += cursor.put_fields(self._format_putobjany1, self._written[id(objct)] | uproot.const.kClassMask)
+            return buf
         if clsname in self._written:
-            buf += cursor.put_fields(self._format_putobjany1, (self._written[clsname]) | uproot.const.kClassMask)
+            buf += cursor.put_fields(self._format_putobjany1, self._written[clsname] | uproot.const.kClassMask)
         else:
             buf += cursor.put_fields(self._format_putobjany1, uproot.const.kNewClassTag)
             buf += cursor.put_cstring(clsname)
             self._written[clsname] = (start + uproot.const.kMapOffset) | uproot.const.kClassMask
+            self._written[id(objct)] = start - 4 + uproot.const.kMapOffset
         if clsname == "THashList" or clsname == "TList":
             buf += self.parent_obj.put_tlist(cursor, objct)
         elif clsname == "TObjString":
@@ -37,7 +41,10 @@ class Util(object):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_putobjany1.size)
         class_buf = b""
-        objct, _ = obj
+        objct, clsname = obj
+        if id(objct) in self._written and clsname in self._written:
+            class_buf = self._putclass(cursor, obj, keycursor)
+            buff = b""
         if objct != [] and objct != None:
             class_buf = self._putclass(cursor, obj, keycursor)
             buff = copy_cursor.put_fields(self._format_putobjany1, len(class_buf) | uproot.const.kByteCountMask)

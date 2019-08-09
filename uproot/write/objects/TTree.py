@@ -363,7 +363,7 @@ class branch(object):
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_tobjarray1 = struct.Struct(">ii")
-    def put_tobjarray(self, cursor, values, classname="TObjArray", fBits=50331648):
+    def put_tobjarray(self, cursor, values, classname, fBits=50331648):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_cntvers.size)
         buff = self._skiptobj(cursor, fBits)
