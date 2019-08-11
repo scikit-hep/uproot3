@@ -1,6 +1,8 @@
 import struct
 from copy import copy
 
+import numpy
+
 import uproot
 
 class Util(object):
@@ -11,12 +13,13 @@ class Util(object):
 
     _format_cntvers = struct.Struct(">IH")
 
-    def _putclass(self, cursor, obj, keycursor):
+    def _putclass(self, cursor, obj, keycursor, beg):
         start = cursor.index - keycursor.index
+        beg = beg - keycursor.index - 8
         buf = b""
         objct, clsname = obj
         if id(objct) in self._written and clsname in self._written:
-            buf += cursor.put_fields(self._format_putobjany1, self._written[id(objct)] | uproot.const.kClassMask)
+            buf += cursor.put_fields(self._format_putobjany1, numpy.uint32(self._written[id(objct)]))
             return buf
         if clsname in self._written:
             buf += cursor.put_fields(self._format_putobjany1, self._written[clsname] | uproot.const.kClassMask)
@@ -24,7 +27,7 @@ class Util(object):
             buf += cursor.put_fields(self._format_putobjany1, uproot.const.kNewClassTag)
             buf += cursor.put_cstring(clsname)
             self._written[clsname] = (start + uproot.const.kMapOffset) | uproot.const.kClassMask
-            self._written[id(objct)] = start - 4 + uproot.const.kMapOffset
+            self._written[id(objct)] = beg + uproot.const.kMapOffset
         if clsname == "THashList" or clsname == "TList":
             buf += self.parent_obj.put_tlist(cursor, objct)
         elif clsname == "TObjString":
@@ -38,17 +41,20 @@ class Util(object):
 
     _format_putobjany1 = struct.Struct(">I")
     def put_objany(self, cursor, obj, keycursor):
-        copy_cursor = copy(cursor)
-        cursor.skip(self._format_putobjany1.size)
         class_buf = b""
         objct, clsname = obj
         if id(objct) in self._written and clsname in self._written:
-            class_buf = self._putclass(cursor, obj, keycursor)
+            class_buf = self._putclass(cursor, obj, keycursor, cursor.index)
             buff = b""
         elif objct != [] and objct != None:
-            class_buf = self._putclass(cursor, obj, keycursor)
+            copy_cursor = copy(cursor)
+            beg = cursor.index
+            cursor.skip(self._format_putobjany1.size)
+            class_buf = self._putclass(cursor, obj, keycursor, beg)
             buff = copy_cursor.put_fields(self._format_putobjany1, len(class_buf) | uproot.const.kByteCountMask)
         else:
+            copy_cursor = copy(cursor)
+            cursor.skip(self._format_putobjany1.size)
             buff = copy_cursor.put_fields(self._format_putobjany1, len(class_buf))
         buff += class_buf
         return buff
