@@ -991,6 +991,6 @@ def test_ttree_empty_tbranch_multiple_uproot(tmp_path):
     with uproot.recreate(filename, compression=None) as f:
         f["t"] = tree
 
-    f = uproot.open("example.root")
+    f = uproot.open(filename)
     assert f["t"]["intBranch"]._classname == b"TBranch"
     assert f["t"]["testbranch"]._classname == b"TBranch"
