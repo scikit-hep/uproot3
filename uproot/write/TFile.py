@@ -8,6 +8,7 @@ import os
 import sys
 import struct
 import uuid
+import copy
 
 import uproot_methods.convert
 
@@ -65,22 +66,23 @@ class TFileUpdate(object):
 
     def __setitem__(self, where, what):
         self.util = Util()
+        temp_what = copy.deepcopy(what)
         where, cycle = self._normalizewhere(where)
-        if what.__class__.__name__ != "TTree":
-            what = uproot_methods.convert.towriteable(what)
+        if temp_what.__class__.__name__ != "TTree":
+            temp_what = uproot_methods.convert.towriteable(temp_what)
         else:
-            what.name = where
+            temp_what.name = where
         cursor = uproot.write.sink.cursor.Cursor(self._fSeekFree)
-        newkey = uproot.write.TKey.TKey(fClassName = what.fClassName,
+        newkey = uproot.write.TKey.TKey(fClassName = temp_what.fClassName,
                                         fName      = where,
-                                        fTitle     = what.fTitle,
+                                        fTitle     = temp_what.fTitle,
                                         fObjlen    = 0,
                                         fSeekKey   = self._fSeekFree,
                                         fSeekPdir  = self._fBEGIN,
                                         fCycle     = cycle if cycle is not None else self._rootdir.newcycle(where))
         newkeycursor = uproot.write.sink.cursor.Cursor(newkey.fSeekKey)
         newkey.write(cursor, self._sink)
-        what.write(self, cursor, where, self.compression, newkey, newkeycursor, self.util)
+        temp_what.write(self, cursor, where, self.compression, newkey, newkeycursor, self.util)
         self._expandfile(cursor)
 
         self._rootdir.setkey(newkey)
