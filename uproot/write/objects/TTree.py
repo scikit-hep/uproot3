@@ -14,9 +14,10 @@ import uproot.write.sink.cursor
 
 class TTree(object):
 
-    def __init__(self, name, title, *branches, **options):
+    def __init__(self, title, *branches, **options):
+        self.name = ""
         self.fClassName = b"TTree"
-        self.fName = self.fixstring(name)
+        self.fName = self.fixstring(self.name)
         self.fTitle = self.fixstring(title)
         self.branches = branches
 

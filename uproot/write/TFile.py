@@ -68,6 +68,8 @@ class TFileUpdate(object):
         where, cycle = self._normalizewhere(where)
         if what.__class__.__name__ != "TTree":
             what = uproot_methods.convert.towriteable(what)
+        else:
+            what.name = where
         cursor = uproot.write.sink.cursor.Cursor(self._fSeekFree)
         newkey = uproot.write.TKey.TKey(fClassName = what.fClassName,
                                         fName      = where,
