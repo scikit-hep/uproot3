@@ -12,14 +12,25 @@ import uproot.const
 import uproot.write.compress
 import uproot.write.sink.cursor
 
+class branch(object):
+
+    def __init__(self, type, title, compression=None):
+        self.name = ""
+        self.type = type
+        self.title = title
+        self.compression = compression
+
 class TTree(object):
 
-    def __init__(self, title, *branches, **options):
+    def __init__(self, title, branches={}):
         self.name = ""
         self.fClassName = b"TTree"
         self.fName = self.fixstring(self.name)
         self.fTitle = self.fixstring(title)
-        self.branches = branches
+
+        self.branches = []
+        for name, branch in branches.items():
+            self.branches.append(TBranch(branch.type, name, branch.title, defaultBasketSize=32000, compression=branch.compression))
 
         self.fields = {"_fLineColor": 602,
                        "_fLineStyle": 1,
@@ -234,7 +245,7 @@ class TTree(object):
         givenbytes = copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
         uproot.write.compress.write(context, write_cursor, givenbytes, compression, key, keycursor)
 
-class branch(object):
+class TBranch(object):
 
     # Need to think about appropriate defaultBasketSize
     # Need to look at ROOT's default branch compression

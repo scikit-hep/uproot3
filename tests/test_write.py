@@ -920,8 +920,9 @@ def test_ttree_multiple_uproot(tmp_path):
 def test_ttree_empty_tbranch(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    b = branch("int", "intBranch", "")
-    tree = TTree("", b)
+    b = branch("int", "")
+    branchdict = {"intBranch": b}
+    tree = TTree("", branchdict)
     with uproot.recreate(filename, compression=None) as f:
         f["t"] = tree
 
@@ -931,8 +932,9 @@ def test_ttree_empty_tbranch(tmp_path):
 def test_ttree_empty_tbranch_multitree(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    b = branch("int", "intBranch", "")
-    tree = TTree("", b)
+    b = branch("int", "")
+    branchdict = {"intBranch": b}
+    tree = TTree("", branchdict)
     with uproot.recreate(filename, compression=None) as f:
         for i in range(100):
             f["t" * (i + 1)] = tree
@@ -944,8 +946,9 @@ def test_ttree_empty_tbranch_multitree(tmp_path):
 def test_ttree_empty_tbranch_uproot(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    b = branch("int", "intBranch", "")
-    tree = TTree("", b)
+    b = branch("int", "")
+    branchdict = {"intBranch": b}
+    tree = TTree("", branchdict)
     with uproot.recreate(filename, compression=None) as f:
         f["t"] = tree
 
@@ -955,8 +958,9 @@ def test_ttree_empty_tbranch_uproot(tmp_path):
 def test_ttree_empty_tbranch_multitree_uproot(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    b = branch("int", "intBranch", "")
-    tree = TTree("", b)
+    b = branch("int", "")
+    branchdict = {"intBranch": b}
+    tree = TTree("", branchdict)
     with uproot.recreate(filename, compression=None) as f:
         for i in range(100):
             f["t"*(i+1)] = tree
