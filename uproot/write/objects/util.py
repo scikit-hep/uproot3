@@ -25,7 +25,7 @@ class Util(object):
             buf += cursor.put_fields(self._format_putobjany1, numpy.uint32(self._written[clsname]) | uproot.const.kClassMask)
         else:
             buf += cursor.put_fields(self._format_putobjany1, uproot.const.kNewClassTag)
-            self.seekpointer = cursor.index
+            self.seekpointer = cursor.index - keycursor.index
             buf += cursor.put_cstring(clsname)
             self._written[clsname] = numpy.uint32(start + uproot.const.kMapOffset) | uproot.const.kClassMask
             self._written[id(objct)] = beg + uproot.const.kMapOffset
