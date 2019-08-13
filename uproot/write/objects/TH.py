@@ -419,7 +419,7 @@ class TH(object):
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_tprofile = struct.Struct(">idddd")
-    def write(self, context, cursor, name, compression, key, keycursor, util):
+    def _write(self, context, cursor, name, compression, key, keycursor, util):
         self.util = util
         self.util.set_obj(self)
         copy_cursor = copy(cursor)

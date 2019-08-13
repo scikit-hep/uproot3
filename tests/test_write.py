@@ -7,7 +7,7 @@ from os.path import join
 import pytest
 
 import uproot
-from uproot.write.objects.TTree import TTree, branch
+from uproot.write.objects.TTree import newtree, newbranch
 
 ROOT = pytest.importorskip("ROOT")
 
@@ -876,9 +876,18 @@ def test_objany_multihist_uproot(tmp_path):
 def test_ttree(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    tree = TTree("")
+    tree = newtree()
     with uproot.recreate(filename, compression=None) as f:
         f["t"] = tree
+
+    f = ROOT.TFile.Open(filename)
+    assert f.GetKey("t").GetClassName() == "TTree"
+
+def test_tree_diff_interface(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    with uproot.recreate(filename, compression=None) as f:
+        f.newtree("t")
 
     f = ROOT.TFile.Open(filename)
     assert f.GetKey("t").GetClassName() == "TTree"
@@ -886,7 +895,7 @@ def test_ttree(tmp_path):
 def test_ttree_multiple(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    tree = TTree("")
+    tree = newtree()
     with uproot.recreate(filename, compression=None) as f:
         for i in range(100):
             f["t"*(i+1)] = tree
@@ -898,7 +907,7 @@ def test_ttree_multiple(tmp_path):
 def test_ttree_uproot(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    tree = TTree("")
+    tree = newtree()
     with uproot.recreate(filename, compression=None) as f:
         f["t"] = tree
 
@@ -908,7 +917,7 @@ def test_ttree_uproot(tmp_path):
 def test_ttree_multiple_uproot(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    tree = TTree("")
+    tree = newtree()
     with uproot.recreate(filename, compression=None) as f:
         for i in range(100):
             f["t"*(i+1)] = tree
@@ -920,9 +929,9 @@ def test_ttree_multiple_uproot(tmp_path):
 def test_ttree_empty_tbranch(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    b = branch("int", "")
+    b = newbranch("int32")
     branchdict = {"intBranch": b}
-    tree = TTree("", branchdict)
+    tree = newtree(branchdict)
     with uproot.recreate(filename, compression=None) as f:
         f["t"] = tree
 
@@ -932,9 +941,9 @@ def test_ttree_empty_tbranch(tmp_path):
 def test_ttree_empty_tbranch_multitree(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    b = branch("int", "")
+    b = newbranch("int32")
     branchdict = {"intBranch": b}
-    tree = TTree("", branchdict)
+    tree = newtree(branchdict)
     with uproot.recreate(filename, compression=None) as f:
         for i in range(100):
             f["t" * (i + 1)] = tree
@@ -946,9 +955,9 @@ def test_ttree_empty_tbranch_multitree(tmp_path):
 def test_ttree_empty_tbranch_uproot(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    b = branch("int", "")
+    b = newbranch("int32")
     branchdict = {"intBranch": b}
-    tree = TTree("", branchdict)
+    tree = newtree(branchdict)
     with uproot.recreate(filename, compression=None) as f:
         f["t"] = tree
 
@@ -958,9 +967,9 @@ def test_ttree_empty_tbranch_uproot(tmp_path):
 def test_ttree_empty_tbranch_multitree_uproot(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    b = branch("int", "")
+    b = newbranch("int32")
     branchdict = {"intBranch": b}
-    tree = TTree("", branchdict)
+    tree = newtree(branchdict)
     with uproot.recreate(filename, compression=None) as f:
         for i in range(100):
             f["t"*(i+1)] = tree
@@ -972,9 +981,9 @@ def test_ttree_empty_tbranch_multitree_uproot(tmp_path):
 def test_ttree_empty_tbranch_multiple(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    b = branch("int", "")
+    b = newbranch("int32")
     branchdict = {"intBranch": b, "testbranch": b}
-    tree = TTree("", branchdict)
+    tree = newtree(branchdict)
     with uproot.recreate(filename, compression=None) as f:
         f["t"] = tree
 
@@ -985,9 +994,9 @@ def test_ttree_empty_tbranch_multiple(tmp_path):
 def test_ttree_empty_tbranch_multiple_uproot(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    b = branch("int", "")
+    b = newbranch("int32")
     branchdict = {"intBranch": b, "testbranch": b}
-    tree = TTree("", branchdict)
+    tree = newtree(branchdict)
     with uproot.recreate(filename, compression=None) as f:
         f["t"] = tree
 

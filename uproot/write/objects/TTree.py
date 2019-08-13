@@ -12,24 +12,33 @@ import uproot.const
 import uproot.write.compress
 import uproot.write.sink.cursor
 
-class branch(object):
+class newbranch(object):
 
-    def __init__(self, type, title, compression=None):
+    def __init__(self, type, flushsize=30000, title="", compression=None):
         self.name = ""
         self.type = type
+        self.flushsize = flushsize
+        self.title = title
+        self.compression = compression
+
+class newtree(object):
+
+    def __init__(self, branches={}, flushsize=30000, title="", compression=None):
+        self.branches = branches
+        self.flushsize = flushsize
         self.title = title
         self.compression = compression
 
 class TTree(object):
 
-    def __init__(self, title, branches={}):
+    def __init__(self, newtree):
         self.name = ""
         self.fClassName = b"TTree"
         self.fName = self.fixstring(self.name)
-        self.fTitle = self.fixstring(title)
+        self.fTitle = self.fixstring(newtree.title)
 
         self.branches = []
-        for name, branch in branches.items():
+        for name, branch in newtree.branches.items():
             self.branches.append(TBranch(branch.type, name, branch.title, defaultBasketSize=32000, compression=branch.compression))
 
         self.fields = {"_fLineColor": 602,
@@ -174,9 +183,8 @@ class TTree(object):
     def put_tarray(self, cursor, values):
         return cursor.put_fields(self._format_tarray, values.size) + cursor.put_array(values)
 
-    #FIXME: HAVE TO FIGURE OUT HOW KEYCURSOR AND UTIL MAP TO BRANCH
     _format_ttree = struct.Struct(">qqqqqdiiiiIqqqqqq")
-    def write(self, context, cursor, name, compression, key, keycursor, util):
+    def _write(self, context, cursor, name, compression, key, keycursor, util):
         self.util = util
         self.util.set_obj(self)
         copy_cursor = copy(cursor)
@@ -250,7 +258,8 @@ class TBranch(object):
     # Need to think about appropriate defaultBasketSize
     # Need to look at ROOT's default branch compression
     def __init__(self, type, name, title, defaultBasketSize=32000, compression=None):
-        self.type = type
+
+        self.type = numpy.dtype(type).newbyteorder(">")
         self.name = self.fixstring(name)
         self.title = self.fixstring(name)
         self.defaultBasketSize = defaultBasketSize
@@ -279,8 +288,24 @@ class TBranch(object):
                        "_fFillStyle": 1001,
                        "_fEntryNumber": 0}
 
-        if self.type == "int":
+        if self.type == "int8":
+            self.fields["_fLeaves"] = [self, "TLeafB"]
+        elif self.type == ">U":
+            self.fields["_fLeaves"] = [self, "TLeafB"]
+        elif self.type == ">f8":
+            self.fields["_fLeaves"] = [self, "TLeafD"]
+        elif self.type == ">f4":
+            self.fields["_fLeaves"] = [self, "TLeafF"]
+        elif self.type == ">i4":
             self.fields["_fLeaves"] = [self, "TLeafI"]
+        elif self.type == ">i8":
+            self.fields["_fLeaves"] = [self, "TleafL"]
+        elif self.type == ">?":
+            self.fields["_fLeaves"] = [self, "TLeafO"]
+        elif self.type == ">int2":
+            self.fields["_fLeaves"] = [self, "TLeafS"]
+        else:
+            raise NotImplementedError
 
         self.fields["_fBasketBytes"] = numpy.array(self.fields["_fBasketBytes"], dtype=">i4", copy=False)
         self.fields["_fBasketEntry"] = numpy.array(self.fields["_fBasketEntry"], dtype=">i8", copy=False)
