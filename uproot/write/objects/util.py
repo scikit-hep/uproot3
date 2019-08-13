@@ -37,6 +37,18 @@ class Util(object):
             buf += objct.write(cursor)
         elif clsname == "TLeafI":
             buf += objct.put_tleafI(cursor)
+        elif clsname == "TLeafB":
+            buf += objct.put_tleafB(cursor)
+        elif clsname == "TLeafD":
+            buf += objct.put_tleafD(cursor)
+        elif clsname == "TLeafF":
+            buf += objct.put_tleafF(cursor)
+        elif clsname == "TLeafL":
+            buf += objct.put_tleafL(cursor)
+        elif clsname == "TLeafO":
+            buf += objct.put_tleafO(cursor)
+        elif clsname == "TLeafS":
+            buf += objct.put_tleafS(cursor)
         return buf
 
     _format_putobjany1 = struct.Struct(">I")

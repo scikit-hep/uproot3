@@ -261,7 +261,12 @@ class TBranch(object):
 
         self.type = numpy.dtype(type).newbyteorder(">")
         self.name = self.fixstring(name)
-        self.title = self.fixstring(name)
+        if title == "":
+            self.title = self.fixstring(name)
+            self.nametitle = self.title + b"/I"
+        else:
+            self.title = self.fixstring(title)
+            self.nametitle = self.title
         self.defaultBasketSize = defaultBasketSize
         self.compression = compression
         self.util = None
@@ -291,7 +296,7 @@ class TBranch(object):
         if self.type == "int8":
             self.fields["_fLeaves"] = [self, "TLeafB"]
         elif self.type == ">U":
-            self.fields["_fLeaves"] = [self, "TLeafB"]
+            self.fields["_fLeaves"] = [self, "TLeafC"]
         elif self.type == ">f8":
             self.fields["_fLeaves"] = [self, "TLeafD"]
         elif self.type == ">f4":
@@ -302,7 +307,7 @@ class TBranch(object):
             self.fields["_fLeaves"] = [self, "TleafL"]
         elif self.type == ">?":
             self.fields["_fLeaves"] = [self, "TLeafO"]
-        elif self.type == ">int2":
+        elif self.type == ">i2":
             self.fields["_fLeaves"] = [self, "TLeafS"]
         else:
             raise NotImplementedError
@@ -398,6 +403,78 @@ class TBranch(object):
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
+    _format_tleafB1 = struct.Struct('>bb')
+    def put_tleafB(self, cursor):
+        copy_cursor = copy(cursor)
+        cursor.skip(self._format_cntvers.size)
+        vers = 1
+        fMinimum = 0
+        fMaximum = 0
+        buff = self.put_tleaf(cursor) + cursor.put_fields(self._format_tleafB1, fMinimum, fMaximum)
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
+
+    _format_tleafD1 = struct.Struct('>dd')
+    def put_tleafD(self, cursor):
+        copy_cursor = copy(cursor)
+        cursor.skip(self._format_cntvers.size)
+        vers = 1
+        fMinimum = 0
+        fMaximum = 0
+        buff = self.put_tleaf(cursor) + cursor.put_fields(self._format_tleafD1, fMinimum, fMaximum)
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
+
+    _format_tleafF1 = struct.Struct('>ff')
+    def put_tleafF(self, cursor):
+        copy_cursor = copy(cursor)
+        cursor.skip(self._format_cntvers.size)
+        vers = 1
+        fMinimum = 0
+        fMaximum = 0
+        buff = self.put_tleaf(cursor) + cursor.put_fields(self._format_tleafF1, fMinimum, fMaximum)
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
+
+    _format_tleafL1 = struct.Struct('>qq')
+    def put_tleafL(self, cursor):
+        copy_cursor = copy(cursor)
+        cursor.skip(self._format_cntvers.size)
+        vers = 1
+        fMinimum = 0
+        fMaximum = 0
+        buff = self.put_tleaf(cursor) + cursor.put_fields(self._format_tleafL1, fMinimum, fMaximum)
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
+
+    _format_tleafO1 = struct.Struct('>??')
+    def put_tleafO(self, cursor):
+        copy_cursor = copy(cursor)
+        cursor.skip(self._format_cntvers.size)
+        vers = 1
+        fMinimum = 0
+        fMaximum = 0
+        buff = self.put_tleaf(cursor) + cursor.put_fields(self._format_tleafO1, fMinimum, fMaximum)
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
+
+    _format_tleafS1 = struct.Struct('>hh')
+    def put_tleafS(self, cursor):
+        copy_cursor = copy(cursor)
+        cursor.skip(self._format_cntvers.size)
+        vers = 1
+        fMinimum = 0
+        fMaximum = 0
+        buff = self.put_tleaf(cursor) + cursor.put_fields(self._format_tleafS1, fMinimum, fMaximum)
+        length = len(buff) + self._format_cntvers.size
+        cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
+        return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
+
     _format_tobjarray1 = struct.Struct(">ii")
     def put_tobjarray(self, cursor, values, classname, fBits=50331648):
         copy_cursor = copy(cursor)
@@ -432,7 +509,7 @@ class TBranch(object):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_cntvers.size)
         vers = 13
-        buff = (self.put_tnamed(cursor, self.name, self.title + b"/I", hexbytes=numpy.uint32(0x03400000)) +
+        buff = (self.put_tnamed(cursor, self.name, self.nametitle, hexbytes=numpy.uint32(0x03400000)) +
                 self.put_tattfill(cursor) +
                 cursor.put_fields(self._format_tbranch1,
                                   self.fields["_fCompress"],
