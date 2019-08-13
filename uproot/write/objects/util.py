@@ -25,6 +25,7 @@ class Util(object):
             buf += cursor.put_fields(self._format_putobjany1, numpy.uint32(self._written[clsname]) | uproot.const.kClassMask)
         else:
             buf += cursor.put_fields(self._format_putobjany1, uproot.const.kNewClassTag)
+            self.seekpointer = cursor.index
             buf += cursor.put_cstring(clsname)
             self._written[clsname] = numpy.uint32(start + uproot.const.kMapOffset) | uproot.const.kClassMask
             self._written[id(objct)] = beg + uproot.const.kMapOffset
@@ -34,6 +35,8 @@ class Util(object):
             self.tobjstring_count += 1
             buf += self.parent_obj.put_tobjstring(cursor, objct, self.tobjstring_count)
         elif clsname == "TBranch":
+            if objct.fields["_fWriteBasket"] != 0:
+                objct.fields["_fBasketSeek"][0] = self.seekpointer
             buf += objct.write(cursor)
         elif clsname == "TLeafI":
             buf += objct.put_tleafI(cursor)

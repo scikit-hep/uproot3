@@ -284,8 +284,8 @@ class TBranch(object):
                        "_fTotBytes": 0, #Number of bytes of the branch?
                        "_fZipBytes": 0, #Same as fTotBytes when no compression
                        "_fBasketBytes": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                       "_fBasketEntry": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], #TODO: WHAT DOES THIS MEAN?!!! (IMPORTANT!!!)
-                       "_fBasketSeek": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], #Number of entries = fMaxBaskets. Empty baskets = 0.
+                       "_fBasketEntry": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                       "_fBasketSeek": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                        "_fFileName": b"",
                        "_fBranches": [],
                        "_fLeaves": [],
@@ -325,6 +325,8 @@ class TBranch(object):
     def basket(self, items):
         self.fields["_fWriteBasket"] += 1
         self.fields["_fEntries"] += len(items)
+        self.fields["_fBasketEntry"][1] = len(items) #Why at 1?
+        self.fields["_fEntryNumber"] = len(items)
         raise NotImplementedError
 
     @staticmethod
@@ -522,24 +524,27 @@ class TBranch(object):
                 self.put_rootiofeatures(cursor))
         copy_cursor2 = copy(cursor)
         cursor.skip(self._format_tbranch2.size)
-        latterbytes = (self.put_tobjarray(cursor, self.fields["_fBranches"], classname="TBranch") +
+        midbytes = (self.put_tobjarray(cursor, self.fields["_fBranches"], classname="TBranch") +
                         self.put_tobjarray(cursor, self.fields["_fLeaves"][0], classname=self.fields["_fLeaves"][1]) +
                         #self.put_tobjarray(cursor, self.fields["fBaskets"]) +
                         b"@\x00\x00\x15\x00\x03\x00\x01\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
         cursor.skip(len(b"@\x00\x00\x15\x00\x03\x00\x01\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"))
-        latterbytes += (b"\x01")
+        midbytes += (b"\x01")
         cursor.skip(len(b"\x01"))
-        latterbytes += (cursor.put_array(self.fields["_fBasketBytes"]) +
-                b"\x01")
+        copy_cursor3 = copy(cursor)
+        cursor.skip(self.fields["_fBasketBytes"].nbytes)
+        latterbytes = b"\x01"
         cursor.skip(len(b"\x01"))
         latterbytes += (cursor.put_array(self.fields["_fBasketEntry"]) + b"\x01")
         cursor.skip(len(b"\x01"))
         latterbytes += (cursor.put_array(self.fields["_fBasketSeek"]) +
                 cursor.put_string(self.fields["_fFileName"]))
-        length = len(formerbytes) + len(latterbytes) + self._format_tbranch2.size + self._format_cntvers.size
+        length = (len(formerbytes) + len(midbytes) + len(latterbytes) + self._format_tbranch2.size + self.fields["_fBasketBytes"].nbytes +
+                  self._format_cntvers.size)
         if self.fields["_fWriteBasket"] != 0:
             self.fields["_fTotbytes"] = length
             self.fields["_fZipBytes"] = length
+            self.fields["_fBasketBytes"][0] = length
         buff = (formerbytes +
                copy_cursor2.put_fields(self._format_tbranch2,
                                        self.fields["_fOffset"],
@@ -549,6 +554,8 @@ class TBranch(object):
                                        self.fields["_fFirstEntry"],
                                        self.fields["_fTotBytes"],
                                        self.fields["_fZipBytes"]) +
+               midbytes +
+               copy_cursor3.put_array(self.fields["_fBasketBytes"]) +
                latterbytes)
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
