@@ -5,7 +5,9 @@
 from os.path import join
 
 import pytest
+
 import uproot
+from uproot.write.objects.TTree import newtree, newbranch
 
 ROOT = pytest.importorskip("ROOT")
 
@@ -870,3 +872,158 @@ def test_objany_multihist_uproot(tmp_path):
     h1 = f["test1"]
     assert h._fXaxis._fLabels[0] == b"Hi"
     assert h1._fXaxis._fLabels[0] == b"Hi"
+
+def test_ttree(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    tree = newtree()
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+
+    f = ROOT.TFile.Open(filename)
+    assert f.GetKey("t").GetClassName() == "TTree"
+
+def test_tree_diff_interface(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    with uproot.recreate(filename, compression=None) as f:
+        f.newtree("t")
+
+    f = ROOT.TFile.Open(filename)
+    assert f.GetKey("t").GetClassName() == "TTree"
+
+def test_ttree_multiple(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    tree = newtree()
+    with uproot.recreate(filename, compression=None) as f:
+        for i in range(100):
+            f["t"*(i+1)] = tree
+
+    f = ROOT.TFile.Open(filename)
+    for i in range(100):
+        assert f.GetKey("t"*(i+1)).GetClassName() == "TTree"
+
+def test_ttree_uproot(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    tree = newtree()
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+
+    f = uproot.open(filename)
+    assert f["t"]._classname == b"TTree"
+
+def test_ttree_multiple_uproot(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    tree = newtree()
+    with uproot.recreate(filename, compression=None) as f:
+        for i in range(100):
+            f["t"*(i+1)] = tree
+
+    f = uproot.open(filename)
+    for i in range(100):
+        assert f["t"*(i+1)]._classname == b"TTree"
+
+def test_ttree_empty_tbranch(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch("int32")
+    branchdict = {"intBranch": b}
+    tree = newtree(branchdict)
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+
+    f = ROOT.TFile.Open(filename)
+    assert f.Get("t").GetBranch("intBranch").GetName() == "intBranch"
+
+def test_ttree_empty_tbranch_multitree(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch("int32")
+    branchdict = {"intBranch": b}
+    tree = newtree(branchdict)
+    with uproot.recreate(filename, compression=None) as f:
+        for i in range(100):
+            f["t" * (i + 1)] = tree
+
+    f = ROOT.TFile.Open(filename)
+    for i in range(100):
+        assert f.Get("t" * (i + 1)).GetBranch("intBranch").GetName() == "intBranch"
+
+def test_ttree_empty_tbranch_uproot(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch("int32")
+    branchdict = {"intBranch": b}
+    tree = newtree(branchdict)
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+
+    f = uproot.open(filename)
+    assert f["t"]["intBranch"]._classname == b"TBranch"
+
+def test_ttree_empty_tbranch_multitree_uproot(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch("int32")
+    branchdict = {"intBranch": b}
+    tree = newtree(branchdict)
+    with uproot.recreate(filename, compression=None) as f:
+        for i in range(100):
+            f["t"*(i+1)] = tree
+
+    f = uproot.open(filename)
+    for i in range(100):
+        assert f["t" * (i + 1)]["intBranch"]._classname == b"TBranch"
+
+def test_ttree_empty_tbranch_multiple(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch("int32")
+    branchdict = {"intBranch": b, "testbranch": b}
+    tree = newtree(branchdict)
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+
+    f = ROOT.TFile.Open(filename)
+    assert f.Get("t").GetBranch("intBranch").GetName() == "intBranch"
+    assert f.Get("t").GetBranch("testbranch").GetName() == "testbranch"
+
+def test_ttree_empty_tbranch_multiple_uproot(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch("int32")
+    branchdict = {"intBranch": b, "testbranch": b}
+    tree = newtree(branchdict)
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+
+    f = uproot.open(filename)
+    assert f["t"]["intBranch"]._classname == b"TBranch"
+    assert f["t"]["testbranch"]._classname == b"TBranch"
+
+def test_ttree_empty_tbranch_diff_type(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch("int64")
+    branchdict = {"intBranch": b}
+    tree = newtree(branchdict)
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+
+    f = ROOT.TFile.Open(filename)
+    assert f.Get("t").GetBranch("intBranch").GetName() == "intBranch"
+
+def test_ttree_empty_tbranch_title(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch("int32", title="hi")
+    branchdict = {"intBranch": b}
+    tree = newtree(branchdict)
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+
+    f = ROOT.TFile.Open(filename)
+    assert f.Get("t").GetBranch("intBranch").GetTitle() == "hi"

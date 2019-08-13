@@ -22,6 +22,7 @@ import uproot.write.TFree
 import uproot.write.TKey
 from uproot.rootio import nofilter
 from uproot.write.objects.util import Util
+from uproot.write.objects.TTree import TTree
 
 class TFileUpdate(object):
     def __init__(self, path):
@@ -63,10 +64,16 @@ class TFileUpdate(object):
 
         return where, cycle
 
+    def newtree(self, name, branches={}, flushsize=30000, title="", compression=None):
+        self.__setitem__(name, uproot.write.objects.TTree.newtree(branches, flushsize, title, compression))
+
     def __setitem__(self, where, what):
         self.util = Util()
         where, cycle = self._normalizewhere(where)
-        what = uproot_methods.convert.towriteable(what)
+        if what.__class__.__name__ != "TTree" and what.__class__.__name__ != "newtree":
+            what = uproot_methods.convert.towriteable(what)
+        elif what.__class__.__name__ == "newtree":
+            what = TTree(what)
         cursor = uproot.write.sink.cursor.Cursor(self._fSeekFree)
         newkey = uproot.write.TKey.TKey(fClassName = what.fClassName,
                                         fName      = where,
@@ -77,7 +84,7 @@ class TFileUpdate(object):
                                         fCycle     = cycle if cycle is not None else self._rootdir.newcycle(where))
         newkeycursor = uproot.write.sink.cursor.Cursor(newkey.fSeekKey)
         newkey.write(cursor, self._sink)
-        what.write(self, cursor, where, self.compression, newkey, newkeycursor, self.util)
+        what._write(self, cursor, where, self.compression, newkey, newkeycursor, self.util)
         self._expandfile(cursor)
 
         self._rootdir.setkey(newkey)

@@ -1,6 +1,3 @@
-// Need TObjString, TH*, TProfile*, TTree with all primitive type branches, char*, all STL vector<>, string, vector<strings>, std::bitset, TLorentzVector, TVector2, TGraph, TMultiGraph.
-// Check streamers for TBranchElement, TLeafElement, TLeaf0, TLeafC.
-
 void allstreamers(){
     TFile *tfile = new TFile("dev/allstreamers.root", "RECREATE");
     tfile->SetCompressionLevel(0);

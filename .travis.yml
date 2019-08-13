@@ -64,7 +64,6 @@ install:
   - pip install "uproot-methods>=0.7.0"
   - python -c 'import uproot_methods; print(uproot_methods.__version__)'
   - pip install cachetools pkgconfig lz4 xxhash mock requests "pytest>=3.9" pytest-runner
-  - pip install lz4 requests
   - if [[ ${PYVER} = "2.7" ]] ; then pip install backports.lzma ; fi
   - pip install pandas
   # pyopenssl is for deployment
@@ -77,6 +76,7 @@ addons:
   apt:
     packages:
       - python-setuptools
+      - libatlas-base-dev
 
 script:
   pytest -v tests
