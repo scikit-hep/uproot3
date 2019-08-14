@@ -1027,3 +1027,59 @@ def test_ttree_empty_tbranch_title(tmp_path):
 
     f = ROOT.TFile.Open(filename)
     assert f.Get("t").GetBranch("intBranch").GetTitle() == "hi"
+
+def test_hist_rewrite_root(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+    testfile = join(str(tmp_path), "test.root")
+
+    f = ROOT.TFile.Open(testfile, "RECREATE")
+    h = ROOT.TH1F("hvar", "title", 5, 1, 10)
+    h.Sumw2()
+    h.Fill(1.0, 3)
+    h.Fill(2.0, 4)
+    h.Write()
+    f.Close()
+
+    t = uproot.open(testfile)
+    hist = t["hvar"]
+    with uproot.recreate(filename, compression=None) as f:
+        f["test"] = hist
+
+    f = ROOT.TFile.Open(filename, "UPDATE")
+    t = ROOT.TObjString("Hello World")
+    t.Write()
+    f.Close()
+
+    f = ROOT.TFile.Open(filename)
+    assert f.Get("Hello World") == "Hello World"
+
+def test_empty_ttree_rewrite_root(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch("int32")
+    branchdict = {"intBranch": b}
+    tree = newtree(branchdict)
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+
+    f = ROOT.TFile.Open(filename, "UPDATE")
+    t = ROOT.TObjString("Hello World")
+    t.Write()
+    f.Close()
+
+    f = ROOT.TFile.Open(filename)
+    assert f.Get("Hello World") == "Hello World"
+
+def test_string_rewrite_root(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    with uproot.recreate(filename, compression=None) as f:
+        f["a"*5] = "a"*5
+
+    f = ROOT.TFile.Open(filename, "UPDATE")
+    t = ROOT.TObjString("Hello World")
+    t.Write()
+    f.Close()
+
+    f = ROOT.TFile.Open(filename)
+    assert f.Get("Hello World") == "Hello World"
