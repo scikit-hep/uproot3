@@ -251,6 +251,7 @@ class TFileRecreate(TFileUpdate):
             freekey = uproot.write.TKey.TKey(b"TFile", self._filename, fObjlen=0, fSeekKey=cursor.index, fSeekPdir=self._fBEGIN)
             freeseg = uproot.write.TFree.TFree(cursor.index + freekey.fNbytes)
             freekey.fObjlen = freeseg.size()
+            freekey.fNbytes += freekey.fObjlen
 
             freekey.write(freecursor, self._sink)
             freeseg.write(freecursor, self._sink)

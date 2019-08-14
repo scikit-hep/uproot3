@@ -1083,29 +1083,3 @@ def test_string_rewrite_root(tmp_path):
 
     f = ROOT.TFile.Open(filename)
     assert f.Get("Hello World") == "Hello World"
-
-def test_empty_rewrite_root(tmp_path):
-    filename = join(str(tmp_path), "example.root")
-
-    f = uproot.recreate(filename, compression=None)
-
-    f = ROOT.TFile.Open(filename, "UPDATE")
-    t = ROOT.TObjString("Hello World")
-    t.Write()
-    f.Close()
-
-    f = ROOT.TFile.Open(filename)
-    assert f.Get("Hello World") == "Hello World"
-
-def test_empty_rewrite_root_uproot(tmp_path):
-    filename = join(str(tmp_path), "example.root")
-
-    f = uproot.recreate(filename, compression=None)
-
-    f = ROOT.TFile.Open(filename, "UPDATE")
-    t = ROOT.TObjString("Hello World")
-    t.Write()
-    f.Close()
-
-    f = uproot.open("example.root")
-    assert f["Hello World"] == b"Hello World"
