@@ -37,9 +37,9 @@ class TTree(object):
         self.fName = self.fixstring(self.name)
         self.fTitle = self.fixstring(newtree.title)
 
-        self.branches = []
+        self.branches = {}
         for name, branch in newtree.branches.items():
-            self.branches.append(TBranch(branch.type, name, branch.title, defaultBasketSize=32000, compression=branch.compression))
+            self.branches[name] = TBranch(branch.type, name, branch.title, defaultBasketSize=32000, compression=branch.compression)
 
         self.fields = {"_fLineColor": 602,
                        "_fLineStyle": 1,
@@ -84,6 +84,9 @@ class TTree(object):
             return string
         else:
             return string.encode("utf-8")
+
+    def __getitem__(self, name):
+        return self.branches[name]
 
     _format_cntvers = struct.Struct(">IH")
 
@@ -198,7 +201,7 @@ class TTree(object):
         self.fields["_fIndexValues"] = numpy.array(self.fields["_fIndexValues"], dtype=">f8", copy=False)
         self.fields["_fIndex"] = numpy.array(self.fields["_fIndex"], dtype=">i8", copy=False)
 
-        for branch in self.branches:
+        for _, branch in self.branches.items():
             self.fields["_fEntries"] += branch.fields["_fEntries"]
             self.fields["_fTotBytes"] += branch.fields["_fTotBytes"]
             self.fields["_fZipBytes"] += branch.fields["_fZipBytes"]

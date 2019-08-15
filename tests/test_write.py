@@ -1083,3 +1083,17 @@ def test_string_rewrite_root(tmp_path):
 
     f = ROOT.TFile.Open(filename)
     assert f.Get("Hello World") == "Hello World"
+
+def test_string_rewrite_root_compress(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    with uproot.recreate(filename, compression=uproot.ZLIB(4)) as f:
+        f["a"*5] = "a"*5
+
+    f = ROOT.TFile.Open(filename, "UPDATE")
+    t = ROOT.TObjString("Hello World")
+    t.Write()
+    f.Close()
+
+    f = ROOT.TFile.Open(filename)
+    assert f.Get("Hello World") == "Hello World"
