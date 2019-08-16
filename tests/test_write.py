@@ -5,6 +5,7 @@
 from os.path import join
 
 import pytest
+import numpy
 
 import uproot
 from uproot.write.objects.TTree import newtree, newbranch
@@ -1097,3 +1098,31 @@ def test_string_rewrite_root_compress(tmp_path):
 
     f = ROOT.TFile.Open(filename)
     assert f.Get("Hello World") == "Hello World"
+
+def test_branch_alt_interface(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    branchdict = {"intBranch": "int"}
+    tree = newtree(branchdict)
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+
+    f = ROOT.TFile.Open(filename)
+    assert f.Get("t").GetBranch("intBranch").GetName() == "intBranch"
+
+def test_branch_basket_one(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch("int32")
+    branchdict = {"intBranch": b}
+    tree = newtree(branchdict)
+    a = numpy.array([1, 2, 3, 4, 5]).astype("int32")
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+        f["t"]["intBranch"].basket(a)
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    treedata = tree.AsMatrix().astype("int32")
+    for i in range(5):
+        assert a[i] == treedata[i]

@@ -74,7 +74,7 @@ class TFileUpdate(object):
         if what.__class__.__name__ != "TTree" and what.__class__.__name__ != "newtree":
             what = uproot_methods.convert.towriteable(what)
         elif what.__class__.__name__ == "newtree":
-            what = TTree(what)
+            what = TTree(what, self)
             self._treedict[where] = what
         elif what.__class__.__name__ == "TTree":
             self._treedict[where] = what

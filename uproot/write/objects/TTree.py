@@ -11,6 +11,7 @@ import uproot
 import uproot.const
 import uproot.write.compress
 import uproot.write.sink.cursor
+from uproot.write.TKey import TKey
 
 class newbranch(object):
 
@@ -31,15 +32,21 @@ class newtree(object):
 
 class TTree(object):
 
-    def __init__(self, newtree):
+    def __init__(self, newtree, file):
         self.name = ""
         self.fClassName = b"TTree"
         self.fName = self.fixstring(self.name)
         self.fTitle = self.fixstring(newtree.title)
+        self.compression = newtree.compression
+        self.flushsize = newtree.flushsize
+        self.file = file
 
         self.branches = {}
         for name, branch in newtree.branches.items():
-            self.branches[name] = TBranch(branch.type, name, branch.title, defaultBasketSize=32000, compression=branch.compression)
+            if isinstance(branch, newbranch):
+                self.branches[name] = TBranch(self.file, self, branch.type, name, branch.title, branch.flushsize, branch.compression)
+            else:
+                self.branches[name] = TBranch(self.file, self, branch, name, "")
 
         self.fields = {"_fLineColor": 602,
                        "_fLineStyle": 1,
@@ -191,6 +198,11 @@ class TTree(object):
         self.util = util
         self.util.set_obj(self)
         copy_cursor = copy(cursor)
+        self.context = context
+        self.ttree_write_cursor = copy(copy_cursor)
+        self.write_name = name
+        self.write_compression = compression
+        self.write_key = key
         write_cursor = copy(cursor)
         self.keycursor = keycursor
         cursor.skip(self._format_cntvers.size)
@@ -202,9 +214,6 @@ class TTree(object):
         self.fields["_fIndex"] = numpy.array(self.fields["_fIndex"], dtype=">i8", copy=False)
 
         for _, branch in self.branches.items():
-            self.fields["_fEntries"] += branch.fields["_fEntries"]
-            self.fields["_fTotBytes"] += branch.fields["_fTotBytes"]
-            self.fields["_fZipBytes"] += branch.fields["_fZipBytes"]
             self.fields["_fLeaves"].append(branch.fields["_fLeaves"])
             #TODO: HAVE TO WRITE BRANCH!
             branch.util = self.util
@@ -256,11 +265,17 @@ class TTree(object):
         givenbytes = copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
         uproot.write.compress.write(context, write_cursor, givenbytes, compression, key, keycursor)
 
+    def append(self, item):
+        self.extend(item)
+
+    def extend(self, items):
+        raise NotImplementedError
+
 class TBranch(object):
 
     # Need to think about appropriate defaultBasketSize
     # Need to look at ROOT's default branch compression
-    def __init__(self, type, name, title, defaultBasketSize=32000, compression=None):
+    def __init__(self, file, tree, type, name, title="", flushsize=32000, compression=None):
 
         self.type = numpy.dtype(type).newbyteorder(">")
         self.name = self.fixstring(name)
@@ -270,10 +285,13 @@ class TBranch(object):
         else:
             self.title = self.fixstring(title)
             self.nametitle = self.title
-        self.defaultBasketSize = defaultBasketSize
+        self.defaultBasketSize = flushsize
         self.compression = compression
         self.util = None
         self.keycursor = None
+        self.basketdata = None
+        self.file = file
+        self.tree = tree
 
         self.fields = {"_fCompress" : 100,
                        "_fBasketSize" : self.defaultBasketSize,
@@ -319,18 +337,38 @@ class TBranch(object):
         self.fields["_fBasketEntry"] = numpy.array(self.fields["_fBasketEntry"], dtype=">i8", copy=False)
         self.fields["_fBasketSeek"] = numpy.array(self.fields["_fBasketSeek"], dtype=">i8", copy=False)
 
-    def append(self, item):
-        self.extend(item)
-
-    def extend(self, items):
-        raise NotImplementedError
-
+    _format_basketkey = struct.Struct(">Hiiii")
     def basket(self, items):
         self.fields["_fWriteBasket"] += 1
         self.fields["_fEntries"] += len(items)
         self.fields["_fBasketEntry"][1] = len(items) #Why at 1?
         self.fields["_fEntryNumber"] = len(items)
-        raise NotImplementedError
+        basketdata = numpy.array(items, dtype=self.type, copy=False)
+        givenbytes = basketdata.tostring()
+        cursor = uproot.write.sink.cursor.Cursor(self.file._fSeekFree)
+        key = TKey(fClassName=b"TBasket",
+                   fName=self.name,
+                   fSeekKey=self.file._fSeekFree,
+                   fSeekPdir=self.file._fBEGIN)
+        keycursor = uproot.write.sink.cursor.Cursor(key.fSeekKey)
+        key.write(cursor, self.file._sink)
+        fVersion = 3
+        fBufferSize = 32000
+        fNevBufSize = 4
+        fNevBuf = 5
+        fLast = 93
+        cursor.write_fields(self.file._sink, self._format_basketkey, fVersion, fBufferSize, fNevBufSize, fNevBuf, fLast)
+        uproot.write.compress.write(self.file, cursor, givenbytes, self.compression, key, keycursor)
+
+        self.file._expandfile(cursor)
+
+        self.tree.fields["_fEntries"] = self.fields["_fEntries"]
+        self.tree.fields["_fTotBytes"] += self.fields["_fTotBytes"]
+        self.tree.fields["_fZipBytes"] += self.fields["_fZipBytes"]
+        self.tree._write(self.tree.context, self.tree.ttree_write_cursor, self.tree.write_name, self.tree.write_compression,
+                        self.tree.write_key, self.tree.keycursor, self.tree.util)
+
+        self.file._sink.flush()
 
     @staticmethod
     def fixstring(string):
