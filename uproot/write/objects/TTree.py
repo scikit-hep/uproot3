@@ -346,6 +346,7 @@ class TBranch(object):
         basketdata = numpy.array(items, dtype=self.type, copy=False)
         givenbytes = basketdata.tostring()
         cursor = uproot.write.sink.cursor.Cursor(self.file._fSeekFree)
+        self.fields["_fBasketSeek"][0] = cursor.index
         key = TKey(fClassName=b"TBasket",
                    fName=self.name,
                    fSeekKey=self.file._fSeekFree,
@@ -365,6 +366,7 @@ class TBranch(object):
         self.tree.fields["_fEntries"] = self.fields["_fEntries"]
         self.tree.fields["_fTotBytes"] += self.fields["_fTotBytes"]
         self.tree.fields["_fZipBytes"] += self.fields["_fZipBytes"]
+        self.tree.branches[self.revertstring(self.name)] = self
         self.tree._write(self.tree.context, self.tree.ttree_write_cursor, self.tree.write_name, self.tree.write_compression,
                         self.tree.write_key, self.tree.keycursor, self.tree.util)
 
@@ -376,6 +378,13 @@ class TBranch(object):
             return string
         else:
             return string.encode("utf-8")
+
+    @staticmethod
+    def revertstring(string):
+        if isinstance(string, bytes):
+            return string.decode()
+        else:
+            return string
 
     _format_cntvers = struct.Struct(">IH")
 
