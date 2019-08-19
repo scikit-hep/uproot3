@@ -26,12 +26,11 @@ class BasketKey(object):
 
     @property
     def fKeylen(self):
-        return self._format1.size + uproot.write.sink.cursor.Cursor.length_strings([self.fClassName, self.fName, self.fTitle]) + self._format_basketkey.size
+        return self._format1.size + uproot.write.sink.cursor.Cursor.length_strings([self.fClassName, self.fName, self.fTitle]) + self._format_basketkey.size + 1
 
     def update(self):
         self.cursor.update_fields(self.sink, self._format1, self.fNbytes, self._version, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
 
-    _format_basketkey = struct.Struct(">Hiiii")
     def write(self, cursor, sink):
         self.cursor = uproot.write.sink.cursor.Cursor(cursor.index)
         self.sink = sink
@@ -47,9 +46,11 @@ class BasketKey(object):
         fNevBufSize = 4
         fNevBuf = 5
         cursor.write_fields(sink, self._format_basketkey, basketversion, self.fBufferSize, fNevBufSize, fNevBuf, self.fLast)
+        cursor.write_data(sink, b"\x00")
 
     _version = 1004
     _format1 = struct.Struct(">ihiIhhqq")
+    _format_basketkey = struct.Struct(">Hiiii")
 
 class TKey(object):
     def __init__(self, fClassName, fName, fTitle=b"", fObjlen=0, fSeekKey=100, fSeekPdir=0, fCycle=1):
