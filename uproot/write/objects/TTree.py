@@ -11,7 +11,7 @@ import uproot
 import uproot.const
 import uproot.write.compress
 import uproot.write.sink.cursor
-from uproot.write.TKey import TKey
+from uproot.write.TKey import TKey, BasketKey
 
 class newbranch(object):
 
@@ -337,7 +337,6 @@ class TBranch(object):
         self.fields["_fBasketEntry"] = numpy.array(self.fields["_fBasketEntry"], dtype=">i8", copy=False)
         self.fields["_fBasketSeek"] = numpy.array(self.fields["_fBasketSeek"], dtype=">i8", copy=False)
 
-    _format_basketkey = struct.Struct(">Hiiii")
     def basket(self, items):
         self.fields["_fWriteBasket"] += 1
         self.fields["_fEntries"] += len(items)
@@ -347,18 +346,14 @@ class TBranch(object):
         givenbytes = basketdata.tostring()
         cursor = uproot.write.sink.cursor.Cursor(self.file._fSeekFree)
         self.fields["_fBasketSeek"][0] = cursor.index
-        key = TKey(fClassName=b"TBasket",
-                   fName=self.name,
-                   fSeekKey=self.file._fSeekFree,
-                   fSeekPdir=self.file._fBEGIN)
+        key = BasketKey(fName=self.name,
+                        fSeekKey=self.file._fSeekFree,
+                        fSeekPdir=self.file._fBEGIN,
+                        #fLast=self.fields["_fTotBytes"],
+                        fLast=93,
+                        fBufferSize=32000)
         keycursor = uproot.write.sink.cursor.Cursor(key.fSeekKey)
         key.write(cursor, self.file._sink)
-        fVersion = 3
-        fBufferSize = 32000
-        fNevBufSize = 4
-        fNevBuf = 5
-        fLast = 93
-        cursor.write_fields(self.file._sink, self._format_basketkey, fVersion, fBufferSize, fNevBufSize, fNevBuf, fLast)
         uproot.write.compress.write(self.file, cursor, givenbytes, self.compression, key, keycursor)
 
         self.file._expandfile(cursor)
