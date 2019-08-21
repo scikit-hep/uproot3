@@ -1159,6 +1159,6 @@ def test_branch_basket_one_rewrite_root(tmp_path):
     t = ROOT.TObjString("Hello World")
     t.Write()
     f.Close()
-    
+
     f = ROOT.TFile.Open(filename)
     assert f.Get("Hello World") == "Hello World"
