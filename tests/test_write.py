@@ -1116,13 +1116,30 @@ def test_branch_basket_one(tmp_path):
     b = newbranch("int32")
     branchdict = {"intBranch": b}
     tree = newtree(branchdict)
-    a = numpy.array([1, 2, 3, 4, 5]).astype("int32").newbyteorder(">")
+    a = numpy.array([1, 2, 3, 4, 5], dtype=">i4")
     with uproot.recreate(filename, compression=None) as f:
         f["t"] = tree
         f["t"]["intBranch"].basket(a)
 
     f = ROOT.TFile.Open(filename)
     tree = f.Get("t")
-    treedata = tree.AsMatrix().astype("int32").newbyteorder(">")
+    treedata = tree.AsMatrix().astype(">i4")
+    for i in range(5):
+        assert a[i] == treedata[i]
+
+def test_branch_basket_one_uproot(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch("int32")
+    branchdict = {"intBranch": b}
+    tree = newtree(branchdict)
+    a = numpy.array([1, 2, 3, 4, 5]).astype("int32").newbyteorder(">")
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+        f["t"]["intBranch"].basket(a)
+
+    f = uproot.open(filename)
+    tree = f["t"]
+    treedata = tree.array("intBranch")
     for i in range(5):
         assert a[i] == treedata[i]

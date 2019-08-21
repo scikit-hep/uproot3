@@ -361,7 +361,7 @@ class TBranch(object):
         self.file._expandfile(cursor)
 
         self.tree.fields["_fEntries"] = self.fields["_fEntries"]
-        self.tree.fields["_fTotBytes"] = self.fields["_fTotBytes"] = key.fNbytes
+        self.tree.fields["_fTotBytes"] = self.fields["_fTotBytes"] = key.fObjlen + key.fKeylen
         self.tree.fields["_fZipBytes"] = self.fields["_fZipBytes"] = key.fNbytes
         self.fields["_fBasketBytes"][0] = key.fNbytes
         self.tree.branches[self.revertstring(self.name)] = self
@@ -575,8 +575,8 @@ class TBranch(object):
         midbytes = (self.put_tobjarray(cursor, self.fields["_fBranches"], classname="TBranch") +
                         self.put_tobjarray(cursor, self.fields["_fLeaves"][0], classname=self.fields["_fLeaves"][1]) +
                         #self.put_tobjarray(cursor, self.fields["fBaskets"]) +
-                        b"@\x00\x00\x15\x00\x03\x00\x01\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
-        cursor.skip(len(b"@\x00\x00\x15\x00\x03\x00\x01\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"))
+                        b'@\x00\x00\x1d\x00\x03\x00\x01\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+        cursor.skip(len(b'@\x00\x00\x1d\x00\x03\x00\x01\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'))
         midbytes += (b"\x01")
         cursor.skip(len(b"\x01"))
         copy_cursor3 = copy(cursor)
