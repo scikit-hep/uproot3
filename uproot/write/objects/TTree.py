@@ -42,14 +42,6 @@ class TTree(object):
         self.flushsize = newtree.flushsize
         self.file = file
 
-        self.branches = {}
-        for name, branch in newtree.branches.items():
-            if isinstance(branch, newbranch):
-                branchobj = TBranch(self.file, self, branch.type, name, branch.title, branch.flushsize, branch.compression)
-            else:
-                branchobj = TBranch(self.file, self, branch, name, "")
-            self.branches[name] = branchobj
-
         self.fields = {"_fLineColor": 602,
                        "_fLineStyle": 1,
                        "_fLineWidth": 1,
@@ -86,6 +78,17 @@ class TTree(object):
                        "_fLeaves": [],
                        "_fUserInfo": None,
                        "_fBranchRef": None}
+
+        self.branches = {}
+        for name, branch in newtree.branches.items():
+            if isinstance(branch, newbranch):
+                branchobj = TBranch(self.file, self, branch.type, name, branch.title, branch.flushsize,
+                                    branch.compression)
+            else:
+                branchobj = TBranch(self.file, self, branch, name, "")
+            self.branches[name] = branchobj
+            self.fields["_fLeaves"].append(self.branches[name].fields["_fLeaves"])
+            self.fields["_fBranches"].append(self.branches[name])
 
     @staticmethod
     def fixstring(string):
@@ -215,11 +218,9 @@ class TTree(object):
         self.fields["_fIndexValues"] = numpy.array(self.fields["_fIndexValues"], dtype=">f8", copy=False)
         self.fields["_fIndex"] = numpy.array(self.fields["_fIndex"], dtype=">i8", copy=False)
 
-        for _, branch in self.branches.items():
-            self.fields["_fLeaves"].append(branch.fields["_fLeaves"])
+        for branch in self.fields["_fBranches"]:
             branch.util = self.util
             branch.keycursor = self.keycursor
-            self.fields["_fBranches"].append(branch)
 
         buff = (self.put_tnamed(cursor, name, self.fTitle, hexbytes=numpy.uint32(0x03000008)) +
                 self.put_tattline(cursor) +
