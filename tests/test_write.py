@@ -1143,3 +1143,22 @@ def test_branch_basket_one_uproot(tmp_path):
     treedata = tree.array("intBranch")
     for i in range(5):
         assert a[i] == treedata[i]
+
+def test_branch_basket_one_rewrite_root(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch("int32")
+    branchdict = {"intBranch": b}
+    tree = newtree(branchdict)
+    a = numpy.array([1, 2, 3, 4, 5]).astype("int32").newbyteorder(">")
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+        f["t"]["intBranch"].basket(a)
+
+    f = ROOT.TFile.Open(filename, "UPDATE")
+    t = ROOT.TObjString("Hello World")
+    t.Write()
+    f.Close()
+    
+    f = ROOT.TFile.Open(filename)
+    assert f.Get("Hello World") == "Hello World"
