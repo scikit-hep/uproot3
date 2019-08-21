@@ -11,7 +11,8 @@ import uproot
 import uproot.const
 import uproot.write.compress
 import uproot.write.sink.cursor
-from uproot.write.TKey import TKey, BasketKey
+from uproot.write.TKey import BasketKey
+from uproot.write.objects.util import Util
 
 class newbranch(object):
 
@@ -44,9 +45,10 @@ class TTree(object):
         self.branches = {}
         for name, branch in newtree.branches.items():
             if isinstance(branch, newbranch):
-                self.branches[name] = TBranch(self.file, self, branch.type, name, branch.title, branch.flushsize, branch.compression)
+                branchobj = TBranch(self.file, self, branch.type, name, branch.title, branch.flushsize, branch.compression)
             else:
-                self.branches[name] = TBranch(self.file, self, branch, name, "")
+                branchobj = TBranch(self.file, self, branch, name, "")
+            self.branches[name] = branchobj
 
         self.fields = {"_fLineColor": 602,
                        "_fLineStyle": 1,
@@ -215,7 +217,6 @@ class TTree(object):
 
         for _, branch in self.branches.items():
             self.fields["_fLeaves"].append(branch.fields["_fLeaves"])
-            #TODO: HAVE TO WRITE BRANCH!
             branch.util = self.util
             branch.keycursor = self.keycursor
             self.fields["_fBranches"].append(branch)
@@ -294,7 +295,7 @@ class TBranch(object):
         self.tree = tree
 
         self.fields = {"_fCompress" : 100,
-                       "_fBasketSize" : self.defaultBasketSize,
+                       "_fBasketSize" : 32000,
                        "_fEntryOffsetLen": 0,
                        "_fWriteBasket": 0, #Number of baskets
                        "_fOffset": 0,
@@ -359,11 +360,12 @@ class TBranch(object):
         self.file._expandfile(cursor)
 
         self.tree.fields["_fEntries"] = self.fields["_fEntries"]
-        self.tree.fields["_fTotBytes"] += self.fields["_fTotBytes"]
-        self.tree.fields["_fZipBytes"] += self.fields["_fZipBytes"]
+        self.tree.fields["_fTotBytes"] = self.fields["_fTotBytes"] = key.fNbytes
+        self.tree.fields["_fZipBytes"] = self.fields["_fZipBytes"] = key.fNbytes
+        self.fields["_fBasketBytes"][0] = key.fNbytes
         self.tree.branches[self.revertstring(self.name)] = self
         self.tree._write(self.tree.context, self.tree.ttree_write_cursor, self.tree.write_name, self.tree.write_compression,
-                        self.tree.write_key, self.tree.keycursor, self.tree.util)
+                        self.tree.write_key, self.tree.keycursor, Util())
 
         self.file._sink.flush()
 
@@ -586,10 +588,6 @@ class TBranch(object):
                 cursor.put_string(self.fields["_fFileName"]))
         length = (len(formerbytes) + len(midbytes) + len(latterbytes) + self._format_tbranch2.size + self.fields["_fBasketBytes"].nbytes +
                   self._format_cntvers.size)
-        if self.fields["_fWriteBasket"] != 0:
-            self.fields["_fTotbytes"] = length
-            self.fields["_fZipBytes"] = length
-            self.fields["_fBasketBytes"][0] = length
         buff = (formerbytes +
                copy_cursor2.put_fields(self._format_tbranch2,
                                        self.fields["_fOffset"],
