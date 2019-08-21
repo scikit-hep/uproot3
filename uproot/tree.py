@@ -501,6 +501,9 @@ class TTreeMethods(object):
     def arrays(self, branches=None, outputtype=dict, namedecode=None, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         awkward = _normalize_awkwardlib(awkwardlib)
         branches = list(self._normalize_branches(branches, awkward))
+        for branch, interpretation in branches:
+            if branch._recoveredbaskets is None:
+                branch._tryrecover()
         if flatten is None:
             branches = [(branch, interpretation) for branch, interpretation in branches if not isinstance(interpretation, asjagged)]
             flatten = False
@@ -549,6 +552,9 @@ class TTreeMethods(object):
         entrysteps = list(self._normalize_entrysteps(entrysteps, branches, entrystart, entrystop, keycache))
         awkward = _normalize_awkwardlib(awkwardlib)
         branches = list(self._normalize_branches(branches, awkward))
+        for branch, interpretation in branches:
+            if branch._recoveredbaskets is None:
+                branch._tryrecover()
 
         lazytree = _LazyTree(self._context.sourcepath, self._context.treename, self, dict((b.name, x) for b, x in branches), flatten, awkward.__name__, basketcache, keycache, executor)
 
@@ -620,6 +626,9 @@ class TTreeMethods(object):
         entrysteps = self._normalize_entrysteps(entrysteps, branches, entrystart, entrystop, keycache)
         awkward = _normalize_awkwardlib(awkwardlib)
         branches = list(self._normalize_branches(branches, awkward))
+        for branch, interpretation in branches:
+            if branch._recoveredbaskets is None:
+                branch._tryrecover()
 
         # for the case of outputtype == pandas.DataFrame, do some preparation to fill DataFrames efficiently
         ispandas = getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame"
