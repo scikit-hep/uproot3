@@ -10,7 +10,7 @@ import uproot.write.sink.cursor
 import uproot.write.util
 
 class BasketKey(object):
-    def __init__(self, fName, fObjlen=0, fSeekKey=100, fSeekPdir=0, fLast=0, fBufferSize=0):
+    def __init__(self, fName, fObjlen=0, fSeekKey=100, fSeekPdir=0, fBufferSize=0):
         self.fClassName = b"TBasket"
         self.fName = fName
         self.fTitle = b"t"
@@ -21,7 +21,6 @@ class BasketKey(object):
         self.fCycle = 0
         self.fDatime = uproot.write.util.datime()
         self.fNbytes = self.fObjlen + self.fKeylen
-        self.fLast = fLast
         self.fBufferSize = fBufferSize
 
     @property
@@ -45,7 +44,8 @@ class BasketKey(object):
         basketversion = 3
         fNevBufSize = 4
         fNevBuf = 5
-        cursor.write_fields(sink, self._format_basketkey, basketversion, self.fBufferSize, fNevBufSize, fNevBuf, self.fLast)
+        fLast = self.fNbytes
+        cursor.write_fields(sink, self._format_basketkey, basketversion, self.fBufferSize, fNevBufSize, fNevBuf, fLast)
         cursor.write_data(sink, b"\x00")
 
     _version = 1004
