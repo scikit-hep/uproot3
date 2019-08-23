@@ -265,7 +265,7 @@ class TTree(object):
         length = len(buff) + self._format_cntvers.size
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
         givenbytes = copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
-        uproot.write.compress.write(context, write_cursor, givenbytes, compression, key, keycursor)
+        uproot.write.compress.write(context, write_cursor, givenbytes, compression, key, copy(self.keycursor))
 
     def append(self, item):
         self.extend(item)
@@ -604,4 +604,3 @@ class TBranch(object):
         length = (len(buff) + self._format_cntvers.size)
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
-
