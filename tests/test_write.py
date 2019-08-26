@@ -1222,7 +1222,7 @@ def test_branch_basket_one_tleaff(tmp_path):
     b = newbranch("float32")
     branchdict = {"floatBranch": b}
     tree = newtree(branchdict)
-    a = [1.0, 2.0, 3.0, 4.0, 5.0]
+    a = numpy.array([1, 2, 3, 4, 5], dtype="float32")
     with uproot.recreate(filename, compression=None) as f:
         f["t"] = tree
         f["t"]["floatBranch"].basket(a)
@@ -1230,5 +1230,75 @@ def test_branch_basket_one_tleaff(tmp_path):
     f = ROOT.TFile.Open(filename)
     tree = f.Get("t")
     treedata = tree.AsMatrix().astype("float32")
+    for i in range(5):
+        assert a[i] == treedata[i]
+
+def test_branch_basket_one_tleafd(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch(">f8")
+    branchdict = {"float8Branch": b}
+    tree = newtree(branchdict)
+    a = numpy.array([1, 2, 3, 4, 5], dtype=">f8")
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+        f["t"]["float8Branch"].basket(a)
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    treedata = tree.AsMatrix().astype(">f8")
+    for i in range(5):
+        assert a[i] == treedata[i]
+
+def test_branch_basket_one_tleafl(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch(">i8")
+    branchdict = {"intBranch": b}
+    tree = newtree(branchdict)
+    a = numpy.array([1, 2, 3, 4, 5], dtype=">i8")
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+        f["t"]["intBranch"].basket(a)
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    treedata = tree.AsMatrix().astype(">i8")
+    for i in range(5):
+        assert a[i] == treedata[i]
+
+"""
+def test_branch_basket_one_tleafO(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch(">?")
+    branchdict = {"booleanBranch": b}
+    tree = newtree(branchdict)
+    a = numpy.array([1, 0, 0, 0, 1], dtype=">?")
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+        f["t"]["booleanBranch"].basket(a)
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    treedata = tree.AsMatrix().astype(">?")
+    for i in range(5):
+        assert a[i] == treedata[i]
+"""
+
+def test_branch_basket_one_tleafs(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch(">i2")
+    branchdict = {"int2Branch": b}
+    tree = newtree(branchdict)
+    a = numpy.array([1, 2, 3, 4, 5], dtype=">i2")
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+        f["t"]["int2Branch"].basket(a)
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    treedata = tree.AsMatrix().astype(">i2")
     for i in range(5):
         assert a[i] == treedata[i]

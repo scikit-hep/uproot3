@@ -326,7 +326,7 @@ class TBranch(object):
             self.fields["_fLeaves"] = [self, "TLeafI"]
         elif self.type == ">i8":
             title_pad = b"/L"
-            self.fields["_fLeaves"] = [self, "TleafL"]
+            self.fields["_fLeaves"] = [self, "TLeafL"]
         elif self.type == ">?":
             title_pad = b"/O"
             self.fields["_fLeaves"] = [self, "TLeafO"]
@@ -358,6 +358,7 @@ class TBranch(object):
         cursor = uproot.write.sink.cursor.Cursor(self.file._fSeekFree)
         self.fields["_fBasketSeek"][0] = cursor.index
         key = BasketKey(fName=self.name,
+                        fNevBuf=len(items),
                         fNevBufSize=numpy.dtype(self.type).itemsize,
                         fSeekKey=self.file._fSeekFree,
                         fSeekPdir=self.file._fBEGIN,
