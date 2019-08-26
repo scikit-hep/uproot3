@@ -1162,3 +1162,73 @@ def test_branch_basket_one_rewrite_root(tmp_path):
 
     f = ROOT.TFile.Open(filename)
     assert f.Get("Hello World") == "Hello World"
+
+def test_branch_basket_one_more_data(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch("int32")
+    branchdict = {"intBranch": b}
+    tree = newtree(branchdict)
+    a = []
+    for i in range(0, 100):
+        a.append(i)
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+        f["t"]["intBranch"].basket(a)
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    treedata = tree.AsMatrix().astype(">i4")
+    for i in range(0, 100):
+        assert a[i] == treedata[i]
+
+def test_branch_basket_one_less_data(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch("int32")
+    branchdict = {"intBranch": b}
+    tree = newtree(branchdict)
+    a = numpy.array([1, 2, 3, 4], dtype=">i4")
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+        f["t"]["intBranch"].basket(a)
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    treedata = tree.AsMatrix().astype(">i4")
+    for i in range(4):
+        assert a[i] == treedata[i]
+
+def test_branch_basket_one_tleafb(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch("int8")
+    branchdict = {"int8Branch": b}
+    tree = newtree(branchdict)
+    a = numpy.array([1, 2, 3, 4, 5], dtype="int8")
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+        f["t"]["int8Branch"].basket(a)
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    treedata = tree.AsMatrix().astype("int8")
+    for i in range(5):
+        assert a[i] == treedata[i]
+
+def test_branch_basket_one_tleaff(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch("float32")
+    branchdict = {"floatBranch": b}
+    tree = newtree(branchdict)
+    a = [1.0, 2.0, 3.0, 4.0, 5.0]
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+        f["t"]["floatBranch"].basket(a)
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    treedata = tree.AsMatrix().astype("float32")
+    for i in range(5):
+        assert a[i] == treedata[i]

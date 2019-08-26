@@ -281,12 +281,6 @@ class TBranch(object):
 
         self.type = numpy.dtype(type).newbyteorder(">")
         self.name = self.fixstring(name)
-        if title == "":
-            self.title = self.fixstring(name)
-            self.nametitle = self.title + b"/I"
-        else:
-            self.title = self.fixstring(title)
-            self.nametitle = self.title
         self.defaultBasketSize = flushsize
         self.compression = compression
         self.util = None
@@ -317,24 +311,37 @@ class TBranch(object):
                        #"_fBaskets": b"\x00\x03\x00\x01\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00"}
                        "_fBaskets": b'@\x00\x00\x1d\x00\x03\x00\x01\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'}
 
+        #TODO: Fix else condition to not always return NotImplementedError
         if self.type == "int8":
+            title_pad = b"/B"
             self.fields["_fLeaves"] = [self, "TLeafB"]
-        elif self.type == ">U":
-            self.fields["_fLeaves"] = [self, "TLeafC"]
         elif self.type == ">f8":
+            title_pad = b"/D"
             self.fields["_fLeaves"] = [self, "TLeafD"]
         elif self.type == ">f4":
+            title_pad = b"/F"
             self.fields["_fLeaves"] = [self, "TLeafF"]
         elif self.type == ">i4":
+            title_pad = b"/I"
             self.fields["_fLeaves"] = [self, "TLeafI"]
         elif self.type == ">i8":
+            title_pad = b"/L"
             self.fields["_fLeaves"] = [self, "TleafL"]
         elif self.type == ">?":
+            title_pad = b"/O"
             self.fields["_fLeaves"] = [self, "TLeafO"]
         elif self.type == ">i2":
+            title_pad = b"/S"
             self.fields["_fLeaves"] = [self, "TLeafS"]
         else:
             raise NotImplementedError
+
+        if title == "":
+            self.title = self.fixstring(name)
+            self.nametitle = self.title + title_pad
+        else:
+            self.title = self.fixstring(title)
+            self.nametitle = self.title
 
         self.fields["_fBasketBytes"] = numpy.array(self.fields["_fBasketBytes"], dtype=">i4", copy=False)
         self.fields["_fBasketEntry"] = numpy.array(self.fields["_fBasketEntry"], dtype=">i8", copy=False)
@@ -351,6 +358,7 @@ class TBranch(object):
         cursor = uproot.write.sink.cursor.Cursor(self.file._fSeekFree)
         self.fields["_fBasketSeek"][0] = cursor.index
         key = BasketKey(fName=self.name,
+                        fNevBufSize=numpy.dtype(self.type).itemsize,
                         fSeekKey=self.file._fSeekFree,
                         fSeekPdir=self.file._fBEGIN,
                         fBufferSize=32000)
@@ -431,7 +439,7 @@ class TBranch(object):
         cursor.skip(self._format_cntvers.size)
         vers = 2
         fLen = 1
-        fLenType = 4
+        fLenType = numpy.dtype(self.type).itemsize
         fOffset = 0
         fIsRange = False
         fIsUnsigned = False
