@@ -1267,7 +1267,7 @@ def test_branch_basket_one_tleafl(tmp_path):
     for i in range(5):
         assert a[i] == treedata[i]
 
-"""
+
 def test_branch_basket_one_tleafO(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
@@ -1279,12 +1279,23 @@ def test_branch_basket_one_tleafO(tmp_path):
         f["t"] = tree
         f["t"]["booleanBranch"].basket(a)
 
-    f = ROOT.TFile.Open(filename)
-    tree = f.Get("t")
-    treedata = tree.AsMatrix().astype(">?")
+    ROOT.gInterpreter.Declare("""
+    void readbasket(bool* arr) {
+        Bool_t x;
+        TFile f("example.root");
+        auto tree = f.Get<TTree>("t");
+        auto branch = tree->GetBranch("booleanBranch");
+        branch->SetAddress(&x);
+        for (int i=0; i<tree->GetEntries(); i++) {
+            tree->GetEvent(i);
+            arr[i] = x;
+        }
+    }""")
+
+    testa = numpy.array([0, 0, 0, 0, 0], dtype=">?")
+    ROOT.readbasket(testa)
     for i in range(5):
-        assert a[i] == treedata[i]
-"""
+        assert a[i] == testa[i]
 
 def test_branch_basket_one_tleafs(tmp_path):
     filename = join(str(tmp_path), "example.root")
