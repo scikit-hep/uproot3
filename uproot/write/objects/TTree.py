@@ -242,13 +242,13 @@ class TTree(object):
                                   self.fields["_fMaxVirtualSize"],
                                   self.fields["_fAutoSave"],
                                   self.fields["_fAutoFlush"],
-                                  self.fields["_fEstimate"]) +
-                cursor.put_array(self.fields["_fClusterRangeEnd"]) +
+                                  self.fields["_fEstimate"]))
+        buff += (b"\x00")
+        cursor.skip(len(b"\x00"))
+        buff += (cursor.put_array(self.fields["_fClusterRangeEnd"]) +
                 b"\x00")
         cursor.skip(len(b"\x00"))
-        buff += (cursor.put_array(self.fields["_fClusterSize"]) +
-                b"\x00")
-        cursor.skip(len(b"\x00"))
+        buff += (cursor.put_array(self.fields["_fClusterSize"]))
         buff += (self.put_rootiofeatures(cursor) +
                 self.put_tobjarray(cursor, self.fields["_fBranches"], "TBranch", fBits=50348032))
         if self.fields["_fBranches"] == []:
@@ -347,16 +347,19 @@ class TBranch(object):
         self.fields["_fBasketEntry"] = numpy.array(self.fields["_fBasketEntry"], dtype=">i8", copy=False)
         self.fields["_fBasketSeek"] = numpy.array(self.fields["_fBasketSeek"], dtype=">i8", copy=False)
 
+        self.basketloc = 0
+
     def basket(self, items):
+        self.basketloc += 1
         self.fields["_fWriteBasket"] += 1
         self.fields["_fEntries"] += len(items)
-        self.fields["_fBasketEntry"][1] = len(items) #Why at 1?
-        self.fields["_fEntryNumber"] = len(items)
+        self.fields["_fBasketEntry"][self.basketloc] = self.fields["_fEntries"]
+        self.fields["_fEntryNumber"] += len(items)
         #self.fields["_fBaskets"] += b"\x00"*8
         basketdata = numpy.array(items, dtype=self.type, copy=False)
         givenbytes = basketdata.tostring()
         cursor = uproot.write.sink.cursor.Cursor(self.file._fSeekFree)
-        self.fields["_fBasketSeek"][0] = cursor.index
+        self.fields["_fBasketSeek"][self.basketloc - 1] = cursor.index
         key = BasketKey(fName=self.name,
                         fNevBuf=len(items),
                         fNevBufSize=numpy.dtype(self.type).itemsize,
@@ -370,9 +373,11 @@ class TBranch(object):
         self.file._expandfile(cursor)
 
         self.tree.fields["_fEntries"] = self.fields["_fEntries"]
-        self.tree.fields["_fTotBytes"] = self.fields["_fTotBytes"] = key.fObjlen + key.fKeylen
-        self.tree.fields["_fZipBytes"] = self.fields["_fZipBytes"] = key.fNbytes
-        self.fields["_fBasketBytes"][0] = key.fNbytes
+        self.fields["_fTotBytes"] += key.fObjlen + key.fKeylen
+        self.fields["_fZipBytes"] += key.fNbytes
+        self.tree.fields["_fTotBytes"] = self.fields["_fTotBytes"]
+        self.tree.fields["_fZipBytes"] = self.fields["_fZipBytes"]
+        self.fields["_fBasketBytes"][self.basketloc - 1] = key.fNbytes
         self.tree.branches[self.revertstring(self.name)] = self
         self.tree._write(self.tree.context, self.tree.ttree_write_cursor, self.tree.write_name, self.tree.write_compression,
                         self.tree.write_key, self.tree.keycursor, Util())

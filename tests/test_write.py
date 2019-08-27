@@ -1313,7 +1313,6 @@ def test_branch_basket_one_tleafs(tmp_path):
     for i in range(5):
         assert a[i] == treedata[i]
 
-"""
 def test_one_branch_multi_basket_same_type(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
@@ -1325,10 +1324,11 @@ def test_one_branch_multi_basket_same_type(tmp_path):
     with uproot.recreate(filename, compression=None) as f:
         f["t"] = tree
         f["t"]["intBranch"].basket(a)
+        f["t"]["intBranch"].basket(b)
 
     f = ROOT.TFile.Open(filename)
     tree = f.Get("t")
     treedata = tree.AsMatrix().astype(">i4")
     for i in range(5):
         assert a[i] == treedata[i]
-"""
+        assert b[i] == treedata[i+5]
