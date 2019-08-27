@@ -1313,7 +1313,7 @@ def test_branch_basket_one_tleafs(tmp_path):
     for i in range(5):
         assert a[i] == treedata[i]
 
-def test_one_branch_multi_basket_same_type(tmp_path):
+def test_one_branch_multi_basket(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
     b = newbranch("int32")
@@ -1332,3 +1332,75 @@ def test_one_branch_multi_basket_same_type(tmp_path):
     for i in range(5):
         assert a[i] == treedata[i]
         assert b[i] == treedata[i+5]
+
+def test_multi_branch_one_basket_same_type(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b1 = newbranch("int32")
+    b2 = newbranch("int32")
+    branchdict = {"intBranch": b1, "intBranch2": b2}
+    tree = newtree(branchdict)
+    a = numpy.array([1, 2, 3, 4, 5], dtype=">i4")
+    b = numpy.array([6, 7, 8, 9, 10], dtype=">i4")
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+        f["t"]["intBranch"].basket(a)
+        f["t"]["intBranch2"].basket(b)
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    intBranchdata = tree.AsMatrix(["intBranch"]).astype(">i4")
+    int8Branchdata = tree.AsMatrix(["intBranch2"]).astype(">i4")
+    for i in range(5):
+        assert a[i] == intBranchdata[i]
+        assert b[i] == int8Branchdata[i]
+
+def test_multi_branch_one_basket_diff_type(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b1 = newbranch("int32")
+    b2 = newbranch("int64")
+    branchdict = {"intBranch": b1, "int8Branch": b2}
+    tree = newtree(branchdict)
+    a = numpy.array([1, 2, 3, 4, 5], dtype=">i4")
+    b = numpy.array([6, 7, 8, 9, 10], dtype=">i8")
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+        f["t"]["intBranch"].basket(a)
+        f["t"]["int8Branch"].basket(b)
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    intBranchdata = tree.AsMatrix(["intBranch"]).astype(">i4")
+    int8Branchdata = tree.AsMatrix(["int8Branch"]).astype(">i8")
+    for i in range(5):
+        assert a[i] == intBranchdata[i]
+        assert b[i] == int8Branchdata[i]
+
+def test_multi_branch_multi_basket_diff_type(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b1 = newbranch("int32")
+    b2 = newbranch("int64")
+    branchdict = {"intBranch": b1, "int8Branch": b2}
+    tree = newtree(branchdict)
+    a = numpy.array([1, 2, 3, 4, 5], dtype=">i4")
+    b = numpy.array([6, 7, 8, 9, 10], dtype=">i4")
+    c = numpy.array([6, 7, 8, 9, 10], dtype=">i8")
+    d = numpy.array([1, 2, 3, 4, 5], dtype=">i8")
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+        f["t"]["intBranch"].basket(a)
+        f["t"]["intBranch"].basket(b)
+        f["t"]["int8Branch"].basket(c)
+        f["t"]["int8Branch"].basket(d)
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    intBranchdata = tree.AsMatrix(["intBranch"]).astype(">i4")
+    int8Branchdata = tree.AsMatrix(["int8Branch"]).astype(">i8")
+    for i in range(5):
+        assert a[i] == intBranchdata[i]
+        assert b[i] == intBranchdata[i+5]
+        assert c[i] == int8Branchdata[i]
+        assert d[i] == int8Branchdata[i+5]
