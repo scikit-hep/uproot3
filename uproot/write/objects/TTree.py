@@ -38,7 +38,6 @@ class TTree(object):
         self.fClassName = b"TTree"
         self.fName = self.fixstring(self.name)
         self.fTitle = self.fixstring(newtree.title)
-        self.compression = newtree.compression
         self.flushsize = newtree.flushsize
         self.file = file
 
@@ -82,8 +81,11 @@ class TTree(object):
         self.branches = {}
         for name, branch in newtree.branches.items():
             if isinstance(branch, newbranch):
-                branchobj = TBranch(self.file, self, branch.type, name, branch.title, branch.flushsize,
-                                    branch.compression)
+                if branch.compression != None:
+                    compression = branch.compression
+                else:
+                    compression = newtree.compression
+                branchobj = TBranch(self.file, self, branch.type, name, branch.title, branch.flushsize, compression)
             else:
                 branchobj = TBranch(self.file, self, branch, name, "")
             self.branches[name] = branchobj
@@ -311,6 +313,9 @@ class TBranch(object):
                        #"_fBaskets": b"\x00\x03\x00\x01\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00"}
                        "_fBaskets": b'@\x00\x00\x1d\x00\x03\x00\x01\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'}
 
+        if self.compression != None:
+           self.fields["_fCompress"] = self.compression.code
+
         #TODO: Fix else condition to not always return NotImplementedError
         if self.type == "int8":
             title_pad = b"/B"
@@ -381,6 +386,8 @@ class TBranch(object):
         self.tree.branches[self.revertstring(self.name)] = self
         self.tree._write(self.tree.context, self.tree.ttree_write_cursor, self.tree.write_name, self.tree.write_compression,
                         self.tree.write_key, self.tree.keycursor, Util())
+
+        self.tree.context._rootdir.setkey(self.tree.write_key)
 
         self.file._sink.flush()
 
