@@ -68,6 +68,16 @@ def test_nocompress(tmp_path):
     assert str(f.Get("hello")) == "a"*2000
     f.Close()
 
+def test_compress_small_data(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    with uproot.recreate(filename, compression=uproot.ZLIB(4)) as f:
+        f["hello"] = "a"
+
+    f = ROOT.TFile.Open(filename)
+    assert str(f.Get("hello")) == "a"
+    f.Close()
+
 def test_lzma(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
