@@ -1404,3 +1404,68 @@ def test_multi_branch_multi_basket_diff_type(tmp_path):
         assert b[i] == intBranchdata[i+5]
         assert c[i] == int8Branchdata[i]
         assert d[i] == int8Branchdata[i+5]
+
+def test_tree_compression_empty(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch(">i4")
+    branchdict = {"intBranch": b}
+    tree = newtree(branchdict)
+    with uproot.recreate(filename, compression=uproot.ZLIB(4)) as f:
+        f["t"] = tree
+
+    f = ROOT.TFile.Open(filename)
+    assert f.Get("t").GetBranch("intBranch").GetName() == "intBranch"
+    assert f.GetCompressionAlgorithm() == uproot.const.kZLIB
+    assert f.GetCompressionLevel() == 4
+
+def test_tree_compression(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch(">i4")
+    branchdict = {"intBranch": b}
+    tree = newtree(branchdict)
+    a = numpy.array([1, 2, 3, 4, 5], dtype=">i4")
+    with uproot.recreate(filename, compression=uproot.ZLIB(4)) as f:
+        f["t"] = tree
+        f["t"]["intBranch"].basket(a)
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    treedata = tree.AsMatrix().astype(">i4")
+    for i in range(5):
+        assert a[i] == treedata[i]
+
+def test_tree_branch_compression_only(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch(">i4", compression=uproot.ZLIB(4))
+    branchdict = {"intBranch": b}
+    tree = newtree(branchdict)
+    a = numpy.array([1, 2, 3, 4, 5], dtype=">i4")
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+        f["t"]["intBranch"].basket(a)
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    treedata = tree.AsMatrix().astype(">i4")
+    for i in range(5):
+        assert a[i] == treedata[i]
+
+def test_tree_branch_compression(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch(">i4", compression=uproot.ZLIB(4))
+    branchdict = {"intBranch": b}
+    tree = newtree(branchdict)
+    a = numpy.array([1, 2, 3, 4, 5], dtype=">i4")
+    with uproot.recreate(filename, compression=uproot.ZLIB(4)) as f:
+        f["t"] = tree
+        f["t"]["intBranch"].basket(a)
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    treedata = tree.AsMatrix().astype(">i4")
+    for i in range(5):
+        assert a[i] == treedata[i]

@@ -87,6 +87,9 @@ def write(context, cursor, givenbytes, compression, key, keycursor):
             key.fNbytes = compressedbytes + key.fKeylen + 9
             key.write(keycursor, context._sink)
         else:
+            key.fObjlen = len(givenbytes)
+            key.fNbytes += key.fObjlen
+            key.write(keycursor, context._sink)
             cursor.write_data(context._sink, givenbytes)
 
     elif algorithm == uproot.const.kLZ4:
@@ -117,6 +120,9 @@ def write(context, cursor, givenbytes, compression, key, keycursor):
             key.fNbytes = compressedbytes + key.fKeylen + 9
             key.write(keycursor, context._sink)
         else:
+            key.fObjlen = len(givenbytes)
+            key.fNbytes += key.fObjlen
+            key.write(keycursor, context._sink)
             cursor.write_data(context._sink, givenbytes)
 
     elif algorithm == uproot.const.kLZMA:
@@ -142,6 +148,9 @@ def write(context, cursor, givenbytes, compression, key, keycursor):
             key.fNbytes = compressedbytes + key.fKeylen + 9
             key.write(keycursor, context._sink)
         else:
+            key.fObjlen = len(givenbytes)
+            key.fNbytes += key.fObjlen
+            key.write(keycursor, context._sink)
             cursor.write_data(context._sink, givenbytes)
 
     elif algorithm == uproot.const.kOldCompressionAlgo:
