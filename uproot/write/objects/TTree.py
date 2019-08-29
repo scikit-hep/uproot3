@@ -83,8 +83,10 @@ class TTree(object):
             if isinstance(branch, newbranch):
                 if branch.compression != None:
                     compression = branch.compression
-                else:
+                elif newtree.compression != None:
                     compression = newtree.compression
+                else:
+                    compression = None
                 branchobj = TBranch(self.file, self, branch.type, name, branch.title, branch.flushsize, compression)
             else:
                 branchobj = TBranch(self.file, self, branch, name, "")
@@ -313,9 +315,6 @@ class TBranch(object):
                        #"_fBaskets": b"\x00\x03\x00\x01\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00"}
                        "_fBaskets": b'@\x00\x00\x1d\x00\x03\x00\x01\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'}
 
-        if self.compression != None:
-           self.fields["_fCompress"] = self.compression.code
-
         #TODO: Fix else condition to not always return NotImplementedError
         if self.type == "int8":
             title_pad = b"/B"
@@ -355,6 +354,11 @@ class TBranch(object):
         self.basketloc = 0
 
     def basket(self, items):
+        if self.compression != None:
+            self.fields["_fCompress"] = self.compression.code
+        elif self.tree.write_compression != None:
+            self.fields["_fCompress"] = self.tree.write_compression.code
+
         self.basketloc += 1
         self.fields["_fWriteBasket"] += 1
         self.fields["_fEntries"] += len(items)
