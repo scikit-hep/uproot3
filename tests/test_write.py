@@ -1415,6 +1415,7 @@ def test_multi_branch_multi_basket_diff_type(tmp_path):
         assert c[i] == int8Branchdata[i]
         assert d[i] == int8Branchdata[i+5]
 
+# Not actually compressed
 def test_tree_compression_empty(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
@@ -1429,6 +1430,7 @@ def test_tree_compression_empty(tmp_path):
     assert f.GetCompressionAlgorithm() == uproot.const.kZLIB
     assert f.GetCompressionLevel() == 4
 
+# Not actually compressed
 def test_tree_compression(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
