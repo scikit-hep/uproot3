@@ -195,3 +195,11 @@ class Test(unittest.TestCase):
         t = uproot.open("tests/samples/issue243.root")["triggerList"]
         for x in t.array("triggerMap", entrystop=100):
             assert all(y == 1.0 for y in x.values())
+
+    def test_issue243_new(self):
+        t = uproot.open("tests/samples/issue243-new.root")["triggerList"]
+        first = t["triggerMap.first"].array()
+        second = t["triggerMap.second"].array()
+        for i in range(t.numentries):
+            x = dict(zip(first[i], second[i]))
+            assert all(y == 1.0 for y in x.values())
