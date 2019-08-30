@@ -1544,3 +1544,20 @@ def test_branch_compression_interface3(tmp_path):
     branch = tree.GetBranch("intBranch")
     assert branch.GetCompressionAlgorithm() == 1
     assert branch.GetCompressionLevel() == 4
+
+def test_many_basket(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch(">i4")
+    branchdict = {"intBranch": b}
+    tree = newtree(branchdict)
+    a = numpy.array([1], dtype=">i4")
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+        for i in range(20):
+            f["t"]["intBranch"].basket(a)
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    treedata = tree.AsMatrix().astype(">i4")
+    assert a[0] == treedata[19]

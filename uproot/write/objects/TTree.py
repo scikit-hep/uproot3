@@ -358,21 +358,34 @@ class TBranch(object):
     def basket(self, items):
         self.basketloc += 1
 
-        if self.basketloc > self.fields["_fMaxBaskets"]:
+        if self.basketloc >= self.fields["_fMaxBaskets"]:
             self.fields["_fMaxBaskets"] = self.fields["_fMaxBaskets"]*10
-            self.fields["_fBasketEntry"].append([0]*(self.fields["_fMaxBaskets"] - len(self.fields["_fBasketEntry"])))
+            self.fields["_fBasketEntry"] = numpy.append(self.fields["_fBasketEntry"], [0]*(self.fields["_fMaxBaskets"] - len(self.fields["_fBasketEntry"])))
+            self.fields["_fBasketSeek"] = numpy.append(self.fields["_fBasketSeek"], [0]*(self.fields["_fMaxBaskets"] - len(self.fields["_fBasketSeek"])))
+            self.fields["_fBasketBytes"] = numpy.append(self.fields["_fBasketBytes"], [0] * (self.fields["_fMaxBaskets"] - len(self.fields["_fBasketBytes"])))
 
-            #self.tree._write(self.tree.context, self.tree.ttree_write_cursor, self.tree.write_name,
-            #                 self.tree.write_compression,
-            #                 self.tree.write_key, self.tree.keycursor, Util())
+            cursor = uproot.write.sink.cursor.Cursor(self.file._fSeekFree)
+            self.tree.write_key = uproot.write.TKey.TKey(fClassName = self.tree.write_key.fClassName,
+                                                         fName      = self.tree.write_key.fName,
+                                                         fTitle     = self.tree.write_key.fTitle,
+                                                         fObjlen    = 0,
+                                                         fSeekKey   = self.file._fSeekFree,
+                                                         fSeekPdir  = self.file._fBEGIN,
+                                                         fCycle     = self.tree.write_key.fCycle,
+                                                         dircursor  = self.tree.write_key.dircursor)
+            self.tree.keycursor = uproot.write.sink.cursor.Cursor(self.tree.write_key.fSeekKey)
+            self.tree.write_key.write(cursor, self.file._sink)
+            self.tree._write(self.tree.context, cursor, self.tree.write_name,
+                             self.tree.write_compression,
+                             self.tree.write_key, self.tree.keycursor, Util())
 
-            #self.tree.context._rootdir.setkey(self.tree.write_key)
+            self.file._expandfile(cursor)
+            self.tree.write_key.write(copy(self.tree.write_key.dircursor), self.file._sink)
 
         self.fields["_fWriteBasket"] += 1
         self.fields["_fEntries"] += len(items)
         self.fields["_fBasketEntry"][self.basketloc] = self.fields["_fEntries"]
         self.fields["_fEntryNumber"] += len(items)
-        #self.fields["_fBaskets"] += b"\x00"*8
         basketdata = numpy.array(items, dtype=self.type, copy=False)
         givenbytes = basketdata.tostring()
         cursor = uproot.write.sink.cursor.Cursor(self.file._fSeekFree)

@@ -53,7 +53,7 @@ class BasketKey(object):
     _format_basketkey = struct.Struct(">Hiiii")
 
 class TKey(object):
-    def __init__(self, fClassName, fName, fTitle=b"", fObjlen=0, fSeekKey=100, fSeekPdir=0, fCycle=1):
+    def __init__(self, fClassName, fName, fTitle=b"", fObjlen=0, fSeekKey=100, fSeekPdir=0, fCycle=1, dircursor=0):
         self.fClassName = fClassName
         self.fName = fName
         self.fTitle = fTitle
@@ -64,6 +64,7 @@ class TKey(object):
         self.fCycle = fCycle
         self.fDatime = uproot.write.util.datime()
         self.fNbytes = self.fObjlen + self.fKeylen
+        self.dircursor = dircursor
 
     @property
     def fKeylen(self):
