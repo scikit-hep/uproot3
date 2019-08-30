@@ -511,7 +511,7 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
                 elif branch._fClassName == b"map<string,string>":
                     return asgenobj(STLMap(STLString(awkward), STLString(awkward)), branch._context, 6)
 
-                if branch._fClassName.startswith(b"pair<string,"):
+                if branch.name.endswith(b".first") and branch._fClassName.startswith(b"pair<string,"):
                     return asgenobj(SimpleArray(STLString(awkward)), branch._context, 6)
 
         return None
