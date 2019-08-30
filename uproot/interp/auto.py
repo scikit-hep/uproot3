@@ -118,19 +118,16 @@ def _obj_or_genobj(streamerClass, branch, isjagged, cntvers=False, tobject=True,
             return asgenobj(streamerClass, context, 0)
 
     else:
-        if streamerClass._methods is None:
-            return asdtype(recarray)
-        else:
-            if isjagged:
-                if streamerClass._methods is None:
-                    return asjagged(astable(asdtype(recarray)))
-                else:
-                    return asjagged(asobj(astable(asdtype(recarray)), streamerClass._methods))
+        if isjagged:
+            if streamerClass._methods is None:
+                return asjagged(astable(asdtype(recarray)))
             else:
-                if streamerClass._methods is None:
-                    return asdtype(recarray)
-                else:
-                    return asobj(astable(asdtype(recarray)), streamerClass._methods)
+                return asjagged(asobj(astable(asdtype(recarray)), streamerClass._methods))
+        else:
+            if streamerClass._methods is None:
+                return asdtype(recarray)
+            else:
+                return asobj(astable(asdtype(recarray)), streamerClass._methods)
 
 def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=True, speedbump=True):
     import uproot.tree

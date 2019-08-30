@@ -1324,6 +1324,32 @@ class THashList(TList):
         TList._readinto(self, source, cursor, context, parent)
         return self
 
+class TRef(ROOTStreamedObject):
+    _format1 = struct.Struct(">xxIxxxxxx")
+
+    def __init__(self, id):
+        self.id = id
+
+    @classmethod
+    def _readinto(cls, self, source, cursor, context, parent):
+        self.id = cursor.field(source, self._format1)
+        return self
+
+    def __repr__(self):
+        return "<TRef {0}>".format(self.id)
+
+    @classmethod
+    def _recarray(cls):
+        out = []
+        out.append(("pidf", ">u2"))
+        out.append(("id", ">u4"))
+        out.append((" other", "S6"))
+        return out
+
+TRef._methods = TRef
+TRef._arraymethods = None
+TRef._fromrow = lambda row: TRef(row["id"])
+
 class TArray(list, ROOTStreamedObject):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
@@ -1419,6 +1445,7 @@ builtin_classes = {"uproot_methods": uproot_methods,
                    "TObjString":     TObjString,
                    "TList":          TList,
                    "THashList":      THashList,
+                   "TRef":           TRef,
                    "TArray":         TArray,
                    "TArrayC":        TArrayC,
                    "TArrayS":        TArrayS,
