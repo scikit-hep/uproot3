@@ -486,6 +486,34 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
                 elif branch._fClassName == b"vector<vector<string> >":
                     return asgenobj(STLVector(STLVector(STLString(awkward))), branch._context, 6)
 
+                if branch._fClassName == b"map<string,bool>":
+                    return asgenobj(STLMap(STLString(awkward), asdtype(awkward.numpy.bool_)), branch._context, 6)
+                elif branch._fClassName == b"map<string,char>":
+                    return asgenobj(STLMap(STLString(awkward), asdtype("i1")), branch._context, 6)
+                elif branch._fClassName == b"map<string,unsigned char>":
+                    return asgenobj(STLMap(STLString(awkward), asdtype("u1")), branch._context, 6)
+                elif branch._fClassName == b"map<string,short>":
+                    return asgenobj(STLMap(STLString(awkward), asdtype("i2")), branch._context, 6)
+                elif branch._fClassName == b"map<string,unsigned short>":
+                    return asgenobj(STLMap(STLString(awkward), asdtype("u2")), branch._context, 6)
+                elif branch._fClassName == b"map<string,int>":
+                    return asgenobj(STLMap(STLString(awkward), asdtype("i4")), branch._context, 6)
+                elif branch._fClassName == b"map<string,unsigned int>":
+                    return asgenobj(STLMap(STLString(awkward), asdtype("u4")), branch._context, 6)
+                elif branch._fClassName == b"map<string,long>":
+                    return asgenobj(STLMap(STLString(awkward), asdtype("i8")), branch._context, 6)
+                elif branch._fClassName == b"map<string,unsigned long>":
+                    return asgenobj(STLMap(STLString(awkward), asdtype("u8")), branch._context, 6)
+                elif branch._fClassName == b"map<string,float>":
+                    return asgenobj(STLMap(STLString(awkward), asdtype("f4")), branch._context, 6)
+                elif branch._fClassName == b"map<string,double>":
+                    return asgenobj(STLMap(STLString(awkward), asdtype("f8")), branch._context, 6)
+                elif branch._fClassName == b"map<string,string>":
+                    return asgenobj(STLMap(STLString(awkward), STLString(awkward)), branch._context, 6)
+
+                if branch._fClassName.startswith(b"pair<string,"):
+                    return asgenobj(SimpleArray(STLString(awkward)), branch._context, 6)
+
         return None
 
 interpret._titlehasdims = re.compile(br"^([^\[\]]+)(\[[^\[\]]+\])+")
