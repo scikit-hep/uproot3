@@ -72,6 +72,7 @@ class TDirectory(object):
         self.nkeycursor = uproot.write.sink.cursor.Cursor(self.keycursor.index)
         self.keycursor.write_fields(self.sink, self._format2, len(self.keys))
         for key in self.keys.values():
+            key.dircursor = copy(self.keycursor)
             key.write(self.keycursor, self.sink)
 
         self.update()
@@ -95,7 +96,6 @@ class TDirectory(object):
             newcursor = uproot.write.sink.cursor.Cursor(self.tfile._fSeekFree)
 
         if newcursor is not None:
-            newkey.dircursor = copy(newcursor)
             self.writekeys(newcursor)
         else:
             newkey.dircursor = copy(self.keycursor)
