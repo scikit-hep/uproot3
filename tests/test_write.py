@@ -1415,6 +1415,36 @@ def test_multi_branch_multi_basket_diff_type(tmp_path):
         assert c[i] == int8Branchdata[i]
         assert d[i] == int8Branchdata[i+5]
 
+def test_multi_tree_one_branch_multi_basket(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch("int32")
+    branchdict = {"intBranch": b}
+    tree = newtree(branchdict)
+    a = numpy.array([1, 2, 3, 4, 5], dtype=">i4")
+    b = numpy.array([6, 7, 8, 9, 10], dtype=">i4")
+    c = numpy.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], dtype=">i4")
+    d = numpy.array([11, 12, 13, 14, 15, 16, 17, 18, 19, 20], dtype=">i4")
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+        f["t"]["intBranch"].basket(a)
+        f["t"]["intBranch"].basket(b)
+        f["tree"] = tree
+        f["tree"]["intBranch"].basket(c)
+        f["tree"]["intBranch"].basket(d)
+
+    f = ROOT.TFile.Open(filename)
+    t = f.Get("t")
+    tree = f.Get("tree")
+    treedata1 = t.AsMatrix().astype(">i4")
+    treedata2 = tree.AsMatrix().astype(">i4")
+    for i in range(5):
+        assert a[i] == treedata1[i]
+        assert b[i] == treedata1[i+5]
+    for i in range(10):
+        assert c[i] == treedata2[i]
+        assert d[i] == treedata2[i+10]
+
 # Not actually compressed
 def test_tree_compression_empty(tmp_path):
     filename = join(str(tmp_path), "example.root")
