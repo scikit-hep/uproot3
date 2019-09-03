@@ -1554,10 +1554,12 @@ def test_many_basket(tmp_path):
     a = numpy.array([1], dtype=">i4")
     with uproot.recreate(filename, compression=None) as f:
         f["t"] = tree
-        for i in range(20):
+        for i in range(19):
             f["t"]["intBranch"].basket(a)
 
     f = ROOT.TFile.Open(filename)
     tree = f.Get("t")
     treedata = tree.AsMatrix().astype(">i4")
-    assert a[0] == treedata[19]
+    for i in range(19):
+        assert a[0] == treedata[i]
+
