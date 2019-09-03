@@ -1615,9 +1615,10 @@ def test_many_basket_uproot(tmp_path):
         for i in range(19):
             f["t"]["intBranch"].basket(a)
 
-    f = uproot.open("example.root")
+    f = uproot.open(filename)
     tree = f["t"]
     treedata = tree.array("intBranch")
+    print(treedata)
     for i in range(19):
         assert a[0] == treedata[i]
 
