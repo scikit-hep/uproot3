@@ -7,7 +7,6 @@ from __future__ import absolute_import
 import collections
 import struct
 import uuid
-from copy import copy
 
 import uproot.write.sink.cursor
 import uproot.write.TKey
@@ -72,7 +71,6 @@ class TDirectory(object):
         self.nkeycursor = uproot.write.sink.cursor.Cursor(self.keycursor.index)
         self.keycursor.write_fields(self.sink, self._format2, len(self.keys))
         for key in self.keys.values():
-            key.dircursor = copy(self.keycursor)
             key.write(self.keycursor, self.sink)
 
         self.update()
@@ -98,7 +96,6 @@ class TDirectory(object):
         if newcursor is not None:
             self.writekeys(newcursor)
         else:
-            newkey.dircursor = copy(self.keycursor)
             newkey.write(self.keycursor, self.sink)
             self.headkey.update()
             self.nkeycursor.update_fields(self.sink, self._format2, len(self.keys))
