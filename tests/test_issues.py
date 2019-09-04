@@ -205,4 +205,4 @@ class Test(unittest.TestCase):
             assert all(y == 1.0 for y in x.values())
 
     def test_issue327(self):
-        uproot.open("issue327.root")["DstTree"]
+        uproot.open("tests/samples/issue327.root")["DstTree"]

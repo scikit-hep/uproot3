@@ -190,7 +190,7 @@ class TTreeMethods(object):
     _copycontext = True
 
     _vector_regex = re.compile(b"^vector<(.+)>$")
-    _objectpointer_regex = re.compile(b"\(([^()]*)\)$")
+    _objectpointer_regex = re.compile(br"\(([^()]*)\)$")
 
     def _attachstreamer(self, branch, streamer, streamerinfosmap, isTClonesArray):
         if streamer is None:
