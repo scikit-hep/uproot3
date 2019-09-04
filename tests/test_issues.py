@@ -203,3 +203,6 @@ class Test(unittest.TestCase):
         for i in range(t.numentries):
             x = dict(zip(first[i], second[i]))
             assert all(y == 1.0 for y in x.values())
+
+    def test_issue327(self):
+        uproot.open("issue327.root")["DstTree"]
