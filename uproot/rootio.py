@@ -1350,6 +1350,28 @@ TRef._methods = TRef
 TRef._arraymethods = None
 TRef._fromrow = lambda row: TRef(row["id"])
 
+class TRefArray(list, ROOTStreamedObject):
+    _format1 = struct.Struct(">i")
+    _dtype = numpy.dtype(">i4")
+
+    @classmethod
+    def _readinto(cls, self, source, cursor, context, parent):
+        start, cnt, self._classversion = _startcheck(source, cursor)
+        cursor.skip(10)
+        self.name = cursor.string(source)
+        self.length = cursor.field(source, self._format1)
+        cursor.skip(6)
+        self.extend(cursor.array(source, self.length, self._dtype))
+        _endcheck(start, cursor, cnt)
+        return self
+
+    @property
+    def nbytes(self):
+        return len(self) * self._dtype.itemsize
+
+    def tostring(self):
+        return numpy.asarray(self, dtype=self._dtype).tostring()
+
 class TArray(list, ROOTStreamedObject):
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
@@ -1454,6 +1476,7 @@ builtin_classes = {"uproot_methods": uproot_methods,
                    "TArrayL64":      TArrayL64,
                    "TArrayF":        TArrayF,
                    "TArrayD":        TArrayD,
+                   "TRefArray":      TRefArray,
                    "ROOT_3a3a_TIOFeatures": ROOT_3a3a_TIOFeatures}
 
 builtin_skip =    {"TBranch":    ["fBaskets"],
