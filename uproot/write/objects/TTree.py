@@ -70,9 +70,68 @@ class TBranch(object):
         self.branch = TBranchImpl(name, branchobj, compression, file)
         self.treelvl1 = treelvl1
 
+    @staticmethod
+    def revertstring(string):
+        if isinstance(string, bytes):
+            return string.decode()
+        else:
+            return string
+
     _tree_size = struct.Struct(">qqq")
     def basket(self, items):
         self.branch.fields["_fWriteBasket"] += 1
+
+        if self.branch.fields["_fWriteBasket"] >= self.branch.fields["_fMaxBaskets"]:
+            self.branch.fields["_fMaxBaskets"] = 20
+            self.branch.fields["_fBasketEntry"] = numpy.append(self.branch.fields["_fBasketEntry"], numpy.array([0] * (self.branch.fields["_fMaxBaskets"] - len(self.branch.fields["_fBasketEntry"])), dtype=">i8"))
+            self.branch.fields["_fBasketSeek"] = numpy.append(self.branch.fields["_fBasketSeek"], numpy.array([0] * (self.branch.fields["_fMaxBaskets"] - len(self.branch.fields["_fBasketSeek"])), dtype=">i8"))
+            self.branch.fields["_fBasketBytes"] = numpy.append(self.branch.fields["_fBasketBytes"], numpy.array([0] * (self.branch.fields["_fMaxBaskets"] - len(self.branch.fields["_fBasketBytes"])), dtype=">i4"))
+
+            tree = TTreeImpl(newtree(), self.branch.file)
+            tree.name = self.treelvl1.tree.name
+            tree.fName = self.treelvl1.tree.fName
+            tree.fTitle = self.treelvl1.tree.fTitle
+            tree.flushsize = self.treelvl1.tree.flushsize
+
+            tree.fields["_fEntries"] = self.treelvl1.tree.fields["_fEntries"]
+            tree.fields["_fTotBytes"] = self.treelvl1.tree.fields["_fTotBytes"]
+            tree.fields["_fZipBytes"] = self.treelvl1.tree.fields["_fZipBytes"]
+
+            temp_branches = {}
+            for name, branch in self.treelvl1.branches.items():
+                temp_branches[name] = TBranch(name, newbranch(branch.branch.type, branch.branch.flushsize, "", branch.branch.compression), branch.branch.compression, self.treelvl1, branch.branch.file)
+                temp_branches[name].branch.fields["_fWriteBasket"] = branch.branch.fields["_fWriteBasket"]
+                temp_branches[name].branch.fields["_fEntries"] = branch.branch.fields["_fEntries"]
+                temp_branches[name].branch.fields["_fBasketEntry"] = branch.branch.fields["_fBasketEntry"]
+                temp_branches[name].branch.fields["_fEntryNumber"] = branch.branch.fields["_fEntryNumber"]
+                temp_branches[name].branch.fields["_fMaxBaskets"] = branch.branch.fields["_fMaxBaskets"]
+                temp_branches[name].branch.fields["_fBasketSeek"] = branch.branch.fields["_fBasketSeek"]
+                temp_branches[name].branch.fields["_fBasketBytes"] = branch.branch.fields["_fBasketBytes"]
+                temp_branches[name].branch.fields["_fTotBytes"] = branch.branch.fields["_fTotBytes"]
+                temp_branches[name].branch.fields["_fZipBytes"] = branch.branch.fields["_fZipBytes"]
+                tree.fields["_fLeaves"].append(temp_branches[name].branch.fields["_fLeaves"])
+                tree.fields["_fBranches"].append(temp_branches[name].branch)
+
+            tree.branches = copy(temp_branches)
+
+            cursor = uproot.write.sink.cursor.Cursor(self.branch.file._fSeekFree)
+            tree.write_key = uproot.write.TKey.TKey(fClassName=self.treelvl1.tree.write_key.fClassName,
+                                                    fName=self.treelvl1.tree.write_key.fName,
+                                                    fTitle=self.treelvl1.tree.write_key.fTitle,
+                                                    fObjlen=0,
+                                                    fSeekKey=copy(self.branch.file._fSeekFree),
+                                                    fSeekPdir=self.treelvl1.tree.write_key.fSeekPdir,
+                                                    fCycle=self.treelvl1.tree.write_key.fCycle)
+            tree.keycursor = uproot.write.sink.cursor.Cursor(tree.write_key.fSeekKey)
+            tree.write_key.write(cursor, self.branch.file._sink)
+            tree.write(tree.file, cursor, self.treelvl1.tree.write_name, tree.write_key, copy(tree.keycursor), Util())
+            tree.file._expandfile(cursor)
+            tree.file._rootdir.setkey(tree.write_key)
+
+            self = tree.branches[self.revertstring(self.branch.name)]
+            self.treelvl1.tree = tree
+            self.treelvl1.branches = temp_branches
+
         self.branch.fields["_fEntries"] += len(items)
         self.branch.fields["_fBasketEntry"][self.branch.fields["_fWriteBasket"]] = self.branch.fields["_fEntries"]
         self.branch.fields["_fEntryNumber"] += len(items)
@@ -411,7 +470,6 @@ class TBranchImpl(object):
     _format_cntvers = struct.Struct(">IH")
 
     _format_tobject1 = struct.Struct(">HII")
-
     def put_tobject(self, cursor, hexbytes):
         return cursor.put_fields(self._format_tobject1, 1, 0, hexbytes)
 
@@ -426,7 +484,6 @@ class TBranchImpl(object):
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_tattfill = struct.Struct(">hh")
-
     def put_tattfill(self, cursor):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_cntvers.size)
@@ -439,7 +496,6 @@ class TBranchImpl(object):
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_rootiofeatures = struct.Struct(">B")
-
     def put_rootiofeatures(self, cursor):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_cntvers.size)
@@ -453,7 +509,6 @@ class TBranchImpl(object):
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_tleaf1 = struct.Struct(">iii??")
-
     def put_tleaf(self, cursor):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_cntvers.size)
@@ -472,7 +527,6 @@ class TBranchImpl(object):
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_tleafI1 = struct.Struct(">ii")
-
     def put_tleafI(self, cursor):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_cntvers.size)
@@ -485,7 +539,6 @@ class TBranchImpl(object):
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_tleafB1 = struct.Struct(">bb")
-
     def put_tleafB(self, cursor):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_cntvers.size)
@@ -498,7 +551,6 @@ class TBranchImpl(object):
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_tleafD1 = struct.Struct(">dd")
-
     def put_tleafD(self, cursor):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_cntvers.size)
@@ -511,7 +563,6 @@ class TBranchImpl(object):
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_tleafF1 = struct.Struct(">ff")
-
     def put_tleafF(self, cursor):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_cntvers.size)
@@ -524,7 +575,6 @@ class TBranchImpl(object):
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_tleafL1 = struct.Struct(">qq")
-
     def put_tleafL(self, cursor):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_cntvers.size)
@@ -537,7 +587,6 @@ class TBranchImpl(object):
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_tleafO1 = struct.Struct(">??")
-
     def put_tleafO(self, cursor):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_cntvers.size)
@@ -550,7 +599,6 @@ class TBranchImpl(object):
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_tleafS1 = struct.Struct(">hh")
-
     def put_tleafS(self, cursor):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_cntvers.size)
@@ -563,7 +611,6 @@ class TBranchImpl(object):
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
 
     _format_tobjarray1 = struct.Struct(">ii")
-
     def put_tobjarray(self, cursor, values, classname, fBits=50331648):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_cntvers.size)
@@ -644,4 +691,3 @@ class TBranchImpl(object):
         length = (len(buff) + self._format_cntvers.size)
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
-
