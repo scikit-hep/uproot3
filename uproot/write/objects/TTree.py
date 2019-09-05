@@ -82,10 +82,16 @@ class TBranch(object):
         self.branch.fields["_fWriteBasket"] += 1
 
         if self.branch.fields["_fWriteBasket"] >= self.branch.fields["_fMaxBaskets"]:
-            self.branch.fields["_fMaxBaskets"] = 20
-            self.branch.fields["_fBasketEntry"] = numpy.append(self.branch.fields["_fBasketEntry"], numpy.array([0] * (self.branch.fields["_fMaxBaskets"] - len(self.branch.fields["_fBasketEntry"])), dtype=">i8"))
-            self.branch.fields["_fBasketSeek"] = numpy.append(self.branch.fields["_fBasketSeek"], numpy.array([0] * (self.branch.fields["_fMaxBaskets"] - len(self.branch.fields["_fBasketSeek"])), dtype=">i8"))
-            self.branch.fields["_fBasketBytes"] = numpy.append(self.branch.fields["_fBasketBytes"], numpy.array([0] * (self.branch.fields["_fMaxBaskets"] - len(self.branch.fields["_fBasketBytes"])), dtype=">i4"))
+            self.branch.fields["_fMaxBaskets"] = self.branch.fields["_fMaxBaskets"]*10
+            temp_arr = numpy.array([0]*self.branch.fields["_fMaxBaskets"], dtype=">i8")
+            temp_arr[0:len(self.branch.fields["_fBasketEntry"])] = self.branch.fields["_fBasketEntry"]
+            self.branch.fields["_fBasketEntry"] = temp_arr
+            temp_arr = numpy.array([0] * self.branch.fields["_fMaxBaskets"], dtype=">i8")
+            temp_arr[0:len(self.branch.fields["_fBasketSeek"])] = self.branch.fields["_fBasketSeek"]
+            self.branch.fields["_fBasketSeek"] = temp_arr
+            temp_arr = numpy.array([0] * self.branch.fields["_fMaxBaskets"], dtype=">i4")
+            temp_arr[0:len(self.branch.fields["_fBasketBytes"])] = self.branch.fields["_fBasketBytes"]
+            self.branch.fields["_fBasketBytes"] = temp_arr
 
             tree = TTreeImpl(newtree(), self.branch.file)
             tree.name = self.treelvl1.tree.name
