@@ -1386,6 +1386,20 @@ class TArrayF(TArray):
 class TArrayD(TArray):
     _dtype = numpy.dtype(">f8")
 
+class TRefArray(TArrayI):
+    _format1 = struct.Struct(">i")
+
+    @classmethod
+    def _readinto(cls, self, source, cursor, context, parent):
+        start, cnt, self._classversion = _startcheck(source, cursor)
+        cursor.skip(10)
+        self.name = cursor.string(source)
+        self.length = cursor.field(source, self._format1)
+        cursor.skip(6)
+        self.extend(cursor.array(source, self.length, self._dtype))
+        _endcheck(start, cursor, cnt)
+        return self
+
 # FIXME: I want to generalize this. It's the first example of a class that doesn't
 # follow the usual pattern. The full 11 bytes are
 #
@@ -1454,6 +1468,7 @@ builtin_classes = {"uproot_methods": uproot_methods,
                    "TArrayL64":      TArrayL64,
                    "TArrayF":        TArrayF,
                    "TArrayD":        TArrayD,
+                   "TRefArray":      TRefArray,
                    "ROOT_3a3a_TIOFeatures": ROOT_3a3a_TIOFeatures}
 
 builtin_skip =    {"TBranch":    ["fBaskets"],
