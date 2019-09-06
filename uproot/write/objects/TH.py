@@ -15,8 +15,8 @@ import uproot.write.sink.cursor
 
 class TH(object):
     def __init__(self, histogram):
-        self.fTitle = self.fixstring(histogram._fTitle)
-        self.fClassName = self.fixstring(histogram._classname)
+        self._fTitle = self.fixstring(histogram._fTitle)
+        self._fClassName = self.fixstring(histogram._classname)
 
         self.fXaxis = self.emptyaxis("xaxis", 1.0)
         self.fXaxis.update(histogram._fXaxis.__dict__)
@@ -39,44 +39,44 @@ class TH(object):
             if hasattr(histogram, n):
                 self.fields[n] = getattr(histogram, n)
 
-        if self.fClassName == b"TH1C":
+        if self._fClassName == b"TH1C":
             self.valuesarray = numpy.array(self.values, dtype=">i1")
-        elif self.fClassName == b"TH1S":
+        elif self._fClassName == b"TH1S":
             self.valuesarray = numpy.array(self.values, dtype=">i2")
-        elif self.fClassName == b"TH1I":
+        elif self._fClassName == b"TH1I":
             self.valuesarray = numpy.array(self.values, dtype=">i4")
-        elif self.fClassName == b"TH1F":
+        elif self._fClassName == b"TH1F":
             self.valuesarray = numpy.array(self.values, dtype=">f4")
-        elif self.fClassName == b"TH1D":
+        elif self._fClassName == b"TH1D":
             self.valuesarray = numpy.array(self.values, dtype=">f8")
-        elif self.fClassName == b"TProfile":
+        elif self._fClassName == b"TProfile":
             self.valuesarray = numpy.array(self.values, dtype=">f8")
-        elif self.fClassName == b"TH2C":
+        elif self._fClassName == b"TH2C":
             self.valuesarray = numpy.array(self.values, dtype=">i1").transpose()
-        elif self.fClassName == b"TH2S":
+        elif self._fClassName == b"TH2S":
             self.valuesarray = numpy.array(self.values, dtype=">i2").transpose()
-        elif self.fClassName == b"TH2I":
+        elif self._fClassName == b"TH2I":
             self.valuesarray = numpy.array(self.values, dtype=">i4").transpose()
-        elif self.fClassName == b"TH2F":
+        elif self._fClassName == b"TH2F":
             self.valuesarray = numpy.array(self.values, dtype=">f4").transpose()
-        elif self.fClassName == b"TH2D":
+        elif self._fClassName == b"TH2D":
             self.valuesarray = numpy.array(self.values, dtype=">f8").transpose()
-        elif self.fClassName == b"TProfile2D":
+        elif self._fClassName == b"TProfile2D":
             self.valuesarray = numpy.array(self.values, dtype=">f8").transpose()
-        elif self.fClassName == b"TH3C":
+        elif self._fClassName == b"TH3C":
             self.valuesarray = numpy.array(self.values, dtype=">i1").transpose()
-        elif self.fClassName == b"TH3S":
+        elif self._fClassName == b"TH3S":
             self.valuesarray = numpy.array(self.values, dtype=">i2").transpose()
-        elif self.fClassName == b"TH3I":
+        elif self._fClassName == b"TH3I":
             self.valuesarray = numpy.array(self.values, dtype=">i4").transpose()
-        elif self.fClassName == b"TH3F":
+        elif self._fClassName == b"TH3F":
             self.valuesarray = numpy.array(self.values, dtype=">f4").transpose()
-        elif self.fClassName == b"TH3D":
+        elif self._fClassName == b"TH3D":
             self.valuesarray = numpy.array(self.values, dtype=">f8").transpose()
-        elif self.fClassName == b"TProfile3D":
+        elif self._fClassName == b"TProfile3D":
             self.valuesarray = numpy.array(self.values, dtype=">f8").transpose()
         else:
-            raise ValueError("unrecognized histogram class name {0}".format(self.fClassName))
+            raise ValueError("unrecognized histogram class name {0}".format(self._fClassName))
 
         self.fields["_fNcells"] = self.valuesarray.size
         self.fields["_fContour"] = numpy.array(self.fields["_fContour"], dtype=">f8", copy=False)
@@ -319,7 +319,7 @@ class TH(object):
         vers = 8
         if len(self.fields["_fBuffer"]) != 0:
             raise NotImplementedError
-        buff = (self.put_tnamed(cursor, name, self.fTitle) +
+        buff = (self.put_tnamed(cursor, name, self._fTitle) +
                 self.put_tattline(cursor) +
                 self.put_tattfill(cursor) +
                 self.put_tattmarker(cursor) +
@@ -426,29 +426,29 @@ class TH(object):
         write_cursor = copy(cursor)
         self.keycursor = keycursor
         cursor.skip(self._format_cntvers.size)
-        if "TH1" in self.fClassName.decode("utf-8"):
+        if "TH1" in self._fClassName.decode("utf-8"):
             vers = 3
             buff = self.put_th1(cursor, name) + self.put_tarray(cursor, self.valuesarray)
-        elif "TH2" in self.fClassName.decode("utf-8"):
+        elif "TH2" in self._fClassName.decode("utf-8"):
             vers = 4
             buff = self.put_th2(cursor, name) + self.put_tarray(cursor, self.valuesarray)
-        elif "TH3" in self.fClassName.decode("utf-8"):
+        elif "TH3" in self._fClassName.decode("utf-8"):
             vers = 4
             buff = self.put_th3(cursor, name) + self.put_tarray(cursor, self.valuesarray)
-        elif "TProfile" == self.fClassName.decode("utf-8"):
+        elif "TProfile" == self._fClassName.decode("utf-8"):
             vers = 7
             buff = (self.put_th1d(cursor, name) + self.put_tarray(cursor, self.fields["_fBinEntries"]) +
                     cursor.put_fields(self._format_tprofile, self.fields["_fErrorMode"], self.fields["_fYmin"],
                                               self.fields["_fYmax"], self.fields["_fTsumwy"], self.fields["_fTsumwy2"]) +
                     self.put_tarray(cursor, self.fields["_fBinSumw2"]))
-        elif "TProfile2D" == self.fClassName.decode("utf-8"):
+        elif "TProfile2D" == self._fClassName.decode("utf-8"):
             vers = 8
             buff = (self.put_th2d(cursor, name)
                     + self.put_tarray(cursor, self.fields["_fBinEntries"]) +
                     cursor.put_fields(self._format_tprofile, self.fields["_fErrorMode"], self.fields["_fZmin"],
                                               self.fields["_fZmax"], self.fields["_fTsumwz"], self.fields["_fTsumwz2"]) +
                     self.put_tarray(cursor, self.fields["_fBinSumw2"]))
-        elif "TProfile3D" == self.fClassName.decode("utf-8"):
+        elif "TProfile3D" == self._fClassName.decode("utf-8"):
             vers = 8
             buff = (self.put_th3d(cursor, name)
                     + self.put_tarray(cursor, self.fields["_fBinEntries"]) +

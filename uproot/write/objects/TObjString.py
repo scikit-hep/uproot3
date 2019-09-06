@@ -20,8 +20,8 @@ class TObjString(object):
         else:
             self.value = string.encode("utf-8")
 
-    fClassName = b"TObjString"
-    fTitle = b"Collectable string class"
+    _fClassName = b"TObjString"
+    _fTitle = b"Collectable string class"
 
     _format = struct.Struct(">IHHII")
 

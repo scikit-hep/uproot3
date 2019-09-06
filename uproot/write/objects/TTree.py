@@ -9,6 +9,7 @@ import numpy
 
 import uproot
 import uproot.const
+from uproot.rootio import _bytesid
 import uproot.write.compress
 import uproot.write.sink.cursor
 from uproot.write.TKey import BasketKey
@@ -42,36 +43,36 @@ class newtree(object):
 class TTree(object):
 
     def __init__(self, newtree, file):
-        self.tree = TTreeImpl(newtree, file)
+        self._tree = TTreeImpl(newtree, file)
 
-        self.branches = {}
+        self._branches = {}
         for name, branch in newtree.branches.items():
             if isinstance(branch, newbranch) == False:
                 branch = newbranch(branch)
             compression = getattr(branch, "compression", getattr(newtree, "compression", file.compression))
-            self.branches[name] = TBranch(name, branch, compression, self, file)
-            self.tree.fields["_fLeaves"].append(self.branches[name].branch.fields["_fLeaves"])
-            self.tree.fields["_fBranches"].append(self.branches[name].branch)
+            self._branches[name] = TBranch(name, branch, compression, self, file)
+            self._tree.fields["_fLeaves"].append(self._branches[name]._branch.fields["_fLeaves"])
+            self._tree.fields["_fBranches"].append(self._branches[name]._branch)
 
     def __getitem__(self, name):
-        return self.branches[name]
+        return self._branches[name]
 
     @property
-    def fClassName(self):
-        return self.tree.fClassName
+    def _fClassName(self):
+        return self._tree.fClassName
 
     @property
-    def fTitle(self):
-        return self.tree.fTitle
+    def _fTitle(self):
+        return self._tree.fTitle
 
     def _write(self, context, cursor, name, compression, key, keycursor, util):
-        self.tree.write(context, cursor, name, key, copy(keycursor), util)
+        self._tree.write(context, cursor, name, key, copy(keycursor), util)
 
 class TBranch(object):
 
     def __init__(self, name, branchobj, compression, treelvl1, file):
-        self.branch = TBranchImpl(name, branchobj, compression, file)
-        self.treelvl1 = treelvl1
+        self._branch = TBranchImpl(name, branchobj, compression, file)
+        self._treelvl1 = treelvl1
 
     @staticmethod
     def revertstring(string):
@@ -81,113 +82,113 @@ class TBranch(object):
             return string
 
     _tree_size = struct.Struct(">qqq")
-    def basket(self, items):
-        self.branch.fields["_fWriteBasket"] += 1
+    def newbasket(self, items):
+        self._branch.fields["_fWriteBasket"] += 1
 
-        if self.branch.fields["_fWriteBasket"] >= self.branch.fields["_fMaxBaskets"]:
-            self.branch.fields["_fMaxBaskets"] = self.branch.fields["_fMaxBaskets"]*10
-            temp_arr = numpy.array([0]*self.branch.fields["_fMaxBaskets"], dtype=">i8")
-            temp_arr[0:len(self.branch.fields["_fBasketEntry"])] = self.branch.fields["_fBasketEntry"]
-            self.branch.fields["_fBasketEntry"] = temp_arr
-            temp_arr = numpy.array([0] * self.branch.fields["_fMaxBaskets"], dtype=">i8")
-            temp_arr[0:len(self.branch.fields["_fBasketSeek"])] = self.branch.fields["_fBasketSeek"]
-            self.branch.fields["_fBasketSeek"] = temp_arr
-            temp_arr = numpy.array([0] * self.branch.fields["_fMaxBaskets"], dtype=">i4")
-            temp_arr[0:len(self.branch.fields["_fBasketBytes"])] = self.branch.fields["_fBasketBytes"]
-            self.branch.fields["_fBasketBytes"] = temp_arr
+        if self._branch.fields["_fWriteBasket"] >= self._branch.fields["_fMaxBaskets"]:
+            self._branch.fields["_fMaxBaskets"] = self._branch.fields["_fMaxBaskets"] * 10
+            temp_arr = numpy.array([0] * self._branch.fields["_fMaxBaskets"], dtype=">i8")
+            temp_arr[0:len(self._branch.fields["_fBasketEntry"])] = self._branch.fields["_fBasketEntry"]
+            self._branch.fields["_fBasketEntry"] = temp_arr
+            temp_arr = numpy.array([0] * self._branch.fields["_fMaxBaskets"], dtype=">i8")
+            temp_arr[0:len(self._branch.fields["_fBasketSeek"])] = self._branch.fields["_fBasketSeek"]
+            self._branch.fields["_fBasketSeek"] = temp_arr
+            temp_arr = numpy.array([0] * self._branch.fields["_fMaxBaskets"], dtype=">i4")
+            temp_arr[0:len(self._branch.fields["_fBasketBytes"])] = self._branch.fields["_fBasketBytes"]
+            self._branch.fields["_fBasketBytes"] = temp_arr
 
-            tree = TTreeImpl(newtree(), self.branch.file)
-            tree.name = self.treelvl1.tree.name
-            tree.fName = self.treelvl1.tree.fName
-            tree.fTitle = self.treelvl1.tree.fTitle
-            tree.flushsize = self.treelvl1.tree.flushsize
+            tree = TTreeImpl(newtree(), self._branch.file)
+            tree.name = self._treelvl1._tree.name
+            tree.fName = self._treelvl1._tree.fName
+            tree.fTitle = self._treelvl1._tree.fTitle
+            tree.flushsize = self._treelvl1._tree.flushsize
 
-            tree.fields["_fEntries"] = self.treelvl1.tree.fields["_fEntries"]
-            tree.fields["_fTotBytes"] = self.treelvl1.tree.fields["_fTotBytes"]
-            tree.fields["_fZipBytes"] = self.treelvl1.tree.fields["_fZipBytes"]
+            tree.fields["_fEntries"] = self._treelvl1._tree.fields["_fEntries"]
+            tree.fields["_fTotBytes"] = self._treelvl1._tree.fields["_fTotBytes"]
+            tree.fields["_fZipBytes"] = self._treelvl1._tree.fields["_fZipBytes"]
 
             temp_branches = {}
-            for name, branch in self.treelvl1.branches.items():
-                compression = getattr(branch.branch, "compression", branch.branch.file.compression)
-                temp_branches[name] = TBranch(name, newbranch(branch.branch.type, branch.branch.flushsize, ""), compression, self.treelvl1, branch.branch.file)
-                temp_branches[name].branch.fields["_fWriteBasket"] = branch.branch.fields["_fWriteBasket"]
-                temp_branches[name].branch.fields["_fEntries"] = branch.branch.fields["_fEntries"]
-                temp_branches[name].branch.fields["_fBasketEntry"] = branch.branch.fields["_fBasketEntry"]
-                temp_branches[name].branch.fields["_fEntryNumber"] = branch.branch.fields["_fEntryNumber"]
-                temp_branches[name].branch.fields["_fMaxBaskets"] = branch.branch.fields["_fMaxBaskets"]
-                temp_branches[name].branch.fields["_fBasketSeek"] = branch.branch.fields["_fBasketSeek"]
-                temp_branches[name].branch.fields["_fBasketBytes"] = branch.branch.fields["_fBasketBytes"]
-                temp_branches[name].branch.fields["_fTotBytes"] = branch.branch.fields["_fTotBytes"]
-                temp_branches[name].branch.fields["_fZipBytes"] = branch.branch.fields["_fZipBytes"]
-                tree.fields["_fLeaves"].append(temp_branches[name].branch.fields["_fLeaves"])
-                tree.fields["_fBranches"].append(temp_branches[name].branch)
+            for name, branch in self._treelvl1._branches.items():
+                compression = getattr(branch._branch, "compression", branch._branch.file.compression)
+                temp_branches[name] = TBranch(name, newbranch(branch._branch.type, branch._branch.flushsize, ""), compression, self._treelvl1, branch._branch.file)
+                temp_branches[name]._branch.fields["_fWriteBasket"] = branch._branch.fields["_fWriteBasket"]
+                temp_branches[name]._branch.fields["_fEntries"] = branch._branch.fields["_fEntries"]
+                temp_branches[name]._branch.fields["_fBasketEntry"] = branch._branch.fields["_fBasketEntry"]
+                temp_branches[name]._branch.fields["_fEntryNumber"] = branch._branch.fields["_fEntryNumber"]
+                temp_branches[name]._branch.fields["_fMaxBaskets"] = branch._branch.fields["_fMaxBaskets"]
+                temp_branches[name]._branch.fields["_fBasketSeek"] = branch._branch.fields["_fBasketSeek"]
+                temp_branches[name]._branch.fields["_fBasketBytes"] = branch._branch.fields["_fBasketBytes"]
+                temp_branches[name]._branch.fields["_fTotBytes"] = branch._branch.fields["_fTotBytes"]
+                temp_branches[name]._branch.fields["_fZipBytes"] = branch._branch.fields["_fZipBytes"]
+                tree.fields["_fLeaves"].append(temp_branches[name]._branch.fields["_fLeaves"])
+                tree.fields["_fBranches"].append(temp_branches[name]._branch)
 
             tree.branches = copy(temp_branches)
 
-            cursor = uproot.write.sink.cursor.Cursor(self.branch.file._fSeekFree)
-            tree.write_key = uproot.write.TKey.TKey(fClassName=self.treelvl1.tree.write_key.fClassName,
-                                                    fName=self.treelvl1.tree.write_key.fName,
-                                                    fTitle=self.treelvl1.tree.write_key.fTitle,
+            cursor = uproot.write.sink.cursor.Cursor(self._branch.file._fSeekFree)
+            tree.write_key = uproot.write.TKey.TKey(fClassName=self._treelvl1._tree.write_key.fClassName,
+                                                    fName=self._treelvl1._tree.write_key.fName,
+                                                    fTitle=self._treelvl1._tree.write_key.fTitle,
                                                     fObjlen=0,
-                                                    fSeekKey=copy(self.branch.file._fSeekFree),
-                                                    fSeekPdir=self.treelvl1.tree.write_key.fSeekPdir,
-                                                    fCycle=self.treelvl1.tree.write_key.fCycle)
+                                                    fSeekKey=copy(self._branch.file._fSeekFree),
+                                                    fSeekPdir=self._treelvl1._tree.write_key.fSeekPdir,
+                                                    fCycle=self._treelvl1._tree.write_key.fCycle)
             tree.keycursor = uproot.write.sink.cursor.Cursor(tree.write_key.fSeekKey)
-            tree.write_key.write(cursor, self.branch.file._sink)
-            tree.write(tree.file, cursor, self.treelvl1.tree.write_name, tree.write_key, copy(tree.keycursor), Util())
+            tree.write_key.write(cursor, self._branch.file._sink)
+            tree.write(tree.file, cursor, self._treelvl1._tree.write_name, tree.write_key, copy(tree.keycursor), Util())
             tree.file._expandfile(cursor)
             tree.file._rootdir.setkey(tree.write_key)
 
-            self = tree.branches[self.revertstring(self.branch.name)]
-            self.treelvl1.tree = tree
-            self.treelvl1.branches = temp_branches
+            self = tree.branches[self.revertstring(self._branch.name)]
+            self._treelvl1._tree = tree
+            self._treelvl1._branches = temp_branches
 
-        self.branch.fields["_fEntries"] += len(items)
-        self.branch.fields["_fBasketEntry"][self.branch.fields["_fWriteBasket"]] = self.branch.fields["_fEntries"]
-        self.branch.fields["_fEntryNumber"] += len(items)
-        basketdata = numpy.array(items, dtype=self.branch.type, copy=False)
+        self._branch.fields["_fEntries"] += len(items)
+        self._branch.fields["_fBasketEntry"][self._branch.fields["_fWriteBasket"]] = self._branch.fields["_fEntries"]
+        self._branch.fields["_fEntryNumber"] += len(items)
+        basketdata = numpy.array(items, dtype=self._branch.type, copy=False)
         givenbytes = basketdata.tostring()
-        cursor = uproot.write.sink.cursor.Cursor(self.branch.file._fSeekFree)
-        self.branch.fields["_fBasketSeek"][self.branch.fields["_fWriteBasket"] - 1] = cursor.index
-        key = BasketKey(fName=self.branch.name,
+        cursor = uproot.write.sink.cursor.Cursor(self._branch.file._fSeekFree)
+        self._branch.fields["_fBasketSeek"][self._branch.fields["_fWriteBasket"] - 1] = cursor.index
+        key = BasketKey(fName=self._branch.name,
                         fNevBuf=len(items),
-                        fNevBufSize=numpy.dtype(self.branch.type).itemsize,
-                        fSeekKey=copy(self.branch.file._fSeekFree),
-                        fSeekPdir=copy(self.branch.file._fBEGIN),
+                        fNevBufSize=numpy.dtype(self._branch.type).itemsize,
+                        fSeekKey=copy(self._branch.file._fSeekFree),
+                        fSeekPdir=copy(self._branch.file._fBEGIN),
                         fBufferSize=32000)
         keycursor = uproot.write.sink.cursor.Cursor(key.fSeekKey)
-        key.write(cursor, self.branch.file._sink)
-        uproot.write.compress.write(self.branch.file, cursor, givenbytes, self.branch.compression, key, copy(keycursor))
+        key.write(cursor, self._branch.file._sink)
+        uproot.write.compress.write(self._branch.file, cursor, givenbytes, self._branch.compression, key, copy(keycursor))
 
-        self.branch.file._expandfile(cursor)
+        self._branch.file._expandfile(cursor)
 
-        self.treelvl1.tree.fields["_fEntries"] = self.branch.fields["_fEntries"]
-        self.branch.fields["_fTotBytes"] += key.fObjlen + key.fKeylen
-        self.branch.fields["_fZipBytes"] += key.fNbytes
-        self.treelvl1.tree.fields["_fTotBytes"] = self.branch.fields["_fTotBytes"]
-        self.treelvl1.tree.fields["_fZipBytes"] = self.branch.fields["_fZipBytes"]
-        self.branch.fields["_fBasketBytes"][self.branch.fields["_fWriteBasket"] - 1] = key.fNbytes
-        self.treelvl1.tree.size_cursor.update_fields(self.branch.file._sink, self._tree_size, self.treelvl1.tree.fields["_fEntries"],
-                                            self.treelvl1.tree.fields["_fTotBytes"],
-                                            self.treelvl1.tree.fields["_fZipBytes"])
-        self.branch._writebasket_cursor.update_fields(self.branch.file._sink, self.branch._format_tbranch12,
-                                               self.branch.fields["_fWriteBasket"], self.branch.fields["_fEntryNumber"])
-        self.branch._fentries_cursor.update_fields(self.branch.file._sink, self.branch._format_fentries, self.branch.fields["_fEntries"])
-        self.branch._fbasketentry_cursor.update_array(self.branch.file._sink, self.branch.fields["_fBasketEntry"])
-        self.branch._fbasketseek_cursor.update_array(self.branch.file._sink, self.branch.fields["_fBasketSeek"])
-        self.branch._tbranch_size_cursor.update_fields(self.branch.file._sink, self.branch._format_branch_size,
-                                                self.branch.fields["_fTotBytes"], self.branch.fields["_fZipBytes"])
-        self.branch._fbasketbytes_cursor.update_array(self.branch.file._sink, self.branch.fields["_fBasketBytes"])
+        self._treelvl1._tree.fields["_fEntries"] = self._branch.fields["_fEntries"]
+        self._branch.fields["_fTotBytes"] += key.fObjlen + key.fKeylen
+        self._branch.fields["_fZipBytes"] += key.fNbytes
+        self._treelvl1._tree.fields["_fTotBytes"] = self._branch.fields["_fTotBytes"]
+        self._treelvl1._tree.fields["_fZipBytes"] = self._branch.fields["_fZipBytes"]
+        self._branch.fields["_fBasketBytes"][self._branch.fields["_fWriteBasket"] - 1] = key.fNbytes
+        self._treelvl1._tree.size_cursor.update_fields(self._branch.file._sink, self._tree_size, self._treelvl1._tree.fields["_fEntries"],
+                                                       self._treelvl1._tree.fields["_fTotBytes"],
+                                                       self._treelvl1._tree.fields["_fZipBytes"])
+        self._branch._writebasket_cursor.update_fields(self._branch.file._sink, self._branch._format_tbranch12,
+                                                       self._branch.fields["_fWriteBasket"], self._branch.fields["_fEntryNumber"])
+        self._branch._fentries_cursor.update_fields(self._branch.file._sink, self._branch._format_fentries, self._branch.fields["_fEntries"])
+        self._branch._fbasketentry_cursor.update_array(self._branch.file._sink, self._branch.fields["_fBasketEntry"])
+        self._branch._fbasketseek_cursor.update_array(self._branch.file._sink, self._branch.fields["_fBasketSeek"])
+        self._branch._tbranch_size_cursor.update_fields(self._branch.file._sink, self._branch._format_branch_size,
+                                                        self._branch.fields["_fTotBytes"], self._branch.fields["_fZipBytes"])
+        self._branch._fbasketbytes_cursor.update_array(self._branch.file._sink, self._branch.fields["_fBasketBytes"])
 
-        self.branch.file._sink.flush()
+        self._branch.file._sink.flush()
 
 class TTreeImpl(object):
 
     def __init__(self, newtree, file):
         self.name = ""
         self.fClassName = b"TTree"
-        self.fName = self.fixstring(self.name)
-        self.fTitle = self.fixstring(newtree.title)
+        self.fName = _bytesid(self.name)
+        self.fTitle = _bytesid(newtree.title)
         self.flushsize = newtree.flushsize
         self.file = file
 
@@ -227,13 +228,6 @@ class TTreeImpl(object):
                        "_fLeaves": [],
                        "_fUserInfo": None,
                        "_fBranchRef": None}
-
-    @staticmethod
-    def fixstring(string):
-        if isinstance(string, bytes):
-            return string
-        else:
-            return string.encode("utf-8")
 
     _format_tobject1 = struct.Struct(">HII")
     def put_tobject(self, cursor, hexbytes):
@@ -404,7 +398,7 @@ class TTreeImpl(object):
 class TBranchImpl(object):
 
     def __init__(self, name, branchobj, compression, file):
-        self.name = self.fixstring(name)
+        self.name = _bytesid(name)
         self.type = numpy.dtype(branchobj.type).newbyteorder(">")
         self.flushsize = branchobj.flushsize
         self.compression = compression
@@ -460,22 +454,15 @@ class TBranchImpl(object):
             raise NotImplementedError
 
         if branchobj.title == "":
-            self.title = self.fixstring(name)
+            self.title = _bytesid(name)
             self.nametitle = self.title + title_pad
         else:
-            self.title = self.fixstring(branchobj.title)
+            self.title = _bytesid(branchobj.title)
             self.nametitle = self.title
 
         self.fields["_fBasketBytes"] = numpy.array(self.fields["_fBasketBytes"], dtype=">i4", copy=False)
         self.fields["_fBasketEntry"] = numpy.array(self.fields["_fBasketEntry"], dtype=">i8", copy=False)
         self.fields["_fBasketSeek"] = numpy.array(self.fields["_fBasketSeek"], dtype=">i8", copy=False)
-
-    @staticmethod
-    def fixstring(string):
-        if isinstance(string, bytes):
-            return string
-        else:
-            return string.encode("utf-8")
 
     _format_cntvers = struct.Struct(">IH")
 

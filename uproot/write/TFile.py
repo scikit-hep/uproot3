@@ -85,9 +85,9 @@ class TFileUpdate(object):
         elif what.__class__.__name__ == "TTree":
             self._treedict[where] = what
         cursor = uproot.write.sink.cursor.Cursor(self._fSeekFree)
-        newkey = uproot.write.TKey.TKey(fClassName = what.fClassName,
+        newkey = uproot.write.TKey.TKey(fClassName = what._fClassName,
                                         fName      = where,
-                                        fTitle     = what.fTitle,
+                                        fTitle     = what._fTitle,
                                         fObjlen    = 0,
                                         fSeekKey   = self._fSeekFree,
                                         fSeekPdir  = self._fBEGIN,
