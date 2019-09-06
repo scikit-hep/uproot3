@@ -16,20 +16,28 @@ from uproot.write.objects.util import Util
 
 class newbranch(object):
 
-    def __init__(self, type, flushsize=30000, title="", compression=None):
+    def __init__(self, type, flushsize=30000, title="", **options):
         self.name = ""
         self.type = type
         self.flushsize = flushsize
         self.title = title
-        self.compression = compression
+        if "compression" in options:
+            self.compression = options["compression"]
+            del options["compression"]
+        if len(options) > 0:
+            raise TypeError("{0} not supported".format(options))
 
 class newtree(object):
 
-    def __init__(self, branches={}, flushsize=30000, title="", compression=None):
+    def __init__(self, branches={}, flushsize=30000, title="", **options):
         self.branches = branches
         self.flushsize = flushsize
         self.title = title
-        self.compression = compression
+        if "compression" in options:
+            self.compression = options["compression"]
+            del options["compression"]
+        if len(options) > 0:
+            raise TypeError("{0} not supported".format(options))
 
 class TTree(object):
 
@@ -40,12 +48,7 @@ class TTree(object):
         for name, branch in newtree.branches.items():
             if isinstance(branch, newbranch) == False:
                 branch = newbranch(branch)
-            if branch.compression != None:
-                compression = branch.compression
-            elif newtree.compression != None:
-                compression = newtree.compression
-            else:
-                compression = None
+            compression = getattr(branch, "compression", getattr(newtree, "compression", file.compression))
             self.branches[name] = TBranch(name, branch, compression, self, file)
             self.tree.fields["_fLeaves"].append(self.branches[name].branch.fields["_fLeaves"])
             self.tree.fields["_fBranches"].append(self.branches[name].branch)
@@ -105,7 +108,8 @@ class TBranch(object):
 
             temp_branches = {}
             for name, branch in self.treelvl1.branches.items():
-                temp_branches[name] = TBranch(name, newbranch(branch.branch.type, branch.branch.flushsize, "", branch.branch.compression), branch.branch.compression, self.treelvl1, branch.branch.file)
+                compression = getattr(branch.branch, "compression", branch.branch.file.compression)
+                temp_branches[name] = TBranch(name, newbranch(branch.branch.type, branch.branch.flushsize, ""), compression, self.treelvl1, branch.branch.file)
                 temp_branches[name].branch.fields["_fWriteBasket"] = branch.branch.fields["_fWriteBasket"]
                 temp_branches[name].branch.fields["_fEntries"] = branch.branch.fields["_fEntries"]
                 temp_branches[name].branch.fields["_fBasketEntry"] = branch.branch.fields["_fBasketEntry"]

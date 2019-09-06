@@ -1543,7 +1543,6 @@ def test_tree_branch_compression(tmp_path):
     assert branch.GetCompressionAlgorithm() == 1
     assert branch.GetCompressionLevel() == 4
 
-"""
 def test_branch_compression_interface1(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
@@ -1563,7 +1562,6 @@ def test_branch_compression_interface1(tmp_path):
     branch = tree.GetBranch("intBranch")
     assert branch.GetCompressionAlgorithm() == 1
     assert branch.GetCompressionLevel() == 4
-"""
 
 def test_branch_compression_interface2(tmp_path):
     filename = join(str(tmp_path), "example.root")
@@ -1641,3 +1639,24 @@ def test_many_basket(tmp_path):
     treedata = tree.AsMatrix().astype(">i4")
     for i in range(19):
         assert a[0] == treedata[i]
+
+def test_tree_move_compress(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch(">i4", compression=uproot.ZLIB(4))
+    branchdict = {"intBranch": b}
+    tree = newtree(branchdict)
+    a = numpy.array([1], dtype=">i4")
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+        for i in range(19):
+            f["t"]["intBranch"].basket(a)
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    treedata = tree.AsMatrix().astype(">i4")
+    for i in range(19):
+        assert a[0] == treedata[i]
+    branch = tree.GetBranch("intBranch")
+    assert branch.GetCompressionAlgorithm() == 1
+    assert branch.GetCompressionLevel() == 4
