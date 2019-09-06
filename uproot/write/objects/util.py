@@ -22,11 +22,11 @@ class Util(object):
             buf += cursor.put_fields(self._format_putobjany1, numpy.uint32(self._written[id(objct)]))
             return buf
         if clsname in self._written:
-            buf += cursor.put_fields(self._format_putobjany1, self._written[clsname] | uproot.const.kClassMask)
+            buf += cursor.put_fields(self._format_putobjany1, numpy.uint32(self._written[clsname]) | uproot.const.kClassMask)
         else:
             buf += cursor.put_fields(self._format_putobjany1, uproot.const.kNewClassTag)
             buf += cursor.put_cstring(clsname)
-            self._written[clsname] = (start + uproot.const.kMapOffset) | uproot.const.kClassMask
+            self._written[clsname] = numpy.uint32(start + uproot.const.kMapOffset) | uproot.const.kClassMask
             self._written[id(objct)] = beg + uproot.const.kMapOffset
         if clsname == "THashList" or clsname == "TList":
             buf += self.parent_obj.put_tlist(cursor, objct)
@@ -63,7 +63,7 @@ class Util(object):
             beg = cursor.index
             cursor.skip(self._format_putobjany1.size)
             class_buf = self._putclass(cursor, obj, keycursor, beg)
-            buff = copy_cursor.put_fields(self._format_putobjany1, len(class_buf) | uproot.const.kByteCountMask)
+            buff = copy_cursor.put_fields(self._format_putobjany1, numpy.uint32(len(class_buf)) | uproot.const.kByteCountMask)
         else:
             copy_cursor = copy(cursor)
             cursor.skip(self._format_putobjany1.size)
