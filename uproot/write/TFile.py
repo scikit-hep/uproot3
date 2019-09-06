@@ -40,6 +40,7 @@ class TFileUpdate(object):
                  path = str(path)
 
         self.compression = compression
+        self._treedict = {}
 
         self._sink = uproot.write.sink.file.FileSink(path)
         self._path = path
@@ -64,8 +65,14 @@ class TFileUpdate(object):
 
         return where, cycle
 
-    def newtree(self, name, branches={}, flushsize=30000, title="", compression=None):
-        self.__setitem__(name, uproot.write.objects.TTree.newtree(branches, flushsize, title, compression))
+    def newtree(self, name, branches={}, flushsize=30000, title="", **options):
+        if "compression" in options:
+            self.__setitem__(name, uproot.write.objects.TTree.newtree(branches, flushsize, title, compression=options["compression"]))
+            del options["compression"]
+        else:
+            self.__setitem__(name, uproot.write.objects.TTree.newtree(branches, flushsize, title))
+        if len(options) > 0:
+            raise TypeError("{0} not supported".format(options))
 
     def __setitem__(self, where, what):
         self.util = Util()
@@ -73,11 +80,14 @@ class TFileUpdate(object):
         if what.__class__.__name__ != "TTree" and what.__class__.__name__ != "newtree":
             what = uproot_methods.convert.towriteable(what)
         elif what.__class__.__name__ == "newtree":
-            what = TTree(what)
+            what = TTree(what, self)
+            self._treedict[where] = what
+        elif what.__class__.__name__ == "TTree":
+            self._treedict[where] = what
         cursor = uproot.write.sink.cursor.Cursor(self._fSeekFree)
-        newkey = uproot.write.TKey.TKey(fClassName = what.fClassName,
+        newkey = uproot.write.TKey.TKey(fClassName = what._fClassName,
                                         fName      = where,
-                                        fTitle     = what.fTitle,
+                                        fTitle     = what._fTitle,
                                         fObjlen    = 0,
                                         fSeekKey   = self._fSeekFree,
                                         fSeekPdir  = self._fBEGIN,
@@ -107,8 +117,19 @@ class TFileUpdate(object):
     def __repr__(self):
         return "<{0} {1} at 0x{2:012x}>".format(self.__class__.__name__, repr(self._filename), id(self))
 
+    @staticmethod
+    def fixstring(string):
+        if isinstance(string, bytes):
+            return string
+        else:
+            return string.encode("utf-8")
+
     def __getitem__(self, name):
-        return self._reopen().get(name)
+        name = self.fixstring(name)
+        if name in self._treedict:
+            return self._treedict[name]
+        else:
+            return self._reopen().get(name)
 
     def __len__(self):
         return len(self._reopen()._keys)
@@ -164,9 +185,6 @@ class TFileUpdate(object):
 
     def __contains__(self, name):
         return name in self._reopen()
-
-    def __getitem__(self, where):
-        return self._reopen()[where]
 
     @property
     def closed(self):
