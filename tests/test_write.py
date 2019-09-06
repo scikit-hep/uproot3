@@ -1323,7 +1323,7 @@ def test_branch_basket_one_tleafs(tmp_path):
     for i in range(5):
         assert a[i] == treedata[i]
 
-def test_one_branch_multi_newbasket(tmp_path):
+def test_one_branch_multi_basket(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
     b = newbranch("int32")
@@ -1443,7 +1443,7 @@ def test_multi_tree_one_branch_multi_basket_uproot(tmp_path):
         assert c[i] == treedata2[i]
         assert d[i] == treedata2[i+9]
 
-def test_multi_tree_one_branch_multi_newbasket(tmp_path):
+def test_multi_tree_one_branch_multi_basket(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
     b = newbranch("int32")
@@ -1612,16 +1612,16 @@ def test_many_basket_uproot(tmp_path):
     a = numpy.array([1], dtype=">i4")
     with uproot.recreate(filename, compression=None) as f:
         f["t"] = tree
-        for i in range(19):
+        for i in range(101):
             f["t"]["intBranch"].newbasket(a)
 
     f = uproot.open(filename)
     tree = f["t"]
     treedata = tree.array("intBranch")
-    for i in range(19):
+    for i in range(101):
         assert a[0] == treedata[i]
 
-def test_many_newbasket(tmp_path):
+def test_many_basket(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
     b = newbranch(">i4")
@@ -1630,13 +1630,13 @@ def test_many_newbasket(tmp_path):
     a = numpy.array([1], dtype=">i4")
     with uproot.recreate(filename, compression=None) as f:
         f["t"] = tree
-        for i in range(19):
+        for i in range(101):
             f["t"]["intBranch"].newbasket(a)
 
     f = ROOT.TFile.Open(filename)
     tree = f.Get("t")
     treedata = tree.AsMatrix().astype(">i4")
-    for i in range(19):
+    for i in range(101):
         assert a[0] == treedata[i]
 
 def test_tree_move_compress(tmp_path):
@@ -1648,13 +1648,13 @@ def test_tree_move_compress(tmp_path):
     a = numpy.array([1], dtype=">i4")
     with uproot.recreate(filename, compression=None) as f:
         f["t"] = tree
-        for i in range(19):
+        for i in range(101):
             f["t"]["intBranch"].newbasket(a)
 
     f = ROOT.TFile.Open(filename)
     tree = f.Get("t")
     treedata = tree.AsMatrix().astype(">i4")
-    for i in range(19):
+    for i in range(101):
         assert a[0] == treedata[i]
     branch = tree.GetBranch("intBranch")
     assert branch.GetCompressionAlgorithm() == 1

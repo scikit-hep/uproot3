@@ -86,7 +86,7 @@ class TBranch(object):
         self._branch.fields["_fWriteBasket"] += 1
 
         if self._branch.fields["_fWriteBasket"] >= self._branch.fields["_fMaxBaskets"]:
-            self._branch.fields["_fMaxBaskets"] = self._branch.fields["_fMaxBaskets"] * 10
+            self._branch.fields["_fMaxBaskets"] = self._branch.fields["_fMaxBaskets"] * 2
             temp_arr = numpy.array([0] * self._branch.fields["_fMaxBaskets"], dtype=">i8")
             temp_arr[0:len(self._branch.fields["_fBasketEntry"])] = self._branch.fields["_fBasketEntry"]
             self._branch.fields["_fBasketEntry"] = temp_arr
@@ -411,15 +411,15 @@ class TBranchImpl(object):
                        "_fEntryOffsetLen": 0,
                        "_fWriteBasket": 0,  # Number of baskets
                        "_fOffset": 0,
-                       "_fMaxBaskets": 10,
+                       "_fMaxBaskets": 50,
                        "_fSplitLevel": 0,
                        "_fEntries": 0,
                        "_fFirstEntry": 0,
                        "_fTotBytes": 0,
                        "_fZipBytes": 0,
-                       "_fBasketBytes": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                       "_fBasketEntry": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                       "_fBasketSeek": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                       "_fBasketBytes": [0]*50,
+                       "_fBasketEntry": [0]*50,
+                       "_fBasketSeek": [0]*50,
                        "_fFileName": b"",
                        "_fBranches": [],
                        "_fLeaves": [],
