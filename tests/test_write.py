@@ -1663,7 +1663,7 @@ def test_tree_move_compress(tmp_path):
 def test_user_interface1(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    b = newbranch(">i4")
+    b = uproot.newbranch(">i4")
     branchdict = {"intBranch": b}
     tree = uproot.newtree(branchdict)
     a = numpy.array([1], dtype=">i4")
