@@ -71,6 +71,19 @@ class TTree(object):
     def _write(self, context, cursor, name, compression, key, keycursor, util):
         self._tree.write(context, cursor, name, key, copy(keycursor), util)
 
+    def extend(self, branchdict, flush=True):
+        #Check for equal number of values in baskets
+        values = iter(branchdict.values())
+        first = next(values)
+        if all(len(first) == len(value) for value in values) == False:
+            raise Exception("Baskets of all branches should have the same length")
+
+        if flush:
+            for key, value in branchdict.items():
+                self._branches[key].newbasket(value)
+        else:
+            raise NotImplementedError
+
     @property
     def name(self):
         return self._tree.fName
@@ -213,7 +226,6 @@ class TBranch(object):
             tree.name = self._treelvl1._tree.name
             tree.fName = self._treelvl1._tree.fName
             tree.fTitle = self._treelvl1._tree.fTitle
-            tree.flushsize = self._treelvl1._tree.flushsize
 
             tree.fields["_fEntries"] = self._treelvl1._tree.fields["_fEntries"]
             tree.fields["_fTotBytes"] = self._treelvl1._tree.fields["_fTotBytes"]
@@ -436,7 +448,6 @@ class TBranch(object):
         b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
         return b.lazyarray(interpretation, entrysteps, entrystart, entrystop, flatten, awkwardlib, cache, basketcache, keycache, executor, persistvirtual)
 
-
 class TTreeImpl(object):
 
     def __init__(self, name, newtree, file):
@@ -444,7 +455,6 @@ class TTreeImpl(object):
         self.fClassName = b"TTree"
         self.fName = _bytesid(self.name)
         self.fTitle = _bytesid(newtree.title)
-        self.flushsize = newtree.flushsize
         self.file = file
 
         self.fields = {"_fLineColor": 602,

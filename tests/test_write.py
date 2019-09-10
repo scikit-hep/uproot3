@@ -1660,7 +1660,7 @@ def test_tree_move_compress(tmp_path):
     assert branch.GetCompressionAlgorithm() == 1
     assert branch.GetCompressionLevel() == 4
 
-def test_user_interface1(tmp_path):
+def test_tree_renames(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
     b = uproot.newbranch(">i4")
@@ -1677,3 +1677,24 @@ def test_user_interface1(tmp_path):
     treedata = tree.array("intBranch")
     for i in range(19):
         assert a[0] == treedata[i]
+
+def test_ttree_extend_flush(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = uproot.newbranch(">i4")
+    branchdict = {"intBranch": b, "intBranch2": b}
+    tree = uproot.newtree(branchdict)
+    with uproot.recreate(filename) as f:
+        f["t"] = tree
+        basket_add = {"intBranch": numpy.array([1, 2, 3, 4, 5]), "intBranch2": numpy.array([6, 7, 8, 9, 10])}
+        f["t"].extend(basket_add)
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    branch1 = tree.AsMatrix(["intBranch"])
+    branch2 = tree.AsMatrix(["intBranch2"])
+    branch1_test = numpy.array([1, 2, 3, 4, 5], dtype=">i4")
+    branch2_test = numpy.array([6, 7, 8, 9, 10], dtype=">i4")
+    for i in range(5):
+        assert branch1[i] == branch1_test[i]
+        assert branch2[i] == branch2_test[i]
