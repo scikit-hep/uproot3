@@ -35,7 +35,7 @@ def divide_flush(branchdict, flushsize):
     flushsize = _normalize_size(flushsize)
     sizes = 0
     for name in branchdict.keys():
-        sizes += branchdict[name]._branch.type.itemsize
+        sizes += numpy.dtype(branchdict[name]._branch.type).itemsize
     div = math.ceil(flushsize / (max(sizes, 1)))
     return div
 
@@ -110,26 +110,15 @@ class TTree(object):
                 self._branches[key].newbasket(value)
         else:
             for key, value in branchdict.items():
-                if self._tree.flushrow != len(self._branches[key]._branch.buffer):
-                    extraflush = self._tree.flushrow
-                else:
-                    extraflush = self._branches[key]._branch.flushrow
-                while True:
-                    if len(self._branches[key]._branch.buffer) - self._branches[key]._branch.bufferpointer - len(value) > 0:
-                        self._branches[key]._branch.buffer[self._branches[key]._branch.bufferpointer:self._branches[key]._branch.bufferpointer + len(value)] = value
-                        self._branches[key]._branch.bufferpointer += len(value)
-                        break
-                    elif len(self._branches[key]._branch.buffer) - self._branches[key]._branch.bufferpointer - len(value) == 0:
-                        self._branches[key]._branch.buffer[self._branches[key]._branch.bufferpointer:] = value
-                        self._branches[key]._branch.bufferpointer = 0
-                        self._branches[key].newbasket(self._branches[key]._branch.buffer)
-                        break
-                    else:
-                        freespace = len(self._branches[key]._branch.buffer) - self._branches[key]._branch.bufferpointer
-                        self._branches[key]._branch.buffer[self._branches[key]._branch.bufferpointer:] = value[:freespace]
-                        value = value[freespace:]
-                        self._branches[key]._branch.bufferpointer = 0
-                        self._branches[key].newbasket(self._branches[key]._branch.buffer)
+                for x in value:
+                    self._branches[key]._branch.buffer[self._branches[key]._branch.bufferpointer:self._branches[key]._branch.bufferpointer+1] = x
+                    self._branches[key]._branch.bufferpointer += 1
+                    self._branches[key]._branch.treecheck += 1
+                    if self._branches[key]._branch.flushrow != None and self._branches[key]._branch.bufferpointer == self._branches[key]._branch.flushrow:
+                        self._branches[key]._flush()
+                    elif self._branches[key]._branch.treecheck == self._tree.flushrow:
+                        self._branches[key]._flush()
+                        self._branches[key]._branch.treecheck = 0
 
     def append(self, branchdict):
         for value in branchdict.values:
@@ -258,20 +247,16 @@ class TBranch(object):
 
     def _allocateflush(self):
         if self._branch.flushsize != None:
-            self._branch.flushrow = _normalize_size(self._branch.flushsize)
-            if self._branch.flushrow == self._treelvl1._tree.flushrow:
+            self._branch.flushrow = math.ceil(_normalize_size(self._branch.flushsize)/numpy.dtype(self._branch.type).itemsize)
+            if self._branch.flushrow >= self._treelvl1._tree.flushrow:
                 self._branch.flushrow = None
         else:
             self._branch.flushrow = None
 
-        if self._branch.flushrow is None:
-            self._branch.buffer = numpy.array([0]*self._treelvl1._tree.flushrow, dtype=self._branch.type)
-        elif self._branch.flushrow > self._treelvl1._tree.flushrow:
-            self._branch.buffer = numpy.array([0]*self._branch.flushrow, dtype=self._branch.type)
-        else:
-            self._branch.buffer = numpy.array([0]*self._treelvl1._tree.flushrow, dtype=self._branch.type)
+        self._branch.buffer = numpy.array([0]*self._treelvl1._tree.flushrow, dtype=self._branch.type)
 
         self._branch.bufferpointer = 0
+        self._branch.treecheck = 0
 
     @staticmethod
     def revertstring(string):
@@ -381,6 +366,10 @@ class TBranch(object):
         self._branch._fbasketbytes_cursor.update_array(self._branch.file._sink, self._branch.fields["_fBasketBytes"])
 
         self._branch.file._sink.flush()
+
+    def _flush(self):
+        self.newbasket(self._branch.buffer[:self._branch.bufferpointer])
+        self._branch.bufferpointer = 0
 
     @property
     def name(self):

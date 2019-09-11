@@ -1717,7 +1717,7 @@ def test_ttree_extend_flush_false(tmp_path):
     for i in range(2):
         assert branch1[i] == branch1_test[i]
 
-def test_ttree_extend_flush_false_readback(tmp_path):
+def test_ttree_extend_flush_false_readback_and_proper_close(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
     b = uproot.newbranch(">i4")
@@ -1842,3 +1842,16 @@ def test_ttree_extend_flush_false_multibasket_multibranch_diff_type(tmp_path):
     for i in range(6):
         assert branch1[i] == branch1_test[i]
         assert branch2[i] == branch2_test[i]
+
+def test_ttree_extend_flush_false_diff_flush(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = uproot.newbranch(">i4", flushsize=5)
+    branchdict = {"intBranch": b}
+    tree = uproot.newtree(branchdict, flushsize=12)
+    with uproot.recreate(filename) as f:
+        f["t"] = tree
+        f["t"].extend({"intBranch": numpy.array([1])}, flush=False)
+        assert f["t"]["intBranch"].numbaskets == 0
+        f["t"].extend({"intBranch": numpy.array([2, 3])}, flush=False)
+        assert f["t"]["intBranch"].numbaskets == 2
