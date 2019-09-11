@@ -5,6 +5,7 @@
 import struct
 from copy import copy
 import sys
+import math
 
 import numpy
 
@@ -12,14 +13,35 @@ import uproot
 import uproot.const
 from uproot.rootio import _bytesid
 from uproot.rootio import nofilter
+from uproot.rootio import _memsize
 import uproot.write.compress
 import uproot.write.sink.cursor
 from uproot.write.TKey import BasketKey
 from uproot.write.objects.util import Util
 
+def _normalize_size(value):
+    if sys.version_info[0] <= 2:
+        string_types = (unicode, str)
+    else:
+        string_types = (str, bytes)
+    if isinstance(value, string_types):
+        return int(_memsize(value))
+    if value is None or value < 0:
+        return 1
+    return value
+
+
+def divide_flush(branchdict, flushsize):
+    flushsize = _normalize_size(flushsize)
+    sizes = 0
+    for name in branchdict.keys():
+        sizes += branchdict[name]._branch.type.itemsize
+    div = math.ceil(flushsize / (max(sizes, 1)))
+    return div
+
 class newbranch(object):
 
-    def __init__(self, type, flushsize=30000, title="", **options):
+    def __init__(self, type, flushsize=None, title="", **options):
         self.name = ""
         self.type = type
         self.flushsize = flushsize
@@ -57,6 +79,11 @@ class TTree(object):
             self._tree.fields["_fLeaves"].append(self._branches[name]._branch.fields["_fLeaves"])
             self._tree.fields["_fBranches"].append(self._branches[name]._branch)
 
+        self._tree.flushrow = divide_flush(self._branches, newtree.flushsize)
+
+        for branch in self._branches.values():
+            branch._allocateflush()
+
     def __getitem__(self, name):
         return self._branches[name]
 
@@ -82,7 +109,37 @@ class TTree(object):
             for key, value in branchdict.items():
                 self._branches[key].newbasket(value)
         else:
-            raise NotImplementedError
+            for key, value in branchdict.items():
+                if self._tree.flushrow != len(self._branches[key]._branch.buffer):
+                    extraflush = self._tree.flushrow
+                else:
+                    extraflush = self._branches[key]._branch.flushrow
+                while True:
+                    if len(self._branches[key]._branch.buffer) - self._branches[key]._branch.bufferpointer - len(value) > 0:
+                        self._branches[key]._branch.buffer[self._branches[key]._branch.bufferpointer:self._branches[key]._branch.bufferpointer + len(value)] = value
+                        self._branches[key]._branch.bufferpointer += len(value)
+                        break
+                    elif len(self._branches[key]._branch.buffer) - self._branches[key]._branch.bufferpointer - len(value) == 0:
+                        self._branches[key]._branch.buffer[self._branches[key]._branch.bufferpointer:] = value
+                        self._branches[key]._branch.bufferpointer = 0
+                        self._branches[key].newbasket(self._branches[key]._branch.buffer)
+                        break
+                    else:
+                        freespace = len(self._branches[key]._branch.buffer) - self._branches[key]._branch.bufferpointer
+                        self._branches[key]._branch.buffer[self._branches[key]._branch.bufferpointer:] = value[:freespace]
+                        value = value[freespace:]
+                        self._branches[key]._branch.bufferpointer = 0
+                        self._branches[key].newbasket(self._branches[key]._branch.buffer)
+
+    def append(self, branchdict):
+        for value in branchdict.values:
+            if len(value) != 1:
+                raise Exception("The length of all the baskets should be 1")
+        self.extend(branchdict, flush=False)
+
+    def flush(self):
+        for key in self._branches.keys():
+            self._branches[key].newbasket(self._branches[key]._branch.buffer[0:self._branches[key]._branch.bufferpointer])
 
     @property
     def name(self):
@@ -199,6 +256,23 @@ class TBranch(object):
         self._branch = TBranchImpl(name, branchobj, compression, file)
         self._treelvl1 = treelvl1
 
+    def _allocateflush(self):
+        if self._branch.flushsize != None:
+            self._branch.flushrow = _normalize_size(self._branch.flushsize)
+            if self._branch.flushrow == self._treelvl1._tree.flushrow:
+                self._branch.flushrow = None
+        else:
+            self._branch.flushrow = None
+
+        if self._branch.flushrow is None:
+            self._branch.buffer = numpy.array([0]*self._treelvl1._tree.flushrow, dtype=self._branch.type)
+        elif self._branch.flushrow > self._treelvl1._tree.flushrow:
+            self._branch.buffer = numpy.array([0]*self._branch.flushrow, dtype=self._branch.type)
+        else:
+            self._branch.buffer = numpy.array([0]*self._treelvl1._tree.flushrow, dtype=self._branch.type)
+
+        self._branch.bufferpointer = 0
+
     @staticmethod
     def revertstring(string):
         if isinstance(string, bytes):
@@ -226,6 +300,7 @@ class TBranch(object):
             tree.name = self._treelvl1._tree.name
             tree.fName = self._treelvl1._tree.fName
             tree.fTitle = self._treelvl1._tree.fTitle
+            tree.flushrow = self._treelvl1._tree.flushrow
 
             tree.fields["_fEntries"] = self._treelvl1._tree.fields["_fEntries"]
             tree.fields["_fTotBytes"] = self._treelvl1._tree.fields["_fTotBytes"]
@@ -235,6 +310,7 @@ class TBranch(object):
             for name, branch in self._treelvl1._branches.items():
                 compression = getattr(branch._branch, "compression", branch._branch.file.compression)
                 temp_branches[name] = TBranch(name, newbranch(branch._branch.type, branch._branch.flushsize, ""), compression, self._treelvl1, branch._branch.file)
+                temp_branches[name]._allocateflush()
                 temp_branches[name]._branch.fields["_fWriteBasket"] = branch._branch.fields["_fWriteBasket"]
                 temp_branches[name]._branch.fields["_fEntries"] = branch._branch.fields["_fEntries"]
                 temp_branches[name]._branch.fields["_fBasketEntry"] = branch._branch.fields["_fBasketEntry"]

@@ -197,6 +197,8 @@ class TFileUpdate(object):
         return self
 
     def __exit__(self, type, value, traceback):
+        for tree in self._treedict.keys():
+            self._treedict[tree].flush()
         self.close()
 
 class TFileRecreate(TFileUpdate):
