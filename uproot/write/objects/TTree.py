@@ -36,7 +36,7 @@ def divide_flush(branchdict, flushsize):
     sizes = 0
     for name in branchdict.keys():
         sizes += numpy.dtype(branchdict[name]._branch.type).itemsize
-    div = math.ceil(flushsize / (max(sizes, 1)))
+    div = int(math.ceil(flushsize / float((max(sizes, 1)))))
     return div
 
 class newbranch(object):
@@ -247,7 +247,7 @@ class TBranch(object):
 
     def _allocateflush(self):
         if self._branch.flushsize != None:
-            self._branch.flushrow = math.ceil(_normalize_size(self._branch.flushsize)/numpy.dtype(self._branch.type).itemsize)
+            self._branch.flushrow = int(math.ceil(_normalize_size(self._branch.flushsize)/float(numpy.dtype(self._branch.type).itemsize)))
             if self._branch.flushrow >= self._treelvl1._tree.flushrow:
                 self._branch.flushrow = None
         else:
