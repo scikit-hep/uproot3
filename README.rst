@@ -4417,117 +4417,7 @@ Basic usage:
         f["t"] = uproot.newtree({"branch": "int32"})
         f["t"].extend({"branch": numpy.array([1, 2, 3, 4, 5])})
 
-Reading it back in uproot:
-
-.. code-block:: python3
-
-    f = uproot.open("example.root")
-    f["t"].array("branch")
-
-
-
-
-.. parsed-literal::
-
-    array([1, 2, 3, 4, 5], dtype=int32)
-
-
-
-Reading it back in ROOT:
-
-.. code-block:: python3
-
-    import ROOT
-    
-    f = ROOT.TFile.Open("example.root")
-    tree = f.Get("t")
-    treedata = tree.AsMatrix(["branch"])
-    print(treedata)
-
-
-.. parsed-literal::
-
-    Welcome to JupyROOT 6.18/00
-    [[1.]
-     [2.]
-     [3.]
-     [4.]
-     [5.]]
-
-
-You can look at the current state of the TTree when you are putting in
-data:
-
-.. code-block:: python3
-
-    import uproot
-    
-    branchdict = {"branch": "int32"}
-    tree = uproot.newtree(branchdict)
-    f = uproot.recreate("example.root")
-    f["t"] = tree
-    f["t"].extend({"branch": numpy.array([1, 2, 3, 4, 5])})
-
-Read it:
-
-.. code-block:: python3
-
-    f["t"].array("branch")
-
-
-
-
-.. parsed-literal::
-
-    array([1, 2, 3, 4, 5], dtype=int32)
-
-
-
-Keep writing:
-
-.. code-block:: python3
-
-    f["t"].extend({"branch": numpy.array([6, 7, 8, 9, 10])})
-
-Close the file!
-
-.. code-block:: python3
-
-    f.close()
-
-Just to check if it is a valid ROOT file:\|
-
-.. code-block:: python3
-
-    import ROOT
-    
-    f = ROOT.TFile.Open("example.root")
-    tree = f.Get("t")
-    treedata = tree.AsMatrix(["branch"])
-    print(treedata)
-
-
-.. parsed-literal::
-
-    [[ 1.]
-     [ 2.]
-     [ 3.]
-     [ 4.]
-     [ 5.]
-     [ 6.]
-     [ 7.]
-     [ 8.]
-     [ 9.]
-     [10.]]
-
-
-Getting into the specifics
---------------------------
-
-Creating the Tree
-~~~~~~~~~~~~~~~~~
-
-This is how you create a TTree:
+You can specify the branches in your TTree explicitly:
 
 .. code-block:: python3
 
@@ -4539,10 +4429,6 @@ uproot.newtree() takes a python dictionary as an argument, where the key
 is the name of the branch and the value is the branch object or type of
 branch.
 
-.. code-block:: python3
-
-    branchdict = {"branch2": ">i8"}
-
 We can specify the title, the flushsize and the compression while
 creating the tree.
 
@@ -4552,38 +4438,6 @@ This is an example of how you would add a title to your tree:
 
     tree = uproot.newtree(branchdict, title="TTree Title")
 
-Creating the Branches
-~~~~~~~~~~~~~~~~~~~~~
-
-There are several ways to specify a branch:
-
-.. code-block:: python3
-
-    b = "int32"
-    # b = ">i4"
-
-where we are using a string with the desired type
-
-or
-
-.. code-block:: python3
-
-    b = numpy.int32
-    # b = numpy.dtype(numpy.int32)
-
-where we are using a numpy object or numpy dtype
-
-or
-
-.. code-block:: python3
-
-    b = uproot.newbranch("int32")
-    # b = uproot.newbranch(">i4")
-
-The above method provides a lot more flexibility, letting you specify
-the flushsize, title of the branch and compression of the baskets along
-with the type of the branch.
-
 To specify the title of the branch, similar to how you would add a title
 to a tree:
 
@@ -4591,19 +4445,13 @@ to a tree:
 
     b = uproot.newbranch("int32", title="This is the title")
 
-Writing the TTree to the file
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. code-block:: python3
-
-    f = uproot.recreate("demo.root") # Creates a writeable ROOT file
-    t = uproot.newtree({"branch1": int, "branch2": numpy.int32})
-    f["t"] = t # Writes the TTree to the file
-
 Writing baskets
 ~~~~~~~~~~~~~~~
 
-We have 2 branches in our TTree: \* branch1 \* branch2
+| We have 2 branches in our TTree: 
+| branch1
+| branch2
+|
 
 The suggested interface of writing baskets to the TTree is using the
 extend method:
@@ -4615,37 +4463,10 @@ extend method:
 | The extend method takes a dictionary where the key is the name of the
   branch and the value of the dictionary is a numpy array or a list of
   data to be written to the branch.
-| Remember to add equal number of entries to each branch, else you will
-  run into an error.
-
-.. code-block:: python3
-
-    f["t"].extend({"branch1": numpy.array([1, 2, 3, 4, 5]), "branch2": [6, 7, 8, 9]})
-
-
-::
-
-
-    ---------------------------------------------------------------------------
-
-    Exception                                 Traceback (most recent call last)
-
-    <ipython-input-18-6767510579cb> in <module>
-    ----> 1 f["t"].extend({"branch1": numpy.array([1, 2, 3, 4, 5]), "branch2": [6, 7, 8, 9]})
-    
-
-    ~/uproot/uproot/write/objects/TTree.py in extend(self, branchdict, flush)
-        104         first = next(values)
-        105         if all(len(first) == len(value) for value in values) == False:
-    --> 106             raise Exception("Baskets of all branches should have the same length")
-        107 
-        108         if flush:
-
-
-    Exception: Baskets of all branches should have the same length
-
-
-You can specify a flush parameter to True or False in the extend method.
+|
+| Remember to add entries to all the branches and the number of entries added to the branches is the same!
+|
+| You can specify a flush parameter to True or False in the extend method.
 
 .. code-block:: python3
 
@@ -4656,6 +4477,11 @@ flushed to the file.
 
 | You can choose not to flush the baskets immediately by setting flush =
   False.
+
+.. code-block:: python3
+
+    f["t"].extend({"branch1": numpy.array([1, 2, 3, 4, 5]), "branch2": [1, 2, 3, 4, 5]}, flush=False)
+
 | The baskets are added to a buffer which are flushed to the file
   depending on the flush size set by the user.
 
@@ -4673,16 +4499,6 @@ and to set it at the tree level:
 
     tree = uproot.newtree({"demoflush": t}, flushsize=1000)
 
-As demonstrated above, one can specify the flush size in several ways:
-\* number B/KB/MB/GB. eg - 10 KB \* number of entries per branch - 1000
-
-To use these flushsizes instead of flushing every basket directly to the
-file:
-
-.. code-block:: python3
-
-    f["t"].extend({"branch1": numpy.array([1, 2, 3, 4, 5]), "branch2": [1, 2, 3, 4, 5]}, flush=False)
-
 You can also use the append function to add baskets to your file if you
 need to just add a single value at the end of your current basket
 buffer:
@@ -4691,8 +4507,7 @@ buffer:
 
     f["t"].append({"branch1": 1, "branch2": 2)
 
-Make sure to add baskets to every branch, similar to the extend method.
-If you need more than 1 value, then use the extend method.
+Make sure to add entries to every branch, similar to the extend method.
 
 The append method does not provide a way to explicitly flush data to the
 file, the data is added to the end of the buffer and is flushed hased on
@@ -4721,38 +4536,10 @@ Compression
 By default, the baskets of all the branches are compressed depending on
 the compression set for the file.
 
-.. code-block:: python3
-
-    branchdict = {"branch": "int32"}
-    tree = uproot.newtree(branchdict)
-    with uproot.recreate("example.root", compression=uproot.LZMA(5)) as f:
-        f["t"] = tree
-        f["t"].extend({"branch": [1]*1000})
-
-In the above example the baskets in the branch are compressed using LZMA
-with level equal to 5.
-
 You can specify the compression of all the branches if you want it to be
-separate from the compression specified for the entire file.
+separate from the compression specified for the entire file by using the uproot.newtree() method.
 
-.. code-block:: python3
-
-    branchdict = {"branch": "int32", "testbranch": "int64"}
-    tree = uproot.newtree(branchdict, compression=uproot.LZ4(4)) # <-- LOOK HERE
-    with uproot.recreate("example.root", compression=uproot.LZMA(5)) as f:
-        f["t"] = tree
-        f["t"].extend({"branch": [1]*1000, "testbranch": [2]*1000})
-
-In the above example, the baskets in both branch “branch” and
-“testbranch” are compressed using LZ4 with level equal to 4. If the user
-adds other objects(new tree, histogram, strings) to the ROOT file, they
-will still follow the compression specified in the file of LZMA with
-level equal to 5.
-
-You can also specify the compression of each branch individually.
-
-In the “Creating the Branches” section, we spoke about the compression
-option if one is using the newbranch interface to create the branch.
+You can also specify the compression of each branch individually by using the uproot.newbranch() method.
 
 .. code-block:: python3
 
@@ -4765,13 +4552,6 @@ option if one is using the newbranch interface to create the branch.
     with uproot.recreate("example.root", compression=uproot.LZMA(5)) as f:
         f["t"] = tree
         f["t"].extend({"branch1": [1]*1000, "branch2": [2]*1000, "branch3": [3]*1000})
-
-| In the above example, the baskets in branch “branch1” are compressed
-  using ZLIB with level equal to 5.
-| The baskets in branch “branch2” are compressed using LZMA with level
-  equal to 4.
-| The baskets in branch “branch3” follow the compression set using the
-  newtree interface and is using LZ4 with level equal to 4.
 
 Acknowledgements
 ================
