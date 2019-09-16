@@ -4448,7 +4448,7 @@ to a tree:
 Writing baskets
 ~~~~~~~~~~~~~~~
 
-| We have 2 branches in our TTree: 
+| Assume there are 2 branches in the TTree: 
 | branch1
 | branch2
 |
@@ -4531,7 +4531,7 @@ Add 3 more basket data to branch2!
     f["t"]["branch2"].newbasket([91, 92, 93])
 
 Compression
------------
+~~~~~~~~~~~~~~~
 
 By default, the baskets of all the branches are compressed depending on
 the compression set for the file.
