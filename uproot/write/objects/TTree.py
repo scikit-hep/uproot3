@@ -4,20 +4,44 @@
 
 import struct
 from copy import copy
+import sys
+import math
 
 import numpy
 
 import uproot
 import uproot.const
 from uproot.rootio import _bytesid
+from uproot.rootio import nofilter
+from uproot.rootio import _memsize
 import uproot.write.compress
 import uproot.write.sink.cursor
 from uproot.write.TKey import BasketKey
 from uproot.write.objects.util import Util
 
+def _normalize_size(value):
+    if sys.version_info[0] <= 2:
+        string_types = (unicode, str)
+    else:
+        string_types = (str, bytes)
+    if isinstance(value, string_types):
+        return int(_memsize(value))
+    if value is None or value < 0:
+        return 1
+    return value
+
+
+def divide_flush(branchdict, flushsize):
+    flushsize = _normalize_size(flushsize)
+    sizes = 0
+    for name in branchdict.keys():
+        sizes += numpy.dtype(branchdict[name]._branch.type).itemsize
+    div = int(math.ceil(flushsize / float((max(sizes, 1)))))
+    return div
+
 class newbranch(object):
 
-    def __init__(self, type, flushsize=30000, title="", **options):
+    def __init__(self, type, flushsize=None, title="", **options):
         self.name = ""
         self.type = type
         self.flushsize = flushsize
@@ -42,8 +66,9 @@ class newtree(object):
 
 class TTree(object):
 
-    def __init__(self, newtree, file):
-        self._tree = TTreeImpl(newtree, file)
+    def __init__(self, name, newtree, file):
+        self._tree = TTreeImpl(name, newtree, file)
+        self._file = file
 
         self._branches = {}
         for name, branch in newtree.branches.items():
@@ -53,6 +78,11 @@ class TTree(object):
             self._branches[name] = TBranch(name, branch, compression, self, file)
             self._tree.fields["_fLeaves"].append(self._branches[name]._branch.fields["_fLeaves"])
             self._tree.fields["_fBranches"].append(self._branches[name]._branch)
+
+        self._tree.flushrow = divide_flush(self._branches, newtree.flushsize)
+
+        for branch in self._branches.values():
+            branch._allocateflush()
 
     def __getitem__(self, name):
         return self._branches[name]
@@ -68,11 +98,165 @@ class TTree(object):
     def _write(self, context, cursor, name, compression, key, keycursor, util):
         self._tree.write(context, cursor, name, key, copy(keycursor), util)
 
+    def extend(self, branchdict, flush=True):
+        #Check for equal number of values in baskets
+        values = iter(branchdict.values())
+        first = next(values)
+        if all(len(first) == len(value) for value in values) == False:
+            raise Exception("Baskets of all branches should have the same length")
+
+        if flush:
+            for key, value in branchdict.items():
+                self._branches[key].newbasket(value)
+        else:
+            for key, value in branchdict.items():
+                for x in value:
+                    self._branches[key]._branch.buffer[self._branches[key]._branch.bufferpointer:self._branches[key]._branch.bufferpointer+1] = x
+                    self._branches[key]._branch.bufferpointer += 1
+                    self._branches[key]._branch.treecheck += 1
+                    if self._branches[key]._branch.flushrow != None and self._branches[key]._branch.bufferpointer == self._branches[key]._branch.flushrow:
+                        self._branches[key]._flush()
+                    elif self._branches[key]._branch.treecheck == self._tree.flushrow:
+                        self._branches[key]._flush()
+                        self._branches[key]._branch.treecheck = 0
+
+    def append(self, branchdict):
+        for value in branchdict.values:
+            if len(value) != 1:
+                raise Exception("The length of all the baskets should be 1")
+        self.extend(branchdict, flush=False)
+
+    def flush(self):
+        for key in self._branches.keys():
+            self._branches[key].newbasket(self._branches[key]._branch.buffer[0:self._branches[key]._branch.bufferpointer])
+
+    @property
+    def name(self):
+        return self._tree.fName
+
+    @property
+    def title(self):
+        return self._tree.fTitle
+
+    @property
+    def numentries(self):
+        t = uproot.open(self._file._path)[self.name]
+        return t.numentries
+
+    @property
+    def numbranches(self):
+        return len(self._branches)
+
+    def iterkeys(self, recursive=False, filtername=nofilter, filtertitle=nofilter, aliases=True):
+        t = uproot.open(self._file._path)[self.name]
+        return t.iterkeys(recursive, filtername, filtertitle, aliases)
+
+    def itervalues(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
+        t = uproot.open(self._file._path)[self.name]
+        return t.itervalues(recursive, filtername, filtertitle)
+
+    def iteritems(self, recursive=False, filtername=nofilter, filtertitle=nofilter, aliases=True):
+        t = uproot.open(self._file._path)[self.name]
+        return t.iteritems(recursive, filtername, filtertitle, aliases)
+
+    def keys(self, recursive=False, filtername=nofilter, filtertitle=nofilter, aliases=True):
+        t = uproot.open(self._file._path)[self.name]
+        return t.keys(recursive, filtername, filtertitle, aliases)
+
+    def values(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
+        t = uproot.open(self._file._path)[self.name]
+        return t.values(recursive, filtername, filtertitle)
+
+    def items(self, recursive=False, filtername=nofilter, filtertitle=nofilter, aliases=True):
+        t = uproot.open(self._file._path)[self.name]
+        return t.items(recursive, filtername, filtertitle, aliases)
+
+    def allkeys(self, filtername=nofilter, filtertitle=nofilter, aliases=True):
+        t = uproot.open(self._file._path)[self.name]
+        return t.allkeys(filtername, filtertitle, aliases)
+
+    def allvalues(self, filtername=nofilter, filtertitle=nofilter):
+        t = uproot.open(self._file._path)[self.name]
+        return t.allvalues(filtername, filtertitle)
+
+    def allitems(self, filtername=nofilter, filtertitle=nofilter, aliases=True):
+        t = uproot.open(self._file._path)[self.name]
+        return t.allitems(filtername, filtertitle, aliases)
+
+    def get(self, name, recursive=True, filtername=nofilter, filtertitle=nofilter, aliases=True):
+        t = uproot.open(self._file._path)[self.name]
+        return t.get(name, recursive, filtername, filtertitle, aliases)
+
+    def __contains__(self, name):
+        t = uproot.open(self._file._path)[self.name]
+        return t.__contains__(name)
+
+    def mempartitions(self, numbytes, branches=None, entrystart=None, entrystop=None, keycache=None, linear=True):
+        t = uproot.open(self._file._path)[self.name]
+        return t.mempartitions(numbytes, branches, entrystart, entrystop, keycache, linear)
+
+    def clusters(self, branches=None, entrystart=None, entrystop=None, strict=False):
+        t = uproot.open(self._file._path)[self.name]
+        return t.clusters(branches, entrystart, entrystop, strict)
+
+    def array(self, branch, interpretation=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+        t = uproot.open(self._file._path)[self.name]
+        return t.array(branch, interpretation, entrystart, entrystop, flatten, awkwardlib, cache, basketcache, keycache, executor, blocking)
+
+    def arrays(self, branches=None, outputtype=dict, namedecode=None, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+        t = uproot.open(self._file._path)[self.name]
+        return t.arrays(branches, outputtype, namedecode, entrystart, entrystop, flatten, flatname, awkwardlib, cache, basketcache, keycache, executor, blocking)
+
+    def lazyarray(self, branch, interpretation=None, entrysteps=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False):
+        t = uproot.open(self._file._path)[self.name]
+        return t.lazyarray(branch, interpretation, entrysteps, entrystart, entrystop, flatten, awkwardlib, cache, basketcache, keycache, executor, persistvirtual)
+
+    def lazyarrays(self, branches=None, namedecode="utf-8", entrysteps=None, entrystart=None, entrystop=None, flatten=False, profile=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False):
+        t = uproot.open(self._file._path)[self.name]
+        return t.lazyarrays(branches, namedecode, entrysteps, entrystart, entrystop, flatten, profile, awkwardlib, cache, basketcache, keycache, executor, persistvirtual)
+
+    def iterate(self, branches=None, entrysteps=None, outputtype=dict, namedecode=None, reportentries=False, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+        t = uproot.open(self._file._path)[self.name]
+        return t.iterate(branches, entrysteps, outputtype, namedecode, reportentries, entrystart, entrystop, flatten, flatname, awkwardlib, cache, basketcache, keycache, executor, blocking)
+
+    def show(self, foldnames=False, stream=sys.stdout):
+        t = uproot.open(self._file._path)[self.name]
+        return t.show(foldnames, stream)
+
+    def matches(self, branches):
+        t = uproot.open(self._file._path)[self.name]
+        return t.matches(branches)
+
+    def __len__(self):
+        return self.numentries
+
+    def __iter__(self):
+        # prevent Python's attempt to interpret __len__ and __getitem__ as iteration
+        raise TypeError("'TTree' object is not iterable")
+
+    @property
+    def pandas(self):
+        t = uproot.open(self._file._path)[self.name]
+        return t.pandas
+
 class TBranch(object):
 
     def __init__(self, name, branchobj, compression, treelvl1, file):
         self._branch = TBranchImpl(name, branchobj, compression, file)
         self._treelvl1 = treelvl1
+
+    def _allocateflush(self):
+        if self._branch.flushsize != None:
+            self._branch.flushrow = int(math.ceil(_normalize_size(self._branch.flushsize)/float(numpy.dtype(self._branch.type).itemsize)))
+            if self._branch.flushrow >= self._treelvl1._tree.flushrow:
+                self._branch.flushrow = None
+        else:
+            self._branch.flushrow = None
+
+        self._branch.buffer = numpy.array([0]*self._treelvl1._tree.flushrow, dtype=self._branch.type)
+
+        self._branch.bufferpointer = 0
+        self._branch.treecheck = 0
 
     @staticmethod
     def revertstring(string):
@@ -97,11 +281,11 @@ class TBranch(object):
             temp_arr[0:len(self._branch.fields["_fBasketBytes"])] = self._branch.fields["_fBasketBytes"]
             self._branch.fields["_fBasketBytes"] = temp_arr
 
-            tree = TTreeImpl(newtree(), self._branch.file)
+            tree = TTreeImpl(self._treelvl1._tree.name, newtree(), self._branch.file)
             tree.name = self._treelvl1._tree.name
             tree.fName = self._treelvl1._tree.fName
             tree.fTitle = self._treelvl1._tree.fTitle
-            tree.flushsize = self._treelvl1._tree.flushsize
+            tree.flushrow = self._treelvl1._tree.flushrow
 
             tree.fields["_fEntries"] = self._treelvl1._tree.fields["_fEntries"]
             tree.fields["_fTotBytes"] = self._treelvl1._tree.fields["_fTotBytes"]
@@ -111,6 +295,7 @@ class TBranch(object):
             for name, branch in self._treelvl1._branches.items():
                 compression = getattr(branch._branch, "compression", branch._branch.file.compression)
                 temp_branches[name] = TBranch(name, newbranch(branch._branch.type, branch._branch.flushsize, ""), compression, self._treelvl1, branch._branch.file)
+                temp_branches[name]._allocateflush()
                 temp_branches[name]._branch.fields["_fWriteBasket"] = branch._branch.fields["_fWriteBasket"]
                 temp_branches[name]._branch.fields["_fEntries"] = branch._branch.fields["_fEntries"]
                 temp_branches[name]._branch.fields["_fBasketEntry"] = branch._branch.fields["_fBasketEntry"]
@@ -182,14 +367,159 @@ class TBranch(object):
 
         self._branch.file._sink.flush()
 
+    def _flush(self):
+        self.newbasket(self._branch.buffer[:self._branch.bufferpointer])
+        self._branch.bufferpointer = 0
+
+    @property
+    def name(self):
+        return self._branch.name
+
+    @property
+    def title(self):
+        return self._branch.title
+
+    @property
+    def interpretation(self):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.interpretation
+
+    @property
+    def countbranch(self):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.countbranch
+
+    @property
+    def countleaf(self):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.countleaf
+
+    @property
+    def numentries(self):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.numentries
+
+    @property
+    def numbranches(self):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.numbranches
+
+    def iterkeys(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.iterkeys(recursive, filtername, filtertitle)
+
+    def itervalues(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.itervalues(recursive, filtername, filtertitle)
+
+    def iteritems(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.iteritems(recursive, filtername, filtertitle)
+
+    def keys(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.keys(recursive, filtername, filtertitle)
+
+    def values(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.keys(recursive, filtername, filtertitle)
+
+    def items(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.items(recursive, filtername, filtertitle)
+
+    def allkeys(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.allkeys(recursive, filtername, filtertitle)
+
+    def allvalues(self, filtername=nofilter, filtertitle=nofilter):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.keys(filtername, filtertitle)
+
+    def allitems(self, filtername=nofilter, filtertitle=nofilter):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.allitems(filtername, filtertitle)
+
+    def get(self, name, recursive=True, filtername=nofilter, filtertitle=nofilter, aliases=True):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.get(name, recursive, filtername, filtertitle, aliases)
+
+    @property
+    def numbaskets(self):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.numbaskets
+
+    def uncompressedbytes(self, keycache=None):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.uncompressedbhytes(keycache)
+
+    def compressedbytes(self, keycache=None):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.compressedbhytes(keycache)
+
+    def compressionratio(self, keycache=None):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.compressionratio(keycache)
+
+    def numitems(self, interpretation=None, keycache=None):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.numitems(interpretation, keycache)
+
+    def basket_entrystart(self, i):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.basket_entrystart(i)
+
+    def basket_entrystop(self, i):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.basket_entrystop(i)
+
+    def basket_numentries(self, i):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.basket_numentries(i)
+
+    def basket_uncompressedbytes(self, i, keycache=None):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.basket_uncompressedbytes(i, keycache)
+
+    def basket_compressedbytes(self, i):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.basked_compressedbytes(i)
+
+    def basket_numitems(self, i, interpretation=None, keycache=None):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.basket_numitems(i, interpretation, keycache)
+
+    def basket(self, i, interpretation=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.basket(i, interpretation, entrystart, entrystop, flatten, awkwardlib, cache, basketcache, keycache)
+
+    def baskets(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, reportentries=False, executor=None, blocking=True):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.baskets(interpretation, entrystart, entrystop, flatten, awkwardlib, cache, basketcache, keycache, reportentries, executor, blocking)
+
+    def iterate_baskets(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, reportentries=False):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.baskets(interpretation, entrystart, entrystop, flatten, awkwardlib, cache, basketcache, keycache, reportentries)
+
+    def array(self, interpretation=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.array(interpretation, entrystart, entrystop, flatten, awkwardlib, cache, basketcache, keycache, executor, blocking)
+
+    def mempartitions(self, numbytes, entrystart=None, entrystop=None, keycache=None, linear=True):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.mempartitions(numbytes, entrystart, entrystop, keycache, linear)
+
+    def lazyarray(self, interpretation=None, entrysteps=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False):
+        b = uproot.open(self._treelvl1._file._path)[self._treelvl1.name][self.name]
+        return b.lazyarray(interpretation, entrysteps, entrystart, entrystop, flatten, awkwardlib, cache, basketcache, keycache, executor, persistvirtual)
+
 class TTreeImpl(object):
 
-    def __init__(self, newtree, file):
-        self.name = ""
+    def __init__(self, name, newtree, file):
+        self.name = name
         self.fClassName = b"TTree"
         self.fName = _bytesid(self.name)
         self.fTitle = _bytesid(newtree.title)
-        self.flushsize = newtree.flushsize
         self.file = file
 
         self.fields = {"_fLineColor": 602,

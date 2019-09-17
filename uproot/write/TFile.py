@@ -80,7 +80,7 @@ class TFileUpdate(object):
         if what.__class__.__name__ != "TTree" and what.__class__.__name__ != "newtree":
             what = uproot_methods.convert.towriteable(what)
         elif what.__class__.__name__ == "newtree":
-            what = TTree(what, self)
+            what = TTree(where, what, self)
             self._treedict[where] = what
         elif what.__class__.__name__ == "TTree":
             self._treedict[where] = what
@@ -197,6 +197,8 @@ class TFileUpdate(object):
         return self
 
     def __exit__(self, type, value, traceback):
+        for tree in self._treedict.keys():
+            self._treedict[tree].flush()
         self.close()
 
 class TFileRecreate(TFileUpdate):
