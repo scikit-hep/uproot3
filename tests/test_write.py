@@ -1549,7 +1549,7 @@ def test_branch_compression_interface1(tmp_path):
     b = newbranch(">i8")
     branchdict = {"intBranch": b}
     tree = newtree(branchdict)
-    a = numpy.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], dtype=">i8")
+    a = numpy.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], dtype=">i8")
     with uproot.recreate(filename, compression=uproot.ZLIB(4)) as f:
         f["t"] = tree
         f["t"]["intBranch"].newbasket(a)
@@ -1557,7 +1557,7 @@ def test_branch_compression_interface1(tmp_path):
     f = ROOT.TFile.Open(filename)
     tree = f.Get("t")
     treedata = tree.AsMatrix().astype(">i8")
-    for i in range(10):
+    for i in range(15):
         assert a[i] == treedata[i]
     branch = tree.GetBranch("intBranch")
     assert branch.GetCompressionAlgorithm() == 1
@@ -1569,7 +1569,7 @@ def test_branch_compression_interface1_diff_type(tmp_path):
     b = newbranch(">i4")
     branchdict = {"intBranch": b}
     tree = newtree(branchdict)
-    a = numpy.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], dtype=">i4")
+    a = numpy.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], dtype=">i4")
     with uproot.recreate(filename, compression=uproot.ZLIB(4)) as f:
         f["t"] = tree
         f["t"]["intBranch"].newbasket(a)
@@ -1577,7 +1577,7 @@ def test_branch_compression_interface1_diff_type(tmp_path):
     f = ROOT.TFile.Open(filename)
     tree = f.Get("t")
     treedata = tree.AsMatrix().astype(">i4")
-    for i in range(10):
+    for i in range(15):
         assert a[i] == treedata[i]
     branch = tree.GetBranch("intBranch")
     assert branch.GetCompressionAlgorithm() == 1
@@ -1589,7 +1589,7 @@ def test_branch_compression_interface2(tmp_path):
     b = newbranch(">i8", compression=uproot.ZLIB(4))
     branchdict = {"intBranch": b}
     tree = newtree(branchdict)
-    a = numpy.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], dtype=">i8")
+    a = numpy.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], dtype=">i8")
     with uproot.recreate(filename, compression=None) as f:
         f["t"] = tree
         f["t"]["intBranch"].newbasket(a)
@@ -1597,7 +1597,7 @@ def test_branch_compression_interface2(tmp_path):
     f = ROOT.TFile.Open(filename)
     tree = f.Get("t")
     treedata = tree.AsMatrix().astype(">i8")
-    for i in range(10):
+    for i in range(15):
         assert a[i] == treedata[i]
     branch = tree.GetBranch("intBranch")
     assert branch.GetCompressionAlgorithm() == 1
@@ -1609,7 +1609,7 @@ def test_branch_compression_interface3(tmp_path):
     b = newbranch(">i8")
     branchdict = {"intBranch": b}
     tree = newtree(branchdict, compression=uproot.ZLIB(4))
-    a = numpy.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], dtype=">i8")
+    a = numpy.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], dtype=">i8")
     with uproot.recreate(filename, compression=None) as f:
         f["t"] = tree
         f["t"]["intBranch"].newbasket(a)
@@ -1617,7 +1617,7 @@ def test_branch_compression_interface3(tmp_path):
     f = ROOT.TFile.Open(filename)
     tree = f.Get("t")
     treedata = tree.AsMatrix().astype(">i8")
-    for i in range(10):
+    for i in range(15):
         assert a[i] == treedata[i]
     branch = tree.GetBranch("intBranch")
     assert branch.GetCompressionAlgorithm() == 1

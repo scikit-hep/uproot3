@@ -76,7 +76,7 @@ def write(context, cursor, givenbytes, compression, key, keycursor):
         import zlib
         after_compressed = zlib.compress(givenbytes, level)
         compressedbytes = len(after_compressed)
-        if compressedbytes < uncompressedbytes:
+        if (compressedbytes + 9) < uncompressedbytes:
             c1 = (compressedbytes >> 0) & 0xff
             c2 = (compressedbytes >> 8) & 0xff
             c3 = (compressedbytes >> 16) & 0xff
@@ -108,7 +108,7 @@ def write(context, cursor, givenbytes, compression, key, keycursor):
             after_compressed = lz4.block.compress(givenbytes, store_size=False)
         compressedbytes = len(after_compressed) + 8
         checksum = xxhash.xxh64(after_compressed).digest()
-        if compressedbytes < uncompressedbytes:
+        if (compressedbytes + 9) < uncompressedbytes:
             c1 = (compressedbytes >> 0) & 0xff
             c2 = (compressedbytes >> 8) & 0xff
             c3 = (compressedbytes >> 16) & 0xff
@@ -137,7 +137,7 @@ def write(context, cursor, givenbytes, compression, key, keycursor):
                     "Install lzma package with:\n    pip install backports.lzma\nor\n    conda install -c conda-forge backports.lzma\n(or just use Python >= 3.3).")
         after_compressed = lzma.compress(givenbytes, preset=level)
         compressedbytes = len(after_compressed)
-        if compressedbytes < uncompressedbytes:
+        if (compressedbytes + 9) < uncompressedbytes:
             c1 = (compressedbytes >> 0) & 0xff
             c2 = (compressedbytes >> 8) & 0xff
             c3 = (compressedbytes >> 16) & 0xff
