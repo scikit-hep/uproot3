@@ -1887,3 +1887,18 @@ def test_issue340(tmp_path):
     t = uproot.open(filename)["t"]
     for i in range(10):
         assert t["normal"].basket(0)[i] == a[i]
+
+def test_basket_append(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch("int32")
+    branchdict = {"intBranch": b}
+    tree = newtree(branchdict)
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+        f["t"].append({"intBranch": 1})
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    treedata = tree.AsMatrix().astype(">i4")
+    assert treedata[0] == 1

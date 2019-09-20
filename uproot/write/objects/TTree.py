@@ -121,10 +121,10 @@ class TTree(object):
                         self._branches[key]._branch.treecheck = 0
 
     def append(self, branchdict):
-        for value in branchdict.values:
-            if len(value) != 1:
-                raise Exception("The length of all the baskets should be 1")
-        self.extend(branchdict, flush=False)
+        appenddict = {}
+        for key, value in branchdict.items():
+            appenddict[key] = [value]
+        self.extend(appenddict, flush=False)
 
     def flush(self):
         for key in self._branches.keys():
