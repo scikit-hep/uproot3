@@ -106,8 +106,8 @@ class TTree(object):
             raise Exception("Baskets of all branches should have the same length")
 
         if flush:
-            for key, value in branchdict.items():
-                self._branches[key].newbasket(value)
+            self.extend(branchdict, flush=False)
+            self.flush()
         else:
             for key, value in branchdict.items():
                 for x in value:
