@@ -29,6 +29,10 @@ class BasketKey(object):
     def fKeylen(self):
         return self._format1.size + uproot.write.sink.cursor.Cursor.length_strings([self.fClassName, self.fName, self.fTitle]) + self._format_basketkey.size + 1
 
+    @property
+    def fLast(self):
+        return self.fKeylen + self.fObjlen
+
     def update(self):
         self.cursor.update_fields(self.sink, self._format1, self.fNbytes, self._version, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
 
@@ -44,8 +48,7 @@ class BasketKey(object):
         cursor.write_string(sink, self.fTitle)
 
         basketversion = 3
-        fLast = self.fNbytes
-        cursor.write_fields(sink, self._format_basketkey, basketversion, self.fBufferSize, self.fNevBufSize, self.fNevBuf, fLast)
+        cursor.write_fields(sink, self._format_basketkey, basketversion, self.fBufferSize, self.fNevBufSize, self.fNevBuf, self.fLast)
         cursor.write_data(sink, b"\x00")
 
     _version = 1004

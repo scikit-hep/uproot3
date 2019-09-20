@@ -1546,10 +1546,30 @@ def test_tree_branch_compression(tmp_path):
 def test_branch_compression_interface1(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
+    b = newbranch(">i8")
+    branchdict = {"intBranch": b}
+    tree = newtree(branchdict)
+    a = numpy.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], dtype=">i8")
+    with uproot.recreate(filename, compression=uproot.ZLIB(4)) as f:
+        f["t"] = tree
+        f["t"]["intBranch"].newbasket(a)
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    treedata = tree.AsMatrix().astype(">i8")
+    for i in range(15):
+        assert a[i] == treedata[i]
+    branch = tree.GetBranch("intBranch")
+    assert branch.GetCompressionAlgorithm() == 1
+    assert branch.GetCompressionLevel() == 4
+
+def test_branch_compression_interface1_diff_type(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
     b = newbranch(">i4")
     branchdict = {"intBranch": b}
     tree = newtree(branchdict)
-    a = numpy.array([1, 2, 3, 4, 5], dtype=">i4")
+    a = numpy.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], dtype=">i4")
     with uproot.recreate(filename, compression=uproot.ZLIB(4)) as f:
         f["t"] = tree
         f["t"]["intBranch"].newbasket(a)
@@ -1557,7 +1577,7 @@ def test_branch_compression_interface1(tmp_path):
     f = ROOT.TFile.Open(filename)
     tree = f.Get("t")
     treedata = tree.AsMatrix().astype(">i4")
-    for i in range(5):
+    for i in range(15):
         assert a[i] == treedata[i]
     branch = tree.GetBranch("intBranch")
     assert branch.GetCompressionAlgorithm() == 1
@@ -1566,18 +1586,18 @@ def test_branch_compression_interface1(tmp_path):
 def test_branch_compression_interface2(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    b = newbranch(">i4", compression=uproot.ZLIB(4))
+    b = newbranch(">i8", compression=uproot.ZLIB(4))
     branchdict = {"intBranch": b}
     tree = newtree(branchdict)
-    a = numpy.array([1, 2, 3, 4, 5], dtype=">i4")
+    a = numpy.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], dtype=">i8")
     with uproot.recreate(filename, compression=None) as f:
         f["t"] = tree
         f["t"]["intBranch"].newbasket(a)
 
     f = ROOT.TFile.Open(filename)
     tree = f.Get("t")
-    treedata = tree.AsMatrix().astype(">i4")
-    for i in range(5):
+    treedata = tree.AsMatrix().astype(">i8")
+    for i in range(15):
         assert a[i] == treedata[i]
     branch = tree.GetBranch("intBranch")
     assert branch.GetCompressionAlgorithm() == 1
@@ -1586,18 +1606,18 @@ def test_branch_compression_interface2(tmp_path):
 def test_branch_compression_interface3(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
-    b = newbranch(">i4")
+    b = newbranch(">i8")
     branchdict = {"intBranch": b}
     tree = newtree(branchdict, compression=uproot.ZLIB(4))
-    a = numpy.array([1, 2, 3, 4, 5], dtype=">i4")
+    a = numpy.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], dtype=">i8")
     with uproot.recreate(filename, compression=None) as f:
         f["t"] = tree
         f["t"]["intBranch"].newbasket(a)
 
     f = ROOT.TFile.Open(filename)
     tree = f.Get("t")
-    treedata = tree.AsMatrix().astype(">i4")
-    for i in range(5):
+    treedata = tree.AsMatrix().astype(">i8")
+    for i in range(15):
         assert a[i] == treedata[i]
     branch = tree.GetBranch("intBranch")
     assert branch.GetCompressionAlgorithm() == 1
@@ -1855,3 +1875,15 @@ def test_ttree_extend_flush_false_diff_flush(tmp_path):
         assert f["t"]["intBranch"].numbaskets == 0
         f["t"].extend({"intBranch": numpy.array([2, 3])}, flush=False)
         assert f["t"]["intBranch"].numbaskets == 2
+
+def test_issue340(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    a = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+    with uproot.recreate(filename) as f:
+        f["t"] = uproot.newtree({"normal": numpy.float64})
+        f["t"].extend({"normal": a})
+
+    t = uproot.open(filename)["t"]
+    for i in range(10):
+        assert t["normal"].basket(0)[i] == a[i]
