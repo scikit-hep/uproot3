@@ -54,7 +54,7 @@ class newbranch(object):
 
 class newtree(object):
 
-    def __init__(self, branches={}, flushsize=30000, title="", **options):
+    def __init__(self, branches={}, flushsize="30 MB", title="", **options):
         self.branches = branches
         self.flushsize = flushsize
         self.title = title
