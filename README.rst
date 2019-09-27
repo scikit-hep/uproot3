@@ -809,7 +809,7 @@ These functions let you make a lazy array that spans many files.
 These functions may be thought of as alternatives to ROOT’s TChain: a
 TChain presents many files as though they were a single TTree, and a
 file-spanning lazy array presents many files as though they were a
-single array. See [Iteration](#iteration) below as a more explicit TChain alternative.
+single array. See `Iteration <#iteration>`_ below as a more explicit TChain alternative.
 
 .. code-block:: python3
 
@@ -3136,6 +3136,8 @@ Here is an example of ``JaggedArrays`` in physics data:
     pt[:6]
     # <JaggedArray [[54.168106 37.744152] [24.417913] [53.58827 29.811996] [88.63194 77.951485]
     #               [81.011406 47.175045] [41.591053 30.844215]] at 0x7f36246d1240>
+
+Note that if you want to histogram the inner contents of these arrays (i.e. histogram of particles, ignoring event boundaries), functions like `numpy.histogram <https://docs.scipy.org/doc/numpy/reference/generated/numpy.histogram.html>`_ require non-jagged arrays, so flatten them with a call to ``.flatten()``.
 
 To select elements of inner lists (Pandas’s
 `DataFrame.xs <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.xs.html>`__),
