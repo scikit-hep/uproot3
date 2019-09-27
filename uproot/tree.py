@@ -123,7 +123,13 @@ def iterate(path, treepath, branches=None, entrysteps=float("inf"), outputtype=d
                     awkward.numpy.add(index, globalentrystart, out=index)
 
                 elif type(arrays.index).__name__ == "RangeIndex":
-                    arrays.index = type(arrays.index)(arrays.index.start + globalentrystart, arrays.index.stop + globalentrystart)
+                    if hasattr(arrays.index, "start") and hasattr(arrays.index, "stop"):
+                        indexstart = arrays.index.start        # pandas>=0.25.0
+                        indexstop = arrays.index.stop
+                    else:
+                        indexstart = arrays.index._start       # pandas<0.25.0
+                        indexstop = arrays.index._stop
+                    arrays.index = type(arrays.index)(indexstart + globalentrystart, indexstop + globalentrystart)
 
                 else:
                     if hasattr(arrays.index, "array"):
