@@ -809,7 +809,7 @@ These functions let you make a lazy array that spans many files.
 These functions may be thought of as alternatives to ROOT’s TChain: a
 TChain presents many files as though they were a single TTree, and a
 file-spanning lazy array presents many files as though they were a
-single array.
+single array. See [Iteration](#iteration) below as a more explicit TChain alternative.
 
 .. code-block:: python3
 
@@ -1099,7 +1099,7 @@ iterates over chunks of a TTree and
 iterates through files.
 
 Like a file-spanning lazy array, a file-spanning iterator erases the
-difference between files. However, the iteration is over *chunks of many
+difference between files and may be used as a TChain alternative. However, the iteration is over *chunks of many
 events*, not *single events*.
 
 .. code-block:: python3
