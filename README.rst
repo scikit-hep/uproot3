@@ -86,7 +86,7 @@ If you have a question about how to use uproot that is not answered in the docum
 
 .. image:: https://cdn.sstatic.net/Sites/stackoverflow/company/img/logos/so/so-logo.png
    :target: https://stackoverflow.com/questions/tagged/uproot
-   :width: 30%
+   :width: 500px
 
 If you believe you have found a bug in uproot, post it on the `GitHub issues tab <https://github.com/scikit-hep/uproot/issues>`__.
 
