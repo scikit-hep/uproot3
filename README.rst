@@ -84,9 +84,9 @@ Questions
 
 If you have a question about how to use uproot that is not answered in the document below, I recommend asking your question on `StackOverflow <https://stackoverflow.com/questions/tagged/uproot>`__ with the ``[uproot]`` tag. I monitor this tag (among others).
 
-.. image:: https://cdn.sstatic.net/Sites/stackoverflow/company/img/logos/so/so-logo.png
-   :target: https://stackoverflow.com/questions/tagged/uproot
-   :width: 500px
+.. raw:: html
+
+   <p align="center"><a href="https://stackoverflow.com/questions/tagged/uproot"><img src="https://cdn.sstatic.net/Sites/stackoverflow/company/img/logos/so/so-logo.png" width="30%"></a></p>
 
 If you believe you have found a bug in uproot, post it on the `GitHub issues tab <https://github.com/scikit-hep/uproot/issues>`__.
 
