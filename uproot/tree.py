@@ -495,7 +495,16 @@ class TTreeMethods(object):
                     break
 
     def array(self, branch, interpretation=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
-        return self.get(branch).array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
+        awkward = _normalize_awkwardlib(awkwardlib)
+        branches = list(self._normalize_branches(branch, awkward))
+        if len(branches) == 1:
+            if interpretation is None:
+                tbranch, interpretation = branches[0]
+            else:
+                tbranch, _ = branches[0]
+        else:
+            raise ValueError("list of branch names or glob/regex matches more than one branch; use TTree.arrays (plural)")
+        return tbranch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
 
     def arrays(self, branches=None, outputtype=dict, namedecode=None, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
         awkward = _normalize_awkwardlib(awkwardlib)
@@ -544,7 +553,16 @@ class TTreeMethods(object):
             return wait
 
     def lazyarray(self, branch, interpretation=None, entrysteps=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False):
-        return self.get(branch).lazyarray(interpretation=interpretation, entrysteps=entrysteps, entrystart=entrystart, entrystop=entrystop, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, persistvirtual=persistvirtual)
+        awkward = _normalize_awkwardlib(awkwardlib)
+        branches = list(self._normalize_branches(branch, awkward))
+        if len(branches) == 1:
+            if interpretation is None:
+                tbranch, interpretation = branches[0]
+            else:
+                tbranch, _ = branches[0]
+        else:
+            raise ValueError("list of branch names or glob/regex matches more than one branch; use TTree.lazyarrays (plural)")
+        return tbranch.lazyarray(interpretation=interpretation, entrysteps=entrysteps, entrystart=entrystart, entrystop=entrystop, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, persistvirtual=persistvirtual)
 
     def lazyarrays(self, branches=None, namedecode="utf-8", entrysteps=None, entrystart=None, entrystop=None, flatten=False, profile=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False):
         entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
@@ -1925,6 +1943,8 @@ def lazyarray(path, treepath, branchname, interpretation=None, namedecode="utf-8
     else:
         branches = {branchname: interpretation}
     out = lazyarrays(path, treepath, branches=branches, namedecode=namedecode, entrysteps=entrysteps, flatten=flatten, profile=None, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, persistvirtual=persistvirtual, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)
+    if len(out.columns) != 1:
+        raise ValueError("list of branch names or glob/regex matches more than one branch; use uproot.lazyarrays (plural)")
     return out[out.columns[0]]
 
 def lazyarrays(path, treepath, branches=None, namedecode="utf-8", entrysteps=float("inf"), flatten=False, profile=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
