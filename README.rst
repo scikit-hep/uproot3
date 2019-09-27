@@ -82,7 +82,7 @@ Optional dependencies:
 Questions
 =========
 
-If you have a question about how to use uproot that is not answered in the document below, I recommend asking your question on `StackOverflow <https://stackoverflow.com/questions/tagged/uproot>`__ with the ``[uproot]`` tag. I monitor this tag (among others).
+If you have a question about how to use uproot that is not answered in the document below, I recommend asking your question on `StackOverflow <https://stackoverflow.com/questions/tagged/uproot>`__ with the ``[uproot]`` tag. (I get notified of questions with this tag.)
 
 .. raw:: html
 
