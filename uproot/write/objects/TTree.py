@@ -99,6 +99,10 @@ class TTree(object):
         self._tree.write(context, cursor, name, key, copy(keycursor), util)
 
     def extend(self, branchdict, flush=True):
+        #Convert to numpy arrays of required dtype
+        for key, value in branchdict.items():
+            branchdict[key] = numpy.array(value, dtype=self._branches[key]._branch.type, copy=False)
+
         #Check for equal number of values in baskets
         values = iter(branchdict.values())
         first = next(values)
