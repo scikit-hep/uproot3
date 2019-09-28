@@ -103,6 +103,10 @@ class TTree(object):
         for key, value in branchdict.items():
             branchdict[key] = numpy.array(value, dtype=self._branches[key]._branch.type, copy=False)
 
+            #Temporary place holder
+            if branchdict[key].ndim != 1:
+                raise NotImplementedError("Multi dimensional array support is coming soon")
+
         #Check for equal number of values in baskets
         values = iter(branchdict.values())
         first = next(values)
