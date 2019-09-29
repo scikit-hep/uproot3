@@ -275,6 +275,9 @@ class TBranch(object):
 
     _tree_size = struct.Struct(">qqq")
     def newbasket(self, items):
+        if len(items) == 0:
+            return
+
         self._branch.fields["_fWriteBasket"] += 1
 
         if self._branch.fields["_fWriteBasket"] >= self._branch.fields["_fMaxBaskets"]:
