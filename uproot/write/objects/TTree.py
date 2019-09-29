@@ -99,6 +99,14 @@ class TTree(object):
         self._tree.write(context, cursor, name, key, copy(keycursor), util)
 
     def extend(self, branchdict, flush=True):
+        #Convert to numpy arrays of required dtype
+        for key, value in branchdict.items():
+            branchdict[key] = numpy.array(value, dtype=self._branches[key]._branch.type, copy=False)
+
+            #Temporary place holder
+            if branchdict[key].ndim != 1:
+                raise NotImplementedError("Multi dimensional array support is coming soon")
+
         #Check for equal number of values in baskets
         values = iter(branchdict.values())
         first = next(values)
@@ -332,6 +340,10 @@ class TBranch(object):
         self._branch.fields["_fBasketEntry"][self._branch.fields["_fWriteBasket"]] = self._branch.fields["_fEntries"]
         self._branch.fields["_fEntryNumber"] += len(items)
         basketdata = numpy.array(items, dtype=self._branch.type, copy=False)
+
+        if basketdata.ndim != 1:
+            raise NotImplementedError("Multi dimensional array support is coming soon")
+
         givenbytes = basketdata.tostring()
         cursor = uproot.write.sink.cursor.Cursor(self._branch.file._fSeekFree)
         self._branch.fields["_fBasketSeek"][self._branch.fields["_fWriteBasket"] - 1] = cursor.index

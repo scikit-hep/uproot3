@@ -67,6 +67,10 @@ def write(context, cursor, givenbytes, compression, key, keycursor):
 
     _header = struct.Struct("2sBBBBBBB")
     uncompressedbytes = len(givenbytes)
+
+    if uncompressedbytes > 2**24:
+        raise NotImplementedError("Data larger than 2^24 bytes cannot be compressed yet")
+
     u1 = (uncompressedbytes >> 0) & 0xff
     u2 = (uncompressedbytes >> 8) & 0xff
     u3 = (uncompressedbytes >> 16) & 0xff
