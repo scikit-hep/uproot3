@@ -146,7 +146,7 @@ Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?urlpath=
 * `Creating and writing data to ROOT files <#creating-and-writing-data-to-root-files>`__
 
   - `Writing histograms <#writing-histograms>`__
-.. - `Writing TTrees <#writing-ttrees>`__
+  - `Writing TTrees <#writing-ttrees>`__
 
 Reference documentation
 =======================
@@ -4413,166 +4413,166 @@ which may have come from other libraries.
     #           -0.0455109 ,  0.72099614,  1.48750319,  2.25401024,  3.02051729,
     #            3.78702434]))])
 
-..  Writing TTrees
-    --------------
+Writing TTrees
+--------------
 
-    As of now, uproot can write TTrees whose branches are basic types
-    (integers and floating-point numbers).
+As of now, uproot can write TTrees whose branches are basic types
+(integers and floating-point numbers).
 
-    Basic usage:
+Basic usage:
 
-    .. code-block:: python3
+.. code-block:: python3
 
-        import uproot
-        import numpy
-        
-        with uproot.recreate("example.root") as f:
-            f["t"] = uproot.newtree({"branch": "int32"})
-            f["t"].extend({"branch": numpy.array([1, 2, 3, 4, 5])})
+    import uproot
+    import numpy
+    
+    with uproot.recreate("example.root") as f:
+        f["t"] = uproot.newtree({"branch": "int32"})
+        f["t"].extend({"branch": numpy.array([1, 2, 3, 4, 5])})
 
-    You can specify the branches in your TTree explicitly:
+You can specify the branches in your TTree explicitly:
 
-    .. code-block:: python3
+.. code-block:: python3
 
-        t = uproot.newtree({"branch1": int,
-                            "branch2": numpy.int32,
-                            "branch3": uproot.newbranch(numpy.float64, title="This is the title")})
+    t = uproot.newtree({"branch1": int,
+                        "branch2": numpy.int32,
+                        "branch3": uproot.newbranch(numpy.float64, title="This is the title")})
 
-    uproot.newtree() takes a python dictionary as an argument, where the key
-    is the name of the branch and the value is the branch object or type of
-    branch.
+uproot.newtree() takes a python dictionary as an argument, where the key
+is the name of the branch and the value is the branch object or type of
+branch.
 
-    We can specify the title, the flushsize and the compression while
-    creating the tree.
+We can specify the title, the flushsize and the compression while
+creating the tree.
 
-    This is an example of how you would add a title to your tree:
+This is an example of how you would add a title to your tree:
 
-    .. code-block:: python3
+.. code-block:: python3
 
-        tree = uproot.newtree(branchdict, title="TTree Title")
+    tree = uproot.newtree(branchdict, title="TTree Title")
 
-    To specify the title of the branch, similar to how you would add a title
-    to a tree:
+To specify the title of the branch, similar to how you would add a title
+to a tree:
 
-    .. code-block:: python3
+.. code-block:: python3
 
-        b = uproot.newbranch("int32", title="This is the title")
+    b = uproot.newbranch("int32", title="This is the title")
 
-    Writing baskets
-    ~~~~~~~~~~~~~~~
+Writing baskets
+~~~~~~~~~~~~~~~
 
-    | Assume there are 2 branches in the TTree: 
-    | branch1
-    | branch2
-    |
+| Assume there are 2 branches in the TTree: 
+| branch1
+| branch2
+|
 
-    The suggested interface of writing baskets to the TTree is using the
-    extend method:
+The suggested interface of writing baskets to the TTree is using the
+extend method:
 
-    .. code-block:: python3
+.. code-block:: python3
 
-        f["t"].extend({"branch1": numpy.array([1, 2, 3, 4, 5]), "branch2": [6, 7, 8, 9, 10]})
+    f["t"].extend({"branch1": numpy.array([1, 2, 3, 4, 5]), "branch2": [6, 7, 8, 9, 10]})
 
-    | The extend method takes a dictionary where the key is the name of the
-      branch and the value of the dictionary is a numpy array or a list of
-      data to be written to the branch.
-    |
-    | Remember to add entries to all the branches and the number of entries added to the branches is the same!
-    |
-    | You can specify a flush parameter to True or False in the extend method.
+| The extend method takes a dictionary where the key is the name of the
+  branch and the value of the dictionary is a numpy array or a list of
+  data to be written to the branch.
+|
+| Remember to add entries to all the branches and the number of entries added to the branches is the same!
+|
+| You can specify a flush parameter to True or False in the extend method.
 
-    .. code-block:: python3
+.. code-block:: python3
 
-        f["t"].extend({"branch1": numpy.array([1, 2, 3, 4, 5]), "branch2": [6, 7, 8, 9, 10]}, flush=True)
+    f["t"].extend({"branch1": numpy.array([1, 2, 3, 4, 5]), "branch2": [6, 7, 8, 9, 10]}, flush=True)
 
-    By default, it is true. This means that these values are immediately
-    flushed to the file.
+By default, it is true. This means that these values are immediately
+flushed to the file.
 
-    | You can choose not to flush the baskets immediately by setting flush =
-      False.
+| You can choose not to flush the baskets immediately by setting flush =
+  False.
 
-    .. code-block:: python3
+.. code-block:: python3
 
-        f["t"].extend({"branch1": numpy.array([1, 2, 3, 4, 5]), "branch2": [1, 2, 3, 4, 5]}, flush=False)
+    f["t"].extend({"branch1": numpy.array([1, 2, 3, 4, 5]), "branch2": [1, 2, 3, 4, 5]}, flush=False)
 
-    | The baskets are added to a buffer which are flushed to the file
-      depending on the flush size set by the user.
+| The baskets are added to a buffer which are flushed to the file
+  depending on the flush size set by the user.
 
-    The flush size can be set at the branch level and the tree level.
+The flush size can be set at the branch level and the tree level.
 
-    To set it at the branch level:
+To set it at the branch level:
 
-    .. code-block:: python3
+.. code-block:: python3
 
-        t = uproot.newbranch("int32", flushsize="10 KB")
+    t = uproot.newbranch("int32", flushsize="10 KB")
 
-    and to set it at the tree level:
+and to set it at the tree level:
 
-    .. code-block:: python3
+.. code-block:: python3
 
-        tree = uproot.newtree({"demoflush": t}, flushsize=1000)
+    tree = uproot.newtree({"demoflush": t}, flushsize=1000)
 
-    You can also use the append function to add baskets to your file if you
-    need to just add a single value at the end of your current basket
-    buffer:
+You can also use the append function to add baskets to your file if you
+need to just add a single value at the end of your current basket
+buffer:
 
-    .. code-block:: python3
+.. code-block:: python3
 
-        f["t"].append({"branch1": 1, "branch2": 2)
+    f["t"].append({"branch1": 1, "branch2": 2)
 
-    Make sure to add entries to every branch, similar to the extend method.
+Make sure to add entries to every branch, similar to the extend method.
 
-    The append method does not provide a way to explicitly flush data to the
-    file, the data is added to the end of the buffer and is flushed hased on
-    the branch and tree flush sizes.
+The append method does not provide a way to explicitly flush data to the
+file, the data is added to the end of the buffer and is flushed hased on
+the branch and tree flush sizes.
 
-    **Low level interface**
+**Low level interface**
 
-    If you want, you can write a basket to only 1 branch. But remember to
-    add equal number of baskets to the other branches as well as ROOT
-    assumes that all the branches have equal number of baskets and will not
-    read the non-uniform baskets.
+If you want, you can write a basket to only 1 branch. But remember to
+add equal number of baskets to the other branches as well as ROOT
+assumes that all the branches have equal number of baskets and will not
+read the non-uniform baskets.
 
-    .. code-block:: python3
+.. code-block:: python3
 
-        f["t"]["branch1"].newbasket([1, 2, 3])
+    f["t"]["branch1"].newbasket([1, 2, 3])
 
-    Add 3 more basket data to branch2!
+Add 3 more basket data to branch2!
 
-    .. code-block:: python3
+.. code-block:: python3
 
-        f["t"]["branch2"].newbasket([91, 92, 93])
+    f["t"]["branch2"].newbasket([91, 92, 93])
 
-    Compression
-    ~~~~~~~~~~~~~~~
+Compression
+~~~~~~~~~~~~~~~
 
-    By default, the baskets of all the branches are compressed depending on
-    the compression set for the file.
+By default, the baskets of all the branches are compressed depending on
+the compression set for the file.
 
-    You can specify the compression of all the branches if you want it to be
-    separate from the compression specified for the entire file by using the uproot.newtree() method.
+You can specify the compression of all the branches if you want it to be
+separate from the compression specified for the entire file by using the uproot.newtree() method.
 
-    You can also specify the compression of each branch individually by using the uproot.newbranch() method.
+You can also specify the compression of each branch individually by using the uproot.newbranch() method.
 
-    .. code-block:: python3
+.. code-block:: python3
 
-        b1 = uproot.newbranch("i4", compression=uproot.ZLIB(5))
-        b2 = uproot.newbranch("i8", compression=uproot.LZMA(4))
-        b3 = uproot.newbranch("f4")
-        
-        branchdict = {"branch1": b1, "branch2": b2, "branch3": b3}
-        tree = uproot.newtree(branchdict, compression=uproot.LZ4(4))
-        with uproot.recreate("example.root", compression=uproot.LZMA(5)) as f:
-            f["t"] = tree
-            f["t"].extend({"branch1": [1]*1000, "branch2": [2]*1000, "branch3": [3]*1000})
+    b1 = uproot.newbranch("i4", compression=uproot.ZLIB(5))
+    b2 = uproot.newbranch("i8", compression=uproot.LZMA(4))
+    b3 = uproot.newbranch("f4")
+    
+    branchdict = {"branch1": b1, "branch2": b2, "branch3": b3}
+    tree = uproot.newtree(branchdict, compression=uproot.LZ4(4))
+    with uproot.recreate("example.root", compression=uproot.LZMA(5)) as f:
+        f["t"] = tree
+        f["t"].extend({"branch1": [1]*1000, "branch2": [2]*1000, "branch3": [3]*1000})
 
-    Acknowledgements
-    ================
+Acknowledgements
+================
 
-    Support for this work was provided by NSF cooperative agreement OAC-1836650 (IRIS-HEP), grant OAC-1450377 (DIANA/HEP) and PHY-1520942 (US-CMS LHC Ops).
+Support for this work was provided by NSF cooperative agreement OAC-1836650 (IRIS-HEP), grant OAC-1450377 (DIANA/HEP) and PHY-1520942 (US-CMS LHC Ops).
 
-    Thanks especially to the gracious help of `uproot contributors <https://github.com/scikit-hep/uproot/graphs/contributors>`__!
+Thanks especially to the gracious help of `uproot contributors <https://github.com/scikit-hep/uproot/graphs/contributors>`__!
 
-    .. inclusion-marker-4-do-not-remove
+.. inclusion-marker-4-do-not-remove
 
-    .. inclusion-marker-5-do-not-remove
+.. inclusion-marker-5-do-not-remove
