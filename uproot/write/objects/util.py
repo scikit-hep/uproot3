@@ -15,7 +15,7 @@ class Util(object):
 
     def _putclass(self, cursor, obj, keycursor, beg):
         start = cursor.index - keycursor.index
-        beg = beg - keycursor.index - 8
+        beg = beg - keycursor.index
         buf = b""
         objct, clsname = obj
         if id(objct) in self._written and clsname in self._written:
