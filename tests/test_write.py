@@ -1902,3 +1902,20 @@ def test_basket_append(tmp_path):
     tree = f.Get("t")
     treedata = tree.AsMatrix().astype(">i4")
     assert treedata[0] == 1
+
+def test_rdf(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b = newbranch("int32")
+    branchdict = {"intBranch": b}
+    tree = newtree(branchdict)
+    a = numpy.array([1, 2, 3, 4, 5], dtype=">i4")
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+        f["t"]["intBranch"].newbasket(a)
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    rdf = ROOT.RDataFrame(tree)
+    for i in range(5):
+        assert a[i] == rdf.AsNumpy()["intBranch"][i]
