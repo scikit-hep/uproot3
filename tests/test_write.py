@@ -1365,6 +1365,28 @@ def test_multi_branch_one_basket_same_type(tmp_path):
         assert a[i] == intBranchdata[i]
         assert b[i] == int8Branchdata[i]
 
+def test_multi_branch_one_basket_same_type_uproot(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    b1 = newbranch("int32")
+    b2 = newbranch("int32")
+    branchdict = {"intBranch": b1, "intBranch2": b2}
+    tree = newtree(branchdict)
+    a = numpy.array([1, 2, 3, 4, 5], dtype=">i4")
+    b = numpy.array([6, 7, 8, 9, 10], dtype=">i4")
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = tree
+        f["t"]["intBranch"].newbasket(a)
+        f["t"]["intBranch2"].newbasket(b)
+
+    f = uproot.open(filename)
+    tree = f["t"]
+    intBranchdata = tree.array("intBranch")
+    int8Branchdata = tree.array("intBranch2")
+    for i in range(5):
+        assert a[i] == intBranchdata[i]
+        assert b[i] == int8Branchdata[i]
+
 def test_multi_branch_one_basket_diff_type(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
@@ -1907,15 +1929,18 @@ def test_rdf(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
     b = newbranch("int32")
-    branchdict = {"intBranch": b}
+    branchdict = {"intBranch": b, "intBranch2": b}
     tree = newtree(branchdict)
     a = numpy.array([1, 2, 3, 4, 5], dtype=">i4")
+    b = numpy.array([11, 12, 13, 14, 15], dtype=">i4")
     with uproot.recreate(filename, compression=None) as f:
         f["t"] = tree
         f["t"]["intBranch"].newbasket(a)
+        f["t"]["intBranch2"].newbasket(b)
 
     f = ROOT.TFile.Open(filename)
     tree = f.Get("t")
     rdf = ROOT.RDataFrame(tree)
     for i in range(5):
         assert a[i] == rdf.AsNumpy()["intBranch"][i]
+        assert b[i] == rdf.AsNumpy()["intBranch2"][i]
