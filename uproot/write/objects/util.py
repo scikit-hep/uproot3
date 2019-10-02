@@ -22,7 +22,9 @@ class Util(object):
             buf += cursor.put_fields(self._format_putobjany1, numpy.uint32(self._written[id(objct)]))
             return buf
         if clsname in self._written:
-            buf += cursor.put_fields(self._format_putobjany1, numpy.uint32(self._written[clsname]) | uproot.const.kClassMask)
+            buf += cursor.put_fields(self._format_putobjany1, self._written[clsname] | uproot.const.kClassMask)
+            if clsname != "TBranch":
+                self._written[id(objct)] = beg + uproot.const.kMapOffset
         else:
             buf += cursor.put_fields(self._format_putobjany1, uproot.const.kNewClassTag)
             buf += cursor.put_cstring(clsname)

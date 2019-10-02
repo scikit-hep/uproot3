@@ -651,8 +651,8 @@ class TTreeImpl(object):
             values = [values]
         low = 0
         buff += cursor.put_string(b"") + cursor.put_fields(self._format_tobjarray1, size, low)
-        for value in values:
-            buff += self.util.put_objany(cursor, (value, classname), self.write_keycursor)
+        for i in range(len(self.fields["_fLeaves"])):
+            buff += self.util.put_objany(cursor, (values[i], classname[i] if type(classname)==list else classname), self.write_keycursor)
         length = len(buff) + self._format_cntvers.size
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
@@ -727,7 +727,8 @@ class TTreeImpl(object):
         if self.fields["_fBranches"] == []:
             buff += self.put_tobjarray(cursor, self.fields["_fLeaves"], "TLeaf")
         else:
-            buff += self.put_tobjarray(cursor, self.fields["_fLeaves"][0][0], classname=self.fields["_fLeaves"][0][1])
+            buff += self.put_tobjarray(cursor, [self.fields["_fLeaves"][i][0] for i in range(len(self.fields["_fLeaves"]))],
+                                       classname=[self.fields["_fLeaves"][i][1] for i in range(len(self.fields["_fLeaves"]))])
         buff += (self.util.put_objany(cursor, (self.fields["_fAliases"], "TList"), self.write_keycursor) +
                  self.put_tarray(cursor, self.fields["_fIndexValues"]) +
                  self.put_tarray(cursor, self.fields["_fIndex"]) +
