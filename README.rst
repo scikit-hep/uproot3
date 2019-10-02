@@ -4204,9 +4204,9 @@ ecosystem, are just a tuple of counts/bin contents and edge positions.
 Creating and writing data to ROOT files
 =======================================
 
-Uproot has a limited (but growing!) ability to *write* ROOT files. Two
-types currently supported are ``TObjString`` (for debugging) and
-histograms.
+Uproot has a limited ability to *write* ROOT files, including TTrees of
+flat data (non-jagged: single number per event), a variety of histogram
+types, and ``TObjString`` (for metadata).
 
 To write to a ROOT file in uproot, the file must be opened for writing
 using ``uproot.create``, ``uproot.recreate``, or ``uproot.update``
