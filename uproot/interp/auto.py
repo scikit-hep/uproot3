@@ -351,77 +351,77 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
                     if m is not None:
                         return asjagged(asstlbitset(int(m.group(1))), skipbytes=6)
 
-                if getattr(branch._streamer, "_fTypeName", None) == b"vector<bool>":
+                if getattr(branch._streamer, "_fTypeName", None) == b"vector<bool>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<Bool_t>":
                     return asjagged(asdtype(awkward.numpy.bool_), skipbytes=10)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<char>":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<char>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<Char_t>":
                     return asjagged(asdtype("i1"), skipbytes=10)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<unsigned char>":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<unsigned char>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<UChar_t>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<Byte_t>":
                     return asjagged(asdtype("u1"), skipbytes=10)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<short>":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<short>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<Short_t>":
                     return asjagged(asdtype("i2"), skipbytes=10)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<unsigned short>":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<unsigned short>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<UShort_t>":
                     return asjagged(asdtype("u2"), skipbytes=10)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<int>":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<int>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<Int_t>":
                     return asjagged(asdtype("i4"), skipbytes=10)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<unsigned int>":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<unsigned int>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<UInt_t>":
                     return asjagged(asdtype("u4"), skipbytes=10)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<long>":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<long>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<Long_t>":
                     return asjagged(asdtype("i8"), skipbytes=10)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<unsigned long>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<ULong64_t>":
                     return asjagged(asdtype("u8"), skipbytes=10)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<float>":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<float>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<Float_t>":
                     return asjagged(asdtype("f4"), skipbytes=10)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<double>":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<double>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<Double_t>":
                     return asjagged(asdtype("f8"), skipbytes=10)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<string>":
                     return asgenobj(STLVector(STLString(awkward)), branch._context, 6)
 
-                if getattr(branch._streamer, "_fTypeName", None) == b"map<string,bool>":
+                if getattr(branch._streamer, "_fTypeName", None) == b"map<string,bool>" or getattr(branch._streamer, "_fTypeName", None) == b"map<string,Bool_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype(awkward.numpy.bool_)), branch._context, 6)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,char>":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,char>" or getattr(branch._streamer, "_fTypeName", None) == b"map<string,Char_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("i1")), branch._context, 6)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,unsigned char>":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,unsigned char>" or getattr(branch._streamer, "_fTypeName", None) == b"map<string,UChar_t>" or getattr(branch._streamer, "_fTypeName", None) == b"map<string,Byte_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("u1")), branch._context, 6)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,short>":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,short>" or getattr(branch._streamer, "_fTypeName", None) == b"map<string,Short_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("i2")), branch._context, 6)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,unsigned short>":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,unsigned short>" or getattr(branch._streamer, "_fTypeName", None) == b"map<string,UShort_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("u2")), branch._context, 6)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,int>":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,int>" or getattr(branch._streamer, "_fTypeName", None) == b"map<string,Int_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("i4")), branch._context, 6)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,unsigned int>":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,unsigned int>" or getattr(branch._streamer, "_fTypeName", None) == b"map<string,UInt_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("u4")), branch._context, 6)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,long>":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,long>" or getattr(branch._streamer, "_fTypeName", None) == b"map<string,Long_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("i8")), branch._context, 6)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,unsigned long>" or getattr(branch._streamer, "_fTypeName", None) == b"map<string,ULong64_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("u8")), branch._context, 6)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,float>":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,float>" or getattr(branch._streamer, "_fTypeName", None) == b"map<string,Float_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("f4")), branch._context, 6)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,double>":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,double>" or getattr(branch._streamer, "_fTypeName", None) == b"map<string,Double_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("f8")), branch._context, 6)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,string>":
                     return asgenobj(STLMap(STLString(awkward), STLString(awkward)), branch._context, 6)
 
-                if getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<bool> >":
+                if getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<bool> >" or getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<Bool_t> >":
                     return asgenobj(STLVector(STLVector(asdtype(awkward.numpy.bool_))), branch._context, 6)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<char> >":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<char> >" or getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<Char_t> >":
                     return asgenobj(STLVector(STLVector(asdtype("i1"))), branch._context, 6)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<unsigned char> >":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<unsigned char> >" or getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<UChar_t> >" or getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<Byte_t> >":
                     return asgenobj(STLVector(STLVector(asdtype("u1"))), branch._context, 6)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<short> >":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<short> >" or getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<Short_t> >":
                     return asgenobj(STLVector(STLVector(asdtype(">i2"))), branch._context, 6)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<unsigned short> >":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<unsigned short> >" or getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<UShort_t> >":
                     return asgenobj(STLVector(STLVector(asdtype(">u2"))), branch._context, 6)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<int> >":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<int> >" or getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<Int_t> >":
                     return asgenobj(STLVector(STLVector(asdtype(">i4"))), branch._context, 6)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<unsigned int> >":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<unsigned int> >" or getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<UInt_t> >":
                     return asgenobj(STLVector(STLVector(asdtype(">u4"))), branch._context, 6)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<long> >":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<long> >" or getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<Long_t> >":
                     return asgenobj(STLVector(STLVector(asdtype(">i8"))), branch._context, 6)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<unsigned long> >" or getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<ULong64_t> >":
                     return asgenobj(STLVector(STLVector(asdtype(">u8"))), branch._context, 6)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<float> >":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<float> >" or getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<Float_t> >":
                     return asgenobj(STLVector(STLVector(asdtype(">f4"))), branch._context, 6)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<double> >":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<double> >" or getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<Double_t> >":
                     return asgenobj(STLVector(STLVector(asdtype(">f8"))), branch._context, 6)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<string> >":
                     return asgenobj(STLVector(STLVector(STLString(awkward))), branch._context, 6)
@@ -433,77 +433,77 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
                 if branch._fClassName == b"string":
                     return asstring(skipbytes=1)
 
-                if branch._fClassName == b"vector<bool>":
+                if branch._fClassName == b"vector<bool>" or branch._fClassName == b"vector<Bool_t>":
                     return asjagged(asdtype(awkward.numpy.bool_), skipbytes=10)
-                elif branch._fClassName == b"vector<char>":
+                elif branch._fClassName == b"vector<char>" or branch._fClassName == b"vector<Char_t>":
                     return asjagged(asdtype("i1"), skipbytes=10)
-                elif branch._fClassName == b"vector<unsigned char>":
+                elif branch._fClassName == b"vector<unsigned char>" or branch._fClassName == b"vector<UChar_t>" or branch._fClassName == b"vector<Byte_t>":
                     return asjagged(asdtype("u1"), skipbytes=10)
-                elif branch._fClassName == b"vector<short>":
+                elif branch._fClassName == b"vector<short>" or branch._fClassName == b"vector<Short_t>":
                     return asjagged(asdtype("i2"), skipbytes=10)
-                elif branch._fClassName == b"vector<unsigned short>":
+                elif branch._fClassName == b"vector<unsigned short>" or branch._fClassName == b"vector<UShort_t>":
                     return asjagged(asdtype("u2"), skipbytes=10)
-                elif branch._fClassName == b"vector<int>":
+                elif branch._fClassName == b"vector<int>" or branch._fClassName == b"vector<Int_t>":
                     return asjagged(asdtype("i4"), skipbytes=10)
-                elif branch._fClassName == b"vector<unsigned int>":
+                elif branch._fClassName == b"vector<unsigned int>" or branch._fClassName == b"vector<UInt_t>":
                     return asjagged(asdtype("u4"), skipbytes=10)
-                elif branch._fClassName == b"vector<long>":
+                elif branch._fClassName == b"vector<long>" or branch._fClassName == b"vector<Long_t>":
                     return asjagged(asdtype("i8"), skipbytes=10)
                 elif branch._fClassName == b"vector<unsigned long>" or branch._fClassName == b"vector<ULong64_t>":
                     return asjagged(asdtype("u8"), skipbytes=10)
-                elif branch._fClassName == b"vector<float>":
+                elif branch._fClassName == b"vector<float>" or branch._fClassName == b"vector<Float_t>":
                     return asjagged(asdtype("f4"), skipbytes=10)
-                elif branch._fClassName == b"vector<double>":
+                elif branch._fClassName == b"vector<double>" or branch._fClassName == b"vector<Double_t>":
                     return asjagged(asdtype("f8"), skipbytes=10)
                 elif branch._fClassName == b"vector<string>":
                     return asgenobj(STLVector(STLString(awkward)), branch._context, 6)
 
-                if branch._fClassName == b"vector<vector<bool> >":
+                if branch._fClassName == b"vector<vector<bool> >" or branch._fClassName == b"vector<vector<Bool_t> >":
                     return asgenobj(STLVector(STLVector(asdtype(awkward.numpy.bool_))), branch._context, 6)
-                elif branch._fClassName == b"vector<vector<char> >":
+                elif branch._fClassName == b"vector<vector<char> >" or branch._fClassName == b"vector<vector<Char_t> >":
                     return asgenobj(STLVector(STLVector(asdtype("i1"))), branch._context, 6)
-                elif branch._fClassName == b"vector<vector<unsigned char> >":
+                elif branch._fClassName == b"vector<vector<unsigned char> >" or branch._fClassName == b"vector<vector<UChar_t> >" or branch._fClassName == b"vector<vector<Byte_t> >":
                     return asgenobj(STLVector(STLVector(asdtype("u1"))), branch._context, 6)
-                elif branch._fClassName == b"vector<vector<short> >":
+                elif branch._fClassName == b"vector<vector<short> >" or branch._fClassName == b"vector<vector<Short_t> >":
                     return asgenobj(STLVector(STLVector(asdtype(">i2"))), branch._context, 6)
-                elif branch._fClassName == b"vector<vector<unsigned short> >":
+                elif branch._fClassName == b"vector<vector<unsigned short> >" or branch._fClassName == b"vector<vector<UShort_t> >":
                     return asgenobj(STLVector(STLVector(asdtype(">u2"))), branch._context, 6)
-                elif branch._fClassName == b"vector<vector<int> >":
+                elif branch._fClassName == b"vector<vector<int> >" or branch._fClassName == b"vector<vector<Int_t> >":
                     return asgenobj(STLVector(STLVector(asdtype(">i4"))), branch._context, 6)
-                elif branch._fClassName == b"vector<vector<unsigned int> >":
+                elif branch._fClassName == b"vector<vector<unsigned int> >" or branch._fClassName == b"vector<vector<UInt_t> >":
                     return asgenobj(STLVector(STLVector(asdtype(">u4"))), branch._context, 6)
-                elif branch._fClassName == b"vector<vector<long> >":
+                elif branch._fClassName == b"vector<vector<long> >" or branch._fClassName == b"vector<vector<Long_t> >":
                     return asgenobj(STLVector(STLVector(asdtype(">i8"))), branch._context, 6)
                 elif branch._fClassName == b"vector<vector<unsigned long> >" or branch._fClassName == b"vector<vector<ULong64_t> >":
                     return asgenobj(STLVector(STLVector(asdtype(">u8"))), branch._context, 6)
-                elif branch._fClassName == b"vector<vector<float> >":
+                elif branch._fClassName == b"vector<vector<float> >" or branch._fClassName == b"vector<vector<Float_t> >":
                     return asgenobj(STLVector(STLVector(asdtype(">f4"))), branch._context, 6)
-                elif branch._fClassName == b"vector<vector<double> >":
+                elif branch._fClassName == b"vector<vector<double> >" or branch._fClassName == b"vector<vector<Double_t> >":
                     return asgenobj(STLVector(STLVector(asdtype(">f8"))), branch._context, 6)
                 elif branch._fClassName == b"vector<vector<string> >":
                     return asgenobj(STLVector(STLVector(STLString(awkward))), branch._context, 6)
 
-                if branch._fClassName == b"map<string,bool>":
+                if branch._fClassName == b"map<string,bool>" or branch._fClassName == b"map<string,Bool_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype(awkward.numpy.bool_)), branch._context, 6)
-                elif branch._fClassName == b"map<string,char>":
+                elif branch._fClassName == b"map<string,char>" or branch._fClassName == b"map<string,Char_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("i1")), branch._context, 6)
-                elif branch._fClassName == b"map<string,unsigned char>":
+                elif branch._fClassName == b"map<string,unsigned char>" or branch._fClassName == b"map<string,UChar_t>" or branch._fClassName == b"map<string,Byte_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("u1")), branch._context, 6)
-                elif branch._fClassName == b"map<string,short>":
+                elif branch._fClassName == b"map<string,short>" or branch._fClassName == b"map<string,Short_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("i2")), branch._context, 6)
-                elif branch._fClassName == b"map<string,unsigned short>":
+                elif branch._fClassName == b"map<string,unsigned short>" or branch._fClassName == b"map<string,UShort_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("u2")), branch._context, 6)
-                elif branch._fClassName == b"map<string,int>":
+                elif branch._fClassName == b"map<string,int>" or branch._fClassName == b"map<string,Int_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("i4")), branch._context, 6)
-                elif branch._fClassName == b"map<string,unsigned int>":
+                elif branch._fClassName == b"map<string,unsigned int>" or branch._fClassName == b"map<string,UInt_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("u4")), branch._context, 6)
-                elif branch._fClassName == b"map<string,long>":
+                elif branch._fClassName == b"map<string,long>" or branch._fClassName == b"map<string,Long_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("i8")), branch._context, 6)
                 elif branch._fClassName == b"map<string,unsigned long>" or branch._fClassName == b"map<string,ULong64_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("u8")), branch._context, 6)
-                elif branch._fClassName == b"map<string,float>":
+                elif branch._fClassName == b"map<string,float>" or branch._fClassName == b"map<string,Float_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("f4")), branch._context, 6)
-                elif branch._fClassName == b"map<string,double>":
+                elif branch._fClassName == b"map<string,double>" or branch._fClassName == b"map<string,Double_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("f8")), branch._context, 6)
                 elif branch._fClassName == b"map<string,string>":
                     return asgenobj(STLMap(STLString(awkward), STLString(awkward)), branch._context, 6)
