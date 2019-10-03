@@ -367,7 +367,7 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
                     return asjagged(asdtype("u4"), skipbytes=10)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<long>":
                     return asjagged(asdtype("i8"), skipbytes=10)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<unsigned long>":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<unsigned long>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<ULong64_t>":
                     return asjagged(asdtype("u8"), skipbytes=10)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<float>":
                     return asjagged(asdtype("f4"), skipbytes=10)
@@ -392,7 +392,7 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
                     return asgenobj(STLMap(STLString(awkward), asdtype("u4")), branch._context, 6)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,long>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("i8")), branch._context, 6)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,unsigned long>":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,unsigned long>" or getattr(branch._streamer, "_fTypeName", None) == b"map<string,ULong64_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("u8")), branch._context, 6)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"map<string,float>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("f4")), branch._context, 6)
@@ -417,7 +417,7 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
                     return asgenobj(STLVector(STLVector(asdtype(">u4"))), branch._context, 6)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<long> >":
                     return asgenobj(STLVector(STLVector(asdtype(">i8"))), branch._context, 6)
-                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<unsigned long> >":
+                elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<unsigned long> >" or getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<ULong64_t> >":
                     return asgenobj(STLVector(STLVector(asdtype(">u8"))), branch._context, 6)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<vector<float> >":
                     return asgenobj(STLVector(STLVector(asdtype(">f4"))), branch._context, 6)
@@ -449,7 +449,7 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
                     return asjagged(asdtype("u4"), skipbytes=10)
                 elif branch._fClassName == b"vector<long>":
                     return asjagged(asdtype("i8"), skipbytes=10)
-                elif branch._fClassName == b"vector<unsigned long>":
+                elif branch._fClassName == b"vector<unsigned long>" or branch._fClassName == b"vector<ULong64_t>":
                     return asjagged(asdtype("u8"), skipbytes=10)
                 elif branch._fClassName == b"vector<float>":
                     return asjagged(asdtype("f4"), skipbytes=10)
@@ -474,7 +474,7 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
                     return asgenobj(STLVector(STLVector(asdtype(">u4"))), branch._context, 6)
                 elif branch._fClassName == b"vector<vector<long> >":
                     return asgenobj(STLVector(STLVector(asdtype(">i8"))), branch._context, 6)
-                elif branch._fClassName == b"vector<vector<unsigned long> >":
+                elif branch._fClassName == b"vector<vector<unsigned long> >" or branch._fClassName == b"vector<vector<ULong64_t> >":
                     return asgenobj(STLVector(STLVector(asdtype(">u8"))), branch._context, 6)
                 elif branch._fClassName == b"vector<vector<float> >":
                     return asgenobj(STLVector(STLVector(asdtype(">f4"))), branch._context, 6)
@@ -499,7 +499,7 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
                     return asgenobj(STLMap(STLString(awkward), asdtype("u4")), branch._context, 6)
                 elif branch._fClassName == b"map<string,long>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("i8")), branch._context, 6)
-                elif branch._fClassName == b"map<string,unsigned long>":
+                elif branch._fClassName == b"map<string,unsigned long>" or branch._fClassName == b"map<string,ULong64_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("u8")), branch._context, 6)
                 elif branch._fClassName == b"map<string,float>":
                     return asgenobj(STLMap(STLString(awkward), asdtype("f4")), branch._context, 6)
