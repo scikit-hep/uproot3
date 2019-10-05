@@ -65,12 +65,12 @@ class TFileUpdate(object):
 
         return where, cycle
 
-    def newtree(self, name, branches={}, flushsize=30000, title="", **options):
+    def newtree(self, name, branches={}, title="", **options):
         if "compression" in options:
-            self.__setitem__(name, uproot.write.objects.TTree.newtree(branches, flushsize, title, compression=options["compression"]))
+            self.__setitem__(name, uproot.write.objects.TTree.newtree(branches, title, compression=options["compression"]))
             del options["compression"]
         else:
-            self.__setitem__(name, uproot.write.objects.TTree.newtree(branches, flushsize, title))
+            self.__setitem__(name, uproot.write.objects.TTree.newtree(branches, title))
         if len(options) > 0:
             raise TypeError("{0} not supported".format(options))
 
@@ -197,8 +197,6 @@ class TFileUpdate(object):
         return self
 
     def __exit__(self, type, value, traceback):
-        for tree in self._treedict.keys():
-            self._treedict[tree].flush()
         self.close()
 
 class TFileRecreate(TFileUpdate):
