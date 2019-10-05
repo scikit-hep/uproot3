@@ -281,16 +281,17 @@ class TBranch(object):
         self._branch.fields["_fWriteBasket"] += 1
 
         if self._branch.fields["_fWriteBasket"] >= self._branch.fields["_fMaxBaskets"]:
-            self._branch.fields["_fMaxBaskets"] = self._branch.fields["_fMaxBaskets"] * 2
-            temp_arr = numpy.array([0] * self._branch.fields["_fMaxBaskets"], dtype=">i8")
-            temp_arr[0:len(self._branch.fields["_fBasketEntry"])] = self._branch.fields["_fBasketEntry"]
-            self._branch.fields["_fBasketEntry"] = temp_arr
-            temp_arr = numpy.array([0] * self._branch.fields["_fMaxBaskets"], dtype=">i8")
-            temp_arr[0:len(self._branch.fields["_fBasketSeek"])] = self._branch.fields["_fBasketSeek"]
-            self._branch.fields["_fBasketSeek"] = temp_arr
-            temp_arr = numpy.array([0] * self._branch.fields["_fMaxBaskets"], dtype=">i4")
-            temp_arr[0:len(self._branch.fields["_fBasketBytes"])] = self._branch.fields["_fBasketBytes"]
-            self._branch.fields["_fBasketBytes"] = temp_arr
+            for branch in self._treelvl1._branches.values():
+                branch._branch.fields["_fMaxBaskets"] = branch._branch.fields["_fMaxBaskets"] * 2
+                temp_arr = numpy.array([0] * branch._branch.fields["_fMaxBaskets"], dtype=">i8")
+                temp_arr[0:len(branch._branch.fields["_fBasketEntry"])] = branch._branch.fields["_fBasketEntry"]
+                branch._branch.fields["_fBasketEntry"] = temp_arr
+                temp_arr = numpy.array([0] * branch._branch.fields["_fMaxBaskets"], dtype=">i8")
+                temp_arr[0:len(branch._branch.fields["_fBasketSeek"])] = branch._branch.fields["_fBasketSeek"]
+                branch._branch.fields["_fBasketSeek"] = temp_arr
+                temp_arr = numpy.array([0] * branch._branch.fields["_fMaxBaskets"], dtype=">i4")
+                temp_arr[0:len(branch._branch.fields["_fBasketBytes"])] = branch._branch.fields["_fBasketBytes"]
+                branch._branch.fields["_fBasketBytes"] = temp_arr
 
             tree = TTreeImpl(self._treelvl1._tree.name, newtree(), self._branch.file)
             tree.name = self._treelvl1._tree.name
