@@ -1720,7 +1720,7 @@ def test_tree_renames(tmp_path):
     for i in range(19):
         assert a[0] == treedata[i]
 
-def test_ttree_extend_flush_true(tmp_path):
+def test_ttree_extend(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
     b = uproot.newbranch(">i4")
@@ -1741,163 +1741,6 @@ def test_ttree_extend_flush_true(tmp_path):
         assert branch1[i] == branch1_test[i]
         assert branch2[i] == branch2_test[i]
 
-def test_ttree_extend_flush_false(tmp_path):
-    filename = join(str(tmp_path), "example.root")
-
-    b = uproot.newbranch(">i4")
-    branchdict = {"intBranch": b}
-    tree = uproot.newtree(branchdict, flushsize=5)
-    with uproot.recreate(filename) as f:
-        f["t"] = tree
-        basket_add = {"intBranch": numpy.array([1, 2])}
-        f["t"].extend(basket_add, flush=False)
-
-    f = ROOT.TFile.Open(filename)
-    tree = f.Get("t")
-    branch1 = tree.AsMatrix(["intBranch"])
-    branch1_test = numpy.array([1, 2], dtype=">i4")
-    for i in range(2):
-        assert branch1[i] == branch1_test[i]
-
-def test_ttree_extend_flush_false_readback_and_proper_close(tmp_path):
-    filename = join(str(tmp_path), "example.root")
-
-    b = uproot.newbranch(">i4")
-    branchdict = {"intBranch": b}
-    tree = uproot.newtree(branchdict, flushsize=9)
-    with uproot.recreate(filename) as f:
-        f["t"] = tree
-        basket_add = {"intBranch": numpy.array([1, 2])}
-        f["t"].extend(basket_add, flush=False)
-        assert f["t"]["intBranch"].numbaskets == 0
-
-    f = ROOT.TFile.Open(filename)
-    tree = f.Get("t")
-    branch1 = tree.AsMatrix(["intBranch"])
-    branch1_test = numpy.array([1, 2], dtype=">i4")
-    for i in range(2):
-        assert branch1[i] == branch1_test[i]
-
-def test_ttree_extend_flush_false_multibranch_same_type(tmp_path):
-    filename = join(str(tmp_path), "example.root")
-
-    b = uproot.newbranch(">i4")
-    branchdict = {"intBranch": b, "intBranch2": b}
-    tree = uproot.newtree(branchdict, flushsize=9)
-    with uproot.recreate(filename) as f:
-        f["t"] = tree
-        basket_add = {"intBranch": numpy.array([1, 2]), "intBranch2": numpy.array([11, 12])}
-        f["t"].extend(basket_add, flush=False)
-
-    f = ROOT.TFile.Open(filename)
-    tree = f.Get("t")
-    branch1 = tree.AsMatrix(["intBranch"])
-    branch2 = tree.AsMatrix(["intBranch2"])
-    branch1_test = numpy.array([1, 2], dtype=">i4")
-    branch2_test = numpy.array([11, 12], dtype=">i4")
-    for i in range(2):
-        assert branch1[i] == branch1_test[i]
-        assert branch2[i] == branch2_test[i]
-
-def test_ttree_extend_flush_false_multibranch_diff_type(tmp_path):
-    filename = join(str(tmp_path), "example.root")
-
-    b = uproot.newbranch(">i4")
-    b2 = uproot.newbranch(">i8")
-    branchdict = {"intBranch": b, "intBranch2": b2}
-    tree = uproot.newtree(branchdict, flushsize=9)
-    with uproot.recreate(filename) as f:
-        f["t"] = tree
-        basket_add = {"intBranch": numpy.array([1, 2]), "intBranch2": numpy.array([11, 12])}
-        f["t"].extend(basket_add, flush=False)
-
-    f = ROOT.TFile.Open(filename)
-    tree = f.Get("t")
-    branch1 = tree.AsMatrix(["intBranch"])
-    branch2 = tree.AsMatrix(["intBranch2"])
-    branch1_test = numpy.array([1, 2], dtype=">i4")
-    branch2_test = numpy.array([11, 12], dtype=">i8")
-    for i in range(2):
-        assert branch1[i] == branch1_test[i]
-        assert branch2[i] == branch2_test[i]
-
-def test_ttree_extend_flush_false_multibasket(tmp_path):
-    filename = join(str(tmp_path), "example.root")
-
-    b = uproot.newbranch(">i4")
-    branchdict = {"intBranch": b}
-    tree = uproot.newtree(branchdict, flushsize=5)
-    with uproot.recreate(filename) as f:
-        f["t"] = tree
-        basket_add = {"intBranch": numpy.array([1, 2])}
-        for i in range(3):
-            f["t"].extend(basket_add, flush=False)
-
-    f = ROOT.TFile.Open(filename)
-    tree = f.Get("t")
-    branch1 = tree.AsMatrix(["intBranch"])
-    branch1_test = numpy.array([1, 2]*3, dtype=">i4")
-    for i in range(6):
-        assert branch1[i] == branch1_test[i]
-
-def test_ttree_extend_flush_false_multibasket_multibranch_same_type(tmp_path):
-    filename = join(str(tmp_path), "example.root")
-
-    b = uproot.newbranch(">i4")
-    branchdict = {"intBranch": b, "intBranch2": b}
-    tree = uproot.newtree(branchdict, flushsize=5)
-    with uproot.recreate(filename) as f:
-        f["t"] = tree
-        basket_add = {"intBranch": numpy.array([1, 2]), "intBranch2": numpy.array([11, 12])}
-        for i in range(3):
-            f["t"].extend(basket_add, flush=False)
-
-    f = ROOT.TFile.Open(filename)
-    tree = f.Get("t")
-    branch1 = tree.AsMatrix(["intBranch"])
-    branch2 = tree.AsMatrix(["intBranch2"])
-    branch1_test = numpy.array([1, 2] * 3, dtype=">i4")
-    branch2_test = numpy.array([11, 12] * 3, dtype=">i4")
-    for i in range(6):
-        assert branch1[i] == branch1_test[i]
-        assert branch2[i] == branch2_test[i]
-
-def test_ttree_extend_flush_false_multibasket_multibranch_diff_type(tmp_path):
-    filename = join(str(tmp_path), "example.root")
-
-    b = uproot.newbranch(">i4")
-    b2 = uproot.newbranch(">i8")
-    branchdict = {"intBranch": b, "intBranch2": b2}
-    tree = uproot.newtree(branchdict, flushsize=5)
-    with uproot.recreate(filename) as f:
-        f["t"] = tree
-        basket_add = {"intBranch": numpy.array([1, 2]), "intBranch2": numpy.array([11, 12])}
-        for i in range(3):
-            f["t"].extend(basket_add, flush=False)
-
-    f = ROOT.TFile.Open(filename)
-    tree = f.Get("t")
-    branch1 = tree.AsMatrix(["intBranch"])
-    branch2 = tree.AsMatrix(["intBranch2"])
-    branch1_test = numpy.array([1, 2] * 3, dtype=">i4")
-    branch2_test = numpy.array([11, 12] * 3, dtype=">i8")
-    for i in range(6):
-        assert branch1[i] == branch1_test[i]
-        assert branch2[i] == branch2_test[i]
-
-def test_ttree_extend_flush_false_diff_flush(tmp_path):
-    filename = join(str(tmp_path), "example.root")
-
-    b = uproot.newbranch(">i4", flushsize=5)
-    branchdict = {"intBranch": b}
-    tree = uproot.newtree(branchdict, flushsize=12)
-    with uproot.recreate(filename) as f:
-        f["t"] = tree
-        f["t"].extend({"intBranch": numpy.array([1])}, flush=False)
-        assert f["t"]["intBranch"].numbaskets == 0
-        f["t"].extend({"intBranch": numpy.array([2, 3])}, flush=False)
-        assert f["t"]["intBranch"].numbaskets == 2
-
 def test_issue340(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
@@ -1909,21 +1752,6 @@ def test_issue340(tmp_path):
     t = uproot.open(filename)["t"]
     for i in range(10):
         assert t["normal"].basket(0)[i] == a[i]
-
-def test_basket_append(tmp_path):
-    filename = join(str(tmp_path), "example.root")
-
-    b = newbranch("int32")
-    branchdict = {"intBranch": b}
-    tree = newtree(branchdict)
-    with uproot.recreate(filename, compression=None) as f:
-        f["t"] = tree
-        f["t"].append({"intBranch": 1})
-
-    f = ROOT.TFile.Open(filename)
-    tree = f.Get("t")
-    treedata = tree.AsMatrix().astype(">i4")
-    assert treedata[0] == 1
 
 def test_rdf(tmp_path):
     filename = join(str(tmp_path), "example.root")

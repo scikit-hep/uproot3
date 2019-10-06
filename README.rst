@@ -4479,52 +4479,8 @@ extend method:
 |
 | Remember to add entries to all the branches and the number of entries added to the branches is the same!
 |
-| You can specify a flush parameter to True or False in the extend method.
 
-.. code-block:: python3
-
-    f["t"].extend({"branch1": numpy.array([1, 2, 3, 4, 5]), "branch2": [6, 7, 8, 9, 10]}, flush=True)
-
-By default, it is true. This means that these values are immediately
-flushed to the file.
-
-| You can choose not to flush the baskets immediately by setting flush =
-  False.
-
-.. code-block:: python3
-
-    f["t"].extend({"branch1": numpy.array([1, 2, 3, 4, 5]), "branch2": [1, 2, 3, 4, 5]}, flush=False)
-
-| The baskets are added to a buffer which are flushed to the file
-  depending on the flush size set by the user.
-
-The flush size can be set at the branch level and the tree level.
-
-To set it at the branch level:
-
-.. code-block:: python3
-
-    t = uproot.newbranch("int32", flushsize="10 KB")
-
-and to set it at the tree level:
-
-.. code-block:: python3
-
-    tree = uproot.newtree({"demoflush": t}, flushsize=1000)
-
-You can also use the append function to add baskets to your file if you
-need to just add a single value at the end of your current basket
-buffer:
-
-.. code-block:: python3
-
-    f["t"].append({"branch1": 1, "branch2": 2)
-
-Make sure to add entries to every branch, similar to the extend method.
-
-The append method does not provide a way to explicitly flush data to the
-file, the data is added to the end of the buffer and is flushed hased on
-the branch and tree flush sizes.
+What must be kept in mind is that if you write a lot of small baskets, it is going to be much less performant(slow and will increase the size of the file) than writing large arrays into the TTree as a single basket -> uproot's implementation is optimized for large array oriented operations.
 
 **Low level interface**
 
