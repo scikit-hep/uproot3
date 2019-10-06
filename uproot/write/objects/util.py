@@ -31,10 +31,10 @@ class Util(object):
             self._written[clsname] = numpy.uint32(start + uproot.const.kMapOffset) | uproot.const.kClassMask
             self._written[id(objct)] = beg + uproot.const.kMapOffset
         if clsname == "THashList" or clsname == "TList":
-            buf += self.parent_obj.put_tlist(cursor, objct)
+            buf += self.parent_obj._put_tlist(cursor, objct)
         elif clsname == "TObjString":
             self.tobjstring_count += 1
-            buf += self.parent_obj.put_tobjstring(cursor, objct, self.tobjstring_count)
+            buf += self.parent_obj._put_tobjstring(cursor, objct, self.tobjstring_count)
         elif clsname == "TBranch":
             buf += objct.write(cursor)
         elif clsname == "TLeafI":
