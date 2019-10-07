@@ -206,3 +206,10 @@ class Test(unittest.TestCase):
 
     def test_issue327(self):
         uproot.open("tests/samples/issue327.root")["DstTree"]
+
+    def test_issue371(self):
+        t = uproot.open("tests/samples/issue371.root")["Event"]
+        obj = t["DRIFT_0."].array()[0]
+        assert obj._samplerName == b'DRIFT_0'
+        assert obj._n == 1
+        assert obj._energy[0] == numpy.array([2.3371024], dtype=numpy.float32)[0]
