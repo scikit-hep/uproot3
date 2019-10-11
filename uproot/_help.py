@@ -520,7 +520,12 @@ tree_fragments = {
 
     # i
     "i": u"""i : non-negative int
-        basket number (must be greater than or equal to zero and strictly less than *numbaskets*)."""
+        basket number (must be greater than or equal to zero and strictly less than *numbaskets*).""",
+
+    # chunked
+    "chunked": u"""chunked : bool
+        if ``True`` *(default)*, produced chunked lazy arrays using awkward.ChunkedArray.   If ``False``, produce bare VirtualArrays.  This option implies ``entrysteps = float('inf')``.""",
+
     }
 
 ################################################################ uproot.tree.iterate
@@ -990,9 +995,11 @@ u"""Create a lazy array that would read the branch as needed.
 
     {persistvirtual}
 
+    {chunked}
+
     Returns
     -------
-    ChunkedArray of VirtualArrays
+    ChunkedArray of VirtualArrays or VirtualArray
         lazy version of the array.
 """.format(**tree_fragments)
 
@@ -1027,9 +1034,11 @@ u"""Create a table of lazy arrays.
 
     {persistvirtual}
 
+    {chunked}
+
     Returns
     -------
-    ChunkedArray of Table of VirtualArrays
+    ChunkedArray of Table of VirtualArrays or Table of VirtualArrays
         lazy branch data.
 """.format(**tree_fragments)
 
@@ -1518,9 +1527,11 @@ u"""Create a lazy array that would read the branch as needed.
 
     {persistvirtual}
 
+    {chunked}
+
     Returns
     -------
-    ChunkedArray of VirtualArrays
+    ChunkedArray of VirtualArrays or VirtualArray
         lazy version of branch data.
 """.format(**tree_fragments)
 
@@ -1695,7 +1706,7 @@ u"""Create a lazy array that would read from a set of files as needed.
 
     Returns
     -------
-    ChunkedArray of VirtualArrays of VirtualArrays
+    ChunkedArray of VirtualArrays
         lazy files of lazy baskets.
 """.format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
 
@@ -1743,7 +1754,7 @@ u"""Create a lazy table that would read from a set of files as needed.
 
     Returns
     -------
-    ChunkedArray of Table of VirtualArrays of VirtualArrays
+    ChunkedArray of Table of VirtualArrays
         lazy files of branches of lazy baskets.
 """.format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
 
