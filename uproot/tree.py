@@ -543,8 +543,8 @@ class TTreeMethods(object):
         else:
             return wait
 
-    def lazyarray(self, branch, interpretation=None, entrysteps=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False):
-        return self.get(branch).lazyarray(interpretation=interpretation, entrysteps=entrysteps, entrystart=entrystart, entrystop=entrystop, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, persistvirtual=persistvirtual)
+    def lazyarray(self, branch, interpretation=None, entrysteps=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False, chunked=True):
+        return self.get(branch).lazyarray(interpretation=interpretation, entrysteps=entrysteps, entrystart=entrystart, entrystop=entrystop, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, persistvirtual=persistvirtual, chunked=chunked)
 
     def lazyarrays(self, branches=None, namedecode="utf-8", entrysteps=None, entrystart=None, entrystop=None, flatten=False, profile=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False, chunked=True):
         entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
