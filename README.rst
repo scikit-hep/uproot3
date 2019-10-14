@@ -79,6 +79,17 @@ Optional dependencies:
 
 .. inclusion-marker-3-do-not-remove
 
+Questions
+=========
+
+If you have a question about how to use uproot that is not answered in the document below, I recommend asking your question on `StackOverflow <https://stackoverflow.com/questions/tagged/uproot>`__ with the ``[uproot]`` tag. (I get notified of questions with this tag.)
+
+.. raw:: html
+
+   <p align="center"><a href="https://stackoverflow.com/questions/tagged/uproot"><img src="https://cdn.sstatic.net/Sites/stackoverflow/company/img/logos/so/so-logo.png" width="30%"></a></p>
+
+If you believe you have found a bug in uproot, post it on the `GitHub issues tab <https://github.com/scikit-hep/uproot/issues>`__.
+
 Tutorial
 ========
 
@@ -809,7 +820,7 @@ These functions let you make a lazy array that spans many files.
 These functions may be thought of as alternatives to ROOT’s TChain: a
 TChain presents many files as though they were a single TTree, and a
 file-spanning lazy array presents many files as though they were a
-single array.
+single array. See `Iteration <#iteration>`__ below as a more explicit TChain alternative.
 
 .. code-block:: python3
 
@@ -1099,7 +1110,7 @@ iterates over chunks of a TTree and
 iterates through files.
 
 Like a file-spanning lazy array, a file-spanning iterator erases the
-difference between files. However, the iteration is over *chunks of many
+difference between files and may be used as a TChain alternative. However, the iteration is over *chunks of many
 events*, not *single events*.
 
 .. code-block:: python3
@@ -3137,6 +3148,8 @@ Here is an example of ``JaggedArrays`` in physics data:
     # <JaggedArray [[54.168106 37.744152] [24.417913] [53.58827 29.811996] [88.63194 77.951485]
     #               [81.011406 47.175045] [41.591053 30.844215]] at 0x7f36246d1240>
 
+Note that if you want to histogram the inner contents of these arrays (i.e. histogram of particles, ignoring event boundaries), functions like `numpy.histogram <https://docs.scipy.org/doc/numpy/reference/generated/numpy.histogram.html>`__ require non-jagged arrays, so flatten them with a call to ``.flatten()``.
+
 To select elements of inner lists (Pandas’s
 `DataFrame.xs <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.xs.html>`__),
 first require the list to have at least that many elements.
@@ -4191,9 +4204,9 @@ ecosystem, are just a tuple of counts/bin contents and edge positions.
 Creating and writing data to ROOT files
 =======================================
 
-Uproot has a limited (but growing!) ability to *write* ROOT files. Two
-types currently supported are ``TObjString`` (for debugging) and
-histograms.
+Uproot has a limited ability to *write* ROOT files, including TTrees of
+flat data (non-jagged: single number per event), a variety of histogram
+types, and ``TObjString`` (for metadata).
 
 To write to a ROOT file in uproot, the file must be opened for writing
 using ``uproot.create``, ``uproot.recreate``, or ``uproot.update``
@@ -4466,52 +4479,8 @@ extend method:
 |
 | Remember to add entries to all the branches and the number of entries added to the branches is the same!
 |
-| You can specify a flush parameter to True or False in the extend method.
 
-.. code-block:: python3
-
-    f["t"].extend({"branch1": numpy.array([1, 2, 3, 4, 5]), "branch2": [6, 7, 8, 9, 10]}, flush=True)
-
-By default, it is true. This means that these values are immediately
-flushed to the file.
-
-| You can choose not to flush the baskets immediately by setting flush =
-  False.
-
-.. code-block:: python3
-
-    f["t"].extend({"branch1": numpy.array([1, 2, 3, 4, 5]), "branch2": [1, 2, 3, 4, 5]}, flush=False)
-
-| The baskets are added to a buffer which are flushed to the file
-  depending on the flush size set by the user.
-
-The flush size can be set at the branch level and the tree level.
-
-To set it at the branch level:
-
-.. code-block:: python3
-
-    t = uproot.newbranch("int32", flushsize="10 KB")
-
-and to set it at the tree level:
-
-.. code-block:: python3
-
-    tree = uproot.newtree({"demoflush": t}, flushsize=1000)
-
-You can also use the append function to add baskets to your file if you
-need to just add a single value at the end of your current basket
-buffer:
-
-.. code-block:: python3
-
-    f["t"].append({"branch1": 1, "branch2": 2)
-
-Make sure to add entries to every branch, similar to the extend method.
-
-The append method does not provide a way to explicitly flush data to the
-file, the data is added to the end of the buffer and is flushed hased on
-the branch and tree flush sizes.
+What must be kept in mind is that if you write a lot of small baskets, it is going to be much less performant(slow and will increase the size of the file) than writing large arrays into the TTree as a single basket -> uproot's implementation is optimized for large array oriented operations.
 
 **Low level interface**
 

@@ -15,24 +15,26 @@ class Util(object):
 
     def _putclass(self, cursor, obj, keycursor, beg):
         start = cursor.index - keycursor.index
-        beg = beg - keycursor.index - 8
+        beg = beg - keycursor.index
         buf = b""
         objct, clsname = obj
         if id(objct) in self._written and clsname in self._written:
             buf += cursor.put_fields(self._format_putobjany1, numpy.uint32(self._written[id(objct)]))
             return buf
         if clsname in self._written:
-            buf += cursor.put_fields(self._format_putobjany1, numpy.uint32(self._written[clsname]) | uproot.const.kClassMask)
+            buf += cursor.put_fields(self._format_putobjany1, self._written[clsname] | uproot.const.kClassMask)
+            if clsname != "TBranch":
+                self._written[id(objct)] = beg + uproot.const.kMapOffset
         else:
             buf += cursor.put_fields(self._format_putobjany1, uproot.const.kNewClassTag)
             buf += cursor.put_cstring(clsname)
             self._written[clsname] = numpy.uint32(start + uproot.const.kMapOffset) | uproot.const.kClassMask
             self._written[id(objct)] = beg + uproot.const.kMapOffset
         if clsname == "THashList" or clsname == "TList":
-            buf += self.parent_obj.put_tlist(cursor, objct)
+            buf += self.parent_obj._put_tlist(cursor, objct)
         elif clsname == "TObjString":
             self.tobjstring_count += 1
-            buf += self.parent_obj.put_tobjstring(cursor, objct, self.tobjstring_count)
+            buf += self.parent_obj._put_tobjstring(cursor, objct, self.tobjstring_count)
         elif clsname == "TBranch":
             buf += objct.write(cursor)
         elif clsname == "TLeafI":

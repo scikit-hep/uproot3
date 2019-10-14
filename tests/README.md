@@ -1,5 +1,7 @@
 # Test coverage
 
+Note: this message is very old and I'd have to check it before trusting its contents (2019-09-25).
+
 | Can be tested | Is it tested? |
 |:--------------|:-------------:|
 | flat numerical types (including booleans)                                 | &#x2713; |

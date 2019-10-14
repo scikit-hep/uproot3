@@ -19,32 +19,11 @@ import uproot.write.sink.cursor
 from uproot.write.TKey import BasketKey
 from uproot.write.objects.util import Util
 
-def _normalize_size(value):
-    if sys.version_info[0] <= 2:
-        string_types = (unicode, str)
-    else:
-        string_types = (str, bytes)
-    if isinstance(value, string_types):
-        return int(_memsize(value))
-    if value is None or value < 0:
-        return 1
-    return value
-
-
-def divide_flush(branchdict, flushsize):
-    flushsize = _normalize_size(flushsize)
-    sizes = 0
-    for name in branchdict.keys():
-        sizes += numpy.dtype(branchdict[name]._branch.type).itemsize
-    div = int(math.ceil(flushsize / float((max(sizes, 1)))))
-    return div
-
 class newbranch(object):
 
-    def __init__(self, type, flushsize=None, title="", **options):
+    def __init__(self, type, title="", **options):
         self.name = ""
         self.type = type
-        self.flushsize = flushsize
         self.title = title
         if "compression" in options:
             self.compression = options["compression"]
@@ -54,9 +33,8 @@ class newbranch(object):
 
 class newtree(object):
 
-    def __init__(self, branches={}, flushsize=30000, title="", **options):
+    def __init__(self, branches={}, title="", **options):
         self.branches = branches
-        self.flushsize = flushsize
         self.title = title
         if "compression" in options:
             self.compression = options["compression"]
@@ -79,11 +57,6 @@ class TTree(object):
             self._tree.fields["_fLeaves"].append(self._branches[name]._branch.fields["_fLeaves"])
             self._tree.fields["_fBranches"].append(self._branches[name]._branch)
 
-        self._tree.flushrow = divide_flush(self._branches, newtree.flushsize)
-
-        for branch in self._branches.values():
-            branch._allocateflush()
-
     def __getitem__(self, name):
         return self._branches[name]
 
@@ -98,37 +71,27 @@ class TTree(object):
     def _write(self, context, cursor, name, compression, key, keycursor, util):
         self._tree.write(context, cursor, name, key, copy(keycursor), util)
 
-    def extend(self, branchdict, flush=True):
-        #Check for equal number of values in baskets
+    def extend(self, branchdict):
+        #Baskets need to be added to all the branches
+        if len(branchdict) != len(self._branches):
+            raise Exception("Basket data should be added to all branches")
+
+        # Check for equal number of values in baskets
         values = iter(branchdict.values())
         first = next(values)
         if all(len(first) == len(value) for value in values) == False:
             raise Exception("Baskets of all branches should have the same length")
 
-        if flush:
-            self.extend(branchdict, flush=False)
-            self.flush()
-        else:
-            for key, value in branchdict.items():
-                for x in value:
-                    self._branches[key]._branch.buffer[self._branches[key]._branch.bufferpointer:self._branches[key]._branch.bufferpointer+1] = x
-                    self._branches[key]._branch.bufferpointer += 1
-                    self._branches[key]._branch.treecheck += 1
-                    if self._branches[key]._branch.flushrow != None and self._branches[key]._branch.bufferpointer == self._branches[key]._branch.flushrow:
-                        self._branches[key]._flush()
-                    elif self._branches[key]._branch.treecheck == self._tree.flushrow:
-                        self._branches[key]._flush()
-                        self._branches[key]._branch.treecheck = 0
-
-    def append(self, branchdict):
-        appenddict = {}
+        #Convert to numpy arrays of required dtype
         for key, value in branchdict.items():
-            appenddict[key] = [value]
-        self.extend(appenddict, flush=False)
+            branchdict[key] = numpy.array(value, dtype=self._branches[key]._branch.type, copy=False)
 
-    def flush(self):
-        for key in self._branches.keys():
-            self._branches[key].newbasket(self._branches[key]._branch.buffer[0:self._branches[key]._branch.bufferpointer])
+            #Temporary place holder
+            if branchdict[key].ndim != 1:
+                raise NotImplementedError("Multi dimensional array support is coming soon")
+
+        for key, value in branchdict.items():
+            self._branches[key].newbasket(value)
 
     @property
     def name(self):
@@ -245,19 +208,6 @@ class TBranch(object):
         self._branch = TBranchImpl(name, branchobj, compression, file)
         self._treelvl1 = treelvl1
 
-    def _allocateflush(self):
-        if self._branch.flushsize != None:
-            self._branch.flushrow = int(math.ceil(_normalize_size(self._branch.flushsize)/float(numpy.dtype(self._branch.type).itemsize)))
-            if self._branch.flushrow >= self._treelvl1._tree.flushrow:
-                self._branch.flushrow = None
-        else:
-            self._branch.flushrow = None
-
-        self._branch.buffer = numpy.array([0]*self._treelvl1._tree.flushrow, dtype=self._branch.type)
-
-        self._branch.bufferpointer = 0
-        self._branch.treecheck = 0
-
     @staticmethod
     def revertstring(string):
         if isinstance(string, bytes):
@@ -267,25 +217,28 @@ class TBranch(object):
 
     _tree_size = struct.Struct(">qqq")
     def newbasket(self, items):
+        if len(items) == 0:
+            return
+
         self._branch.fields["_fWriteBasket"] += 1
 
         if self._branch.fields["_fWriteBasket"] >= self._branch.fields["_fMaxBaskets"]:
-            self._branch.fields["_fMaxBaskets"] = self._branch.fields["_fMaxBaskets"] * 2
-            temp_arr = numpy.array([0] * self._branch.fields["_fMaxBaskets"], dtype=">i8")
-            temp_arr[0:len(self._branch.fields["_fBasketEntry"])] = self._branch.fields["_fBasketEntry"]
-            self._branch.fields["_fBasketEntry"] = temp_arr
-            temp_arr = numpy.array([0] * self._branch.fields["_fMaxBaskets"], dtype=">i8")
-            temp_arr[0:len(self._branch.fields["_fBasketSeek"])] = self._branch.fields["_fBasketSeek"]
-            self._branch.fields["_fBasketSeek"] = temp_arr
-            temp_arr = numpy.array([0] * self._branch.fields["_fMaxBaskets"], dtype=">i4")
-            temp_arr[0:len(self._branch.fields["_fBasketBytes"])] = self._branch.fields["_fBasketBytes"]
-            self._branch.fields["_fBasketBytes"] = temp_arr
+            for branch in self._treelvl1._branches.values():
+                branch._branch.fields["_fMaxBaskets"] = branch._branch.fields["_fMaxBaskets"] * 2
+                temp_arr = numpy.array([0] * branch._branch.fields["_fMaxBaskets"], dtype=">i8")
+                temp_arr[0:len(branch._branch.fields["_fBasketEntry"])] = branch._branch.fields["_fBasketEntry"]
+                branch._branch.fields["_fBasketEntry"] = temp_arr
+                temp_arr = numpy.array([0] * branch._branch.fields["_fMaxBaskets"], dtype=">i8")
+                temp_arr[0:len(branch._branch.fields["_fBasketSeek"])] = branch._branch.fields["_fBasketSeek"]
+                branch._branch.fields["_fBasketSeek"] = temp_arr
+                temp_arr = numpy.array([0] * branch._branch.fields["_fMaxBaskets"], dtype=">i4")
+                temp_arr[0:len(branch._branch.fields["_fBasketBytes"])] = branch._branch.fields["_fBasketBytes"]
+                branch._branch.fields["_fBasketBytes"] = temp_arr
 
             tree = TTreeImpl(self._treelvl1._tree.name, newtree(), self._branch.file)
             tree.name = self._treelvl1._tree.name
             tree.fName = self._treelvl1._tree.fName
             tree.fTitle = self._treelvl1._tree.fTitle
-            tree.flushrow = self._treelvl1._tree.flushrow
 
             tree.fields["_fEntries"] = self._treelvl1._tree.fields["_fEntries"]
             tree.fields["_fTotBytes"] = self._treelvl1._tree.fields["_fTotBytes"]
@@ -294,8 +247,7 @@ class TBranch(object):
             temp_branches = {}
             for name, branch in self._treelvl1._branches.items():
                 compression = getattr(branch._branch, "compression", branch._branch.file.compression)
-                temp_branches[name] = TBranch(name, newbranch(branch._branch.type, branch._branch.flushsize, ""), compression, self._treelvl1, branch._branch.file)
-                temp_branches[name]._allocateflush()
+                temp_branches[name] = TBranch(name, newbranch(branch._branch.type, ""), compression, self._treelvl1, branch._branch.file)
                 temp_branches[name]._branch.fields["_fWriteBasket"] = branch._branch.fields["_fWriteBasket"]
                 temp_branches[name]._branch.fields["_fEntries"] = branch._branch.fields["_fEntries"]
                 temp_branches[name]._branch.fields["_fBasketEntry"] = branch._branch.fields["_fBasketEntry"]
@@ -332,6 +284,10 @@ class TBranch(object):
         self._branch.fields["_fBasketEntry"][self._branch.fields["_fWriteBasket"]] = self._branch.fields["_fEntries"]
         self._branch.fields["_fEntryNumber"] += len(items)
         basketdata = numpy.array(items, dtype=self._branch.type, copy=False)
+
+        if basketdata.ndim != 1:
+            raise NotImplementedError("Multi dimensional array support is coming soon")
+
         givenbytes = basketdata.tostring()
         cursor = uproot.write.sink.cursor.Cursor(self._branch.file._fSeekFree)
         self._branch.fields["_fBasketSeek"][self._branch.fields["_fWriteBasket"] - 1] = cursor.index
@@ -364,12 +320,6 @@ class TBranch(object):
         self._branch._tbranch_size_cursor.update_fields(self._branch.file._sink, self._branch._format_branch_size,
                                                         self._branch.fields["_fTotBytes"], self._branch.fields["_fZipBytes"])
         self._branch._fbasketbytes_cursor.update_array(self._branch.file._sink, self._branch.fields["_fBasketBytes"])
-
-        self._branch.file._sink.flush()
-
-    def _flush(self):
-        self.newbasket(self._branch.buffer[:self._branch.bufferpointer])
-        self._branch.bufferpointer = 0
 
     @property
     def name(self):
@@ -636,8 +586,8 @@ class TTreeImpl(object):
             values = [values]
         low = 0
         buff += cursor.put_string(b"") + cursor.put_fields(self._format_tobjarray1, size, low)
-        for value in values:
-            buff += self.util.put_objany(cursor, (value, classname), self.write_keycursor)
+        for i in range(len(self.fields["_fLeaves"])):
+            buff += self.util.put_objany(cursor, (values[i], classname[i] if type(classname)==list else classname), self.write_keycursor)
         length = len(buff) + self._format_cntvers.size
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
@@ -712,7 +662,8 @@ class TTreeImpl(object):
         if self.fields["_fBranches"] == []:
             buff += self.put_tobjarray(cursor, self.fields["_fLeaves"], "TLeaf")
         else:
-            buff += self.put_tobjarray(cursor, self.fields["_fLeaves"][0][0], classname=self.fields["_fLeaves"][0][1])
+            buff += self.put_tobjarray(cursor, [self.fields["_fLeaves"][i][0] for i in range(len(self.fields["_fLeaves"]))],
+                                       classname=[self.fields["_fLeaves"][i][1] for i in range(len(self.fields["_fLeaves"]))])
         buff += (self.util.put_objany(cursor, (self.fields["_fAliases"], "TList"), self.write_keycursor) +
                  self.put_tarray(cursor, self.fields["_fIndexValues"]) +
                  self.put_tarray(cursor, self.fields["_fIndex"]) +
@@ -730,7 +681,6 @@ class TBranchImpl(object):
     def __init__(self, name, branchobj, compression, file):
         self.name = _bytesid(name)
         self.type = numpy.dtype(branchobj.type).newbyteorder(">")
-        self.flushsize = branchobj.flushsize
         self.compression = compression
         self.util = None
         self.keycursor = None

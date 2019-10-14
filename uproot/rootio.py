@@ -677,10 +677,13 @@ def _defineclasses(streamerinfos, classes):
             code = ["    @classmethod",
                     "    def _readinto(cls, self, source, cursor, context, parent, asclass=None):",
                     "        start, cnt, classversion = _startcheck(source, cursor)",
+                    "        startendcheck = True",
                     "        if cls._classversion != classversion:",
                     "            cursor.index = start",
                     "            if classversion in cls._versions:",
                     "                return cls._versions[classversion]._readinto(self, source, cursor, context, parent)",
+                    "            elif cnt is None:",
+                    "                startendcheck = False",
                     "            else:",
                     "                return Undefined.read(source, cursor, context, parent, cls.__name__)"]
 
@@ -694,6 +697,7 @@ def _defineclasses(streamerinfos, classes):
             for elementi, element in enumerate(streamerinfo._fElements):
                 if isinstance(element, TStreamerArtificial):
                     code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
+                    recarray.append("raise ValueError('not a recarray')")
 
                 elif isinstance(element, TStreamerBase):
                     code.append("        {0}._readinto(self, source, cursor, context, parent)".format(_safename(element._fName)))
@@ -774,12 +778,64 @@ def _defineclasses(streamerinfos, classes):
                             recarray.append("raise ValueError('not a recarray')")
                     else:
                         code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
+                        recarray.append("raise ValueError('not a recarray')")
 
                 elif isinstance(element, TStreamerSTL):
-                    code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
+                    if element._fSTLtype == uproot.const.kSTLstring or element._fTypeName == b"string":
+                        code.append("        cursor.skip(6)")
+                        code.append("        self._{0} = cursor.string(source)".format(_safename(element._fName)))
+                        fields.append(_safename(element._fName))
+                    elif (element._fSTLtype == uproot.const.kSTLvector and element._fCtype == uproot.const.kBool) or element._fTypeName == b"vector<bool>" or element._fTypeName == b"vector<Bool_t>":
+                        code.append("        cursor.skip(6)")
+                        code.append("        self._{0} = cursor.array(source, cursor.field(source, self._int32), '?')".format(_safename(element._fName)))
+                        fields.append(_safename(element._fName))
+                    elif (element._fSTLtype == uproot.const.kSTLvector and element._fCtype == uproot.const.kChar) or element._fTypeName == b"vector<char>" or element._fTypeName == b"vector<Char_t>":
+                        code.append("        cursor.skip(6)")
+                        code.append("        self._{0} = cursor.array(source, cursor.field(source, self._int32), 'i1')".format(_safename(element._fName)))
+                        fields.append(_safename(element._fName))
+                    elif (element._fSTLtype == uproot.const.kSTLvector and element._fCtype == uproot.const.kUChar) or element._fTypeName == b"vector<unsigned char>" or element._fTypeName == b"vector<UChar_t>" or element._fTypeName == b"vector<Byte_t>":
+                        code.append("        cursor.skip(6)")
+                        code.append("        self._{0} = cursor.array(source, cursor.field(source, self._int32), 'u1')".format(_safename(element._fName)))
+                        fields.append(_safename(element._fName))
+                    elif (element._fSTLtype == uproot.const.kSTLvector and element._fCtype == uproot.const.kShort) or element._fTypeName == b"vector<short>" or element._fTypeName == b"vector<Short_t>":
+                        code.append("        cursor.skip(6)")
+                        code.append("        self._{0} = cursor.array(source, cursor.field(source, self._int32), '>i2')".format(_safename(element._fName)))
+                        fields.append(_safename(element._fName))
+                    elif (element._fSTLtype == uproot.const.kSTLvector and element._fCtype == uproot.const.kUShort) or element._fTypeName == b"vector<unsigned short>" or element._fTypeName == b"vector<UShort_t>":
+                        code.append("        cursor.skip(6)")
+                        code.append("        self._{0} = cursor.array(source, cursor.field(source, self._int32), '>u2')".format(_safename(element._fName)))
+                        fields.append(_safename(element._fName))
+                    elif (element._fSTLtype == uproot.const.kSTLvector and element._fCtype == uproot.const.kInt) or element._fTypeName == b"vector<int>" or element._fTypeName == b"vector<Int_t>":
+                        code.append("        cursor.skip(6)")
+                        code.append("        self._{0} = cursor.array(source, cursor.field(source, self._int32), '>i4')".format(_safename(element._fName)))
+                        fields.append(_safename(element._fName))
+                    elif (element._fSTLtype == uproot.const.kSTLvector and element._fCtype == uproot.const.kUInt) or element._fTypeName == b"vector<unsigned int>" or element._fTypeName == b"vector<UInt_t>":
+                        code.append("        cursor.skip(6)")
+                        code.append("        self._{0} = cursor.array(source, cursor.field(source, self._int32), '>u4')".format(_safename(element._fName)))
+                        fields.append(_safename(element._fName))
+                    elif (element._fSTLtype == uproot.const.kSTLvector and element._fCtype == uproot.const.kLong) or element._fTypeName == b"vector<long>" or element._fTypeName == b"vector<Long_t>":
+                        code.append("        cursor.skip(6)")
+                        code.append("        self._{0} = cursor.array(source, cursor.field(source, self._int32), '>i8')".format(_safename(element._fName)))
+                        fields.append(_safename(element._fName))
+                    elif (element._fSTLtype == uproot.const.kSTLvector and element._fCtype == uproot.const.kULong) or element._fTypeName == b"vector<unsigned long>" or element._fTypeName == b"vector<ULong64_t>":
+                        code.append("        cursor.skip(6)")
+                        code.append("        self._{0} = cursor.array(source, cursor.field(source, self._int32), '>u8')".format(_safename(element._fName)))
+                        fields.append(_safename(element._fName))
+                    elif (element._fSTLtype == uproot.const.kSTLvector and element._fCtype == uproot.const.kFloat) or element._fTypeName == b"vector<float>" or element._fTypeName == b"vector<Float_t>":
+                        code.append("        cursor.skip(6)")
+                        code.append("        self._{0} = cursor.array(source, cursor.field(source, self._int32), '>f4')".format(_safename(element._fName)))
+                        fields.append(_safename(element._fName))
+                    elif (element._fSTLtype == uproot.const.kSTLvector and element._fCtype == uproot.const.kDouble) or element._fTypeName == b"vector<double>" or element._fTypeName == b"vector<Double_t>":
+                        code.append("        cursor.skip(6)")
+                        code.append("        self._{0} = cursor.array(source, cursor.field(source, self._int32), '>f8')".format(_safename(element._fName)))
+                        fields.append(_safename(element._fName))
+                    else:
+                        code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
+                    recarray.append("raise ValueError('not a recarray')")
 
                 elif isinstance(element, TStreamerSTLstring):
                     code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
+                    recarray.append("raise ValueError('not a recarray')")
 
                 elif isinstance(element, (TStreamerObject, TStreamerObjectAny, TStreamerString)):
                     if pyclassname in skip and _safename(element._fName) in skip[pyclassname]:
@@ -792,19 +848,21 @@ def _defineclasses(streamerinfos, classes):
                 else:
                     raise AssertionError(element)
 
-            code.extend(["        if self.__class__.__name__ == cls.__name__:",
-                         "            self.__class__ = cls._versions[classversion]",
-                         "        try:",
-                         "            _endcheck(start, cursor, cnt)",
-                         "        except ValueError:",
-                         "            cursor.index = start",
-                         "            return Undefined.read(source, cursor, context, parent, cls.__name__)",
+            code.extend(["        if startendcheck:",
+                         "            if self.__class__.__name__ == cls.__name__:",
+                         "                self.__class__ = cls._versions[classversion]",
+                         "            try:",
+                         "                _endcheck(start, cursor, cnt)",
+                         "            except ValueError:",
+                         "                cursor.index = start",
+                         "                return Undefined.read(source, cursor, context, parent, cls.__name__)",
                          "        return self"])
 
             for n, v in sorted(formats.items()):
                 code.append("    {0} = {1}".format(n, v))
             for n, v in sorted(dtypes.items()):
                 code.append("    {0} = {1}".format(n, v))
+            code.append("    _int32 = struct.Struct('>I')")
 
             code.insert(0, "    _classversion = {0}".format(streamerinfo._fClassVersion))
             code.insert(0, "    _versions = versions")
