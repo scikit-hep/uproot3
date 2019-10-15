@@ -558,7 +558,7 @@ class TTreeMethods(object):
         else:
             return wait
 
-    def lazyarray(self, branch, interpretation=None, entrysteps=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False):
+    def lazyarray(self, branch, interpretation=None, entrysteps=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False, chunked=True):
         awkward = _normalize_awkwardlib(awkwardlib)
         branches = list(self._normalize_branches(branch, awkward))
         if len(branches) == 1:
@@ -568,10 +568,12 @@ class TTreeMethods(object):
                 tbranch, _ = branches[0]
         else:
             raise ValueError("list of branch names or glob/regex matches more than one branch; use TTree.lazyarrays (plural)")
-        return tbranch.lazyarray(interpretation=interpretation, entrysteps=entrysteps, entrystart=entrystart, entrystop=entrystop, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, persistvirtual=persistvirtual)
+        return tbranch.lazyarray(interpretation=interpretation, entrysteps=entrysteps, entrystart=entrystart, entrystop=entrystop, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, persistvirtual=persistvirtual, chunked=chunked)
 
-    def lazyarrays(self, branches=None, namedecode="utf-8", entrysteps=None, entrystart=None, entrystop=None, flatten=False, profile=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False):
+    def lazyarrays(self, branches=None, namedecode="utf-8", entrysteps=None, entrystart=None, entrystop=None, flatten=False, profile=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False, chunked=True):
         entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
+        if not chunked and entrysteps is None:
+            entrysteps = float('inf')
         entrysteps = list(self._normalize_entrysteps(entrysteps, branches, entrystart, entrystop, keycache))
         awkward = _normalize_awkwardlib(awkwardlib)
         branches = list(self._normalize_branches(branches, awkward))
@@ -593,13 +595,17 @@ class TTreeMethods(object):
             else:
                 VirtualArray = awkward.VirtualArray
 
-            chunks = []
-            counts = []
-            for start, stop in entrysteps:
-                chunks.append(VirtualArray(lazytree, (branch.name, start, stop), cache=cache, type=awkward.type.ArrayType(stop - start, interpretation.type), persistvirtual=persistvirtual))
-                counts.append(stop - start)
             name = branch.name.decode("ascii") if namedecode is None else branch.name.decode(namedecode)
-            out[name] = awkward.ChunkedArray(chunks, counts)
+            if chunked:
+                chunks = []
+                counts = []
+                for start, stop in entrysteps:
+                    chunks.append(VirtualArray(lazytree, (branch.name, start, stop), cache=cache, type=awkward.type.ArrayType(stop - start, interpretation.type), persistvirtual=persistvirtual))
+                    counts.append(stop - start)
+                out[name] = awkward.ChunkedArray(chunks, counts)
+            else:
+                start, stop = entrysteps[0]
+                out[name] = VirtualArray(lazytree, (branch.name, start, stop), cache=cache, type=awkward.type.ArrayType(stop - start, interpretation.type), persistvirtual=persistvirtual)
 
         if profile is not None:
             out = uproot_methods.profiles.transformer(profile)(out)
@@ -1590,7 +1596,7 @@ class TBranchMethods(object):
                 raise TypeError("entrysteps must be None for cluster iteration, a positive integer for equal steps in number of entries (inf for maximal), a memory size string (number followed by B/kB/MB/GB/etc.), or an iterable of 2-tuples for explicit entry starts (inclusive) and stops (exclusive)")
             return entrysteps
 
-    def lazyarray(self, interpretation=None, entrysteps=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False):
+    def lazyarray(self, interpretation=None, entrysteps=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, persistvirtual=False, chunked=True):
         if self._recoveredbaskets is None:
             self._tryrecover()
         awkward = _normalize_awkwardlib(awkwardlib)
@@ -1598,6 +1604,8 @@ class TBranchMethods(object):
         if interpretation is None:
             raise ValueError("cannot interpret branch {0} as a Python type\n   in file: {1}".format(repr(self.name), self._context.sourcepath))
         entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
+        if not chunked and entrysteps is None:
+            entrysteps = float('inf')
         entrysteps = self._normalize_entrysteps(entrysteps, entrystart, entrystop, keycache)
 
         inner = interpretation
@@ -1615,14 +1623,18 @@ class TBranchMethods(object):
 
         lazybranch = _LazyBranch(self._context.sourcepath, self._context.treename, self.name, self, interpretation, flatten, awkward.__name__, basketcache, keycache, executor)
 
-        chunks = []
-        counts = []
-        for start, stop in entrysteps:
-            numentries = stop - start
-            chunks.append(VirtualArray(lazybranch, (start, stop), cache=cache, type=awkward.type.ArrayType(numentries, interpretation.type), persistvirtual=persistvirtual))
-            counts.append(numentries)
+        if chunked:
+            chunks = []
+            counts = []
+            for start, stop in entrysteps:
+                numentries = stop - start
+                chunks.append(VirtualArray(lazybranch, (start, stop), cache=cache, type=awkward.type.ArrayType(numentries, interpretation.type), persistvirtual=persistvirtual))
+                counts.append(numentries)
 
-        return chunkedarray(chunks, counts)
+            return chunkedarray(chunks, counts)
+        else:
+            start, stop = entrysteps[0]
+            return VirtualArray(lazybranch, (start, stop), cache=cache, type=awkward.type.ArrayType(numentries, interpretation.type), persistvirtual=persistvirtual)
 
     class _BasketKey(object):
         def __init__(self, source, cursor, compression, complete):
