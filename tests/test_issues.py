@@ -213,3 +213,10 @@ class Test(unittest.TestCase):
         assert obj._samplerName == b'DRIFT_0'
         assert obj._n == 1
         assert obj._energy[0] == numpy.array([2.3371024], dtype=numpy.float32)[0]
+
+    def test_issue376(self):
+        f = uproot.open("tests/samples/from-geant4.root")
+        assert f.classname() == 'TDirectory'
+        real_class_names = ['TTree'] * 4 + ['TH1D'] * 10 + ['TH2D'] * 5
+        assert f.classnames() == real_class_names
+        assert [value.classname() for value in f.values()] == real_class_names
