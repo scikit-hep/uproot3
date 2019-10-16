@@ -107,6 +107,10 @@ class ROOTDirectory(object):
             out.__dict__.update(self.__dict__)
             return out
 
+    @classmethod
+    def classname(cls):
+        return cls._classname.decode('ascii')
+
     @staticmethod
     def read(source, *args, **options):
         if len(args) == 0:
@@ -299,6 +303,9 @@ class ROOTDirectory(object):
 
     def classes(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         return list(self.iterclasses(recursive=recursive, filtername=filtername, filterclass=filterclass))
+
+    def classnames(self):
+        return list(key._fClassName.decode('ascii') for key in self._keys)
 
     def allkeys(self, filtername=nofilter, filterclass=nofilter):
         return self.keys(recursive=True, filtername=filtername, filterclass=filterclass)
@@ -1294,6 +1301,10 @@ class ROOTStreamedObject(ROOTObject):
             raise ValueError("not a recarray")
 
         return numpy.dtype(dtypesout)
+
+    @classmethod
+    def classname(cls):
+        return cls.__name__
 
 class TObject(ROOTStreamedObject):
     @classmethod
