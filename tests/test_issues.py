@@ -216,7 +216,9 @@ class Test(unittest.TestCase):
 
     def test_issue376(self):
         f = uproot.open("tests/samples/from-geant4.root")
+        assert type(f).classname() == 'TDirectory'
         assert f.classname() == 'TDirectory'
         real_class_names = ['TTree'] * 4 + ['TH1D'] * 10 + ['TH2D'] * 5
         assert f.classnames() == real_class_names
+        assert [twotuple[1].classname() for twotuple in f.classes()] == real_class_names
         assert [value.classname() for value in f.values()] == real_class_names
