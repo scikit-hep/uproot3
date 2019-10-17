@@ -10,6 +10,7 @@ import pytest
 import numpy
 
 import uproot
+import awkward
 
 import uproot_methods.classes.TVector3
 import uproot_methods.classes.TLorentzVector
@@ -213,3 +214,7 @@ class Test(unittest.TestCase):
         assert obj._samplerName == b'DRIFT_0'
         assert obj._n == 1
         assert obj._energy[0] == numpy.array([2.3371024], dtype=numpy.float32)[0]
+
+    def test_issue367(self):
+        t = uproot.open("tests/samples/issue367.root")["tree"]
+        assert awkward.fromiter(t.array("weights.second")).counts.tolist() == [1000, 1000]
