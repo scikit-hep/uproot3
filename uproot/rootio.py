@@ -288,6 +288,16 @@ class ROOTDirectory(object):
                 for name, classname in key.get().iterclasses(recursive, filtername, filterclass):
                     yield "{0}/{1}".format(self._withoutcycle(key).decode("ascii"), name.decode("ascii")).encode("ascii"), classname
 
+    def iterclassnames(self, recursive=False, filtername=nofilter, filterclass=nofilter):
+        for key in self._keys:
+            cls = _classof(self._context, key._fClassName)
+            if filtername(key._fName) and filterclass(cls):
+                yield self._withcycle(key), key._fClassName.decode('ascii')
+
+            if recursive and (key._fClassName == b"TDirectory" or key._fClassName == b"TDirectoryFile"):
+                for name, classname in key.get().iterclassnames(recursive, filtername, filterclass):
+                    yield "{0}/{1}".format(self._withoutcycle(key).decode("ascii"), name.decode("ascii")).encode("ascii"), classname
+
     def keys(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         return list(self.iterkeys(recursive=recursive, filtername=filtername, filterclass=filterclass))
 
@@ -304,8 +314,8 @@ class ROOTDirectory(object):
     def classes(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         return list(self.iterclasses(recursive=recursive, filtername=filtername, filterclass=filterclass))
 
-    def classnames(self):
-        return list(key._fClassName.decode('ascii') for key in self._keys)
+    def classnames(self, recursive=False, filtername=nofilter, filterclass=nofilter):
+        return list(self.iterclassnames(recursive=recursive, filtername=filtername, filterclass=filterclass))
 
     def allkeys(self, filtername=nofilter, filterclass=nofilter):
         return self.keys(recursive=True, filtername=filtername, filterclass=filterclass)
@@ -318,6 +328,9 @@ class ROOTDirectory(object):
 
     def allclasses(self, filtername=nofilter, filterclass=nofilter):
         return self.classes(recursive=True, filtername=filtername, filterclass=filterclass)
+
+    def allclassnames(self, filtername=nofilter, filterclass=nofilter):
+        return self.classnames(recursive=True, filtername=filtername, filterclass=filterclass)
 
     def get(self, name, cycle=None):
         name = _bytesid(name)
