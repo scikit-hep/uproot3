@@ -511,8 +511,38 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
                 if branch.name.endswith(b".first") and branch._fClassName.startswith(b"pair<string,"):
                     return asgenobj(SimpleArray(STLString(awkward)), branch._context, 6)
 
+                if branch.name.endswith(b".second"):
+                    m = interpret._pairsecond.match(branch._fClassName)
+                    if m is not None:
+                        t, = m.groups()
+                        if t == b"vector<bool>" or t == b"vector<Bool_t>":
+                            return asgenobj(SimpleArray(STLVector(asdtype(awkward.numpy.bool_))), branch._context, 6)
+                        elif t == b"vector<char>" or t == b"vector<Char_t>":
+                            return asgenobj(SimpleArray(STLVector(asdtype("i1"))), branch._context, 6)
+                        elif t == b"vector<unsigned char>" or t == b"vector<UChar_t>" or t == b"vector<Byte_t>":
+                            return asgenobj(SimpleArray(STLVector(asdtype("u1"))), branch._context, 6)
+                        elif t == b"vector<short>" or t == b"vector<Short_t>":
+                            return asgenobj(SimpleArray(STLVector(asdtype("i2"))), branch._context, 6)
+                        elif t == b"vector<unsigned short>" or t == b"vector<UShort_t>":
+                            return asgenobj(SimpleArray(STLVector(asdtype("u2"))), branch._context, 6)
+                        elif t == b"vector<int>" or t == b"vector<Int_t>":
+                            return asgenobj(SimpleArray(STLVector(asdtype("i4"))), branch._context, 6)
+                        elif t == b"vector<unsigned int>" or t == b"vector<UInt_t>":
+                            return asgenobj(SimpleArray(STLVector(asdtype("u4"))), branch._context, 6)
+                        elif t == b"vector<long>" or t == b"vector<Long_t>":
+                            return asgenobj(SimpleArray(STLVector(asdtype("i8"))), branch._context, 6)
+                        elif t == b"vector<unsigned long>" or t == b"vector<ULong64_t>":
+                            return asgenobj(SimpleArray(STLVector(asdtype("u8"))), branch._context, 6)
+                        elif t == b"vector<float>" or t == b"vector<Float_t>":
+                            return asgenobj(SimpleArray(STLVector(asdtype("f4"))), branch._context, 6)
+                        elif t == b"vector<double>" or t == b"vector<Double_t>":
+                            return asgenobj(SimpleArray(STLVector(asdtype("f8"))), branch._context, 6)
+                        elif t == b"vector<string>":
+                            return asgenobj(SimpleArray(STLVector(STLString(awkward))), branch._context, 6)
+
         return None
 
 interpret._titlehasdims = re.compile(br"^([^\[\]]+)(\[[^\[\]]+\])+")
 interpret._itemdimpattern = re.compile(br"\[([1-9][0-9]*)\]")
 interpret._itemanypattern = re.compile(br"\[(.*)\]")
+interpret._pairsecond = re.compile(br"pair\<[^<>]*,(.*) \>")
