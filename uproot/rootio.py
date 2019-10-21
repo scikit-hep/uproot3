@@ -40,7 +40,8 @@ def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defa
 
     parsed = urlparse(path)
     if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0 or (os.name == "nt" and open._windows_absolute.match(path) is not None):
-        path = parsed.netloc + parsed.path
+        if not (os.name == "nt" and open._windows_absolute.match(path) is not None):
+            path = parsed.netloc + parsed.path
         if isinstance(localsource, dict):
             kwargs = dict(MemmapSource.defaults)
             kwargs.update(localsource)
