@@ -68,7 +68,9 @@ def _filename_explode(x):
              x = str(x)
     parsed = urlparse(x)
     if _bytesid(parsed.scheme) == b"file" or len(parsed.scheme) == 0 or (os.name == "nt" and open._windows_absolute.match(x) is not None):
-        pattern = os.path.expanduser(parsed.netloc + parsed.path)
+        if not (os.name == "nt" and open._windows_absolute.match(x) is not None):
+            path = parsed.netloc + parsed.path
+        pattern = os.path.expanduser(path)
         if "*" in pattern or "?" in pattern or "[" in pattern:
             out = sorted(glob.glob(pattern))
             if len(out) == 0:
