@@ -15,6 +15,10 @@ class SimpleArray(object):
     def __init__(self, cls):
         self.cls = cls
 
+    @property
+    def __name__(self):
+        return "SimpleArray"
+
     def __repr__(self):
         if isinstance(self.cls, type):
             return "SimpleArray({0})".format(self.cls.__name__)
@@ -32,6 +36,10 @@ class SimpleArray(object):
 class STLVector(object):
     def __init__(self, cls):
         self.cls = cls
+
+    @property
+    def __name__(self):
+        return "STLVector"
 
     def __repr__(self):
         if isinstance(self.cls, type):
@@ -58,6 +66,10 @@ class STLMap(object):
     def __init__(self, keycls, valcls):
         self.keycls = keycls
         self.valcls = valcls
+
+    @property
+    def __name__(self):
+        return "STLMap"
 
     def __repr__(self):
         key = self.keycls.__name__ if isinstance(self.keycls, type) else repr(self.keycls)
@@ -96,6 +108,10 @@ class STLString(object):
         if awkward is None:
             awkward = uproot.interp.interp.Interpretation.awkward
         self.awkward = awkward
+
+    @property
+    def __name__(self):
+        return "STLString"
 
     def __repr__(self):
         return "STLString()"
