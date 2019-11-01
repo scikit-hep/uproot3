@@ -28,6 +28,8 @@ class SimpleArray(object):
     def read(self, source, cursor, context, parent):
         out = []
         while True:
+            if hasattr(source, "_source") and cursor.index >= len(source._source):
+                return out
             try:
                 out.append(self.cls.read(source, cursor, context, parent))
             except IndexError:
@@ -50,6 +52,8 @@ class STLVector(object):
     _format1 = struct.Struct(">i")
 
     def read(self, source, cursor, context, parent):
+        if hasattr(source, "_source") and len(source._source) == 0:
+            return []
         numitems = cursor.field(source, self._format1)
         if isinstance(self.cls, uproot.interp.numerical.asdtype):
             out = cursor.array(source, numitems, self.cls.fromdtype)

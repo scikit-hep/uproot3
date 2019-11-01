@@ -304,7 +304,10 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
                     return asstring(skipbytes=1)
 
                 if isinstance(branch._streamer, uproot.rootio.TStreamerSTLstring):
-                    return asstring(skipbytes=7)
+                    if branch._isTClonesArray:
+                        return asgenobj(STLVector(STLString()), branch._context, 6)
+                    else:
+                        return asstring(skipbytes=7)
 
                 if getattr(branch._streamer, "_fType", None) == uproot.const.kCharStar:
                     return asstring(skipbytes=4)
@@ -317,7 +320,7 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
                         else:
                             ascontent = asdtype(fromdtype, fromdtype)
                         if branch._isTClonesArray:
-                            return asgenobj(SimpleArray(STLVector(asdtype(">i2"))), branch._context, 6)
+                            return asgenobj(SimpleArray(STLVector(asdtype(fromdtype, fromdtype))), branch._context, 6)
                         else:
                             return asjagged(ascontent, skipbytes=10)
 
@@ -329,6 +332,8 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
                                 obj = uproot.rootio._safename(branch._vecstreamer._fName)
                                 if obj in branch._context.classes:
                                     streamerClass = branch._context.classes.get(obj)
+                            if getattr(streamerClass, "_hasreadobjany", False):
+                                return None
 
                             if streamerClass.__name__ == "string":
                                 return asgenobj(STLVector(STLString(awkward)), branch._context, 6)
