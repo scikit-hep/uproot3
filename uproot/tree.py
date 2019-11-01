@@ -113,8 +113,8 @@ def _normalize_entrystartstop(numentries, entrystart, entrystop):
 
 def iterate(path, treepath, branches=None, entrysteps=float("inf"), outputtype=dict, namedecode=None, reportpath=False, reportfile=False, reportentries=False, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
     awkward = _normalize_awkwardlib(awkwardlib)
-    for tree, newbranches, globalentrystart, thispath, thisfile in _iterate(path, treepath, branches, awkward, localsource, xrootdsource, httpsource, **options):
-        for start, stop, arrays in tree.iterate(branches=newbranches, entrysteps=entrysteps, outputtype=outputtype, namedecode=namedecode, reportentries=True, entrystart=0, entrystop=tree.numentries, flatten=flatten, flatname=flatname, awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking):
+    for tree, branchesinterp, globalentrystart, thispath, thisfile in _iterate(path, treepath, branches, awkward, localsource, xrootdsource, httpsource, **options):
+        for start, stop, arrays in tree.iterate(branches=branchesinterp, entrysteps=entrysteps, outputtype=outputtype, namedecode=namedecode, reportentries=True, entrystart=0, entrystop=tree.numentries, flatten=flatten, flatname=flatname, awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking):
 
             if getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame":
                 if type(arrays.index).__name__ == "MultiIndex":
@@ -158,11 +158,6 @@ def _iterate(path, treepath, branches, awkward, localsource, xrootdsource, https
     else:
         paths = [y for x in path for y in _filename_explode(x)]
 
-    oldpath = None
-    oldbranches = None
-    holdover = None
-    holdoverentries = 0
-    outerstart = 0
     globalentrystart = 0
     for path in paths:
         file = uproot.rootio.open(path, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)
@@ -170,22 +165,11 @@ def _iterate(path, treepath, branches, awkward, localsource, xrootdsource, https
             tree = file[treepath]
         except KeyError:
             continue
-        listbranches = list(tree._normalize_branches(branches, awkward))
+        branchesinterp = OrderedDict()
+        for branch, interpretation in tree._normalize_branches(branches, awkward):
+            branchesinterp[branch.name] = interpretation
 
-        newbranches = OrderedDict((branch.name, interpretation) for branch, interpretation in listbranches)
-        if oldbranches is not None:
-            for key in set(oldbranches.keys()).union(set(newbranches.keys())):
-                if key not in newbranches:
-                    raise ValueError("branch {0} cannot be found in {1}, but it was in {2}".format(repr(key), repr(path), repr(oldpath)))
-                if key not in oldbranches:
-                    del newbranches[key]
-                elif not newbranches[key].compatible(oldbranches[key]):
-                    raise ValueError("branch {0} interpreted as {1} in {2}, but as {3} in {4}".format(repr(key), newbranches[key], repr(path), oldbranches[key], repr(oldpath)))
-
-        oldpath = path
-        oldbranches = newbranches
-
-        yield tree, newbranches, globalentrystart, path, file
+        yield tree, branchesinterp, globalentrystart, path, file
         globalentrystart += tree.numentries
 
 ################################################################ methods for TTree
