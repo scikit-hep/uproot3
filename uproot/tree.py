@@ -224,6 +224,7 @@ class TTreeMethods(object):
         branch._isTClonesArray = isTClonesArray
         if isinstance(streamer, uproot.rootio.TStreamerSTL) and streamer._fSTLtype == uproot.const.kSTLvector:
             branch._vecstreamer = streamerinfosmap.get(re.match(self._vector_regex, streamer._fTypeName).group(1), None)
+            isTClonesArray = True
         else:
             branch._vecstreamer = None
 

@@ -218,3 +218,8 @@ class Test(unittest.TestCase):
     def test_issue367(self):
         t = uproot.open("tests/samples/issue367.root")["tree"]
         assert awkward.fromiter(t.array("weights.second"))[0].counts.tolist() == [1000, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 100, 100, 100, 1]
+
+    def test_issue390(self):
+        t = uproot.open("tests/samples/issue390.root")["E"]
+        t.pandas.df("hits.*")
+        t.pandas.df("trks.*")

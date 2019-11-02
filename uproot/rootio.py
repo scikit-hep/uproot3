@@ -675,6 +675,8 @@ def _defineclasses(streamerinfos, classes):
         pyclassname = _safename(streamerinfo._fName)
 
         if isinstance(streamerinfo, TStreamerInfo) and pyclassname not in builtin_classes and (pyclassname not in classes or hasattr(classes[pyclassname], "_versions")):
+            hasreadobjany = False
+
             code = ["    @classmethod",
                     "    def _readinto(cls, self, source, cursor, context, parent, asclass=None):",
                     "        start, cnt, classversion = _startcheck(source, cursor)",
@@ -773,8 +775,10 @@ def _defineclasses(streamerinfos, classes):
                     elif element._fType == uproot.const.kObjectP or element._fType == uproot.const.kAnyP:
                         if pyclassname in skip and _safename(element._fName) in skip[pyclassname]:
                             code.append("        _readobjany(source, cursor, context, parent, asclass=Undefined)")
+                            hasreadobjany = True
                         else:
                             code.append("        self._{0} = _readobjany(source, cursor, context, parent)".format(_safename(element._fName)))
+                            hasreadobjany = True
                             fields.append(_safename(element._fName))
                             recarray.append("raise ValueError('not a recarray')")
                     else:
@@ -865,6 +869,7 @@ def _defineclasses(streamerinfos, classes):
                 code.append("    {0} = {1}".format(n, v))
             code.append("    _int32 = struct.Struct('>I')")
 
+            code.insert(0, "    _hasreadobjany = {0}".format(hasreadobjany))
             code.insert(0, "    _classversion = {0}".format(streamerinfo._fClassVersion))
             code.insert(0, "    _versions = versions")
             if sys.version_info[0] > 2:
