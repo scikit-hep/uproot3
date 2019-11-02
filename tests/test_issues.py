@@ -217,12 +217,12 @@ class Test(unittest.TestCase):
 
     def test_issue376_simple(self):
         f = uproot.open("tests/samples/from-geant4.root")
-        assert type(f).classname() == 'TDirectory'
-        assert f.classname() == 'TDirectory'
+        assert type(f).classname == 'TDirectory'
+        assert f.classname == 'TDirectory'
         real_class_names = ['TTree'] * 4 + ['TH1D'] * 10 + ['TH2D'] * 5
         assert [classname_two_tuple[1] for classname_two_tuple in f.classnames()] == real_class_names
-        assert [class_two_tuple[1].classname() for class_two_tuple in f.classes()] == real_class_names
-        assert [value.classname() for value in f.values()] == real_class_names
+        assert [class_two_tuple[1].classname for class_two_tuple in f.classes()] == real_class_names
+        assert [value.classname for value in f.values()] == real_class_names
 
     def test_issue376_nested(self):
         f = uproot.open("tests/samples/nesteddirs.root")

@@ -97,6 +97,7 @@ class ROOTDirectory(object):
     __metaclass__ = type.__new__(type, "type", (type,), {})
 
     _classname = b"TDirectory"
+    classname = "TDirectory"
 
     class _FileContext(object):
         def __init__(self, sourcepath, streamerinfos, streamerinfosmap, classes, compression, tfile):
@@ -107,10 +108,6 @@ class ROOTDirectory(object):
             out = ROOTDirectory._FileContext.__new__(ROOTDirectory._FileContext)
             out.__dict__.update(self.__dict__)
             return out
-
-    @classmethod
-    def classname(cls):
-        return cls._classname.decode('ascii')
 
     @staticmethod
     def read(source, *args, **options):
@@ -892,6 +889,7 @@ def _defineclasses(streamerinfos, classes):
             code.insert(0, "    _hasreadobjany = {0}".format(hasreadobjany))
             code.insert(0, "    _classversion = {0}".format(streamerinfo._fClassVersion))
             code.insert(0, "    _versions = versions")
+            code.insert(0, "    classname = {0}".format(repr(streamerinfo._fName.decode("ascii"))))
             if sys.version_info[0] > 2:
                 code.insert(0, "    _classname = {0}".format(repr(streamerinfo._fName)))
             else:
@@ -1321,11 +1319,10 @@ class ROOTStreamedObject(ROOTObject):
 
         return numpy.dtype(dtypesout)
 
-    @classmethod
-    def classname(cls):
-        return cls.__name__
-
 class TObject(ROOTStreamedObject):
+    _classname = b"TObject"
+    classname = "TObject"
+
     @classmethod
     def _recarray(cls):
         return [(" fBits", numpy.dtype(">u8")), (" fUniqueID", numpy.dtype(">u8"))]
@@ -1336,6 +1333,9 @@ class TObject(ROOTStreamedObject):
         return self
 
 class TString(bytes, ROOTStreamedObject):
+    _classname = b"TString"
+    classname = "TString"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         return TString(cursor.string(source))
@@ -1344,6 +1344,8 @@ class TString(bytes, ROOTStreamedObject):
         return self.decode("utf-8", "replace")
 
 class TNamed(TObject):
+    _classname = b"TNamed"
+    classname = "TNamed"
     _fields = ["fName", "fTitle"]
 
     @classmethod
@@ -1360,6 +1362,9 @@ class TNamed(TObject):
         return self
 
 class TObjArray(list, ROOTStreamedObject):
+    _classname = b"TObjArray"
+    classname = "TObjArray"
+
     @classmethod
     def read(cls, source, cursor, context, parent, asclass=None):
         if cls._copycontext:
@@ -1380,6 +1385,9 @@ class TObjArray(list, ROOTStreamedObject):
         return self
 
 class TObjString(bytes, ROOTStreamedObject):
+    _classname = b"TObjString"
+    classname = "TObjString"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1392,6 +1400,9 @@ class TObjString(bytes, ROOTStreamedObject):
         return self.decode("utf-8", "replace")
 
 class TList(list, ROOTStreamedObject):
+    _classname = b"TList"
+    classname = "TList"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1407,12 +1418,18 @@ class TList(list, ROOTStreamedObject):
     _format_n = struct.Struct(">B")
 
 class THashList(TList):
+    _classname = b"THashList"
+    classname = "THashList"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         TList._readinto(self, source, cursor, context, parent)
         return self
 
 class TRef(ROOTStreamedObject):
+    _classname = b"TRef"
+    classname = "TRef"
+
     _format1 = struct.Struct(">xxIxxxxxx")
 
     def __init__(self, id):
@@ -1439,6 +1456,9 @@ TRef._arraymethods = None
 TRef._fromrow = lambda row: TRef(row["id"])
 
 class TRefArray(list, ROOTStreamedObject):
+    _classname = b"TRefArray"
+    classname = "TRefArray"
+
     _format1 = struct.Struct(">i")
     _dtype = numpy.dtype(">i4")
 
@@ -1461,6 +1481,9 @@ class TRefArray(list, ROOTStreamedObject):
         return numpy.asarray(self, dtype=self._dtype).tostring()
 
 class TArray(list, ROOTStreamedObject):
+    _classname = b"TArray"
+    classname = "TArray"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         length = cursor.field(source, TArray._format)
@@ -1476,24 +1499,38 @@ class TArray(list, ROOTStreamedObject):
         return numpy.asarray(self, dtype=self._dtype).tostring()
 
 class TArrayC(TArray):
+    _classname = b"TArray"
+    classname = "TArray"
     _dtype = numpy.dtype(">i1")
 
 class TArrayS(TArray):
+    _classname = b"TArrayS"
+    classname = "TArrayS"
     _dtype = numpy.dtype(">i2")
 
 class TArrayI(TArray):
+    _classname = b"TArrayI"
+    classname = "TArrayI"
     _dtype = numpy.dtype(">i4")
 
 class TArrayL(TArray):
+    _classname = b"TArrayL"
+    classname = "TArrayL"
     _dtype = numpy.dtype(numpy.int_).newbyteorder(">")
 
 class TArrayL64(TArray):
+    _classname = b"TArrayL64"
+    classname = "TArrayL64"
     _dtype = numpy.dtype(">i8")
 
 class TArrayF(TArray):
+    _classname = b"TArrayF"
+    classname = "TArrayF"
     _dtype = numpy.dtype(">f4")
 
 class TArrayD(TArray):
+    _classname = b"TArrayD"
+    classname = "TArrayD"
     _dtype = numpy.dtype(">f8")
 
 # FIXME: I want to generalize this. It's the first example of a class that doesn't
@@ -1506,8 +1543,10 @@ class TArrayD(TArray):
 # I'm also reasonably certain that the last byte is the fIOBits data.
 # That leaves 4 bytes unaccounted for.
 class ROOT_3a3a_TIOFeatures(ROOTStreamedObject):
-    _fields = ["fIOBits"]
     _classname = b"ROOT::TIOFeatures"
+    classname = "ROOT::TIOFeatures"
+    _fields = ["fIOBits"]
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1515,10 +1554,12 @@ class ROOT_3a3a_TIOFeatures(ROOTStreamedObject):
         self._fIOBits = cursor.field(source, ROOT_3a3a_TIOFeatures._format1)
         _endcheck(start, cursor, cnt)
         return self
+
     _format1 = struct.Struct(">B")
 
 class Undefined(ROOTStreamedObject):
     _classname = None
+    classname = None
 
     @classmethod
     def read(cls, source, cursor, context, parent, classname=None):
