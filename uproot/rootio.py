@@ -1499,8 +1499,8 @@ class TArray(list, ROOTStreamedObject):
         return numpy.asarray(self, dtype=self._dtype).tostring()
 
 class TArrayC(TArray):
-    _classname = b"TArray"
-    classname = "TArray"
+    _classname = b"TArrayC"
+    classname = "TArrayC"
     _dtype = numpy.dtype(">i1")
 
 class TArrayS(TArray):
