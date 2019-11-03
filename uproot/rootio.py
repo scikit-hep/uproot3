@@ -97,6 +97,7 @@ class ROOTDirectory(object):
     __metaclass__ = type.__new__(type, "type", (type,), {})
 
     _classname = b"TDirectory"
+    classname = "TDirectory"
 
     class _FileContext(object):
         def __init__(self, sourcepath, streamerinfos, streamerinfosmap, classes, compression, tfile):
@@ -285,6 +286,16 @@ class ROOTDirectory(object):
                 for name, classname in key.get().iterclasses(recursive, filtername, filterclass):
                     yield "{0}/{1}".format(self._withoutcycle(key).decode("ascii"), name.decode("ascii")).encode("ascii"), classname
 
+    def iterclassnames(self, recursive=False, filtername=nofilter, filterclass=nofilter):
+        for key in self._keys:
+            cls = _classof(self._context, key._fClassName)
+            if filtername(key._fName) and filterclass(cls):
+                yield self._withcycle(key), key._fClassName.decode('ascii')
+
+            if recursive and (key._fClassName == b"TDirectory" or key._fClassName == b"TDirectoryFile"):
+                for name, classname in key.get().iterclassnames(recursive, filtername, filterclass):
+                    yield "{0}/{1}".format(self._withoutcycle(key).decode("ascii"), name.decode("ascii")).encode("ascii"), classname
+
     def keys(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         return list(self.iterkeys(recursive=recursive, filtername=filtername, filterclass=filterclass))
 
@@ -301,6 +312,9 @@ class ROOTDirectory(object):
     def classes(self, recursive=False, filtername=nofilter, filterclass=nofilter):
         return list(self.iterclasses(recursive=recursive, filtername=filtername, filterclass=filterclass))
 
+    def classnames(self, recursive=False, filtername=nofilter, filterclass=nofilter):
+        return list(self.iterclassnames(recursive=recursive, filtername=filtername, filterclass=filterclass))
+
     def allkeys(self, filtername=nofilter, filterclass=nofilter):
         return self.keys(recursive=True, filtername=filtername, filterclass=filterclass)
 
@@ -312,6 +326,9 @@ class ROOTDirectory(object):
 
     def allclasses(self, filtername=nofilter, filterclass=nofilter):
         return self.classes(recursive=True, filtername=filtername, filterclass=filterclass)
+
+    def allclassnames(self, filtername=nofilter, filterclass=nofilter):
+        return self.classnames(recursive=True, filtername=filtername, filterclass=filterclass)
 
     def get(self, name, cycle=None):
         name = _bytesid(name)
@@ -872,6 +889,7 @@ def _defineclasses(streamerinfos, classes):
             code.insert(0, "    _hasreadobjany = {0}".format(hasreadobjany))
             code.insert(0, "    _classversion = {0}".format(streamerinfo._fClassVersion))
             code.insert(0, "    _versions = versions")
+            code.insert(0, "    classname = {0}".format(repr(streamerinfo._fName.decode("ascii"))))
             if sys.version_info[0] > 2:
                 code.insert(0, "    _classname = {0}".format(repr(streamerinfo._fName)))
             else:
@@ -946,6 +964,9 @@ class ROOTObject(object):
             return "<{0} at 0x{1:012x}>".format(self.__class__.__name__, id(self))
 
 class TKey(ROOTObject):
+    _classname = b"TKey"
+    classname = "TKey"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start = cursor.index
@@ -1034,6 +1055,9 @@ _canonicaltype.patterns = [
     ]
 
 class TStreamerInfo(ROOTObject):
+    _classname = b"TStreamerInfo"
+    classname = "TStreamerInfo"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1055,6 +1079,9 @@ class TStreamerInfo(ROOTObject):
             stream.write("\n")
 
 class TStreamerElement(ROOTObject):
+    _classname = b"TStreamerElement"
+    classname = "TStreamerElement"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1104,6 +1131,9 @@ class TStreamerElement(ROOTObject):
             stream.write("\n")
 
 class TStreamerArtificial(TStreamerElement):
+    _classname = b"TStreamerArtificial"
+    classname = "TStreamerArtificial"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1112,6 +1142,9 @@ class TStreamerArtificial(TStreamerElement):
         return self
 
 class TStreamerBase(TStreamerElement):
+    _classname = b"TStreamerBase"
+    classname = "TStreamerBase"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1124,6 +1157,9 @@ class TStreamerBase(TStreamerElement):
     _format = struct.Struct(">i")
 
 class TStreamerBasicPointer(TStreamerElement):
+    _classname = b"TStreamerBasicPointer"
+    classname = "TStreamerBasicPointer"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1137,6 +1173,9 @@ class TStreamerBasicPointer(TStreamerElement):
     _format = struct.Struct(">i")
 
 class TStreamerBasicType(TStreamerElement):
+    _classname = b"TStreamerBasicType"
+    classname = "TStreamerBasicType"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1170,6 +1209,9 @@ class TStreamerBasicType(TStreamerElement):
         return self
 
 class TStreamerLoop(TStreamerElement):
+    _classname = b"TStreamerLoop"
+    classname = "TStreamerLoop"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1183,6 +1225,9 @@ class TStreamerLoop(TStreamerElement):
     _format = struct.Struct(">i")
 
 class TStreamerObject(TStreamerElement):
+    _classname = b"TStreamerObject"
+    classname = "TStreamerObject"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1191,6 +1236,9 @@ class TStreamerObject(TStreamerElement):
         return self
 
 class TStreamerObjectAny(TStreamerElement):
+    _classname = b"TStreamerObjectAny"
+    classname = "TStreamerObjectAny"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1199,6 +1247,9 @@ class TStreamerObjectAny(TStreamerElement):
         return self
 
 class TStreamerObjectAnyPointer(TStreamerElement):
+    _classname = b"TStreamerObjectAnyPointer"
+    classname = "TStreamerObjectAnyPointer"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1207,6 +1258,9 @@ class TStreamerObjectAnyPointer(TStreamerElement):
         return self
 
 class TStreamerObjectPointer(TStreamerElement):
+    _classname = b"TStreamerObjectPointer"
+    classname = "TStreamerObjectPointer"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1215,6 +1269,9 @@ class TStreamerObjectPointer(TStreamerElement):
         return self
 
 class TStreamerSTL(TStreamerElement):
+    _classname = b"TStreamerSTL"
+    classname = "TStreamerSTL"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1242,6 +1299,9 @@ class TStreamerSTL(TStreamerElement):
     _format = struct.Struct(">ii")
 
 class TStreamerSTLstring(TStreamerSTL):
+    _classname = b"TStreamerSTLstring"
+    classname = "TStreamerSTLstring"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1250,6 +1310,9 @@ class TStreamerSTLstring(TStreamerSTL):
         return self
 
 class TStreamerString(TStreamerElement):
+    _classname = b"TStreamerString"
+    classname = "TStreamerString"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1302,6 +1365,9 @@ class ROOTStreamedObject(ROOTObject):
         return numpy.dtype(dtypesout)
 
 class TObject(ROOTStreamedObject):
+    _classname = b"TObject"
+    classname = "TObject"
+
     @classmethod
     def _recarray(cls):
         return [(" fBits", numpy.dtype(">u8")), (" fUniqueID", numpy.dtype(">u8"))]
@@ -1312,6 +1378,9 @@ class TObject(ROOTStreamedObject):
         return self
 
 class TString(bytes, ROOTStreamedObject):
+    _classname = b"TString"
+    classname = "TString"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         return TString(cursor.string(source))
@@ -1320,6 +1389,8 @@ class TString(bytes, ROOTStreamedObject):
         return self.decode("utf-8", "replace")
 
 class TNamed(TObject):
+    _classname = b"TNamed"
+    classname = "TNamed"
     _fields = ["fName", "fTitle"]
 
     @classmethod
@@ -1336,6 +1407,9 @@ class TNamed(TObject):
         return self
 
 class TObjArray(list, ROOTStreamedObject):
+    _classname = b"TObjArray"
+    classname = "TObjArray"
+
     @classmethod
     def read(cls, source, cursor, context, parent, asclass=None):
         if cls._copycontext:
@@ -1356,6 +1430,9 @@ class TObjArray(list, ROOTStreamedObject):
         return self
 
 class TObjString(bytes, ROOTStreamedObject):
+    _classname = b"TObjString"
+    classname = "TObjString"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1368,6 +1445,9 @@ class TObjString(bytes, ROOTStreamedObject):
         return self.decode("utf-8", "replace")
 
 class TList(list, ROOTStreamedObject):
+    _classname = b"TList"
+    classname = "TList"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1383,12 +1463,18 @@ class TList(list, ROOTStreamedObject):
     _format_n = struct.Struct(">B")
 
 class THashList(TList):
+    _classname = b"THashList"
+    classname = "THashList"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         TList._readinto(self, source, cursor, context, parent)
         return self
 
 class TRef(ROOTStreamedObject):
+    _classname = b"TRef"
+    classname = "TRef"
+
     _format1 = struct.Struct(">xxIxxxxxx")
 
     def __init__(self, id):
@@ -1415,6 +1501,9 @@ TRef._arraymethods = None
 TRef._fromrow = lambda row: TRef(row["id"])
 
 class TRefArray(list, ROOTStreamedObject):
+    _classname = b"TRefArray"
+    classname = "TRefArray"
+
     _format1 = struct.Struct(">i")
     _dtype = numpy.dtype(">i4")
 
@@ -1437,6 +1526,9 @@ class TRefArray(list, ROOTStreamedObject):
         return numpy.asarray(self, dtype=self._dtype).tostring()
 
 class TArray(list, ROOTStreamedObject):
+    _classname = b"TArray"
+    classname = "TArray"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         length = cursor.field(source, TArray._format)
@@ -1452,24 +1544,38 @@ class TArray(list, ROOTStreamedObject):
         return numpy.asarray(self, dtype=self._dtype).tostring()
 
 class TArrayC(TArray):
+    _classname = b"TArrayC"
+    classname = "TArrayC"
     _dtype = numpy.dtype(">i1")
 
 class TArrayS(TArray):
+    _classname = b"TArrayS"
+    classname = "TArrayS"
     _dtype = numpy.dtype(">i2")
 
 class TArrayI(TArray):
+    _classname = b"TArrayI"
+    classname = "TArrayI"
     _dtype = numpy.dtype(">i4")
 
 class TArrayL(TArray):
+    _classname = b"TArrayL"
+    classname = "TArrayL"
     _dtype = numpy.dtype(numpy.int_).newbyteorder(">")
 
 class TArrayL64(TArray):
+    _classname = b"TArrayL64"
+    classname = "TArrayL64"
     _dtype = numpy.dtype(">i8")
 
 class TArrayF(TArray):
+    _classname = b"TArrayF"
+    classname = "TArrayF"
     _dtype = numpy.dtype(">f4")
 
 class TArrayD(TArray):
+    _classname = b"TArrayD"
+    classname = "TArrayD"
     _dtype = numpy.dtype(">f8")
 
 # FIXME: I want to generalize this. It's the first example of a class that doesn't
@@ -1482,8 +1588,10 @@ class TArrayD(TArray):
 # I'm also reasonably certain that the last byte is the fIOBits data.
 # That leaves 4 bytes unaccounted for.
 class ROOT_3a3a_TIOFeatures(ROOTStreamedObject):
-    _fields = ["fIOBits"]
     _classname = b"ROOT::TIOFeatures"
+    classname = "ROOT::TIOFeatures"
+    _fields = ["fIOBits"]
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1491,10 +1599,12 @@ class ROOT_3a3a_TIOFeatures(ROOTStreamedObject):
         self._fIOBits = cursor.field(source, ROOT_3a3a_TIOFeatures._format1)
         _endcheck(start, cursor, cnt)
         return self
+
     _format1 = struct.Struct(">B")
 
 class Undefined(ROOTStreamedObject):
     _classname = None
+    classname = None
 
     @classmethod
     def read(cls, source, cursor, context, parent, classname=None):
