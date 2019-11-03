@@ -964,6 +964,9 @@ class ROOTObject(object):
             return "<{0} at 0x{1:012x}>".format(self.__class__.__name__, id(self))
 
 class TKey(ROOTObject):
+    _classname = b"TKey"
+    classname = "TKey"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start = cursor.index
@@ -1052,6 +1055,9 @@ _canonicaltype.patterns = [
     ]
 
 class TStreamerInfo(ROOTObject):
+    _classname = b"TStreamerInfo"
+    classname = "TStreamerInfo"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1073,6 +1079,9 @@ class TStreamerInfo(ROOTObject):
             stream.write("\n")
 
 class TStreamerElement(ROOTObject):
+    _classname = b"TStreamerElement"
+    classname = "TStreamerElement"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1122,6 +1131,9 @@ class TStreamerElement(ROOTObject):
             stream.write("\n")
 
 class TStreamerArtificial(TStreamerElement):
+    _classname = b"TStreamerArtificial"
+    classname = "TStreamerArtificial"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1130,6 +1142,9 @@ class TStreamerArtificial(TStreamerElement):
         return self
 
 class TStreamerBase(TStreamerElement):
+    _classname = b"TStreamerBase"
+    classname = "TStreamerBase"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1142,6 +1157,9 @@ class TStreamerBase(TStreamerElement):
     _format = struct.Struct(">i")
 
 class TStreamerBasicPointer(TStreamerElement):
+    _classname = b"TStreamerBasicPointer"
+    classname = "TStreamerBasicPointer"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1155,6 +1173,9 @@ class TStreamerBasicPointer(TStreamerElement):
     _format = struct.Struct(">i")
 
 class TStreamerBasicType(TStreamerElement):
+    _classname = b"TStreamerBasicType"
+    classname = "TStreamerBasicType"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1188,6 +1209,9 @@ class TStreamerBasicType(TStreamerElement):
         return self
 
 class TStreamerLoop(TStreamerElement):
+    _classname = b"TStreamerLoop"
+    classname = "TStreamerLoop"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1201,6 +1225,9 @@ class TStreamerLoop(TStreamerElement):
     _format = struct.Struct(">i")
 
 class TStreamerObject(TStreamerElement):
+    _classname = b"TStreamerObject"
+    classname = "TStreamerObject"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1209,6 +1236,9 @@ class TStreamerObject(TStreamerElement):
         return self
 
 class TStreamerObjectAny(TStreamerElement):
+    _classname = b"TStreamerObjectAny"
+    classname = "TStreamerObjectAny"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1217,6 +1247,9 @@ class TStreamerObjectAny(TStreamerElement):
         return self
 
 class TStreamerObjectAnyPointer(TStreamerElement):
+    _classname = b"TStreamerObjectAnyPointer"
+    classname = "TStreamerObjectAnyPointer"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1225,6 +1258,9 @@ class TStreamerObjectAnyPointer(TStreamerElement):
         return self
 
 class TStreamerObjectPointer(TStreamerElement):
+    _classname = b"TStreamerObjectPointer"
+    classname = "TStreamerObjectPointer"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1233,6 +1269,9 @@ class TStreamerObjectPointer(TStreamerElement):
         return self
 
 class TStreamerSTL(TStreamerElement):
+    _classname = b"TStreamerSTL"
+    classname = "TStreamerSTL"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1260,6 +1299,9 @@ class TStreamerSTL(TStreamerElement):
     _format = struct.Struct(">ii")
 
 class TStreamerSTLstring(TStreamerSTL):
+    _classname = b"TStreamerSTLstring"
+    classname = "TStreamerSTLstring"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
@@ -1268,6 +1310,9 @@ class TStreamerSTLstring(TStreamerSTL):
         return self
 
 class TStreamerString(TStreamerElement):
+    _classname = b"TStreamerString"
+    classname = "TStreamerString"
+
     @classmethod
     def _readinto(cls, self, source, cursor, context, parent):
         start, cnt, self._classversion = _startcheck(source, cursor)
