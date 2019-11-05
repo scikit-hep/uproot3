@@ -1140,7 +1140,7 @@ class TBranchMethods(object):
             self._tryrecover()
         return self._threadsafe_key(i, keycache, False)._fObjlen
 
-    def basket_compressedbytes(self, i):
+    def basket_compressedbytes(self, i, keycache=None):
         if self._recoveredbaskets is None:
             self._tryrecover()
         key = self._threadsafe_key(i, keycache, False)
