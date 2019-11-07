@@ -36,7 +36,7 @@ The :py:func:`uproot.iterate <uproot.tree.iterate>` function gives you an iterat
 uproot.pandas.iterate
 ---------------------
 
-The :py:func`uproot.pandas.iterate <uproot.pandas.iterate>` function is like the above, except that it iterates over Pandas DataFrames (as though you passed ``outputtype=pandas.DataFrame`` and changed some defaults).
+The :py:func:`uproot.pandas.iterate <uproot.pandas.iterate>` function is like the above, except that it iterates over Pandas DataFrames (as though you passed ``outputtype=pandas.DataFrame`` and changed some defaults).
 
 .. autofunction:: uproot.pandas.iterate
 
