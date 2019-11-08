@@ -1140,7 +1140,7 @@ class TBranchMethods(object):
             self._tryrecover()
         return self._threadsafe_key(i, keycache, False)._fObjlen
 
-    def basket_compressedbytes(self, i):
+    def basket_compressedbytes(self, i, keycache=None):
         if self._recoveredbaskets is None:
             self._tryrecover()
         key = self._threadsafe_key(i, keycache, False)
@@ -2023,7 +2023,7 @@ def daskframe(path, treepath, branches=None, namedecode="utf-8", entrysteps=floa
 
 ################################################################ for quickly getting numentries
 
-def numentries(path, treepath, total=True, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, executor=None, blocking=True, **options):
+def numentries(path, treepath, total=True, localsource=MemmapSource.defaults, xrootdsource={"timeout": None, "chunkbytes": 32*1024, "limitbytes": 1024**2, "parallel": False}, httpsource={"chunkbytes": 32*1024, "limitbytes": 1024**2, "parallel": False}, executor=None, blocking=True, **options):
     if isinstance(path, string_types):
         paths = _filename_explode(path)
     else:
