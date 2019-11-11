@@ -1913,7 +1913,7 @@ u"""Interface for interpretations.
     **source_numitems(self, source)**
         calculate the number of "items" given a ``source`` instance.
 
-    **fromroot(self, data, offsets, local_entrystart, local_entrystop)**
+    **fromroot(self, data, offsets, local_entrystart, local_entrystop, keylen)**
         produce a source from one basket ``data`` array (dtype ``numpy.uint8``) and its corresponding ``offsets`` array (dtype **numpy.int32** or ``None`` if not present) that has *n + 1* elements for *n* entries: ``offsets[0] == 0 and offsets[-1] == numentries``. The ``local_entrystart`` and ``local_entrystop`` are entry start (inclusive) and stop (exclusive), in which the first entry in the basket is number zero (hence "local"). The result of this operation may be a zero-copy cast of the basket data.
 
     **destination(self, numitems, numentries)**

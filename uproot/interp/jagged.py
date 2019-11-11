@@ -66,15 +66,15 @@ class asjagged(uproot.interp.interp.Interpretation):
     def source_numitems(self, source):
         return self.content.source_numitems(source.content)
 
-    def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop):
+    def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop, keylen):
         if local_entrystart == local_entrystop:
-            return self.awkward.JaggedArray.fromoffsets([0], self.content.fromroot(data, None, local_entrystart, local_entrystop))
+            return self.awkward.JaggedArray.fromoffsets([0], self.content.fromroot(data, None, local_entrystart, local_entrystop, keylen))
         else:
             if self.skipbytes == 0:
                 offsets = _destructive_divide(byteoffsets, self.content.itemsize, self.awkward)
                 starts  = offsets[local_entrystart     : local_entrystop    ]
                 stops   = offsets[local_entrystart + 1 : local_entrystop + 1]
-                content = self.content.fromroot(data, None, starts[0], stops[-1])
+                content = self.content.fromroot(data, None, starts[0], stops[-1], keylen)
                 return self.awkward.JaggedArray(starts, stops, content)
 
             else:
@@ -87,7 +87,7 @@ class asjagged(uproot.interp.interp.Interpretation):
                 self.awkward.numpy.cumsum(mask, out=mask)
                 data = data[mask.view(self.awkward.numpy.bool_)]
 
-                content = self.content.fromroot(data, None, 0, bytestops[-1])
+                content = self.content.fromroot(data, None, 0, bytestops[-1], keylen)
 
                 itemsize = 1
                 sub = self.content

@@ -25,6 +25,7 @@ from uproot.interp.objects import SimpleArray
 from uproot.interp.objects import STLVector
 from uproot.interp.objects import STLMap
 from uproot.interp.objects import STLString
+from uproot.interp.objects import Pointer
 
 class _NotNumerical(Exception): pass
 
@@ -380,6 +381,11 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
                     return asjagged(asdtype("f8"), skipbytes=10)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<string>":
                     return asgenobj(STLVector(STLString(awkward)), branch._context, 6)
+                else:
+                    m = interpret._vectorpointer.match(getattr(branch._streamer, "_fTypeName", b""))
+                    if m is not None and m.group(1) in branch._context.streamerinfosmap:
+                        streamer = branch._context.streamerinfosmap[m.group(1)]
+                        return asgenobj(STLVector(Pointer(streamer.pyclass)), branch._context, skipbytes=6)
 
                 if getattr(branch._streamer, "_fTypeName", None) == b"map<string,bool>" or getattr(branch._streamer, "_fTypeName", None) == b"map<string,Bool_t>":
                     return asgenobj(STLMap(STLString(awkward), asdtype(awkward.numpy.bool_)), branch._context, 6)
@@ -550,4 +556,5 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
 interpret._titlehasdims = re.compile(br"^([^\[\]]+)(\[[^\[\]]+\])+")
 interpret._itemdimpattern = re.compile(br"\[([1-9][0-9]*)\]")
 interpret._itemanypattern = re.compile(br"\[(.*)\]")
+interpret._vectorpointer = re.compile(br"vector\<([^<>]*)\*\>")
 interpret._pairsecond = re.compile(br"pair\<[^<>]*,(.*) \>")
