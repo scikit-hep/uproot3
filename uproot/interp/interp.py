@@ -41,7 +41,7 @@ class Interpretation(object):
     def source_numitems(self, source):
         raise NotImplementedError
 
-    def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop):
+    def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop, keylen):
         raise NotImplementedError
 
     def destination(self, numitems, numentries):

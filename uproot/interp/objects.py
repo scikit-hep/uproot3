@@ -6,7 +6,11 @@ from __future__ import absolute_import
 
 import copy
 import struct
+import numbers
 
+import numpy
+
+import uproot.rootio
 import uproot.interp.interp
 import uproot.interp.numerical
 import uproot.interp.jagged
@@ -129,6 +133,25 @@ class STLString(object):
             numitems = cursor.field(source, self._format2)
         return cursor.array(source, numitems, self.awkward.ObjectArray.CHARTYPE).tostring()
 
+class Pointer(object):
+    def __init__(self, cls):
+        self.cls = cls
+
+    @property
+    def __name__(self):
+        return "Pointer"
+
+    def __repr__(self):
+        if isinstance(self.cls, type):
+            return "Pointer({0})".format(self.cls.__name__)
+        else:
+            return "Pointer({0})".format(repr(self.cls))
+
+    def read(self, source, cursor, context, parent):
+        return uproot.rootio._readobjany(source, cursor, context, parent)
+
+    _format1 = struct.Struct(">II")
+
 class astable(uproot.interp.interp.Interpretation):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (uproot.interp.interp.Interpretation.__metaclass__,), {})
@@ -180,8 +203,8 @@ class astable(uproot.interp.interp.Interpretation):
     def source_numitems(self, source):
         return self.content.source_numitems(source)
 
-    def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop):
-        return self.content.fromroot(data, byteoffsets, local_entrystart, local_entrystop)
+    def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop, keylen):
+        return self.content.fromroot(data, byteoffsets, local_entrystart, local_entrystop, keylen)
 
     def destination(self, numitems, numentries):
         return self.content.destination(numitems, numentries)
@@ -233,8 +256,8 @@ class asobj(uproot.interp.interp.Interpretation):
     def source_numitems(self, source):
         return self.content.source_numitems(source)
 
-    def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop):
-        return self.content.fromroot(data, byteoffsets, local_entrystart, local_entrystop)
+    def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop, keylen):
+        return self.content.fromroot(data, byteoffsets, local_entrystart, local_entrystop, keylen)
 
     def destination(self, numitems, numentries):
         return self.content.destination(numitems, numentries)
@@ -286,14 +309,14 @@ class _variable(uproot.interp.interp.Interpretation):
     def source_numitems(self, source):
         return self.content.source_numitems(source)
 
-    def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop):
-        return self.content.fromroot(data, byteoffsets, local_entrystart, local_entrystop)
+    def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop, keylen):
+        return self.content.fromroot(data, byteoffsets, local_entrystart, local_entrystop, keylen)
 
     def destination(self, numitems, numentries):
         return self.content.destination(numitems, numentries)
 
     def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
-        return self.content.fill(source, destination, itemstart, itemstop, entrystart, entrystop)
+        self.content.fill(source, destination, itemstart, itemstop, entrystart, entrystop)
 
     def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
         return self.content.clip(destination, itemstart, itemstop, entrystart, entrystop)
@@ -304,7 +327,44 @@ class _variable(uproot.interp.interp.Interpretation):
             print("reading {0}".format(repr(out)))
         return out
 
-class asgenobj(_variable):
+class _variable_withoffsets(_variable):
+    def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop, keylen):
+        out = self.content.fromroot(data, byteoffsets, local_entrystart, local_entrystop, keylen)
+        out.byteoffsets = byteoffsets[local_entrystart:local_entrystop] + keylen + self.content.skipbytes
+        return out
+
+    def destination(self, numitems, numentries):
+        out = self.content.destination(numitems, numentries)
+        out.byteoffsets = self.awkward.numpy.empty(numentries, dtype=self.awkward.numpy.int32)
+        return out
+
+    def fill(self, source, destination, itemstart, itemstop, entrystart, entrystop):
+        self.content.fill(source, destination, itemstart, itemstop, entrystart, entrystop)
+        destination.byteoffsets[entrystart:entrystop] = source.byteoffsets
+
+    def clip(self, destination, itemstart, itemstop, entrystart, entrystop):
+        out = self.content.clip(destination, itemstart, itemstop, entrystart, entrystop)
+        out.byteoffsets = destination.byteoffsets[entrystart:entrystop]
+        return out
+
+    def finalize(self, destination, branch):
+        out = self.awkward.ObjectArray(JaggedWithByteOffsets(self.content.finalize(destination, branch), destination.byteoffsets), self.generator, *self.args, **self.kwargs)
+        if self.debug_reading:
+            print("reading {0}".format(repr(out)))
+        return out
+
+class JaggedWithByteOffsets(object):
+    def __init__(self, jagged, byteoffsets):
+        self.jagged = jagged
+        self.byteoffsets = byteoffsets
+
+    def __len__(self):
+        return len(self.jagged)
+
+    def __getitem__(self, where):
+        return self.jagged[where], -self.byteoffsets[where]
+
+class asgenobj(_variable_withoffsets):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (_variable.__metaclass__,), {})
 
@@ -312,9 +372,10 @@ class asgenobj(_variable):
         def __init__(self, cls, context):
             self.cls = cls
             self.context = context
-        def __call__(self, bytes):
+        def __call__(self, arg):
+            bytes, origin = arg
             source = uproot.source.source.Source(bytes)
-            cursor = uproot.source.cursor.Cursor(0)
+            cursor = uproot.source.cursor.Cursor(0, origin=origin)
             return self.cls.read(source, cursor, self.context, None)
         def __repr__(self):
             if isinstance(self.cls, type):

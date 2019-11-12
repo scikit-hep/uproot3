@@ -240,3 +240,9 @@ class Test(unittest.TestCase):
         t = uproot.open("tests/samples/issue390.root")["E"]
         t.pandas.df("hits.*")
         t.pandas.df("trks.*")
+
+    def test_issue399(self):
+        t = uproot.open("tests/samples/issue399.root")["Event"]
+        a = t["Histos.histograms1D"].array()
+        for i in range(t.numentries):
+            assert [x.title for x in a[i]] == [b"Primary Hits", b"Primary Loss", b"Energy Loss", b"Primary Hits per Element", b"Primary Loss per Element", b"Energy Loss per Element"]

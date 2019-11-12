@@ -152,7 +152,7 @@ class asdtype(_asnumeric):
         assert remainder == 0
         return quotient
 
-    def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop):
+    def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop, keylen):
         dtype, shape = _dtypeshape(self.fromdtype)
         return data.view(dtype).reshape((-1,) + shape)[local_entrystart:local_entrystop]
 
@@ -269,7 +269,7 @@ class asdouble32(_asnumeric):
         assert remainder == 0
         return quotient
 
-    def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop):
+    def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop, keylen):
         # Interpret input data using proper type
         array = data.view(dtype=self.fromdtypeflat)
         # Make sure the interpreted data has correct shape
@@ -359,7 +359,7 @@ class asstlbitset(uproot.interp.interp.Interpretation):
     def source_numitems(self, source):
         return int(self.awkward.numpy.prod(source.shape))
 
-    def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop):
+    def fromroot(self, data, byteoffsets, local_entrystart, local_entrystop, keylen):
         return data.view(self.todtype).reshape((-1, self.numbytes + 4))[:, 4:]
 
     def destination(self, numitems, numentries):

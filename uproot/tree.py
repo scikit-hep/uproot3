@@ -1194,7 +1194,7 @@ class TBranchMethods(object):
             byteoffsets[-1] = key._fLast
             awkward.numpy.subtract(byteoffsets, key._fKeylen, byteoffsets)
 
-        return interpretation.fromroot(data, byteoffsets, local_entrystart, local_entrystop)
+        return interpretation.fromroot(data, byteoffsets, local_entrystart, local_entrystop, key._fKeylen)
 
     def basket(self, i, interpretation=None, entrystart=None, entrystop=None, flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None):
         awkward = _normalize_awkwardlib(awkwardlib)
