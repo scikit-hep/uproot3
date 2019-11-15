@@ -246,3 +246,7 @@ class Test(unittest.TestCase):
         a = t["Histos.histograms1D"].array()
         for i in range(t.numentries):
             assert [x.title for x in a[i]] == [b"Primary Hits", b"Primary Loss", b"Energy Loss", b"Primary Hits per Element", b"Primary Loss per Element", b"Energy Loss per Element"]
+
+    def test_issue404(self):
+        t = uproot.open("tests/samples/issue404.root")["Beam"]
+        assert t["Beam.GMAD::BeamBase.beamParticleName"].array().tolist() == [b"proton"]
