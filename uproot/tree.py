@@ -251,7 +251,7 @@ class TTreeMethods(object):
                     members = streamerinfosmap[typename].members
 
         if members is not None:
-            for subbranch in branch._fBranches:
+            for subbranch in branch.itervalues(recursive=True):
                 name = subbranch._fName
                 if name.startswith(branch._fName + b"."):           # drop parent branch's name
                     name = name[len(branch._fName) + 1:]
