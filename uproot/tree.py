@@ -1816,17 +1816,17 @@ class _LazyFiles(object):
             self.keycache = cachetools.LRUCache(10000)                      # last 10000 TKeys
 
     def __getstate__(self):
-        return {"paths": paths,
-                "treepath": treepath,
-                "branches": branches,
-                "entrysteps": entrysteps,
-                "flatten": flatten,
-                "awkwardlib": awkwardlib,
-                "persistvirtual": persistvirtual,
-                "localsource": localsource,
-                "xrootdsource": xrootdsource,
-                "httpsource": httpsource,
-                "options": options}
+        return {"paths": self.paths,
+                "treepath": self.treepath,
+                "branches": self.branches,
+                "entrysteps": self.entrysteps,
+                "flatten": self.flatten,
+                "awkwardlib": self.awkwardlib,
+                "persistvirtual": self.persistvirtual,
+                "localsource": self.localsource,
+                "xrootdsource": self.xrootdsource,
+                "httpsource": self.httpsource,
+                "options": self.options}
                 
     def __setstate__(self, state):
         self.paths = state["paths"]

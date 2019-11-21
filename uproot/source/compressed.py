@@ -119,7 +119,7 @@ class CompressedSource(uproot.source.source.Source):
                 # https://github.com/root-project/root/blob/master/core/zip/src/RZip.cxx#L217
                 # https://github.com/root-project/root/blob/master/core/lzma/src/ZipLZMA.c#L81
                 # https://github.com/root-project/root/blob/master/core/lz4/src/ZipLZ4.cxx#L38
-                algo, method, c1, c2, c3, u1, u2, u3 = cursor.fields(self._compressed, self._header)
+                algo, method, c1, c2, c3, u1, u2, u3 = header = cursor.fields(self._compressed, self._header)
                 compressedbytes = c1 + (c2 << 8) + (c3 << 16)
                 uncompressedbytes = u1 + (u2 << 8) + (u3 << 16)
 
