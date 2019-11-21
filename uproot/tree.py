@@ -812,7 +812,7 @@ class TTreeMethods(object):
         else:
             try:
                 words = iter(arg)                          # only way to check for iterable (in general)
-            except:
+            except Exception:
                 raise TypeError("'branches' argument not understood")
             else:
                 for word in words:
@@ -1281,7 +1281,7 @@ class TBranchMethods(object):
                     basket = (local_entrystart + self.basket_entrystart(j + basketstart),
                               local_entrystop + self.basket_entrystart(j + basketstart),
                               basket)
-            except:
+            except Exception:
                 return sys.exc_info()
             else:
                 out[j] = basket
@@ -1412,7 +1412,7 @@ class TBranchMethods(object):
                                     basket_entryoffset[j],
                                     basket_entryoffset[j + 1])
 
-            except:
+            except Exception:
                 return sys.exc_info()
 
         if executor is None:
@@ -1489,7 +1489,7 @@ class TBranchMethods(object):
                                     basket_entryoffset[j],
                                     basket_entryoffset[j + 1])
 
-            except:
+            except Exception:
                 return sys.exc_info()
 
         if executor is None:
@@ -2048,7 +2048,7 @@ def _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, e
     def fill(i):
         try:
             file = uproot.rootio.open(paths[i], localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, read_streamers=False, **options)
-        except:
+        except Exception:
             return sys.exc_info()
         else:
             try:
@@ -2059,7 +2059,7 @@ def _numentries(paths, treepath, total, localsource, xrootdsource, httpsource, e
                 except KeyError:
                     out[i] = 0
                 uuids[i] = file._context.uuid
-            except:
+            except Exception:
                 return sys.exc_info()
             else:
                 return None

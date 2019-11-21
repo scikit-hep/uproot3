@@ -166,7 +166,7 @@ class ROOTDirectory(object):
 
                 return ROOTDirectory.read(source, Cursor(fBEGIN + fNbytesName), context, mykey)
 
-            except:
+            except Exception:
                 source.dismiss()
                 raise
 
