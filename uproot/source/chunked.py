@@ -5,11 +5,13 @@
 from __future__ import absolute_import
 
 import math
+import warnings
 
 import numpy
 
 import uproot.cache
 import uproot.source.source
+
 
 class ChunkedSource(uproot.source.source.Source):
     # makes __doc__ attribute mutable before Python 3.3
@@ -106,20 +108,26 @@ class ChunkedSource(uproot.source.source.Source):
                 future = self._futures.pop(chunkindex, None)
                 if future is not None:
                     chunk = future.result()
-                    if chunk is not None:
-                        self.cache[chunkindex] = chunk
 
             if chunk is None:
                 try:
                     chunk = self.cache[chunkindex]
                 except KeyError:
                     self._open()
-                    chunk = self.cache[chunkindex] = self._read(chunkindex)
+                    chunk = self._read(chunkindex)
 
             cstart = 0
             cstop = self._chunkbytes
             gstart = chunkindex * self._chunkbytes
             gstop = (chunkindex + 1) * self._chunkbytes
+
+            if len(chunk) > self._chunkbytes:
+                warnings.warn('Received larger chunk than expected, assumed to be entire file. Performance may be significantly degraded.', RuntimeWarning)
+                for i in range(0, len(chunk), self._chunkbytes):
+                    self.cache[i//self._chunkbytes] = chunk[i:i+self._chunkbytes]
+                chunk = self.cache[chunkindex]
+            else:
+                self.cache[chunkindex] = chunk
 
             if gstart < start:
                 cstart += start - gstart
