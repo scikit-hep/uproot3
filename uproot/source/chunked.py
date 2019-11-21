@@ -125,6 +125,8 @@ class ChunkedSource(uproot.source.source.Source):
                 warnings.warn('Received larger chunk than expected, assumed to be entire file. Performance may be significantly degraded.', RuntimeWarning)
                 for i in range(0, len(chunk), self._chunkbytes):
                     self.cache[i//self._chunkbytes] = chunk[i:i+self._chunkbytes]
+                # Dismiss any pending futures as everything has already been loaded
+                self.dismiss()
                 chunk = self.cache[chunkindex]
             else:
                 self.cache[chunkindex] = chunk
