@@ -559,7 +559,7 @@ class Test(unittest.TestCase):
             for i in range(len(lazy), 0, -1):
                 assert lazy[branchname][i - 1 : i + 3].tolist() == strict[i - 1 : i + 3].tolist()
 
-    def test_tree_lazy2(self):
+    def test_tree_lazy3(self):
         lazy = uproot.lazyarrays(["tests/samples/sample-5.29.02-uncompressed.root", "tests/samples/sample-5.30.00-uncompressed.root"], "sample")
 
         assert lazy["u1"].tolist() == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]
