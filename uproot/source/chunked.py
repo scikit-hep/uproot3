@@ -123,7 +123,9 @@ class ChunkedSource(uproot.source.source.Source):
 
             if len(chunk) > self._chunkbytes:
                 if len(chunk) > self._limitbytes:
-                    warnings.warn('Received larger chunk than expected, assumed to be entire file. Performance may be significantly degraded.', RuntimeWarning)
+                    warnings.warn('Remote server sent a larger chunk than expected, assumed to be entire file. '
+                                  'Performance will be degraded as the file is larger than the cache limit and might need to be downloaded many times.',
+                                  RuntimeWarning)
                 for i in range(0, len(chunk), self._chunkbytes):
                     if i // self._chunkbytes not in self.cache:
                         self.cache[i // self._chunkbytes] = chunk[i:i+self._chunkbytes]
