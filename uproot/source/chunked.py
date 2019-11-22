@@ -122,12 +122,18 @@ class ChunkedSource(uproot.source.source.Source):
             gstop = (chunkindex + 1) * self._chunkbytes
 
             if len(chunk) > self._chunkbytes:
-                warnings.warn('Received larger chunk than expected, assumed to be entire file. Performance may be significantly degraded.', RuntimeWarning)
+                if len(chunk) > self._limitbytes:
+                    warnings.warn('Received larger chunk than expected, assumed to be entire file. Performance may be significantly degraded.', RuntimeWarning)
                 for i in range(0, len(chunk), self._chunkbytes):
-                    self.cache[i//self._chunkbytes] = chunk[i:i+self._chunkbytes]
+                    if i // self._chunkbytes not in self.cache:
+                        self.cache[i // self._chunkbytes] = chunk[i:i+self._chunkbytes]
+                # Add the requested range last to minimise cache misses
+                for i in range(chunkstart*self._chunkbytes, chunkstop*self._chunkbytes):
+                    if i // self._chunkbytes not in self.cache:
+                        self.cache[i // self._chunkbytes] = chunk[i:i+self._chunkbytes]
+                chunk = chunk[gstart:gstop]
                 # Dismiss any pending futures as everything has already been loaded
                 self.dismiss()
-                chunk = self.cache[chunkindex]
             else:
                 self.cache[chunkindex] = chunk
 
