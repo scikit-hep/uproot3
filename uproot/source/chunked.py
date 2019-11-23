@@ -5,7 +5,6 @@
 from __future__ import absolute_import
 
 import math
-import warnings
 
 import numpy
 
@@ -122,18 +121,12 @@ class ChunkedSource(uproot.source.source.Source):
             gstop = (chunkindex + 1) * self._chunkbytes
 
             if len(chunk) > self._chunkbytes:
-                if len(chunk) > self._limitbytes:
-                    warnings.warn('Remote server sent a larger chunk than expected, assumed to be entire file. '
-                                  'Performance will be degraded as the file is larger than the cache limit and might need to be downloaded many times.',
-                                  RuntimeWarning)
+                if not numpy.array_equal(chunk[:4], list(b"root")):
+                    raise NotImplementedError("Expected {0} or fewer bytes but received {1} and data does not appear to be an entire ROOT file.".format(self._chunkbytes, len(chunk)))
+                self.cache = {}
                 for i in range(0, len(chunk), self._chunkbytes):
-                    if i // self._chunkbytes not in self.cache:
-                        self.cache[i // self._chunkbytes] = chunk[i:i+self._chunkbytes]
-                # Add the requested range last to minimise cache misses
-                for i in range(chunkstart*self._chunkbytes, chunkstop*self._chunkbytes):
-                    if i // self._chunkbytes not in self.cache:
-                        self.cache[i // self._chunkbytes] = chunk[i:i+self._chunkbytes]
-                chunk = chunk[gstart:gstop]
+                    self.cache[i // self._chunkbytes] = chunk[i:i+self._chunkbytes]
+                chunk = self.cache[chunkindex]
                 # Dismiss any pending futures as everything has already been loaded
                 self.dismiss()
             else:
