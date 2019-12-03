@@ -200,7 +200,7 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
                             numbits = None
                         else:
                             low, high, numbits = spec
-                    except:
+                    except Exception:
                         return None
 
                 if iskDouble32 and numbits == 0:

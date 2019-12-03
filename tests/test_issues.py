@@ -47,8 +47,8 @@ class Test(unittest.TestCase):
         before = before_hadd.arrays()
         after = after_hadd.arrays()
 
-        assert set(before.keys()), se == ([b"v_int16", b"v_int32", b"v_int64", b"v_uint16", b"v_uint32", b"v_uint64", b"v_bool", b"v_float", b"v_double"])
-        assert set(after.keys()),  se == ([b"v_int16", b"v_int32", b"v_int64", b"v_uint16", b"v_uint32", b"v_uint64", b"v_bool", b"v_float", b"v_double"])
+        assert set(before.keys())
+        assert set(after.keys())
 
         for key in before.keys():
             assert before[key].tolist() * 3 == after[key].tolist()
