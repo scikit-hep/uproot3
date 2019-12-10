@@ -1621,7 +1621,7 @@ class TBranchMethods(object):
             return chunkedarray(chunks, counts)
         else:
             start, stop = entrysteps[0]
-            return VirtualArray(lazybranch, (start, stop), cache=cache, type=awkward.type.ArrayType(numentries, interpretation.type), persistvirtual=persistvirtual)
+            out = VirtualArray(lazybranch, (start, stop), cache=cache, type=awkward.type.ArrayType(stop - start, interpretation.type), persistvirtual=persistvirtual)
 
     class _BasketKey(object):
         def __init__(self, source, cursor, compression, complete):
