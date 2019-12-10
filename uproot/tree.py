@@ -590,9 +590,11 @@ class TTreeMethods(object):
                     chunks.append(VirtualArray(lazytree, (branch.name, start, stop), cache=cache, type=awkward.type.ArrayType(stop - start, interpretation.type), persistvirtual=persistvirtual))
                     counts.append(stop - start)
                 out[name] = awkward.ChunkedArray(chunks, counts)
+                out[name].__doc__ = branch.title.decode('ascii')
             else:
                 start, stop = entrysteps[0]
                 out[name] = VirtualArray(lazytree, (branch.name, start, stop), cache=cache, type=awkward.type.ArrayType(stop - start, interpretation.type), persistvirtual=persistvirtual)
+                out[name].__doc__ = branch.title.decode('ascii')
 
         if profile is not None:
             out = uproot_methods.profiles.transformer(profile)(out)
@@ -1618,10 +1620,14 @@ class TBranchMethods(object):
                 chunks.append(VirtualArray(lazybranch, (start, stop), cache=cache, type=awkward.type.ArrayType(numentries, interpretation.type), persistvirtual=persistvirtual))
                 counts.append(numentries)
 
-            return chunkedarray(chunks, counts)
+            out = chunkedarray(chunks, counts)
+            out.__doc__ = self.title.decode('ascii')
+            return out
         else:
             start, stop = entrysteps[0]
             out = VirtualArray(lazybranch, (start, stop), cache=cache, type=awkward.type.ArrayType(stop - start, interpretation.type), persistvirtual=persistvirtual)
+            out.__doc__ = self.title.decode('ascii')
+            return out
 
     class _BasketKey(object):
         def __init__(self, source, cursor, compression, complete):
