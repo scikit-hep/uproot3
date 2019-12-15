@@ -987,6 +987,8 @@ class TBranchMethods(object):
 
     @property
     def numbaskets(self):
+        if self.interpretation is None:
+            return 0
         if self._recoveredbaskets is None:
             self._tryrecover()
         return self._numgoodbaskets + len(self._recoveredbaskets)
