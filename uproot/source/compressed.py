@@ -76,7 +76,7 @@ class Compression(object):
             try:
                 from lz4.block import decompress as lz4_decompress
             except ImportError:
-                raise ImportError("Install lz4 package with:\n    pip install lz4\nor\n    conda install -c anaconda lz4")
+                raise ImportError("Install lz4 package with:\n    pip install lz4\nor\n    conda install -c conda-forge lz4")
 
             if uncompressedbytes is None:
                 raise ValueError("lz4 needs to know the uncompressed number of bytes")
@@ -86,7 +86,7 @@ class Compression(object):
             try:
                 from zstd import decompress as zstd_decompress
             except ImportError:
-                raise ImportError("Install zstd package with:\n    pip install zstd\nor\n    conda install -c anaconda zstd")
+                raise ImportError("Install zstd package with:\n    pip install zstd\nor\n    conda install -c anaconda python-zstd")
             return zstd_decompress(cursor.bytes(source, compressedbytes))
 
         else:
