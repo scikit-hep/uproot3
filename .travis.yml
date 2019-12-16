@@ -22,6 +22,8 @@ env:
   - PYVER=3.7 NPY="numpy==1.14.5"
   - PYVER=3.7 NPY="numpy>=1.15"
 
+  - PYVER=3.8 NPY="numpy>=1.15"
+
   - PYVER=pypy2.7 NPY="numpy>=1.15"
 
   - PYVER=pypy3.5 NPY="numpy>=1.15"
