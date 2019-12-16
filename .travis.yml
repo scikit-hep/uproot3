@@ -22,6 +22,8 @@ env:
   - PYVER=3.7 NPY="numpy==1.14.5"
   - PYVER=3.7 NPY="numpy>=1.15"
 
+  - PYVER=3.8 NPY="numpy>=1.15"
+
   - PYVER=pypy2.7 NPY="numpy>=1.15"
 
   - PYVER=pypy3.5 NPY="numpy>=1.15"
@@ -59,7 +61,7 @@ install:
   - python -c 'import awkward; print(awkward.__version__)'
   - pip install "uproot-methods>=0.7.0"
   - python -c 'import uproot_methods; print(uproot_methods.__version__)'
-  - pip install cachetools pkgconfig lz4 xxhash mock requests "pytest>=3.9" pytest-runner
+  - pip install cachetools pkgconfig lz4 zstandard xxhash mock requests "pytest>=3.9" pytest-runner
   - if [[ ${PYVER} = "2.7" ]] ; then pip install backports.lzma ; fi
   - pip install pandas
   # pyopenssl is for deployment
