@@ -1742,8 +1742,11 @@ class TBranchMethods(object):
             with self._recoverylock:
                 self._recoveredbaskets = recoveredbaskets
                 self._entryoffsets = entryoffsets
-        elif self.interpretation is not None:
-            raise ValueError("entries in recovered baskets (offsets {0}) don't add up to total number of entries ({1})\n   in file: {2}".format(entryoffsets, self.numentries, self._context.sourcepath))
+        else:
+            if self.interpretation is None:
+                self._recoveredbaskets = []
+            else:
+                raise ValueError("entries in recovered baskets (offsets {0}) don't add up to total number of entries ({1})\n   in file: {2}".format(entryoffsets, self.numentries, self._context.sourcepath))
 
     def _tryrecover(self):
         if self._recoveredbaskets is None:
