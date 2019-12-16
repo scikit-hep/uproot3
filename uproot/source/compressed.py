@@ -84,10 +84,11 @@ class Compression(object):
 
         elif self.algo == uproot.const.kZSTD:
             try:
-                from zstd import decompress as zstd_decompress
+                import zstandard as zstd
             except ImportError:
-                raise ImportError("Install zstd package with:\n    pip install zstd\nor\n    conda install python-zstd")
-            return zstd_decompress(cursor.bytes(source, compressedbytes))
+                raise ImportError("Install zstd package with:\n    pip install zstandard\nor\n    conda install zstandard")
+            dctx = zstd.ZstdDecompressor()
+            return dctx.decompress(cursor.bytes(source, compressedbytes))
 
         else:
             raise ValueError("unrecognized compression algorithm: {0}".format(self.algo))

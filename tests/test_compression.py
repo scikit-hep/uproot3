@@ -9,7 +9,7 @@ try:
 except ImportError:
     from backports import lzma
 import lz4
-import zstd
+import zstandard
 
 import uproot
 

@@ -4,7 +4,7 @@ uproot-methods>=0.7.0
 cachetools
 pkgconfig
 lz4
-zstd
+zstandard
 backports.lzma;python_version<"3.3"
 pandas
 requests
