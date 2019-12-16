@@ -987,8 +987,6 @@ class TBranchMethods(object):
 
     @property
     def numbaskets(self):
-        if self.interpretation is None:
-            return 0
         if self._recoveredbaskets is None:
             self._tryrecover()
         return self._numgoodbaskets + len(self._recoveredbaskets)
@@ -1744,7 +1742,7 @@ class TBranchMethods(object):
             with self._recoverylock:
                 self._recoveredbaskets = recoveredbaskets
                 self._entryoffsets = entryoffsets
-        else:
+        elif self.interpretation is not None:
             raise ValueError("entries in recovered baskets (offsets {0}) don't add up to total number of entries ({1})\n   in file: {2}".format(entryoffsets, self.numentries, self._context.sourcepath))
 
     def _tryrecover(self):
