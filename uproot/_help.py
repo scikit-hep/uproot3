@@ -2483,7 +2483,7 @@ u"""Describe the compression of a compressed block.
 
     - **algo** (*int*) algorithm code.
     - **level** (*int*) 0 is no compression, 1 is least, 9 is most.
-    - **algoname** (*str*) algorithm expressed as a string: ``"zlib"``, ``"lzma"``, ``"old"``, or ``"lz4"``.
+    - **algoname** (*str*) algorithm expressed as a string: ``"zlib"``, ``"lzma"``, ``"old"``, ``"lz4"`` or ``"zstd"``.
     - **copy(algo=None, level=None)** copy this :py:class:`Compression <uproot.source.compressed.Compression>` object, possibly changing a field.
     - **decompress(source, cursor, compressedbytes, uncompressedbytes)** decompress data from **source** at **cursor**, knowing the compressed and uncompressed size.
 

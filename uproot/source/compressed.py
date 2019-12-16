@@ -46,6 +46,8 @@ class Compression(object):
             return "old"
         elif self.algo == uproot.const.kLZ4:
             return "lz4"
+        elif self.algo == uproot.const.kZSTD:
+            return "zstd"
         else:
             raise ValueError("unrecognized compression algorithm: {0}".format(self.algo))
 
@@ -79,6 +81,13 @@ class Compression(object):
             if uncompressedbytes is None:
                 raise ValueError("lz4 needs to know the uncompressed number of bytes")
             return lz4_decompress(cursor.bytes(source, compressedbytes), uncompressed_size=uncompressedbytes)
+
+        elif self.algo == uproot.const.kZSTD:
+            try:
+                from zstd import decompress as zstd_decompress
+            except ImportError:
+                raise ImportError("Install zstd package with:\n    pip install zstd\nor\n    conda install -c anaconda zstd")
+            return zstd_decompress(cursor.bytes(source, compressedbytes))
 
         else:
             raise ValueError("unrecognized compression algorithm: {0}".format(self.algo))
@@ -139,6 +148,8 @@ class CompressedSource(uproot.source.source.Source):
                     after_compressed = copy_cursor.bytes(self._compressed, compressedbytes)
                     if xxhash.xxh64(after_compressed).intdigest() != checksum:
                         raise ValueError("LZ4 checksum didn't match")
+                elif algo == b"ZS":
+                    compression = self.compression.copy(uproot.const.kZSTD)
                 elif algo == b"CS":
                     raise ValueError("unsupported compression algorithm: 'old' (according to ROOT comments, hasn't been used in 20+ years!)")
                 else:

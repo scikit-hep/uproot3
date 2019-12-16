@@ -158,4 +158,4 @@ from uproot.version import __version__
 # don't expose uproot.uproot; it's ugly
 del uproot
 
-__all__ = ["open", "xrootd", "http", "iterate", "numentries", "lazyarray", "lazyarrays", "daskarray", "daskframe", "create", "recreate", "update", "ZLIB", "LZMA", "LZ4", "newtree", "newbranch", "MemmapSource", "FileSource", "XRootDSource", "HTTPSource", "ArrayCache", "ThreadSafeArrayCache", "interpret", "asdtype", "asarray", "asdouble32", "asstlbitset", "asjagged", "astable", "asobj", "asgenobj", "asstring", "asdebug", "SimpleArray", "STLVector", "STLMap", "STLString", "Pointer", "pandas", "__version__"]
+__all__ = ["open", "xrootd", "http", "iterate", "numentries", "lazyarray", "lazyarrays", "daskarray", "daskframe", "create", "recreate", "update", "ZLIB", "LZMA", "LZ4", "ZSTD", "newtree", "newbranch", "MemmapSource", "FileSource", "XRootDSource", "HTTPSource", "ArrayCache", "ThreadSafeArrayCache", "interpret", "asdtype", "asarray", "asdouble32", "asstlbitset", "asjagged", "astable", "asobj", "asgenobj", "asstring", "asdebug", "SimpleArray", "STLVector", "STLMap", "STLString", "Pointer", "pandas", "__version__"]

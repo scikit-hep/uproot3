@@ -31,7 +31,8 @@ kZLIB                 = 1
 kLZMA                 = 2
 kOldCompressionAlgo   = 3
 kLZ4                  = 4
-kUndefinedCompressionAlgorithm = 5
+kZSTD                 = 5
+kUndefinedCompressionAlgorithm = 6
 
 ################################################################ constants for streamers
 
