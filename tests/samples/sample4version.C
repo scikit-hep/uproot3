@@ -31,6 +31,12 @@ void sample4version(const char* version, const char* compression) {
     f->SetCompressionAlgorithm(4);
     f->SetCompressionLevel(4);
   }
+  else if (strcmp(compression, "zstd") == 0) {
+    sprintf(filename, "sample-%s-zstd.root", version);
+    f = new TFile(filename, "RECREATE");
+    f->SetCompressionAlgorithm(5);
+    f->SetCompressionLevel(5);
+  }
   else
     exit(-1);
 
