@@ -2,15 +2,13 @@
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
-import unittest
-
 import uproot
 try:
     import pandas
 except ImportError:
     pandas = None
 
-class Test(unittest.TestCase):
+class Test(object):
     if pandas is not None:
         sample = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]
 

@@ -3,12 +3,9 @@
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
 import os
-import unittest
-
 from collections import namedtuple
 
 import numpy
-import pytest
 
 import awkward
 import uproot
@@ -18,7 +15,7 @@ def basest(array):
         array = array.base
     return array
 
-class Test(unittest.TestCase):
+class Test(object):
     ###################################################### double32
 
     def test_double32(self):

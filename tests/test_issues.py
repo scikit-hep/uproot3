@@ -2,10 +2,6 @@
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
-import unittest
-
-from collections import namedtuple
-
 import pytest
 import numpy
 
@@ -16,7 +12,7 @@ import uproot_methods.classes.TVector3
 import uproot_methods.classes.TLorentzVector
 
 
-class Test(unittest.TestCase):
+class Test(object):
     def test_issue21(self):
         t = uproot.open("tests/samples/issue21.root")["nllscan"]
 

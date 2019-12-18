@@ -2,13 +2,9 @@
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
-import unittest
-
-from collections import namedtuple
-
 import uproot
 
-class Test(unittest.TestCase):
+class Test(object):
     def test_flat_array(self):
         branch = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]["i8"]
         expectation = [-15, -14, -13, -12, -11, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
