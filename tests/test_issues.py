@@ -273,13 +273,12 @@ class Test(object):
             ["V0Hyper.fNsigmaHe3Pos", "V0Hyper.fDcaPos2PrimaryVertex"],
             flatten=True)
 
-    @pytest.mark.skip(reason="This one takes way too long (eospublic?).")
     def test_issue240(self):
         pytest.importorskip("pyxrootd")
         t = uproot.open(
             "root://eospublic.cern.ch//eos/root-eos/cms_opendata_2012_nanoaod/Run2012B_DoubleMuParked.root"
         )["Events"]
-        assert (abs(t.array("nMuon")) < 50).all()
+        assert (abs(t.array("nMuon", entrystop=100000)) < 50).all()
 
     def test_issue243(self):
         t = uproot.open("tests/samples/issue243.root")["triggerList"]
