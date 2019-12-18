@@ -11,5 +11,7 @@ requests
 matplotlib
 dask[array]
 dask[dataframe]
+fsspec
 cloudpickle
 pyyaml
+python-xxhash
