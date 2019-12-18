@@ -710,12 +710,12 @@ through the **limitbytes** parameter.
     # (32.0, 32.0)
 
 If you want to limit this cache to less than the default **chunkbytes**
-of 32 kB (?!?), be sure to make the **chunkbytes** smaller, so that it’s
+of 1 MB, be sure to make the **chunkbytes** smaller, so that it’s
 able to load at least one chunk!
 
 .. code-block:: python3
 
-    uproot.open("http://scikit-hep.org/uproot/examples/Zmumu.root", limitbytes="16 kB", chunkbytes="4 kB")
+    uproot.open("http://scikit-hep.org/uproot/examples/Zmumu.root", limitbytes="100 kB", chunkbytes="10 kB")
     # <ROOTDirectory b'Zmumu.root' at 0x7f375041f278>
 
 By default (unless **localsource** is overridden), local files are
@@ -756,7 +756,8 @@ baskets align, called “clusters”). Each chunk contains a
 .. code-block:: python3
 
     data = events.lazyarrays(entrysteps=500)   # chunks of 500 events each
-    data["E1"]
+    dataE1 = data["E1"]
+    dataE1
     # <ChunkedArray [82.2018663875 62.3449289481 62.3449289481 ...
     #                81.2701355756 81.2701355756 81.5662173543] at 0x7f3750467400>
 
@@ -766,7 +767,7 @@ all that got written to the screen. (See the ``...``?)
 
 .. code-block:: python3
 
-    [chunk["E1"].ismaterialized for chunk in data.chunks]
+    [chunk.ismaterialized for chunk in dataE1.chunks]
     # [True, False, False, False, True]
 
 These arrays can be used with `Numpy’s universal
@@ -776,7 +777,7 @@ mathematics.
 
 .. code-block:: python3
 
-    numpy.log(data["E1"])
+    numpy.log(dataE1)
     # <ChunkedArray [4.409178007248409 4.132682336791151 4.132682336791151 4.104655794838432
     #                3.733527454020269 3.891440776178839 3.891440776178839 ...] at 0x7f37504560b8>
 
@@ -785,7 +786,7 @@ compute ``log(E1)`` for all ``E1``.
 
 .. code-block:: python3
 
-    [chunk["E1"].ismaterialized for chunk in data.chunks]
+    [chunk.ismaterialized for chunk in dataE1.chunks]
     # [True, True, True, True, True]
 
 (**Note:** only ufuncs recognize these lazy arrays because Numpy
@@ -800,7 +801,7 @@ contiguous whole.)
 
 .. code-block:: python3
 
-    numpy.array(data["E1"])
+    numpy.array(dataE1)
     # array([82.20186639, 62.34492895, 62.34492895, ..., 81.27013558,
     #        81.27013558, 81.56621735])
 
@@ -905,8 +906,8 @@ as it could hold.
 
 .. code-block:: python3
 
-    # chunks in cache  chunks touched to compute mass
-    len(mycache),      len(data.chunks) * 8
+    # chunks in cache  chunks touched to compute (E1 + E2)**2 - (px1 + px2)**2 - (py1 + py2)**2 - (pz1 + pz2)**2
+    len(mycache),      len(data["E1"].chunks) * 8
     # (28, 40)
 
 Lazy arrays as lightweight skims
@@ -1277,7 +1278,7 @@ iteration functions also have:
 
 .. code-block:: python3
 
-    [len(chunk) for chunk in events.lazyarrays(entrysteps=500).chunks]
+    [len(chunk) for chunk in events.lazyarrays(entrysteps=500)["E1"].chunks]
     # [500, 500, 500, 500, 304]
 
 .. code-block:: python3
@@ -1342,7 +1343,7 @@ consistently.
 
 .. code-block:: python3
 
-    [len(chunk) for chunk in events.lazyarrays(entrysteps="50 kB").chunks]
+    [len(chunk) for chunk in events.lazyarrays(entrysteps="50 kB")["E1"].chunks]
     # [359, 359, 359, 359, 359, 359, 150]
 
 Caching and iteration
