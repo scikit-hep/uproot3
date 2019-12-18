@@ -14,4 +14,4 @@ dask[dataframe]
 fsspec
 cloudpickle
 pyyaml
-python-xxhash
+xxhash
