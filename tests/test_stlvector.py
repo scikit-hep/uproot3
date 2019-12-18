@@ -2,13 +2,9 @@
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
-import unittest
-
-from collections import namedtuple
-
 import uproot
 
-class Test(unittest.TestCase):
+class Test(object):
     def runTest(self):
         pass
 

@@ -2,10 +2,6 @@
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
-import unittest
-
-from collections import namedtuple
-
 import pytest
 import numpy
 
@@ -16,7 +12,7 @@ import uproot_methods.classes.TVector3
 import uproot_methods.classes.TLorentzVector
 
 
-class Test(unittest.TestCase):
+class Test(object):
     def test_issue21(self):
         t = uproot.open("tests/samples/issue21.root")["nllscan"]
 
@@ -271,27 +267,18 @@ class Test(unittest.TestCase):
         ]
 
     def test_issue232(self):
-        try:
-            import pandas
-        except ImportError:
-            pass
-        else:
-            t = uproot.open("tests/samples/issue232.root")["fTreeV0"]
-            t.pandas.df(
-                ["V0Hyper.fNsigmaHe3Pos", "V0Hyper.fDcaPos2PrimaryVertex"],
-                flatten=True)
+        pytest.importorskip("pandas")
+        t = uproot.open("tests/samples/issue232.root")["fTreeV0"]
+        t.pandas.df(
+            ["V0Hyper.fNsigmaHe3Pos", "V0Hyper.fDcaPos2PrimaryVertex"],
+            flatten=True)
 
-    @pytest.mark.skip(reason="This one takes way too long (eospublic?).")
     def test_issue240(self):
-        try:
-            import pyxrootd
-        except ImportError:
-            pytest.skip("unable to import pyxrootd")
-        else:
-            t = uproot.open(
-                "root://eospublic.cern.ch//eos/root-eos/cms_opendata_2012_nanoaod/Run2012B_DoubleMuParked.root"
-            )["Events"]
-            assert (abs(t.array("nMuon")) < 50).all()
+        pytest.importorskip("pyxrootd")
+        t = uproot.open(
+            "root://eospublic.cern.ch//eos/root-eos/cms_opendata_2012_nanoaod/Run2012B_DoubleMuParked.root"
+        )["Events"]
+        assert (abs(t.array("nMuon", entrystop=100000)) < 50).all()
 
     def test_issue243(self):
         t = uproot.open("tests/samples/issue243.root")["triggerList"]

@@ -2,8 +2,6 @@
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
-import unittest
-
 try:
     import lzma
 except ImportError:
@@ -13,7 +11,7 @@ import zstandard
 
 import uproot
 
-class Test(unittest.TestCase):
+class Test(object):
     def test_compression_identity(self):
         assert uproot.open("tests/samples/Zmumu-zlib.root").compression.algoname == "zlib"
         assert uproot.open("tests/samples/Zmumu-zlib.root").compression.level == 4

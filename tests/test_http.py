@@ -2,8 +2,6 @@
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
-import unittest
-
 import pytest
 import mock
 from requests.exceptions import HTTPError
@@ -41,7 +39,7 @@ def mock_get_local_instead_of_http(url="", headers={}, auth=None, **kwargs):
         return MockResponse(401)
 
 @mock.patch("requests.get", mock_get_local_instead_of_http)
-class Test(unittest.TestCase):
+class Test(object):
     def test_no_auth_needed_no_auth(self):
         f = uproot.open(URL)
         assert type(f) == uproot.rootio.ROOTDirectory

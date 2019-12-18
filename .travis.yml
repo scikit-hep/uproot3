@@ -44,13 +44,13 @@ install:
   # FIXME: Mamba causes pip install numpy to be extremely slow
   - if [[ "${PYVER}" = pypy* ]]; then
       conda create --quiet --yes -n testenv ${PYVER};
-    elif [ "${PYVER}" = "2.7" ] || [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" ]; then
+    elif [ "${PYVER}" = "2.7" ] || [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" || [ "${PYVER}" = "3.8" ]; then
       conda create --quiet --yes -n testenv python=${PYVER} pip;
     else
       conda create --quiet --yes -n testenv python=${PYVER};
     fi
   - source activate testenv
-  - if [ "${PYVER}" = "2.7" ] || [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" ]; then
+  - if [ "${PYVER}" = "2.7" ] || [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" || [ "${PYVER}" = "3.8" ]; then
       conda install --quiet --yes python=${PYVER} pip root;
       source activate testenv;
     fi
@@ -69,6 +69,7 @@ install:
       conda install -c anaconda python=${PYVER} pyopenssl;
     fi
   - wget -O tests/samples/Event.root http://scikit-hep.org/uproot/examples/Event.root
+  - pip install git+https://github.com/chrisburr/pytest-error-for-skips.git@patch-1
 
 addons:
   apt:
@@ -77,7 +78,11 @@ addons:
       - libatlas-base-dev
 
 script:
-  pytest -v tests
+  if [ "${PYVER}" = "2.7" ] || [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" || [ "${PYVER}" = "3.8" ]; then
+    pytest --error-for-skips -v tests;
+  else
+    pytest -v tests;
+  fi
 
 notifications:
   slack: scikit-hep:b6cgBXwccPoaCNLn5VKFJFVy

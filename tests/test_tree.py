@@ -3,8 +3,6 @@
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
 import os
-import unittest
-
 from collections import namedtuple
 
 import numpy
@@ -18,7 +16,7 @@ def basest(array):
         array = array.base
     return array
 
-class Test(unittest.TestCase):
+class Test(object):
     ###################################################### double32
 
     def test_double32(self):
@@ -594,9 +592,12 @@ class Test(unittest.TestCase):
             for i in range(len(lazy), 0, -1):
                 assert lazy[i - 1 : i + 3].tolist() == strict[i - 1 : i + 3].tolist()
 
-    def test_hist_in_tree(self):
-        path = os.path.join("tests", "samples", "Event.root")
-        if os.path.exists(path):
+    @pytest.mark.parametrize("use_http", [False, True])
+    def test_hist_in_tree(self, use_http):
+        if use_http:
+            path = os.path.join("tests", "samples", "Event.root")
+            if not os.path.exists(path):
+                raise pytest.skip()
             tree = uproot.open(path)["T"]
         else:
             tree = uproot.open("http://scikit-hep.org/uproot/examples/Event.root")["T"]
@@ -610,7 +611,8 @@ class Test(unittest.TestCase):
 
         assert tree.array("fH")[20].values.tolist() == check
 
-    def test_branch_auto_interpretation(self):
+    @pytest.mark.parametrize("use_http", [False, True])
+    def test_branch_auto_interpretation(self, use_http):
         # The aim is to reduce this list in a controlled manner
         known_branches_without_interp = [
             b'event',
@@ -622,8 +624,10 @@ class Test(unittest.TestCase):
             b'fTriggerBits',
             b'fTriggerBits.TObject'
         ]
-        path = os.path.join("tests", "samples", "Event.root")
-        if os.path.exists(path):
+        if use_http:
+            path = os.path.join("tests", "samples", "Event.root")
+            if not os.path.exists(path):
+                raise pytest.skip()
             tree = uproot.open(path)["T"]
         else:
             tree = uproot.open("http://scikit-hep.org/uproot/examples/Event.root")["T"]
@@ -650,24 +654,20 @@ class Test(unittest.TestCase):
         assert a["y"].tolist() == [1, 2, 3, 4, 5]
         assert a["z"].tolist() == [ord("a"), ord("b"), ord("c"), ord("d"), ord("e")]
 
-        try:
-            import pandas
-        except ImportError:
-            pass
-        else:
-            assert tree.pandas.df()["leaflist.x"].tolist() == [1.1, 2.2, 3.3, 4.0, 5.5]
+        pytest.importorskip("pandas")
+        assert tree.pandas.df()["leaflist.x"].tolist() == [1.1, 2.2, 3.3, 4.0, 5.5]
 
-            tree = uproot.open("tests/samples/HZZ-objects.root")["events"]
-            tree.pandas.df("muonp4")
-            tree.pandas.df("muonp4", flatten=False)
-            df = tree.pandas.df("eventweight", entrystart=100, entrystop=200)
-            index = df.index.tolist()
-            assert min(index) == 100
-            assert max(index) == 199
-            df = tree.pandas.df("muonp4", entrystart=100, entrystop=200)
-            index = df.index.get_level_values("entry").tolist()
-            assert min(index) == 100
-            assert max(index) == 199
+        tree = uproot.open("tests/samples/HZZ-objects.root")["events"]
+        tree.pandas.df("muonp4")
+        tree.pandas.df("muonp4", flatten=False)
+        df = tree.pandas.df("eventweight", entrystart=100, entrystop=200)
+        index = df.index.tolist()
+        assert min(index) == 100
+        assert max(index) == 199
+        df = tree.pandas.df("muonp4", entrystart=100, entrystop=200)
+        index = df.index.get_level_values("entry").tolist()
+        assert min(index) == 100
+        assert max(index) == 199
 
     def test_mempartitions(self):
         t = uproot.open("tests/samples/sample-5.23.02-zlib.root")["sample"]

@@ -40,7 +40,7 @@ class HTTPSource(uproot.source.chunked.ChunkedSource):
         while True:
             response = requests.get(
                 self.path,
-                headers={"Range": "bytes={0}-{1}".format(chunkindex * self._chunkbytes, (chunkindex + 1) * self._chunkbytes)},
+                headers={"Range": "bytes={0}-{1}".format(chunkindex * self._chunkbytes, (chunkindex + 1) * self._chunkbytes - 1)},
                 auth=self.auth,
             )
             if response.status_code == 504:   # timeout, try it again

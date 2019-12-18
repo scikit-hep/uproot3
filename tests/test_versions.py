@@ -2,8 +2,6 @@
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
-import unittest
-
 try:
     import lzma
 except ImportError:
@@ -12,7 +10,7 @@ import lz4
 
 import uproot
 
-class Test(unittest.TestCase):
+class Test(object):
     sample = {
         b"n": [0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4],
 
