@@ -1793,3 +1793,25 @@ def test_tree_cycle(tmp_path):
         assert branch1[i] == a[i]
         assert branch2[i] == b[i]
 
+def test_large_compress(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    with uproot.recreate(filename, uproot.ZLIB(5)) as f:
+        f["a"] = "a" * ((2 ** 24) + 2000)
+        f["b"] = "b" * ((2 ** 24) + 10)
+
+    f = ROOT.TFile.Open(filename)
+    assert str(f.Get("a")) == "a" * ((2 ** 24) + 2000)
+    assert str(f.Get("b")) == "b" * ((2 ** 24) + 10)
+    f.Close()
+
+def test_large_compress_uproot(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    with uproot.recreate(filename, uproot.ZLIB(5)) as f:
+        f["a"] = "a"*((2**24) + 2000)
+        f["b"] = "b"*((2**24) + 10)
+
+    f = uproot.open(filename)
+    assert f["a"] == ("a"*((2**24) + 2000)).encode("utf-8")
+    assert f["b"] == ("b"*((2**24) + 10)).encode("utf-8")
