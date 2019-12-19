@@ -1772,3 +1772,24 @@ def test_rdf(tmp_path):
     for i in range(5):
         assert a[i] == rdf.AsNumpy()["intBranch"][i]
         assert b[i] == rdf.AsNumpy()["intBranch2"][i]
+
+def test_tree_cycle(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    with uproot.recreate(filename) as f:
+        f["t;1"] = uproot.newtree({"branch": "int32"})
+        f["t;2"] = uproot.newtree({"branch": "int32"})
+        f["t;1"].extend({"branch": numpy.array([1, 2, 3, 4, 5])})
+        f["t"].extend({"branch": numpy.array([6, 7, 8, 9, 10])})
+
+    f = ROOT.TFile.Open(filename)
+    tree1 = f.Get("t;1")
+    branch1 = tree1.AsMatrix(["branch"])
+    tree2 = f.Get("t;2")
+    branch2 = tree2.AsMatrix(["branch"])
+    a = numpy.array([1, 2, 3, 4, 5], dtype="int32")
+    b = numpy.array([6, 7, 8, 9, 10], dtype="int32")
+    for i in range(5):
+        assert branch1[i] == a[i]
+        assert branch2[i] == b[i]
+

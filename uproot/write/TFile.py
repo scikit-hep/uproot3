@@ -81,9 +81,6 @@ class TFileUpdate(object):
             what = uproot_methods.convert.towriteable(what)
         elif what.__class__.__name__ == "newtree":
             what = TTree(where, what, self)
-            self._treedict[where] = what
-        elif what.__class__.__name__ == "TTree":
-            self._treedict[where] = what
         cursor = uproot.write.sink.cursor.Cursor(self._fSeekFree)
         newkey = uproot.write.TKey.TKey(fClassName = what._fClassName,
                                         fName      = where,
@@ -92,6 +89,10 @@ class TFileUpdate(object):
                                         fSeekKey   = self._fSeekFree,
                                         fSeekPdir  = self._fBEGIN,
                                         fCycle     = cycle if cycle is not None else self._rootdir.newcycle(where))
+        if what.__class__.__name__ == "newtree" or what.__class__.__name__ == "TTree":
+            # Need to (re)attach the cycle number to allow getitem to access writable TTree
+            tree_where = where + b";" + str(newkey.fCycle).encode("utf-8")
+            self._treedict[tree_where] = what
         newkeycursor = uproot.write.sink.cursor.Cursor(newkey.fSeekKey)
         newkey.write(cursor, self._sink)
         what._write(self, cursor, where, self.compression, newkey, newkeycursor, self.util)
@@ -127,6 +128,9 @@ class TFileUpdate(object):
     def __getitem__(self, name):
         name = self.fixstring(name)
         if name in self._treedict:
+            return self._treedict[name]
+        elif any(name == x[:-2] for x in self._treedict.keys()):
+            name = sorted([x for x in self._treedict.keys() if name == x[:-2]], key=lambda y: int(y[-1]), reverse=True)[0]
             return self._treedict[name]
         else:
             return self._reopen().get(name)
