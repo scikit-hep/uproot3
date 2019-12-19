@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 import numbers
 import struct
+import copy
 
 import numpy
 
@@ -53,6 +54,7 @@ algo = {uproot.const.kZLIB: ZLIB,
         uproot.const.kLZ4: LZ4}
 
 def write(context, cursor, givenbytes, compression, key, keycursor):
+    retaincursor = copy.copy(keycursor)
     if compression is None:
         algorithm, level = 0, 0
     else:
@@ -60,16 +62,20 @@ def write(context, cursor, givenbytes, compression, key, keycursor):
 
     _header = struct.Struct("2sBBBBBBB")
     uncompressedbytes = len(givenbytes)
-    key.fObjlen = len(givenbytes)
 
     if algorithm == 0 or level == 0:
+        key.fObjlen = uncompressedbytes
         key.fNbytes = key.fObjlen + key.fKeylen
         key.write(keycursor, context._sink)
         cursor.write_data(context._sink, givenbytes)
         return
 
     if uncompressedbytes > 2**24:
-        raise NotImplementedError("Data larger than 2^24 bytes cannot be compressed yet")
+        uncompressedbytes = 2**24 - 1
+        remainingbytes = givenbytes[2**24 - 1:]
+        givenbytes = givenbytes[:2**24 - 1]
+
+    key.fObjlen += uncompressedbytes
 
     u1 = (uncompressedbytes >> 0) & 0xff
     u2 = (uncompressedbytes >> 8) & 0xff
@@ -155,3 +161,6 @@ def write(context, cursor, givenbytes, compression, key, keycursor):
         raise ValueError("unsupported compression algorithm: 'old' (according to ROOT comments, hasn't been used in 20+ years!)")
     else:
         raise ValueError("Unrecognized compression algorithm: {0}".format(algorithm))
+
+    if "remainingbytes" in locals() and len(remainingbytes)>0:
+        uproot.write.compress.write(context, cursor, remainingbytes, compression, key, retaincursor)
