@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 import numbers
 import struct
+import copy
 
 import numpy
 
@@ -53,23 +54,28 @@ algo = {uproot.const.kZLIB: ZLIB,
         uproot.const.kLZ4: LZ4}
 
 def write(context, cursor, givenbytes, compression, key, keycursor):
+    retaincursor = copy.copy(keycursor)
     if compression is None:
         algorithm, level = 0, 0
     else:
         algorithm, level = compression.pair
 
+    _header = struct.Struct("2sBBBBBBB")
+    uncompressedbytes = len(givenbytes)
+
     if algorithm == 0 or level == 0:
-        key.fObjlen = len(givenbytes)
+        key.fObjlen = uncompressedbytes
         key.fNbytes = key.fObjlen + key.fKeylen
         key.write(keycursor, context._sink)
         cursor.write_data(context._sink, givenbytes)
         return
 
-    _header = struct.Struct("2sBBBBBBB")
-    uncompressedbytes = len(givenbytes)
-
     if uncompressedbytes > 2**24:
-        raise NotImplementedError("Data larger than 2^24 bytes cannot be compressed yet")
+        uncompressedbytes = 2**24 - 1
+        remainingbytes = givenbytes[2**24 - 1:]
+        givenbytes = givenbytes[:2**24 - 1]
+
+    key.fObjlen += uncompressedbytes
 
     u1 = (uncompressedbytes >> 0) & 0xff
     u2 = (uncompressedbytes >> 8) & 0xff
@@ -87,12 +93,10 @@ def write(context, cursor, givenbytes, compression, key, keycursor):
             method = 8
             cursor.write_fields(context._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
             cursor.write_data(context._sink, after_compressed)
-            key.fObjlen = uncompressedbytes
-            key.fNbytes = compressedbytes + key.fKeylen + 9
+            key.fNbytes += compressedbytes + 9
             key.write(keycursor, context._sink)
         else:
-            key.fObjlen = len(givenbytes)
-            key.fNbytes += key.fObjlen
+            key.fNbytes += uncompressedbytes
             key.write(keycursor, context._sink)
             cursor.write_data(context._sink, givenbytes)
 
@@ -120,12 +124,10 @@ def write(context, cursor, givenbytes, compression, key, keycursor):
             cursor.write_fields(context._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
             cursor.write_data(context._sink, checksum)
             cursor.write_data(context._sink, after_compressed)
-            key.fObjlen = uncompressedbytes
-            key.fNbytes = compressedbytes + key.fKeylen + 9
+            key.fNbytes += compressedbytes + 9
             key.write(keycursor, context._sink)
         else:
-            key.fObjlen = len(givenbytes)
-            key.fNbytes += key.fObjlen
+            key.fNbytes += uncompressedbytes
             key.write(keycursor, context._sink)
             cursor.write_data(context._sink, givenbytes)
 
@@ -148,12 +150,10 @@ def write(context, cursor, givenbytes, compression, key, keycursor):
             method = 0
             cursor.write_fields(context._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
             cursor.write_data(context._sink, after_compressed)
-            key.fObjlen = uncompressedbytes
-            key.fNbytes = compressedbytes + key.fKeylen + 9
+            key.fNbytes += compressedbytes + 9
             key.write(keycursor, context._sink)
         else:
-            key.fObjlen = len(givenbytes)
-            key.fNbytes += key.fObjlen
+            key.fNbytes += uncompressedbytes
             key.write(keycursor, context._sink)
             cursor.write_data(context._sink, givenbytes)
 
@@ -161,3 +161,6 @@ def write(context, cursor, givenbytes, compression, key, keycursor):
         raise ValueError("unsupported compression algorithm: 'old' (according to ROOT comments, hasn't been used in 20+ years!)")
     else:
         raise ValueError("Unrecognized compression algorithm: {0}".format(algorithm))
+
+    if "remainingbytes" in locals() and len(remainingbytes)>0:
+        uproot.write.compress.write(context, cursor, remainingbytes, compression, key, retaincursor)

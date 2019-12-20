@@ -303,7 +303,6 @@ class TFileRecreate(TFileUpdate):
         streamerkey = uproot.write.TKey.TKey32(fClassName = b"TList",
                                                fName      = b"StreamerInfo",
                                                fTitle     = b"Doubly linked list",
-                                               fObjlen    = len(uproot.write.streamers.streamers),
                                                fSeekKey   = self._fSeekInfo,
                                                fSeekPdir  = self._fBEGIN)
         streamerkeycursor = uproot.write.sink.cursor.Cursor(self._fSeekInfo)
