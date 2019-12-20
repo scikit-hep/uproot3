@@ -347,6 +347,7 @@ class Test(object):
             ]
 
     def test_issue390(self):
+        pytest.importorskip("pandas")
         t = uproot.open("tests/samples/issue390.root")["E"]
         t.pandas.df("hits.*")
         t.pandas.df("trks.*")
