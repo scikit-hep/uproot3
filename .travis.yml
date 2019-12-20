@@ -69,7 +69,7 @@ install:
       conda install -c anaconda python=${PYVER} pyopenssl;
     fi
   - wget -O tests/samples/Event.root http://scikit-hep.org/uproot/examples/Event.root
-  - pip install git+https://github.com/chrisburr/pytest-error-for-skips.git@patch-1
+  - pip install pytest-error-for-skips
 
 addons:
   apt:
