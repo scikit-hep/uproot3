@@ -375,3 +375,12 @@ class Test(object):
         assert 0 == branch.compressedbytes()
         assert 0 == branch.uncompressedbytes()
         assert 0 == branch.numbaskets
+
+    def test_issue429(self):
+        file = uproot.open("tests/samples/issue429.root")
+        tree = file["data_tr"]
+        branch = tree["data_ana_kk"]
+        # FIXME: how can uproot.interp.auto.interpret *infer* the 4 bytes of padding?
+        dtype = [(x._fName.decode("utf-8"), "float32" if type(x).__name__ == "TLeafF" else "int32") for x in branch._fLeaves]
+        array = branch.array(uproot.asdtype(dtype + [("padding", "S4")]))
+        assert (array["padding"] == b"\xff\xff\xff\xff").all()
