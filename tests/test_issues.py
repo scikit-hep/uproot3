@@ -2,6 +2,8 @@
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
+import sys
+
 import pytest
 import numpy
 
@@ -377,10 +379,15 @@ class Test(object):
         assert 0 == branch.numbaskets
 
     def test_issue429(self):
+        if sys.version_info[0] >= 3:
+            fix = lambda name: name.decode("utf-8")
+        else:
+            fix = lambda name: name
+
         file = uproot.open("tests/samples/issue429.root")
         tree = file["data_tr"]
         branch = tree["data_ana_kk"]
         # FIXME: how can uproot.interp.auto.interpret *infer* the 4 bytes of padding?
-        dtype = [(x._fName.decode("utf-8"), "float32" if type(x).__name__ == "TLeafF" else "int32") for x in branch._fLeaves]
+        dtype = [(fix(x._fName), "float32" if type(x).__name__ == "TLeafF" else "int32") for x in branch._fLeaves]
         array = branch.array(uproot.asdtype(dtype + [("padding", "S4")]))
         assert (array["padding"] == b"\xff\xff\xff\xff").all()
