@@ -1815,3 +1815,45 @@ def test_large_compress_uproot(tmp_path):
     f = uproot.open(filename)
     assert f["a"] == ("a"*((2**24) + 2000)).encode("utf-8")
     assert f["b"] == ("b"*((2**24) + 10)).encode("utf-8")
+
+def test_tree_twodim(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    a = numpy.array([[0, 1, 2, 3],
+                     [3, 4, 5, 6]])
+
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">i4"), shape=a.shape)})
+        f["t"].extend({"branch": a})
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    rdf = ROOT.RDataFrame(tree).AsNumpy()["branch"]
+    for i in range(0, 2):
+        for j in range(0, 4):
+            assert a[i][j] == rdf[i][j]
+
+def test_tree_threedim(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    a = numpy.array([[[0, 1, 2, 3],
+                      [3, 4, 5, 6],
+                      [90, 91, 91, 92]],
+                     [[10, 11, 12, 13],
+                      [13, 14, 15, 16],
+                      [190, 191, 191, 192]]])
+
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">i4"), shape=a.shape)})
+        f["t"].extend({"branch": a})
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    i = 0
+    for x in tree:
+        count = 0
+        for j in range(0, 3):
+            for k in range(0, 4):
+                assert a[i][j][k] == numpy.frombuffer(x.branch, dtype="i4")[count]
+                count += 1
+        i += 1
