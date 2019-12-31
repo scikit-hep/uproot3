@@ -21,10 +21,11 @@ from uproot.write.objects.util import Util
 
 class newbranch(object):
 
-    def __init__(self, type, title="", **options):
+    def __init__(self, type, title="", shape=(1,), **options):
         self.name = ""
         self.type = type
         self.title = title
+        self.shape = shape
         if "compression" in options:
             self.compression = options["compression"]
             del options["compression"]
@@ -87,7 +88,11 @@ class TTree(object):
             branchdict[key] = numpy.array(value, dtype=self._branches[key]._branch.type, copy=False)
 
         for key, value in branchdict.items():
-            self._branches[key].newbasket(value)
+            if value.ndim == 1:
+                self._branches[key].newbasket(value)
+            else:
+                for i in range(0, value.shape[0]):
+                    self._branches[key].newbasket(value[i], i + 1)
 
     @property
     def name(self):
@@ -212,7 +217,7 @@ class TBranch(object):
             return string
 
     _tree_size = struct.Struct(">qqq")
-    def newbasket(self, items):
+    def newbasket(self, items, multidim=None):
         if len(items) == 0:
             return
 
@@ -276,17 +281,22 @@ class TBranch(object):
             self._treelvl1._tree = tree
             self._treelvl1._branches = temp_branches
 
-        self._branch.fields["_fEntries"] += len(items)
+        if multidim is None:
+            self._branch.fields["_fEntries"] += len(items)
+            self._branch.fields["_fEntryNumber"] += len(items)
+        else:
+            self._branch.fields["_fEntries"] = multidim
+            self._branch.fields["_fEntryNumber"] = multidim
         self._branch.fields["_fBasketEntry"][self._branch.fields["_fWriteBasket"]] = self._branch.fields["_fEntries"]
-        self._branch.fields["_fEntryNumber"] += len(items)
         basketdata = numpy.array(items, dtype=self._branch.type, copy=False)
 
         givenbytes = basketdata.tostring()
         cursor = uproot.write.sink.cursor.Cursor(self._branch.file._fSeekFree)
         self._branch.fields["_fBasketSeek"][self._branch.fields["_fWriteBasket"] - 1] = cursor.index
         key = BasketKey(fName=self._branch.name,
-                        fNevBuf=len(items),
-                        fNevBufSize=numpy.dtype(self._branch.type).itemsize,
+                        fTitle=self._treelvl1._tree.write_key.fName,
+                        fNevBuf=1 if multidim else len(items),
+                        fNevBufSize=numpy.dtype(self._branch.type).itemsize*len(items) if multidim else numpy.dtype(self._branch.type).itemsize,
                         fSeekKey=copy(self._branch.file._fSeekFree),
                         fSeekPdir=copy(self._branch.file._fBEGIN),
                         fBufferSize=32000)
@@ -674,6 +684,7 @@ class TBranchImpl(object):
     def __init__(self, name, branchobj, compression, file):
         self.name = _bytesid(name)
         self.type = numpy.dtype(branchobj.type).newbyteorder(">")
+        self.shape = branchobj.shape
         self.compression = compression
         self.util = None
         self.keycursor = None
@@ -700,6 +711,12 @@ class TBranchImpl(object):
                        "_fFillStyle": 1001,
                        "_fEntryNumber": 0,
                        "_fBaskets": b'@\x00\x00\x1d\x00\x03\x00\x01\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'}
+
+        # For multidimensional arrays
+        if len(self.shape) > 1:
+            array_pad = b""
+            for i in range(1, len(self.shape)):
+                array_pad += b"[" + str(self.shape[i]).encode("utf-8") + b"]"
 
         # TODO: Fix else condition to not always return NotImplementedError
         if self.type == "int8":
@@ -728,10 +745,18 @@ class TBranchImpl(object):
 
         if branchobj.title == "":
             self.title = _bytesid(name)
-            self.nametitle = self.title + title_pad
+            if len(self.shape) > 1:
+                self.nametitle = self.title + array_pad + title_pad
+                self.arraytitle = self.title + array_pad
+            else:
+                self.nametitle = self.title + title_pad
         else:
             self.title = _bytesid(branchobj.title)
-            self.nametitle = self.title
+            if len(self.shape) > 1:
+                self.nametitle = self.title + array_pad
+                self.arraytitle = self.title + array_pad
+            else:
+                self.nametitle = self.title
 
         self.fields["_fBasketBytes"] = numpy.array(self.fields["_fBasketBytes"], dtype=">i4", copy=False)
         self.fields["_fBasketEntry"] = numpy.array(self.fields["_fBasketEntry"], dtype=">i8", copy=False)
@@ -784,12 +809,15 @@ class TBranchImpl(object):
         cursor.skip(self._format_cntvers.size)
         vers = 2
         fLen = 1
+        if len(self.shape) > 1:
+            for i in range(1, len(self.shape)):
+                fLen = fLen*self.shape[i]
         fLenType = numpy.dtype(self.type).itemsize
         fOffset = 0
         fIsRange = False
         fIsUnsigned = False
         fLeafCount = None
-        buff = (self.put_tnamed(cursor, self.name, self.title) +
+        buff = (self.put_tnamed(cursor, self.name, self.arraytitle if len(self.shape)>1 else self.title) +
                 cursor.put_fields(self._format_tleaf1, fLen, fLenType, fOffset, fIsRange, fIsUnsigned) +
                 self.util.put_objany(cursor, (fLeafCount, "TLeaf"), self.keycursor))
         length = len(buff) + self._format_cntvers.size
