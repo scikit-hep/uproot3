@@ -26,7 +26,7 @@ env:
 
   - PYVER=pypy2.7 NPY="numpy>=1.15"
 
-  - PYVER=pypy3.5 NPY="numpy>=1.15"
+  - PYVER=pypy3.6 NPY="numpy>=1.15"
 
 install:
   # Install conda
