@@ -459,6 +459,17 @@ def _nametitle(source, cursor):
     _endcheck(start, cursor, cnt)
     return name, title
 
+def _mapstrstr(source, cursor):
+    cursor.skip(12)
+    size = cursor.field(source, _mapstrstr._int32)
+    cursor.skip(6)
+    keys = [cursor.string(source) for i in range(size)]
+    cursor.skip(6)
+    values = [cursor.string(source) for i in range(size)]
+    return dict(zip(keys, values))
+
+_mapstrstr._int32 = struct.Struct('>I')
+
 def _readobjany(source, cursor, context, parent, asclass=None):
     # TBufferFile::ReadObjectAny()
     # https://github.com/root-project/root/blob/c4aa801d24d0b1eeb6c1623fd18160ef2397ee54/io/io/src/TBufferFile.cxx#L2684
@@ -851,6 +862,8 @@ def _defineclasses(streamerinfos, classes):
                         code.append("        cursor.skip(6)")
                         code.append("        self._{0} = cursor.array(source, cursor.field(source, self._int32), '>f8')".format(_safename(element._fName)))
                         fields.append(_safename(element._fName))
+                    elif element._fTypeName == b"map<string,string>":
+                        code.append("        self._{0} = _mapstrstr(source, cursor)".format(_safename(element._fName)))
                     else:
                         code.append("        _raise_notimplemented({0}, {1}, source, cursor)".format(repr(element.__class__.__name__), repr(repr(element.__dict__))))
                     recarray.append("raise ValueError('not a recarray')")
