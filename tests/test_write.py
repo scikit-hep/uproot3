@@ -1849,11 +1849,9 @@ def test_tree_threedim(tmp_path):
 
     f = ROOT.TFile.Open(filename)
     tree = f.Get("t")
-    i = 0
-    for x in tree:
-        count = 0
-        for j in range(0, 3):
-            for k in range(0, 4):
-                assert a[i][j][k] == numpy.frombuffer(x.branch, dtype="i4")[count]
-                count += 1
-        i += 1
+    rdf = ROOT.RDataFrame(tree).AsNumpy()["branch"]
+    for i in range(2):
+        test = numpy.array(rdf[i]).reshape(3, 4)
+        for j in range(3):
+            for k in range(4):
+                assert a[i][j][k] == test[j][k]
