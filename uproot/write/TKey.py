@@ -10,10 +10,10 @@ import uproot.write.sink.cursor
 import uproot.write.util
 
 class BasketKey(object):
-    def __init__(self, fName, fNevBuf, fNevBufSize, fObjlen=0, fSeekKey=100, fSeekPdir=0, fBufferSize=0):
+    def __init__(self, fName, fTitle, fNevBuf, fNevBufSize, fObjlen=0, fSeekKey=100, fSeekPdir=0, fBufferSize=0):
         self.fClassName = b"TBasket"
         self.fName = fName
-        self.fTitle = b"t"
+        self.fTitle = fTitle
 
         self.fObjlen = fObjlen
         self.fSeekKey = fSeekKey
