@@ -17,6 +17,9 @@ if sys.version_info[0] <= 2:
 else:
     string_types = (str, bytes)
 
+BYTEORDER_INDICATORS = (">", "<", "=", "|", b">", b"<", b"=", b"|")
+
+
 def _dtypeshape(obj):
     out = ()
     while obj.subdtype is not None:
@@ -85,7 +88,9 @@ class asdtype(_asnumeric):
     def __init__(self, fromdtype, todtype=None):
         if isinstance(fromdtype, self.awkward.numpy.dtype):
             self.fromdtype = fromdtype
-        elif isinstance(fromdtype, string_types) and len(fromdtype) > 0 and fromdtype[0] in (">", "<", "=", "|", b">", b"<", b"=", b"|"):
+        elif isinstance(fromdtype, string_types) and len(fromdtype) > 0 and fromdtype[0] in BYTEORDER_INDICATORS:
+            self.fromdtype = self.awkward.numpy.dtype(fromdtype)
+        elif isinstance(fromdtype, list) and any(e[1][0] in BYTEORDER_INDICATORS for e in fromdtype):
             self.fromdtype = self.awkward.numpy.dtype(fromdtype)
         else:
             self.fromdtype = self.awkward.numpy.dtype(fromdtype).newbyteorder(">")
@@ -94,7 +99,9 @@ class asdtype(_asnumeric):
             self.todtype = self.fromdtype.newbyteorder("=")
         elif isinstance(todtype, self.awkward.numpy.dtype):
             self.todtype = todtype
-        elif isinstance(todtype, string_types) and len(todtype) > 0 and todtype[0] in (">", "<", "=", "|", b">", b"<", b"=", b"|"):
+        elif isinstance(todtype, string_types) and len(todtype) > 0 and todtype[0] in BYTEORDER_INDICATORS:
+            self.todtype = self.awkward.numpy.dtype(todtype)
+        elif isinstance(todtype, list) and any(e[1][0] in BYTEORDER_INDICATORS for e in todtype):
             self.todtype = self.awkward.numpy.dtype(todtype)
         else:
             self.todtype = self.awkward.numpy.dtype(todtype).newbyteorder("=")
