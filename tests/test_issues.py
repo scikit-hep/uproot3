@@ -391,3 +391,16 @@ class Test(object):
         dtype = [(fix(x._fName), "float32" if type(x).__name__ == "TLeafF" else "int32") for x in branch._fLeaves]
         array = branch.array(uproot.asdtype(dtype + [("padding", "S4")]))
         assert (array["padding"] == b"\xff\xff\xff\xff").all()
+
+    def test_issue434(self):
+        f = uproot.open("tests/samples/issue434.root")
+        fromdtype = [("pmt", "u1"), ("tdc", "<u4"), ("tot", "u1")]
+        todtype = [("pmt", "u1"), ("tdc", ">u4"), ("tot", "u1")]
+        tree = f[b'KM3NET_TIMESLICE_L1'][b'KM3NETDAQ::JDAQTimeslice']
+        superframes = tree[b'vector<KM3NETDAQ::JDAQSuperFrame>']
+        hits_buffer = superframes[b'vector<KM3NETDAQ::JDAQSuperFrame>.buffer']
+        hits = hits_buffer.lazyarray(
+                uproot.asjagged(
+                    uproot.astable(
+                        uproot.asdtype(fromdtype, todtype)), skipbytes=6))
+        assert 486480 == hits['tdc'][0][0]
