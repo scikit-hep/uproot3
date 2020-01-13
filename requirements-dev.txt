@@ -1,5 +1,0 @@
-lz4
-pytest
-requests
-xxhash
-zstandard

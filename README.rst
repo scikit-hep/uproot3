@@ -77,19 +77,19 @@ Optional dependencies:
 
 **Reminder: you do not need C++ ROOT to run uproot.**
 
-Development requirements
-------------------------
+Testing and development requirements
+------------------------------------
 
-The ``requirements-dev.txt`` file contains the packages needed to run the test
-suite. Here is an example how to set up a development environment:
+The packages need to run the test suite can be installed via ``pip install
+"uproot[testing]"``. Here is an example how to set up a development
 
 .. code-block:: bash
 
-    cd /path/to/your/cloned/repo/or/fork/of/uproot
+    git clone https://github.com/scikit-hep/uproot.git  # alternatively your own fork
+    cd uproot
     python -m venv venv  # create a virtual environment in the folder venv
     . venv/bin/activate  # activate the Python environment
-    pip install -e .     # this will install uproot in "editable mode"
-    pip install -r requirements-dev.txt  # install the dev-requirements
+    pip install -e ".[testing]"   # installs uproot in editable mode with all packages required for testing
     pytest               # run the test suite
 
 
