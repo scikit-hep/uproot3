@@ -77,6 +77,16 @@ Optional dependencies:
 
 **Reminder: you do not need C++ ROOT to run uproot.**
 
+Development requirements
+------------------------
+The ``requirements-dev.txt`` file contains the packages which are needed to
+run the test suite. To install those via ``pip`` run:
+
+.. code-block:: bash
+
+    pip install -r requirements-dev.txt
+
+
 .. inclusion-marker-3-do-not-remove
 
 Questions
