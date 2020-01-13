@@ -79,12 +79,18 @@ Optional dependencies:
 
 Development requirements
 ------------------------
-The ``requirements-dev.txt`` file contains the packages which are needed to
-run the test suite. To install those via ``pip`` run:
+
+The ``requirements-dev.txt`` file contains the packages needed to run the test
+suite. Here is an example how to set up a development environment:
 
 .. code-block:: bash
 
-    pip install -r requirements-dev.txt
+    cd /path/to/your/cloned/repo/or/fork/of/uproot
+    python -m venv venv  # create a virtual environment in the folder venv
+    . venv/bin/activate  # activate the Python environment
+    pip install -e .     # this will install uproot in "editable mode"
+    pip install -r requirements-dev.txt  # install the dev-requirements
+    pytest               # run the test suite
 
 
 .. inclusion-marker-3-do-not-remove
