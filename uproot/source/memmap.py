@@ -19,10 +19,11 @@ class MemmapSource(uproot.source.source.Source):
     def __init__(self, path):
         self.path = os.path.expanduser(path)
         self._source = numpy.memmap(self.path, dtype=numpy.uint8, mode="r")
+        self.closed = False
 
     @property
     def source(self):
-        if self._source._mmap.closed:
+        if self.closed:
             raise IOError("The file handler has already been closed.")
         return self._source
 
@@ -40,6 +41,7 @@ class MemmapSource(uproot.source.source.Source):
 
     def close(self):
         self.source._mmap.close()
+        self.closed = True
 
     def data(self, start, stop, dtype=None):
         # assert start >= 0
