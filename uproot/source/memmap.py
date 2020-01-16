@@ -20,11 +20,17 @@ class MemmapSource(uproot.source.source.Source):
         self.path = os.path.expanduser(path)
         self._source = numpy.memmap(self.path, dtype=numpy.uint8, mode="r")
 
+    @property
+    def source(self):
+        if self._source._mmap.closed:
+            raise IOError("The file handler has already been closed.")
+        return self._source
+
     def parent(self):
         return self
 
     def size(self):
-        return len(self._source)
+        return len(self.source)
 
     def threadlocal(self):
         return self
@@ -33,17 +39,17 @@ class MemmapSource(uproot.source.source.Source):
         pass
 
     def close(self):
-        self._source._mmap.close()
+        self.source._mmap.close()
 
     def data(self, start, stop, dtype=None):
         # assert start >= 0
         # assert stop >= 0
         # assert stop >= start
 
-        if stop > len(self._source):
-            raise IndexError("indexes {0}:{1} are beyond the end of data source {2}".format(len(self._source), stop, repr(self.path)))
+        if stop > len(self.source):
+            raise IndexError("indexes {0}:{1} are beyond the end of data source {2}".format(len(self.source), stop, repr(self.path)))
 
         if dtype is None:
-            return self._source[start:stop]
+            return self.source[start:stop]
         else:
-            return self._source[start:stop].view(dtype)
+            return self.source[start:stop].view(dtype)
