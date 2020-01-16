@@ -404,3 +404,13 @@ class Test(object):
                     uproot.astable(
                         uproot.asdtype(fromdtype, todtype)), skipbytes=6))
         assert 486480 == hits['tdc'][0][0]
+
+    def test_issue438_accessing_memory_mapped_objects_outside_of_context_raises(self):
+        with uproot.open("tests/samples/issue434.root") as f:
+            a = f['KM3NET_EVENT']['KM3NET_EVENT']['KM3NETDAQ::JDAQPreamble'].array()
+            b = f['KM3NET_EVENT']['KM3NET_EVENT']['KM3NETDAQ::JDAQPreamble'].lazyarray()
+        assert 4 == len(a[0])
+        with pytest.raises(IOError):
+            len(b[0])
+
+
