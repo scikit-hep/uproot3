@@ -362,6 +362,9 @@ class ROOTDirectory(object):
             else:
                 raise _KeyError("not found: {0} with cycle {1}\n in file: {2}".format(repr(name), cycle, self._context.sourcepath))
 
+    def close(self):
+        self._context.source.close()
+
     def __contains__(self, name):
         try:
             self.get(name)
@@ -374,7 +377,7 @@ class ROOTDirectory(object):
         return self
 
     def __exit__(self, *args, **kwds):
-        pass
+        self.close()
 
 class _KeyError(KeyError):
     def __str__(self):
