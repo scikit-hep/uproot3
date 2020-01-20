@@ -46,6 +46,10 @@ class ChunkedSource(uproot.source.source.Source):
     def _read(self, chunkindex):
         raise NotImplementedError
 
+    def close(self):
+        super(ChunkedSource, self).close()
+        self.cache.clear()
+
     def dismiss(self):
         if self._futures is not None:
             for future in self._futures.values():

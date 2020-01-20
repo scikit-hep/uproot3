@@ -396,3 +396,24 @@ class Test(object):
         file = uproot.open("tests/samples/issue431.root")
         head = file["Head"]
         assert head._map_3c_string_2c_string_3e_ == {b'DAQ': b'394', b'PDF': b'4      58', b'XSecFile': b'', b'can': b'0 1027 888.4', b'can_user': b'0.00 1027.00  888.40', b'coord_origin': b'0 0 0', b'cut_in': b'0 0 0 0', b'cut_nu': b'100 1e+08 -1 1', b'cut_primary': b'0 0 0 0', b'cut_seamuon': b'0 0 0 0', b'decay': b'doesnt happen', b'detector': b'NOT', b'drawing': b'Volume', b'end_event': b'', b'genhencut': b'2000 0', b'genvol': b'0 1027 888.4 2.649e+09 100000', b'kcut': b'2', b'livetime': b'0 0', b'model': b'1       2       0       1      12', b'muon_desc_file': b'', b'ngen': b'0.1000E+06', b'norma': b'0 0', b'nuflux': b'0       3       0 0.500E+00 0.000E+00 0.100E+01 0.300E+01', b'physics': b'GENHEN 7.2-220514 181116 1138', b'seed': b'GENHEN 3  305765867         0         0', b'simul': b'JSirene 11012 11/17/18 07', b'sourcemode': b'diffuse', b'spectrum': b'-1.4', b'start_run': b'1', b'target': b'isoscalar', b'usedetfile': b'false', b'xlat_user': b'0.63297', b'xparam': b'OFF', b'zed_user': b'0.00 3450.00'}
+
+    def test_issue434(self):
+        f = uproot.open("tests/samples/issue434.root")
+        fromdtype = [("pmt", "u1"), ("tdc", "<u4"), ("tot", "u1")]
+        todtype = [("pmt", "u1"), ("tdc", ">u4"), ("tot", "u1")]
+        tree = f[b'KM3NET_TIMESLICE_L1'][b'KM3NETDAQ::JDAQTimeslice']
+        superframes = tree[b'vector<KM3NETDAQ::JDAQSuperFrame>']
+        hits_buffer = superframes[b'vector<KM3NETDAQ::JDAQSuperFrame>.buffer']
+        hits = hits_buffer.lazyarray(
+                uproot.asjagged(
+                    uproot.astable(
+                        uproot.asdtype(fromdtype, todtype)), skipbytes=6))
+        assert 486480 == hits['tdc'][0][0]
+
+    def test_issue438_accessing_memory_mapped_objects_outside_of_context_raises(self):
+        with uproot.open("tests/samples/issue434.root") as f:
+            a = f['KM3NET_EVENT']['KM3NET_EVENT']['KM3NETDAQ::JDAQPreamble'].array()
+            b = f['KM3NET_EVENT']['KM3NET_EVENT']['KM3NETDAQ::JDAQPreamble'].lazyarray()
+        assert 4 == len(a[0])
+        with pytest.raises(IOError):
+            len(b[0])
