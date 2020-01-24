@@ -17,6 +17,15 @@ uproot
 .. image:: https://mybinder.org/badge_logo.svg
    :target: https://mybinder.org/v2/gh/scikit-hep/uproot/master?urlpath=lab/tree/binder%2Ftutorial.ipynb
 
+|PyPI version|
+|Conda-Forge|
+
+.. |PyPI version| image:: https://badge.fury.io/py/uproot.svg
+   :target: https://badge.fury.io/py/uproot
+
+.. |Conda-Forge| image:: https://img.shields.io/conda/vn/conda-forge/uproot
+   :target: https://github.com/conda-forge/uproot-feedstock
+
 .. inclusion-marker-1-do-not-remove
 
 ROOT I/O in pure Python and Numpy.
