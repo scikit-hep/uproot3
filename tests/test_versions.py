@@ -2,13 +2,15 @@
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
+import pytest
 try:
     import lzma
 except ImportError:
-    from backports import lzma
-import lz4
+    lzma = pytest.importorskip('backports.lzma')
+lz4 = pytest.importorskip('lz4')
 
 import uproot
+
 
 class Test(object):
     sample = {

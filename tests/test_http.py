@@ -4,7 +4,7 @@
 
 import pytest
 import mock
-from requests.exceptions import HTTPError
+HTTPError = pytest.importorskip('requests.exceptions').HTTPError
 
 import uproot
 
