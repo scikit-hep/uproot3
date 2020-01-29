@@ -66,7 +66,7 @@ class Compression(object):
                 try:
                     from backports.lzma import decompress as lzma_decompress
                 except ImportError:
-                    raise ImportError("Install lzma package with:\n    pip install backports.lzma\nor\n    conda install backports.lzma\n(or just use Python >= 3.3).")
+                    raise ImportError("install lzma package with:\n    pip install backports.lzma\nor\n    conda install backports.lzma\n(or just use Python >= 3.3).")
             return lzma_decompress(cursor.bytes(source, compressedbytes))
 
         elif self.algo == uproot.const.kOldCompressionAlgo:
@@ -76,7 +76,7 @@ class Compression(object):
             try:
                 from lz4.block import decompress as lz4_decompress
             except ImportError:
-                raise ImportError("Install lz4 package with:\n    pip install lz4\nor\n    conda install lz4")
+                raise ImportError("install lz4 package with:\n    pip install lz4\nor\n    conda install lz4")
 
             if uncompressedbytes is None:
                 raise ValueError("lz4 needs to know the uncompressed number of bytes")
@@ -86,7 +86,7 @@ class Compression(object):
             try:
                 import zstandard as zstd
             except ImportError:
-                raise ImportError("Install zstd package with:\n    pip install zstandard\nor\n    conda install zstandard")
+                raise ImportError("install zstd package with:\n    pip install zstandard\nor\n    conda install zstandard")
             dctx = zstd.ZstdDecompressor()
             return dctx.decompress(cursor.bytes(source, compressedbytes))
 
@@ -141,7 +141,7 @@ class CompressedSource(uproot.source.source.Source):
                     try:
                         import xxhash
                     except ImportError:
-                        raise ImportError("Install xxhash package with:\n    pip install xxhash\nor\n    conda install python-xxhash")
+                        raise ImportError("install xxhash package with:\n    pip install xxhash\nor\n    conda install python-xxhash")
                     compression = self.compression.copy(uproot.const.kLZ4)
                     compressedbytes -= 8
                     checksum = cursor.field(self._compressed, self._format_field0)

@@ -1972,20 +1972,21 @@ def lazyarrays(path, treepath, branches=None, namedecode="utf-8", entrysteps=flo
 
     lazyfiles = _LazyFiles(paths, treepath, branches, entrysteps, flatten, awkward.__name__, basketcache, keycache, executor, persistvirtual, localsource, xrootdsource, httpsource, options)
 
+    brancheslist = None
     for path in paths:
         file = uproot.rootio.open(path, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)
         try:
             tree = file[treepath]
         except KeyError:
             continue
-        branches = list(tree._normalize_branches(branches, awkward))
+        brancheslist = list(tree._normalize_branches(branches, awkward))
         break
 
-    if branches is None:
+    if brancheslist is None:
         raise ValueError("no matching paths contained a tree named {0}".format(repr(treepath)))
 
     out = awkward.Table()
-    for branch, interpretation in branches:
+    for branch, interpretation in brancheslist:
         inner = interpretation
         while isinstance(inner, asjagged):
             inner = inner.content
