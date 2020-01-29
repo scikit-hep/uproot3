@@ -2,13 +2,6 @@
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
-try:
-    import lzma
-except ImportError:
-    from backports import lzma
-import lz4
-import zstandard
-
 import uproot
 
 class Test(object):
