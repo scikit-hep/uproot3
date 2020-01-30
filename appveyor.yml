@@ -55,4 +55,4 @@ build_script:
   - "IF \"%PYTHON_VERSION%\"==\"2.7.10\" ( python -m pip install -i https://pypi.anaconda.org/carlkl/simple backports.lzma )"
   - "python -m pip install pytest pytest-runner pandas requests"
   - "curl -fsS -o tests/samples/Event.root http://scikit-hep.org/uproot/examples/Event.root"
-  - "pytest -v tests"
+  - "python -m pytest -v tests"
