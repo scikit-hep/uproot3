@@ -41,18 +41,18 @@ environment:
       NUMPY: "numpy>=1.15"
 
 install:
+  - "SET PATH=%PYTHON%;%PATH%"
   - "python --version"
 
 build_script:
-  - "SET PATH=%PYTHON%;%PATH%"
   - "python -m pip install --upgrade pip"
-  - "pip install %NUMPY%"
-  - "pip install \"awkward>=0.12.0,<1.0\""
+  - "python -m pip install %NUMPY%"
+  - "python -m pip install \"awkward>=0.12.0,<1.0\""
   - "python -c \"import awkward; print(awkward.__version__)\""
-  - "pip install \"uproot-methods>=0.7.0\""
+  - "python -m pip install \"uproot-methods>=0.7.0\""
   - "python -c \"import uproot_methods; print(uproot_methods.__version__)\""
-  - "pip install cachetools lz4 zstandard mock xxhash"
-  - "pip install -i https://pypi.anaconda.org/carlkl/simple backports.lzma"
-  - "pip install pytest pytest-runner pandas requests"
+  - "python -m pip install cachetools lz4 zstandard mock xxhash"
+  - "python -m pip install -i https://pypi.anaconda.org/carlkl/simple backports.lzma"
+  - "python -m pip install pytest pytest-runner pandas requests"
   - "curl -fsS -o tests/samples/Event.root http://scikit-hep.org/uproot/examples/Event.root"
   - "pytest -v tests"
