@@ -52,7 +52,7 @@ build_script:
   - "python -m pip install \"uproot-methods>=0.7.0\""
   - "python -c \"import uproot_methods; print(uproot_methods.__version__)\""
   - "python -m pip install cachetools lz4 zstandard mock xxhash"
-  - "python -m pip install -i https://pypi.anaconda.org/carlkl/simple backports.lzma"
+  - "IF \"%PYTHON_VERSION%\"==\"2.7.10\" ( python -m pip install -i https://pypi.anaconda.org/carlkl/simple backports.lzma )"
   - "python -m pip install pytest pytest-runner pandas requests"
   - "curl -fsS -o tests/samples/Event.root http://scikit-hep.org/uproot/examples/Event.root"
   - "pytest -v tests"
