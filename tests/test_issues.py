@@ -248,6 +248,7 @@ class Test(object):
         assert t.array("V0s.fEtaPos")[-3].tolist() == [-0.390625, 0.046875]
 
     def test_issue213(self):
+        pytest.importorskip("xxhash")
         t = uproot.open("tests/samples/issue213.root")["T"]
         assert t["fMCHits.fPosition"].array().x.tolist() == [
             [], [], [], [], [], [], [], [42.17024612426758, 50.63192367553711],

@@ -52,9 +52,9 @@ def _ftype2dtype(fType, awkward):
     elif fType in (uproot.const.kBits, uproot.const.kUInt, uproot.const.kCounter):
         return awkward.numpy.dtype(">u4")
     elif fType == uproot.const.kLong:
-        return awkward.numpy.dtype(awkward.numpy.long).newbyteorder(">")
+        return awkward.numpy.dtype(">i8")
     elif fType == uproot.const.kULong:
-        return awkward.numpy.dtype(">u" + repr(awkward.numpy.dtype(awkward.numpy.long).itemsize))
+        return awkward.numpy.dtype(">u8")
     elif fType == uproot.const.kLong64:
         return awkward.numpy.dtype(">i8")
     elif fType == uproot.const.kULong64:

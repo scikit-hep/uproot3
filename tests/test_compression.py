@@ -2,7 +2,15 @@
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
 
+import pytest
+try:
+    import lzma
+except ImportError:
+    lzma = pytest.importorskip('backports.lzma')
+lz4 = pytest.importorskip('lz4')
+zstandard = pytest.importorskip('zstandard')
 import uproot
+
 
 class Test(object):
     def test_compression_identity(self):
