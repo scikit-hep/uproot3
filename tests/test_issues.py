@@ -425,3 +425,11 @@ class Test(object):
         tree = f['Events']
         assert len(tree.arrays(entrystop=0)) == 4179
         assert len(tree.arrays('recoMuons_muons__RECO.*', entrystop=10)) == 93
+
+    def test_issue447_tree_arrays_omitting_variables():
+        with uproot.open("tests/samples/issue447.root") as f:
+            t1 = f['l1CaloTowerEmuTree/L1CaloTowerTree']
+            arrays = t1.arrays()
+            n_array_vars = len(arrays.keys())
+            n_tree_vars = sum([len(t1[k].keys()) for k in t1.keys()])
+            assert n_tree_vars == n_array_vars
