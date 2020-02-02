@@ -351,6 +351,8 @@ class TTreeMethods(object):
                 yield branch
             if recursive:
                 for x in branch.itervalues(recursive, filtername, filtertitle):
+                    if branch.name not in x._provenance:
+                        x._provenance += [branch.name]
                     yield x
 
     def iteritems(self, recursive=False, filtername=nofilter, filtertitle=nofilter, aliases=True):
@@ -511,9 +513,9 @@ class TTreeMethods(object):
             raise ValueError("list of branch names or glob/regex matches more than one branch; use TTree.arrays (plural)")
         return tbranch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
 
-    def arrays(self, branches=None, outputtype=dict, namedecode=None, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+    def arrays(self, branches=None, outputtype=dict, namedecode=None, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, recursive=True):
         awkward = _normalize_awkwardlib(awkwardlib)
-        branches = list(self._normalize_branches(branches, awkward))
+        branches = list(self._normalize_branches(branches, awkward, recursive=recursive))
         for branch, interpretation in branches:
             if branch._recoveredbaskets is None:
                 branch._tryrecover()
@@ -526,7 +528,20 @@ class TTreeMethods(object):
         entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
 
         # start the job of filling the arrays
-        futures = [(branch.name if namedecode is None else branch.name.decode(namedecode), interpretation, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=(flatten and not ispandas), awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=False)) for branch, interpretation in branches]
+        futures = None
+        if recursive and recursive is not True:
+            def wrap_name(branch, namedecode):
+                if branch._provenance:
+                    if namedecode is None:
+                        return recursive.join(branch._provenance + [branch.name])
+                    else:
+                        return recursive.join([p.decode(namedecode) for p in (branch._provenance + [branch.name])])
+                else:
+                    return branch.name if namedecode is None else branch.name.decode(namedecode)
+
+            futures = [(wrap_name(branch, namedecode), interpretation, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=(flatten and not ispandas), awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=False)) for branch, interpretation in branches]
+        else:
+            futures = [(branch.name if namedecode is None else branch.name.decode(namedecode), interpretation, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=(flatten and not ispandas), awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=False)) for branch, interpretation in branches]
 
         # make functions that wait for the filling job to be done and return the right outputtype
         if outputtype == namedtuple:
@@ -780,9 +795,10 @@ class TTreeMethods(object):
                 flagsbyte += re.X
         return flagsbyte
 
-    def _normalize_branches(self, arg, awkward, allownone=True, allowcallable=True, allowdict=True, allowstring=True, aliases=True):
+    def _normalize_branches(self, arg, awkward, allownone=True, allowcallable=True, allowdict=True, allowstring=True, aliases=True, recursive=True):
         if allownone and arg is None:                      # no specification; read all branches
             for branch in self.allvalues():                # that have interpretations
+                branch._provenance = [self.name] + branch._provenance
                 interpretation = interpret(branch, awkward)
                 if interpretation is not None:
                     yield branch, interpretation
@@ -806,12 +822,12 @@ class TTreeMethods(object):
                 isregex = re.match(self._branch_regex, word)
                 if isregex is not None:
                     regex, flags = isregex.groups()
-                    for name, branch in self.iteritems(recursive=True, aliases=aliases):
+                    for name, branch in self.iteritems(recursive=recursive, aliases=aliases):
                         if re.match(regex, name, self._branch_flags(flags)):
                             yield branch, branch._normalize_dtype(interpretation, awkward)
 
                 elif b"*" in word or b"?" in word or b"[" in word:
-                    for name, branch in self.iteritems(recursive=True, aliases=aliases):
+                    for name, branch in self.iteritems(recursive=recursive, aliases=aliases):
                         if name == word or glob.fnmatch.fnmatchcase(name, word):
                             yield branch, branch._normalize_dtype(interpretation, awkward)
 
@@ -835,7 +851,7 @@ class TTreeMethods(object):
                     isregex = re.match(self._branch_regex, word)
                     if isregex is not None:
                         regex, flags = isregex.groups()
-                        for name, branch in self.iteritems(recursive=True, aliases=aliases):
+                        for name, branch in self.iteritems(recursive=recursive, aliases=aliases):
                             if re.match(regex, name, self._branch_flags(flags)):
                                 interpretation = interpret(branch, awkward)
                                 if interpretation is None:
@@ -845,7 +861,7 @@ class TTreeMethods(object):
                                     yield branch, interpretation
 
                     elif b"*" in word or b"?" in word or b"[" in word:
-                        for name, branch in self.iteritems(recursive=True, aliases=aliases):
+                        for name, branch in self.iteritems(recursive=recursive, aliases=aliases):
                             if name == word or glob.fnmatch.fnmatchcase(name, word):
                                 interpretation = interpret(branch, awkward)
                                 if interpretation is None:
@@ -888,6 +904,7 @@ class TBranchMethods(object):
         self._context = context
         self._streamer = None
         self._interpretation = None
+        self._provenance = []
 
         self._numgoodbaskets = 0
         for i, x in enumerate(self._fBasketSeek):
