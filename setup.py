@@ -145,7 +145,8 @@ setup(name = "uproot",
       install_requires = ["numpy>=1.13.1", "awkward>=0.12.0,<1.0", "uproot-methods>=0.7.0", "cachetools"],
       setup_requires = ["pytest-runner"],
       extras_require = {
-          'testing': ["pytest>=3.9", "pkgconfig", "lz4", "zstandard", 'backports.lzma;python_version<"3.3"', "xxhash", "mock", "requests"],
+          "testing": ["pytest>=3.9", "pkgconfig", "lz4", "zstandard", 'backports.lzma;python_version<"3.3"', "xxhash", "mock", "requests"],
+          "decompression": ["lz4", "zstandard", 'backports.lzma;python_version<"3.3"', "xxhash"],
       },
       classifiers = [
           "Development Status :: 5 - Production/Stable",
