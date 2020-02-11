@@ -270,7 +270,7 @@ class TTreeMethods(object):
                             try:
                                 submembers = streamerinfosmap[key].members
                             except KeyError:
-                                for regex, substitution in uproot.interp.auto.streamer_aliases.items():
+                                for regex, substitution in uproot.interp.auto.streamer_aliases:
                                     new_key, n_matched = regex.subn(substitution, key)
                                     if n_matched:
                                         submembers = streamerinfosmap[new_key].members

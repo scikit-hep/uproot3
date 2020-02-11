@@ -559,7 +559,7 @@ interpret._itemanypattern = re.compile(br"\[(.*)\]")
 interpret._vectorpointer = re.compile(br"vector\<([^<>]*)\*\>")
 interpret._pairsecond = re.compile(br"pair\<[^<>]*,(.*) \>")
 
-streamer_aliases = {
-    re.compile(b'(ROOT::Math::(?:PositionVector3D|DisplacementVector3D)<ROOT::Math::Cartesian3D<(?:[^>]+)>)\\s+(>)'):
-        b'\\1,ROOT::Math::DefaultCoordinateSystemTag\\2',
-}
+streamer_aliases = [
+    (re.compile(b'(ROOT::Math::(?:PositionVector3D|DisplacementVector3D)<ROOT::Math::Cartesian3D<(?:[^>,]+)>)\\s+(>)'),
+        b'\\1,ROOT::Math::DefaultCoordinateSystemTag\\2'),
+]
