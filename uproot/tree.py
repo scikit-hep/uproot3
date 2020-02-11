@@ -34,6 +34,7 @@ import uproot.rootio
 from uproot.rootio import _bytesid
 from uproot.rootio import _memsize
 from uproot.rootio import nofilter
+from uproot.rootio import _safename
 from uproot.interp.auto import interpret
 from uproot.interp.numerical import asdtype
 from uproot.interp.jagged import asjagged
@@ -265,7 +266,18 @@ class TTreeMethods(object):
                     else:
                         base, name = name[:index], name[index + 1:]
                         if base in submembers and isinstance(submembers[base], digDeeperTypes):
-                            submembers = streamerinfosmap[submembers[base]._fTypeName.rstrip(b"*")].members
+                            key = submembers[base]._fTypeName.rstrip(b"*")
+                            try:
+                                submembers = streamerinfosmap[key].members
+                            except KeyError:
+                                for regex, substitution in uproot.interp.auto.streamer_aliases:
+                                    new_key, n_matched = regex.subn(substitution, key)
+                                    if n_matched:
+                                        submembers = streamerinfosmap[new_key].members
+                                        self._context.classes[_safename(key)] = self._context.classes[_safename(new_key)]
+                                        break
+                                else:
+                                    raise
 
                 try:
                     name = name[:name.index(b"[")]
