@@ -146,7 +146,7 @@ setup(name = "uproot",
       setup_requires = ["pytest-runner"],
       extras_require = {
           "testing": ["pytest>=3.9", "pkgconfig", "lz4", "zstandard", 'backports.lzma;python_version<"3.3"', "xxhash", "mock", "requests"],
-          "decompression": ["lz4", "zstandard", 'backports.lzma;python_version<"3.3"', "xxhash"],
+          "compress": ["lz4", "zstandard", 'backports.lzma;python_version<"3.3"', "xxhash"],
       },
       classifiers = [
           "Development Status :: 5 - Production/Stable",
