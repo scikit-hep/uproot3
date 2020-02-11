@@ -418,3 +418,10 @@ class Test(object):
         assert 4 == len(a[0])
         with pytest.raises(IOError):
             len(b[0])
+
+    def test_issue448(self):
+        pytest.importorskip("pyxrootd")
+        f = uproot.open('root://eospublic.cern.ch//eos/opendata/cms/Run2010B/MuOnia/AOD/Apr21ReReco-v1/0000/02186E3C-D277-E011-8A05-00215E21D516.root')
+        tree = f['Events']
+        assert len(tree.arrays(entrystop=0)) == 4179
+        assert len(tree.arrays('recoMuons_muons__RECO.*', entrystop=10)) == 93
