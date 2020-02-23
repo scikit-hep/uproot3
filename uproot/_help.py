@@ -4,14 +4,37 @@
 
 from __future__ import absolute_import
 
+import functools
+import textwrap
+
 import uproot
 import uproot._connect._pandas
+
+TEXT_WIDTH = 80
+
 
 def _method(x):
     if hasattr(x, "__func__"):
         return x.__func__
     else:
         return x
+
+
+def _join_and_preserve_sequential_indent(lines):
+    """Joins lines with newlines while preserving indentation of first line"""
+    if not lines:
+        return ''
+    first_line = lines[0]
+    leading_spaces = len(first_line) - len(first_line.lstrip(' '))
+    return '\n'.join([first_line] + [' ' * leading_spaces + line for line in lines[1:]])
+
+
+def wrap(text, width=80):
+    """Wraps the text to a given width, preserving indentation"""
+    return "\n".join(
+        map(_join_and_preserve_sequential_indent,
+            map(functools.partial(textwrap.wrap, width=width), text.split('\n'))))
+
 
 ################################################################ uproot.rootio fragments
 
