@@ -115,7 +115,8 @@ Some, however, are useful:
 
 By default, local files are read as memory-mapped arrays. Change this by setting
 
-    open("...", localsource=lambda path: uproot.LocalSource(path, **uproot.LocalSource.defaults))
+    from uproot import FileSource
+    open("...", localsource=lambda path: FileSource(path, **FileSource.defaults))
 
 The same procedure sets options for uproot.XRootDSource and uproot.HTTPSource.
 """
