@@ -18,15 +18,36 @@ def _method(x):
 open_fragments = {
     # localsource
     "localsource": u"""localsource : function: path \u21d2 :py:class:`Source <uproot.source.source.Source> or ``dict`` of keyword arguments`
-        function that will be applied to the path to produce an uproot :py:class:`Source <uproot.source.source.Source>` object if the path is a local file. Default is ``MemmapSource.defaults`` for memory-mapped files. If a ``dict``, the ``dict`` is passed as keyword arguments to :py:class:`MemmapSource <uproot.source.memmap.MemmapSource>` constructor.""",
+        function that will be applied to the path to produce an uproot
+        :py:class:`Source <uproot.source.source.Source>` object if the path is a local
+        file. Default is ``MemmapSource.defaults`` for memory-mapped files. If a
+        ``dict``, the ``dict`` is passed as keyword arguments to
+        :py:class:`MemmapSource <uproot.source.memmap.MemmapSource>` constructor.
+    """,
 
     # xrootdsource
     "xrootdsource": u"""xrootdsource : function: path \u21d2 :py:class:`Source <uproot.source.source.Source> or ``dict`` of keyword arguments`
-        function that will be applied to the path to produce an uproot :py:class:`Source <uproot.source.source.Source>` object if the path is an XRootD URL. Default is ``uproot.source.xrootd.XRootDSource.defaults`` for XRootD with default chunk size/caching. (See :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>` constructor for details.) If a ``dict``, the ``dict`` is passed as keyword arguments to :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>` constructor.""",
+        function that will be applied to the path to produce an uproot
+        :py:class:`Source <uproot.source.source.Source>` object if the path is an
+        XRootD URL. Default is ``uproot.source.xrootd.XRootDSource.defaults`` for XRootD
+        with default chunk size/caching.
+        (See :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>` constructor
+        for details.)
+        If a ``dict``, the ``dict`` is passed as keyword arguments to
+        :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>` constructor.
+    """,
 
     # httpsource
     "httpsource": u"""httpsource : function: path \u21d2 :py:class:`Source <uproot.source.source.Source> or ``dict`` of keyword arguments`
-        function that will be applied to the path to produce an uproot :py:class:`Source <uproot.source.source.Source>` object if the path is an HTTP URL. Default is ``uproot.source.http.HTTPSource.defaults`` for HTTP with default chunk size/caching. (See :py:class:`HTTPSource <uproot.source.http.HTTPSource>` constructor for details.) If a ``dict``, the ``dict`` is passed as keyword arguments to :py:class:`HTTPSource <uproot.source.http.HTTPSource>` constructor.""",
+        function that will be applied to the path to produce an uproot
+        :py:class:`Source <uproot.source.source.Source>` object if the path is an
+        HTTP URL. Default is ``uproot.source.http.HTTPSource.defaults`` for HTTP with
+        default chunk size/caching.
+        (See :py:class:`HTTPSource <uproot.source.http.HTTPSource>` constructor for
+        details.)
+        If a ``dict``, the ``dict`` is passed as keyword arguments to
+        :py:class:`HTTPSource <uproot.source.http.HTTPSource>` constructor.
+    """,
 
     # options
     "options": u"""options
@@ -36,15 +57,26 @@ open_fragments = {
 rootdirectory_fragments = {
     # recursive
     "recursive": u"""recursive : bool
-        if ``False`` *(default)*, only iterate over this directory level; if ``True``, depth-first iterate over all subdirectories as well.""",
+        if ``False`` *(default)*, only iterate over this directory level;
+        if ``True``, depth-first iterate over all subdirectories as well.
+    """,
 
     # filtername
     "filtername": u"""filtername : function: str \u21d2 bool
-        only keys for which ``filtername(name)`` returns ``True`` are returned (does not eliminate subdirectories if ``recursive=True``). Default returns ``True`` for all input.""",
+        only keys for which ``filtername(name)`` returns ``True`` are returned (does not
+        eliminate subdirectories if ``recursive=True``).
+        Default returns ``True`` for all input.
+    """,
 
     # filterclass
     "filterclass": u"""filterclass : function: class object \u21d2 bool
-        only keys for which ``filterclass(class object)`` returns ``True`` are returned (does not eliminate subdirectories if ``recursive=True``). Default returns ``True`` for all input. Note that all class objects passed to this function have a ``classname`` attribute for the C++ class name (may differ from the Python class name for syntactic reasons).""",
+        only keys for which ``filterclass(class object)`` returns ``True`` are returned
+        (does not eliminate subdirectories if ``recursive=True``).
+        Default returns ``True`` for all input.
+        Note that all class objects passed to this function have a ``classname``
+        attribute for the C++ class name (may differ from the Python class name for
+        syntactic reasons).
+    """,
     }
 
 ################################################################ uproot.rootio.open
@@ -55,7 +87,10 @@ u"""Opens a ROOT file (local or remote), specified by file path.
     Parameters
     ----------
     path : str
-        local file path or URL specifying the location of a file (note: not a Python file object!). If the URL schema is "root://", :py:func:`xrootd <uproot.xrootd>` will be called; if "http://", :py:func:`http <uproot.http>` will be called.
+        local file path or URL specifying the location of a file (note: not a Python
+        file object!).
+        If the URL schema is "root://", :py:func:`xrootd <uproot.xrootd>` will be called;
+        If "http://", :py:func:`http <uproot.http>` will be called.
 
     {localsource}
 
@@ -72,7 +107,12 @@ u"""Opens a ROOT file (local or remote), specified by file path.
 
     Notes
     -----
-    The ROOTDirectory returned by this function is not necessarily an open file. File handles are managed internally by :py:class:`Source <uproot.source.source.Source>` objects to permit parallel reading. Although this function can be used in a ``with`` construct (which protects against unclosed files), the ``with`` construct has no meaning when applied to this function. Files will be opened or closed as needed to read data on demand.
+    The ROOTDirectory returned by this function is not necessarily an open file.
+    File handles are managed internally by :py:class:`Source
+    <uproot.source.source.Source>` objects to permit parallel reading. Although this
+    function can be used in a ``with`` construct (which protects against unclosed
+    files), the ``with`` construct has no meaning when applied to this function.
+    Files will be opened or closed as needed to read data on demand.
     """.format(**open_fragments)
 
 ################################################################ uproot.rootio.xrootd
@@ -120,33 +160,50 @@ u"""Opens a remote ROOT file with HTTP (if ``requests`` is installed).
 uproot.rootio.ROOTDirectory.__doc__ = \
 u"""Represents a ROOT file or directory, an entry point for reading objects.
 
-    Although this class has a constructor that could be called by a user, objects are usually created from ROOT files through :py:func:`open <uproot.rootio.open>` or :py:func:`xrootd <uproot.rootio.xrootd>`.
+    Although this class has a constructor that could be called by a user, objects are
+    usually created from ROOT files through :py:func:`open <uproot.rootio.open>` or
+    :py:func:`xrootd <uproot.rootio.xrootd>`.
 
-    :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` objects may be accessed as Python containers:
+    :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` objects may be accessed
+    as Python containers:
 
-    - square brackets (``__getitem__``) read objects from the file by key name (see :py:meth:`get <uproot.rootio.ROOTDirectory.get>`).
+    - square brackets (``__getitem__``) read objects from the file by key name
+      (see :py:meth:`get <uproot.rootio.ROOTDirectory.get>`).
     - the ``len`` function (``__len__``) returns the number of keys.
-    - iteration (``__iter__``) iterates over the *names* of the keys only (like a ``dict``, see :py:meth:`keys <uproot.rootio.ROOTDirectory.keys>`).
+    - iteration (``__iter__``) iterates over the *names* of the keys only (like a
+      ``dict``, see :py:meth:`keys <uproot.rootio.ROOTDirectory.keys>`).
 
     **Attributes, properties, and methods:**
 
-    - **name** (*bytes*) name of the file or directory *as read from the ROOT file*. (ROOT files may be imprinted with a different name than they have in the file system.)
+    - **name** (*bytes*) name of the file or directory *as read from the ROOT file*.
+      (ROOT files may be imprinted with a different name than they have in the file
+      system.)
 
-    - **compression** (:py:class:`Compression <uproot.source.compressed.Compression>`) the compression algorithm and level specified in the file header. (Some objects, including TTree branches, may have different compression settings than the global file settings.)
+    - **compression** (:py:class:`Compression <uproot.source.compressed.Compression>`)
+      the compression algorithm and level specified in the file header.
+      (Some objects, including TTree branches, may have different compression
+      settings than the global file settings.)
 
-    - :py:meth:`get <uproot.rootio.ROOTDirectory.get>` read an object from the file, selected by name.
+    - :py:meth:`get <uproot.rootio.ROOTDirectory.get>` read an object from the file,
+      selected by name.
 
-    - :py:meth:`iterkeys <uproot.rootio.ROOTDirectory.iterkeys>` iterate over key names in this directory.
+    - :py:meth:`iterkeys <uproot.rootio.ROOTDirectory.iterkeys>` iterate over key
+      names in this directory.
 
-    - :py:meth:`itervalues <uproot.rootio.ROOTDirectory.itervalues>` iterate over objects in this directory.
+    - :py:meth:`itervalues <uproot.rootio.ROOTDirectory.itervalues>` iterate over
+      objects in this directory.
 
-    - :py:meth:`iteritems <uproot.rootio.ROOTDirectory.iteritems>` iterate over *(key name, object)* pairs in this directory, like a ``dict``.
+    - :py:meth:`iteritems <uproot.rootio.ROOTDirectory.iteritems>` iterate over
+      *(key name, object)* pairs in this directory, like a ``dict``.
 
-    - :py:meth:`iterclasses <uproot.rootio.ROOTDirectory.iterclasses>` iterate over *(key name, class object)* pairs in this directory.
+    - :py:meth:`iterclasses <uproot.rootio.ROOTDirectory.iterclasses>` iterate over
+      *(key name, class object)* pairs in this directory.
 
-    - :py:meth:`keys <uproot.rootio.ROOTDirectory.keys>` return key names in this directory.
+    - :py:meth:`keys <uproot.rootio.ROOTDirectory.keys>` return key names in this
+      directory.
 
-    - :py:meth:`values <uproot.rootio.ROOTDirectory.values>` return objects in this directory.
+    - :py:meth:`values <uproot.rootio.ROOTDirectory.values>` return objects in this
+      directory.
 
     - :py:meth:`items <uproot.rootio.ROOTDirectory.items>` return *(key name, object)* pairs in this directory, like a ``dict``.
 
@@ -649,9 +706,15 @@ u"""Opens a series of ROOT files (local or remote), yielding Pandas DataFrames i
 uproot.tree.TTreeMethods.__doc__ = \
 u"""Adds array reading methods to TTree objects that have been streamed from a ROOT file.
 
-    - square brackets (``__getitem__``) returns a branch by name (see :py:meth:`get <uproot.tree.TTreeMethods.get>`).
-    - the ``len`` function (``__len__``) returns the number of entries (same as ``numentries``).
-    - iteration (``__iter__``) has no implementation. This is to avoid confusion between iterating over all branches (probably not what you want, but fitting the pattern set by :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` and ``dict``) and iterating over the data.
+    - square brackets (``__getitem__``) returns a branch by name
+      (see :py:meth:`get <uproot.tree.TTreeMethods.get>`).
+    - the ``len`` function (``__len__``) returns the number of entries
+      (same as ``numentries``).
+    - iteration (``__iter__``) has no implementation.
+      This is to avoid confusion between iterating over all branches (probably not
+      what you want, but fitting the pattern set by
+      :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` and ``dict``) and
+      iterating over the data.
 
     **Attributes, properties, and methods:**
 

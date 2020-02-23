@@ -14,13 +14,16 @@ Open ROOT files with uproot.open (for reading) or uproot.create (for read-write)
     file = uproot.open("http://path/to/my/file.root")
     writeable = uproot.create("/new/local/file.root")
 
-These file objects act like dicts; get objects like TTrees from them with square brackets.
+These file objects act like dicts; get objects like TTrees from them with square
+brackets.
 
     tree = file["path/to/events"]
     tree = file["path/to/events;2"]            # optional cycle number
-    writeable["name"] = numpy.histogram(...)   # write to files by assignment (histograms only)
+    # write to files by assignment (histograms only)
+    writeable["name"] = numpy.histogram(...)
 
-TTree objects also act like dicts; get branches with square brackets or list them with keys().
+TTree objects also act like dicts; get branches with square brackets or list them
+with keys().
 
     tree.keys()
     tree.allkeys()    # recursive branches-of-branches
@@ -34,11 +37,13 @@ Get data as arrays with an array(...) or arrays(...) call.
     tree.arrays(["branch1", "branch2", "branch3"])
     tree.arrays(["Muon_*"])
 
-Variable numbers of objects per entry (particles per event) are handled by awkward-array:
+Variable numbers of objects per entry (particles per event) are handled by
+awkward-array:
 
     https://github.com/scikit-hep/awkward-array
 
-The arrays(...) call returns a dict from branch name (bytes) to data (Numpy array) by default.
+The arrays(...) call returns a dict from branch name (bytes) to data
+(Numpy array) by default.
 Change this by passing an outputtype class (e.g. dict, tuple, pandas.DataFrame).
 
     x, y, z = tree.arrays(["x", "y", "z"], outputtype=tuple)
@@ -47,8 +52,9 @@ For more idiomatic Pandas defaults, use tree.pandas.df().
 
     df = tree.pandas.df()
 
-If the desired branches do not fit into memory, iterate over chunks of entries with iterate().
-The interface is the same as above: you get the same dict/tuple/DataFrame with fewer entries.
+If the desired branches do not fit into memory, iterate over chunks of entries
+with iterate(). The interface is the same as above: you get the same
+dict/tuple/DataFrame with fewer entries.
 
     for x, y, z in tree.iterate(["x", "y", "z"], outputtype=tuple):
         do_something(x, y, z)
@@ -61,15 +67,17 @@ To iterate over many files (like TChain), do uproot.iterate(...).
 Intermediate cheat-sheet
 ------------------------
 
-Each call to array/arrays/iterate reads the file again. For faster access after the first time,
-pass a dict-like object to the cache parameter and uproot will try the cache first.
+Each call to array/arrays/iterate reads the file again. For faster access after
+the first time, pass a dict-like object to the cache parameter and uproot will
+try the cache first.
 
     cache = {}
     arrays = tree.arrays(["Muon_*"], cache=cache)    # slow
     arrays = tree.arrays(["Muon_*"], cache=cache)    # fast
 
-You control the cache object. If you're running out of memory, remove it or remove items from it.
-Or use one of the dict-like caches from cachetools (already installed) or another library.
+You control the cache object. If you're running out of memory, remove it or
+remove items from it. Or use one of the dict-like caches from cachetools (already
+installed) or another library.
 
 For parallel processing, pass a Python 3 executor.
 
@@ -77,12 +85,14 @@ For parallel processing, pass a Python 3 executor.
     executor = concurrent.futures.ThreadPoolExecutor(32)
     arrays = tree.arrays(["Muon_*"], executor=executor)
 
-To get the number of entries per file in a a collection of files, use uproot.numentries().
+To get the number of entries per file in a a collection of files, use
+uproot.numentries().
 
     uproot.numentries("tests/samples/sample*.root", "sample", total=False)
 
 For arrays that read on demand, use uproot.lazyarray and uproot.lazyarrays.
-For processing with Dask, use uproot.daskarray, uproot.daskarrays, or uproot.daskframe.
+For processing with Dask, use uproot.daskarray, uproot.daskarrays, or
+uproot.daskframe.
 
 Advanced cheat-sheet
 --------------------
