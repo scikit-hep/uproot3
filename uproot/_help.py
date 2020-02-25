@@ -4,14 +4,37 @@
 
 from __future__ import absolute_import
 
+import functools
+import textwrap
+
 import uproot
 import uproot._connect._pandas
+
+TEXT_WIDTH = 80
+
 
 def _method(x):
     if hasattr(x, "__func__"):
         return x.__func__
     else:
         return x
+
+
+def _join_and_preserve_sequential_indent(lines):
+    """Joins lines with newlines while preserving indentation of first line"""
+    if not lines:
+        return ''
+    first_line = lines[0]
+    leading_spaces = len(first_line) - len(first_line.lstrip(' '))
+    return '\n'.join([first_line] + [' ' * leading_spaces + line for line in lines[1:]])
+
+
+def wrap(text, width=80):
+    """Wraps the text to a given width, preserving indentation"""
+    return "\n".join(
+        map(_join_and_preserve_sequential_indent,
+            map(functools.partial(textwrap.wrap, width=width), text.split('\n'))))
+
 
 ################################################################ uproot.rootio fragments
 
@@ -49,7 +72,7 @@ rootdirectory_fragments = {
 
 ################################################################ uproot.rootio.open
 
-uproot.rootio.open.__doc__ = \
+uproot.rootio.open.__doc__ = wrap(
 u"""Opens a ROOT file (local or remote), specified by file path.
 
     Parameters
@@ -73,11 +96,11 @@ u"""Opens a ROOT file (local or remote), specified by file path.
     Notes
     -----
     The ROOTDirectory returned by this function is not necessarily an open file. File handles are managed internally by :py:class:`Source <uproot.source.source.Source>` objects to permit parallel reading. Although this function can be used in a ``with`` construct (which protects against unclosed files), the ``with`` construct has no meaning when applied to this function. Files will be opened or closed as needed to read data on demand.
-    """.format(**open_fragments)
+    """.format(**open_fragments), width=TEXT_WIDTH)
 
 ################################################################ uproot.rootio.xrootd
 
-uproot.rootio.xrootd.__doc__ = \
+uproot.rootio.xrootd.__doc__ = wrap(
 u"""Opens a remote ROOT file with XRootD (if installed).
 
     Parameters
@@ -93,11 +116,11 @@ u"""Opens a remote ROOT file with XRootD (if installed).
     -------
     :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>`
         top-level directory of the ROOT file.
-    """.format(**open_fragments)
+    """.format(**open_fragments), width=TEXT_WIDTH)
 
 ################################################################ uproot.rootio.http
 
-uproot.rootio.http.__doc__ = \
+uproot.rootio.http.__doc__ = wrap(
 u"""Opens a remote ROOT file with HTTP (if ``requests`` is installed).
 
     Parameters
@@ -113,11 +136,11 @@ u"""Opens a remote ROOT file with HTTP (if ``requests`` is installed).
     -------
     :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>`
         top-level directory of the ROOT file.
-    """.format(**open_fragments)
+    """.format(**open_fragments), width=TEXT_WIDTH)
 
 ################################################################ uproot.rootio.ROOTDirectory
 
-uproot.rootio.ROOTDirectory.__doc__ = \
+uproot.rootio.ROOTDirectory.__doc__ = wrap(
 u"""Represents a ROOT file or directory, an entry point for reading objects.
 
     Although this class has a constructor that could be called by a user, objects are usually created from ROOT files through :py:func:`open <uproot.rootio.open>` or :py:func:`xrootd <uproot.rootio.xrootd>`.
@@ -159,9 +182,9 @@ u"""Represents a ROOT file or directory, an entry point for reading objects.
     - :py:meth:`allitems <uproot.rootio.ROOTDirectory.allitems>` return *(key name, object)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`items <uproot.rootio.ROOTDirectory.items>`).
 
     - :py:meth:`allclasses <uproot.rootio.ROOTDirectory.allclasses>` return *(key name, class object)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`classes <uproot.rootio.ROOTDirectory.classes>`).
-"""
+""", width=TEXT_WIDTH)
 
-_method(uproot.rootio.ROOTDirectory.get).__doc__ = \
+_method(uproot.rootio.ROOTDirectory.get).__doc__ = wrap(
 u"""Read an object from the ROOT file or directory by name.
 
     Parameters
@@ -181,9 +204,9 @@ u"""Read an object from the ROOT file or directory by name.
     -----
 
     This method, without the ``cycle`` argument, can be accessed more directly through square brackets (``__getitem__``) on the :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` object.
-""".format(**rootdirectory_fragments)
+""".format(**rootdirectory_fragments), width=TEXT_WIDTH)
 
-_method(uproot.rootio.ROOTDirectory.iterkeys).__doc__ = \
+_method(uproot.rootio.ROOTDirectory.iterkeys).__doc__ = wrap(
 u"""Iterate over key names in this directory.
 
     This method does not read objects.
@@ -205,9 +228,9 @@ u"""Iterate over key names in this directory.
     -----
 
     This method can be accessed more directly by simply iterating over a :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>` object.
-""".format(**rootdirectory_fragments)
+""".format(**rootdirectory_fragments), width=TEXT_WIDTH)
 
-_method(uproot.rootio.ROOTDirectory.itervalues).__doc__ = \
+_method(uproot.rootio.ROOTDirectory.itervalues).__doc__ = wrap(
 u"""Iterate over objects in this directory.
 
     Parameters
@@ -222,9 +245,9 @@ u"""Iterate over objects in this directory.
     -------
     iterator over :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`
         freshly read objects from the ROOT file.
-""".format(**rootdirectory_fragments)
+""".format(**rootdirectory_fragments), width=TEXT_WIDTH)
 
-_method(uproot.rootio.ROOTDirectory.iteritems).__doc__ = \
+_method(uproot.rootio.ROOTDirectory.iteritems).__doc__ = wrap(
 u"""Iterate over *(key name, object)* pairs in this directory, like a ``dict``.
 
     Parameters
@@ -239,9 +262,9 @@ u"""Iterate over *(key name, object)* pairs in this directory, like a ``dict``.
     -------
     iterator over (bytes, :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`)
         name-object pairs from the file.
-""".format(**rootdirectory_fragments)
+""".format(**rootdirectory_fragments), width=TEXT_WIDTH)
 
-_method(uproot.rootio.ROOTDirectory.iterclasses).__doc__ = \
+_method(uproot.rootio.ROOTDirectory.iterclasses).__doc__ = wrap(
 u"""Iterate over *(key name, class object)* pairs in this directory.
 
     This method does not read objects.
@@ -258,9 +281,9 @@ u"""Iterate over *(key name, class object)* pairs in this directory.
     -------
     iterator over (bytes, class object)
         name-class object pairs from the file.
-""".format(**rootdirectory_fragments)
+""".format(**rootdirectory_fragments), width=TEXT_WIDTH)
 
-_method(uproot.rootio.ROOTDirectory.keys).__doc__ = \
+_method(uproot.rootio.ROOTDirectory.keys).__doc__ = wrap(
 u"""Return key names in this directory.
 
     This method does not read objects.
@@ -277,9 +300,9 @@ u"""Return key names in this directory.
     -------
     list of bytes
         names of objects and subdirectories in the file.
-""".format(**rootdirectory_fragments)
+""".format(**rootdirectory_fragments), width=TEXT_WIDTH)
 
-_method(uproot.rootio.ROOTDirectory.values).__doc__ = \
+_method(uproot.rootio.ROOTDirectory.values).__doc__ = wrap(
 u"""Return objects in this directory.
 
     Parameters
@@ -294,9 +317,9 @@ u"""Return objects in this directory.
     -------
     list of :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`
         freshly read objects from the ROOT file.
-""".format(**rootdirectory_fragments)
+""".format(**rootdirectory_fragments), width=TEXT_WIDTH)
 
-_method(uproot.rootio.ROOTDirectory.items).__doc__ = \
+_method(uproot.rootio.ROOTDirectory.items).__doc__ = wrap(
 u"""Return *(key name, object)* pairs in this directory, like a ``dict``.
 
     Parameters
@@ -311,9 +334,9 @@ u"""Return *(key name, object)* pairs in this directory, like a ``dict``.
     -------
     list of (bytes, :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`)
         name-object pairs from the file.
-""".format(**rootdirectory_fragments)
+""".format(**rootdirectory_fragments), width=TEXT_WIDTH)
 
-_method(uproot.rootio.ROOTDirectory.classes).__doc__ = \
+_method(uproot.rootio.ROOTDirectory.classes).__doc__ = wrap(
 u"""Return *(key name, class object)* pairs in this directory.
 
     This method does not read objects.
@@ -330,9 +353,9 @@ u"""Return *(key name, class object)* pairs in this directory.
     -------
     list of (bytes, class object)
         name-class object pairs from the file.
-""".format(**rootdirectory_fragments)
+""".format(**rootdirectory_fragments), width=TEXT_WIDTH)
 
-_method(uproot.rootio.ROOTDirectory.allkeys).__doc__ = \
+_method(uproot.rootio.ROOTDirectory.allkeys).__doc__ = wrap(
 u"""Return keys at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`keys <uproot.rootio.ROOTDirectory.keys>`).
 
     This method does not read objects.
@@ -347,9 +370,9 @@ u"""Return keys at all levels of depth (shortcut for passing ``recursive=True`` 
     -------
     list of bytes
         names of objects and subdirectories in the file.
-""".format(**rootdirectory_fragments)
+""".format(**rootdirectory_fragments), width=TEXT_WIDTH)
 
-_method(uproot.rootio.ROOTDirectory.allvalues).__doc__ = \
+_method(uproot.rootio.ROOTDirectory.allvalues).__doc__ = wrap(
 u"""Return objects at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`values <uproot.rootio.ROOTDirectory.values>`).
 
     Parameters
@@ -362,9 +385,9 @@ u"""Return objects at all levels of depth (shortcut for passing ``recursive=True
     -------
     list of :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`
         freshly read objects from the ROOT file.
-""".format(**rootdirectory_fragments)
+""".format(**rootdirectory_fragments), width=TEXT_WIDTH)
 
-_method(uproot.rootio.ROOTDirectory.allitems).__doc__ = \
+_method(uproot.rootio.ROOTDirectory.allitems).__doc__ = wrap(
 u"""Return *(key name, object)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`items <uproot.rootio.ROOTDirectory.items>`).
 
     Parameters
@@ -377,9 +400,9 @@ u"""Return *(key name, object)* pairs at all levels of depth (shortcut for passi
     -------
     list of (bytes, :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`)
         name-object pairs from the file.
-""".format(**rootdirectory_fragments)
+""".format(**rootdirectory_fragments), width=TEXT_WIDTH)
 
-_method(uproot.rootio.ROOTDirectory.allclasses).__doc__ = \
+_method(uproot.rootio.ROOTDirectory.allclasses).__doc__ = wrap(
 u"""Return *(key name, class object)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`classes <uproot.rootio.ROOTDirectory.classes>`).
 
     This method does not read objects.
@@ -394,21 +417,21 @@ u"""Return *(key name, class object)* pairs at all levels of depth (shortcut for
     -------
     list of (bytes, class object)
         name-class object pairs from the file.
-""".format(**rootdirectory_fragments)
+""".format(**rootdirectory_fragments), width=TEXT_WIDTH)
 
 ################################################################ uproot.rootio.ROOTObject and uproot.rootio.ROOTStreamedObject
 
-uproot.rootio.ROOTObject.__doc__ = \
+uproot.rootio.ROOTObject.__doc__ = wrap(
 u"""Superclass of all objects read out of a ROOT file (except :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>`).
 
     If a :py:class:`ROOTObject <uproot.rootio.ROOTObject>` is not a :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>`, then its class definition is hard-coded, not derived from the file's *streamer info*.
-"""
+""", width=TEXT_WIDTH)
 
-uproot.rootio.ROOTStreamedObject.__doc__ = \
+uproot.rootio.ROOTStreamedObject.__doc__ = wrap(
 u"""Superclass of all objects read out of a ROOT file with an automatically generated class, derived from the file's *streamer info*.
 
     Each subclass of a :py:class:`ROOTStreamedObject <uproot.rootio.ROOTStreamedObject>` has a ``classversion`` attribute, corresponding to the class version in the *streamer info*. If this version does not match the version of the serialized class, an error is raised during the read.
-"""
+""", width=TEXT_WIDTH)
 
 ################################################################ uproot.tree fragments
 
@@ -530,7 +553,7 @@ tree_fragments = {
 
 ################################################################ uproot.tree.iterate
 
-uproot.tree.iterate.__doc__ = \
+uproot.tree.iterate.__doc__ = wrap(
 u"""Opens a series of ROOT files (local or remote), yielding the same number of entries from all selected branches in each step.
 
     Depending on the "entrysteps" parameter, the number of entries in one step may differ from the number of entries in the next step, but in every step, the same number of entries is retrieved from all *baskets.*
@@ -587,11 +610,11 @@ u"""Opens a series of ROOT files (local or remote), yielding the same number of 
     -------
     iterator over (str, :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>`, int, int, outputtype) (if *reportpath*, *reportfile*, *reportentries*) or just outputtype (otherwise)
         aligned array segments from the files.
-    """.format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
+    """.format(**dict(list(open_fragments.items()) + list(tree_fragments.items()))), width=TEXT_WIDTH)
 
 ################################################################ uproot.pandas.iterate
 
-uproot.pandas.iterate.__doc__ = \
+uproot.pandas.iterate.__doc__ = wrap(
 u"""Opens a series of ROOT files (local or remote), yielding Pandas DataFrames in each step.
 
     Depending on the "entrysteps" parameter, the number of entries in one step may differ from the number of entries in the next step, but in every step, the same number of entries is retrieved from all *baskets.*
@@ -642,11 +665,11 @@ u"""Opens a series of ROOT files (local or remote), yielding Pandas DataFrames i
     -------
     iterator over (str, :py:class:`ROOTDirectory <uproot.rootio.ROOTDirectory>`, pandas.Dataframe) (if *reportpath* and *reportfile*) or just pandas.DataFrame (otherwise)
         aligned array segments from the files.
-    """.format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
+    """.format(**dict(list(open_fragments.items()) + list(tree_fragments.items()))), width=TEXT_WIDTH)
 
 ################################################################ uproot.tree.TTreeMethods
 
-uproot.tree.TTreeMethods.__doc__ = \
+uproot.tree.TTreeMethods.__doc__ = wrap(
 u"""Adds array reading methods to TTree objects that have been streamed from a ROOT file.
 
     - square brackets (``__getitem__``) returns a branch by name (see :py:meth:`get <uproot.tree.TTreeMethods.get>`).
@@ -680,9 +703,9 @@ u"""Adds array reading methods to TTree objects that have been streamed from a R
     - :py:meth:`lazyarray <uproot.tree.TTreeMethods.lazyarray>` create a lazy array that would read the branch as needed.
     - :py:meth:`lazyarrays <uproot.tree.TTreeMethods.lazyarrays>` create many lazy arrays.
     - :py:meth:`iterate <uproot.tree.TTreeMethods.iterate>` iterate over many arrays at once, yielding the same number of entries from all selected branches in each step.
-"""
+""", width=TEXT_WIDTH)
 
-_method(uproot.tree.TTreeMethods.get).__doc__ = \
+_method(uproot.tree.TTreeMethods.get).__doc__ = wrap(
 u"""Return a branch by name (at any level of depth).
 
     Parameters
@@ -699,9 +722,9 @@ u"""Return a branch by name (at any level of depth).
     -----
 
     This method can be accessed more directly through square brackets (``__getitem__``) on the :py:class:`TTree <uproot.tree.TTreeMethods>` object.
-"""
+""", width=TEXT_WIDTH)
 
-_method(uproot.tree.TTreeMethods.iterkeys).__doc__ = \
+_method(uproot.tree.TTreeMethods.iterkeys).__doc__ = wrap(
 u"""Iterate over branch names.
 
     Parameters
@@ -716,9 +739,9 @@ u"""Iterate over branch names.
     -------
     iterator over bytes
         names of branches.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TTreeMethods.itervalues).__doc__ = \
+_method(uproot.tree.TTreeMethods.itervalues).__doc__ = wrap(
 u"""Iterate over branches.
 
     Parameters
@@ -733,9 +756,9 @@ u"""Iterate over branches.
     -------
     iterator over :py:class:`TBranch <uproot.tree.TBranchMethods>`
         branches.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TTreeMethods.iteritems).__doc__ = \
+_method(uproot.tree.TTreeMethods.iteritems).__doc__ = wrap(
 u"""Iterate over *(branch name, branch)* pairs.
 
     Parameters
@@ -750,9 +773,9 @@ u"""Iterate over *(branch name, branch)* pairs.
     -------
     iterator over (bytes, :py:class:`TBranch <uproot.tree.TBranchMethods>`)
         name-branch pairs.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TTreeMethods.keys).__doc__ = \
+_method(uproot.tree.TTreeMethods.keys).__doc__ = wrap(
 u"""Return branch names.
 
     Parameters
@@ -767,9 +790,9 @@ u"""Return branch names.
     -------
     list of bytes
         names of branches.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TTreeMethods.values).__doc__ = \
+_method(uproot.tree.TTreeMethods.values).__doc__ = wrap(
 u"""Return branches.
 
     Parameters
@@ -784,9 +807,9 @@ u"""Return branches.
     -------
     list of :py:class:`TBranch <uproot.tree.TBranchMethods>`
         branches.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TTreeMethods.items).__doc__ = \
+_method(uproot.tree.TTreeMethods.items).__doc__ = wrap(
 u"""Return *(branch name, branch)* pairs.
 
     Parameters
@@ -801,9 +824,9 @@ u"""Return *(branch name, branch)* pairs.
     -------
     list of (bytes, :py:class:`TBranch <uproot.tree.TBranchMethods>`)
         name-branch pairs.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TTreeMethods.allkeys).__doc__ = \
+_method(uproot.tree.TTreeMethods.allkeys).__doc__ = wrap(
 u"""Return branch names at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`keys <uproot.tree.TTreeMethods.keys>`).
 
     Parameters
@@ -816,9 +839,9 @@ u"""Return branch names at all levels of depth (shortcut for passing ``recursive
     -------
     list of bytes
         names of branches.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TTreeMethods.allvalues).__doc__ = \
+_method(uproot.tree.TTreeMethods.allvalues).__doc__ = wrap(
 u"""Return branches at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`values <uproot.tree.TTreeMethods.values>`).
 
     Parameters
@@ -831,9 +854,9 @@ u"""Return branches at all levels of depth (shortcut for passing ``recursive=Tru
     -------
     list of :py:class:`TBranch <uproot.tree.TBranchMethods>`
         branches.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TTreeMethods.allitems).__doc__ = \
+_method(uproot.tree.TTreeMethods.allitems).__doc__ = wrap(
 u"""Return *(branch name, branch)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`items <uproot.tree.TTreeMethods.items>`).
 
     Parameters
@@ -846,9 +869,9 @@ u"""Return *(branch name, branch)* pairs at all levels of depth (shortcut for pa
     -------
     list of (bytes, :py:class:`TBranch <uproot.tree.TBranchMethods>`
         name-branch pairs.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TTreeMethods.clusters).__doc__ = \
+_method(uproot.tree.TTreeMethods.clusters).__doc__ = wrap(
 u"""Return entry starts and stops as *(int, int)* pairs representing clusters for a given set of branches this TTree.
 
     Rather than using ROOT's self-reported clusters (which don't exist in every ROOT file), this method finds the minimal step sizes in which a given set of branches have basket thresholds for the same entry number. For a single branch, this is exactly the basket boundaries. It is possible for a given set of branches to never line up, in which case, the cluster is the entire file.
@@ -868,9 +891,9 @@ u"""Return entry starts and stops as *(int, int)* pairs representing clusters fo
     -------
     list of (int, int)
         start (inclusive) and stop (exclusive) pairs for each cluster.
-"""
+""", width=TEXT_WIDTH)
 
-_method(uproot.tree.TTreeMethods.mempartitions).__doc__ = \
+_method(uproot.tree.TTreeMethods.mempartitions).__doc__ = wrap(
 u"""Return entry starts and stops as *(int, int)* pairs of (approximately) equal-memory partitions for a given set of branches in this TTree.
 
     Similar to :py:meth:`clusters <uproot.tree.TTreeMethods.clusters>` in that it provides a list of (start, stop) entry pairs, but instead of fitting baskets, this method attempts to keep the memory use constant.
@@ -895,9 +918,9 @@ u"""Return entry starts and stops as *(int, int)* pairs of (approximately) equal
     -------
     list of (int, int)
         start (inclusive) and stop (exclusive) pairs for each equal-memory partition.
-"""
+""", width=TEXT_WIDTH)
 
-_method(uproot.tree.TTreeMethods.array).__doc__ = \
+_method(uproot.tree.TTreeMethods.array).__doc__ = wrap(
 u"""Read one branch into an array (or other object if provided an alternate *interpretation*).
 
     Parameters
@@ -927,9 +950,9 @@ u"""Read one branch into an array (or other object if provided an alternate *int
     Returns
     -------
     array or other object, depending on *interpretation*.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TTreeMethods.arrays).__doc__ = \
+_method(uproot.tree.TTreeMethods.arrays).__doc__ = wrap(
 u"""Read many branches into arrays (or other objects if provided alternate *interpretations*).
 
     Parameters
@@ -964,9 +987,9 @@ u"""Read many branches into arrays (or other objects if provided alternate *inte
     -------
     outputtype of arrays or other objects, depending on *interpretation*
         branch data.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TTreeMethods.lazyarray).__doc__ = \
+_method(uproot.tree.TTreeMethods.lazyarray).__doc__ = wrap(
 u"""Create a lazy array that would read the branch as needed.
 
     Parameters
@@ -1001,9 +1024,9 @@ u"""Create a lazy array that would read the branch as needed.
     -------
     ChunkedArray of VirtualArrays or VirtualArray
         lazy version of the array.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TTreeMethods.lazyarrays).__doc__ = \
+_method(uproot.tree.TTreeMethods.lazyarrays).__doc__ = wrap(
 u"""Create a table of lazy arrays.
 
     Parameters
@@ -1040,9 +1063,9 @@ u"""Create a table of lazy arrays.
     -------
     ChunkedArray of Table of VirtualArrays or Table of VirtualArrays
         lazy branch data.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TTreeMethods.iterate).__doc__ = \
+_method(uproot.tree.TTreeMethods.iterate).__doc__ = wrap(
 u"""Iterate over many arrays at once, yielding the same number of entries from all selected branches in each step.
 
     Depending on the "entrysteps" parameter, the number of entries in one step may differ from the number of entries in the next step, but in every step, the same number of entries is retrieved from all *baskets.*
@@ -1083,11 +1106,11 @@ u"""Iterate over many arrays at once, yielding the same number of entries from a
     -------
     iterator over (int, int, outputtype) (if *reportentries*) or just outputtype (otherwise)
         aligned array segments from the TTree.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
 ################################################################ uproot.tree.TBranchMethods
 
-uproot.tree.TBranchMethods.__doc__ = \
+uproot.tree.TBranchMethods.__doc__ = wrap(
 u"""Adds array reading methods to TBranch objects that have been streamed from a ROOT file.
 
     - square brackets (``__getitem__``) returns a subbranch by name (see :py:meth:`get <uproot.tree.TBranchMethods.get>`).
@@ -1136,9 +1159,9 @@ u"""Adds array reading methods to TBranch objects that have been streamed from a
     - :py:meth:`basket <uproot.tree.TBranchMethods.basket>` read a single basket into an array.
     - :py:meth:`baskets <uproot.tree.TBranchMethods.baskets>` read baskets into a list of arrays.
     - :py:meth:`iterate_baskets <uproot.tree.TBranchMethods.iterate_baskets>` iterate over baskets.
-"""
+""", width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.get).__doc__ = \
+_method(uproot.tree.TBranchMethods.get).__doc__ = wrap(
 u"""Return a subbranch by name (at any level of depth).
 
     Parameters
@@ -1155,9 +1178,9 @@ u"""Return a subbranch by name (at any level of depth).
     -----
 
     This method can be accessed more directly through square brackets (``__getitem__``) on the :py:class:`TBranch <uproot.tree.TBranchMethods>` object.
-"""
+""", width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.iterkeys).__doc__ = \
+_method(uproot.tree.TBranchMethods.iterkeys).__doc__ = wrap(
 u"""Iterate over subbranch names.
 
     Parameters
@@ -1172,9 +1195,9 @@ u"""Iterate over subbranch names.
     -------
     iterator over bytes
         subbranch names.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.itervalues).__doc__ = \
+_method(uproot.tree.TBranchMethods.itervalues).__doc__ = wrap(
 u"""Iterate over subbranches.
 
     Parameters
@@ -1189,9 +1212,9 @@ u"""Iterate over subbranches.
     -------
     iterator over :py:class:`TBranch <uproot.tree.TBranchMethods>`
         subbranches.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.iteritems).__doc__ = \
+_method(uproot.tree.TBranchMethods.iteritems).__doc__ = wrap(
 u"""Iterate over *(subbranch name, subbranch)* pairs.
 
     Parameters
@@ -1206,9 +1229,9 @@ u"""Iterate over *(subbranch name, subbranch)* pairs.
     -------
     iterator over (bytes, :py:class:`TBranch <uproot.tree.TBranchMethods>`)
         *(subbranch name, subbranch)* pairs.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.keys).__doc__ = \
+_method(uproot.tree.TBranchMethods.keys).__doc__ = wrap(
 u"""Return subbranch names.
 
     Parameters
@@ -1223,9 +1246,9 @@ u"""Return subbranch names.
     -------
     list of bytes
         subbranch names.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.values).__doc__ = \
+_method(uproot.tree.TBranchMethods.values).__doc__ = wrap(
 u"""Return subbranches.
 
     Parameters
@@ -1240,9 +1263,9 @@ u"""Return subbranches.
     -------
     list of :py:class:`TBranch <uproot.tree.TBranchMethods>`
         subbranches.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.items).__doc__ = \
+_method(uproot.tree.TBranchMethods.items).__doc__ = wrap(
 u"""Return *(subbranch name, subbranch)* pairs.
 
     Parameters
@@ -1257,9 +1280,9 @@ u"""Return *(subbranch name, subbranch)* pairs.
     -------
     list of (bytes, :py:class:`TBranch <uproot.tree.TBranchMethods>`)
         *(subbranch name, subbranch)* pairs.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.allkeys).__doc__ = \
+_method(uproot.tree.TBranchMethods.allkeys).__doc__ = wrap(
 u"""Return subbranch names at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`keys <uproot.tree.TBranchMethods.keys>`).
 
     Parameters
@@ -1272,9 +1295,9 @@ u"""Return subbranch names at all levels of depth (shortcut for passing ``recurs
     -------
     list of bytes
         subbranch names.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.allvalues).__doc__ = \
+_method(uproot.tree.TBranchMethods.allvalues).__doc__ = wrap(
 u"""Return subbranches at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`values <uproot.tree.TBranchMethods.values>`).
 
     Parameters
@@ -1287,9 +1310,9 @@ u"""Return subbranches at all levels of depth (shortcut for passing ``recursive=
     -------
     list of :py:class:`TBranch <uproot.tree.TBranchMethods>`
         subbranches.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.allitems).__doc__ = \
+_method(uproot.tree.TBranchMethods.allitems).__doc__ = wrap(
 u"""Return *(subbranch name, subbranch)* pairs at all levels of depth (shortcut for passing ``recursive=True`` to :py:meth:`items <uproot.tree.TBranchMethods.items>`).
 
     Parameters
@@ -1302,9 +1325,9 @@ u"""Return *(subbranch name, subbranch)* pairs at all levels of depth (shortcut 
     -------
     list of (bytes, :py:class:`TBranch <uproot.tree.TBranchMethods>`
         (subbranch name, subbranch)* pairs.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.uncompressedbytes).__doc__ = \
+_method(uproot.tree.TBranchMethods.uncompressedbytes).__doc__ = wrap(
 u"""The number of bytes contained in the TBranch (data and offsets; not including any key headers) *after* decompression, if applicable.
 
     Parameters
@@ -1315,9 +1338,9 @@ u"""The number of bytes contained in the TBranch (data and offsets; not includin
     -------
     int
         uncompressed bytes.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.compressedbytes).__doc__ = \
+_method(uproot.tree.TBranchMethods.compressedbytes).__doc__ = wrap(
 u"""The number of bytes contained in the TBranch (data and offsets; not including any key headers) *before* decompression, if applicable.
 
     Parameters
@@ -1328,9 +1351,9 @@ u"""The number of bytes contained in the TBranch (data and offsets; not includin
     -------
     int
         compressed bytes.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.compressionratio).__doc__ = \
+_method(uproot.tree.TBranchMethods.compressionratio).__doc__ = wrap(
 u"""The uncompressed bytes divided by compressed bytes (greater than or equal to 1).
 
     Parameters
@@ -1341,9 +1364,9 @@ u"""The uncompressed bytes divided by compressed bytes (greater than or equal to
     -------
     float
         compression ratio.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.numitems).__doc__ = \
+_method(uproot.tree.TBranchMethods.numitems).__doc__ = wrap(
 u"""The number of items in the TBranch, under a given interpretation.
 
     Parameters
@@ -1356,9 +1379,9 @@ u"""The number of items in the TBranch, under a given interpretation.
     -------
     int
         number of items.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.basket_entrystart).__doc__ = \
+_method(uproot.tree.TBranchMethods.basket_entrystart).__doc__ = wrap(
 u"""The starting entry for a given basket (inclusive).
 
     Parameters
@@ -1369,9 +1392,9 @@ u"""The starting entry for a given basket (inclusive).
     -------
     int
         starting entry.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.basket_entrystop).__doc__ = \
+_method(uproot.tree.TBranchMethods.basket_entrystop).__doc__ = wrap(
 u"""The stopping entry for a given basket (exclusive).
 
     Parameters
@@ -1382,9 +1405,9 @@ u"""The stopping entry for a given basket (exclusive).
     -------
     int
         stopping entry.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.basket_numentries).__doc__ = \
+_method(uproot.tree.TBranchMethods.basket_numentries).__doc__ = wrap(
 u"""The number of entries in a given basket.
 
     Parameters
@@ -1395,9 +1418,9 @@ u"""The number of entries in a given basket.
     -------
     int
         number of entries.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.basket_uncompressedbytes).__doc__ = \
+_method(uproot.tree.TBranchMethods.basket_uncompressedbytes).__doc__ = wrap(
 u"""The number of bytes contained in the basket (data and offsets; not including any key headers) *after* decompression, if applicable.
 
     Parameters
@@ -1410,9 +1433,9 @@ u"""The number of bytes contained in the basket (data and offsets; not including
     -------
     int
         number of uncompressed bytes.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.basket_compressedbytes).__doc__ = \
+_method(uproot.tree.TBranchMethods.basket_compressedbytes).__doc__ = wrap(
 u"""The number of bytes contained in the basket (data and offsets; not including any key headers) *before* decompression, if applicable.
 
     Parameters
@@ -1425,9 +1448,9 @@ u"""The number of bytes contained in the basket (data and offsets; not including
     -------
     int
         number of compressed bytes.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.basket_numitems).__doc__ = \
+_method(uproot.tree.TBranchMethods.basket_numitems).__doc__ = wrap(
 u"""The number of items in the basket, under a given interpretation.
 
     Parameters
@@ -1442,9 +1465,9 @@ u"""The number of items in the basket, under a given interpretation.
     -------
     int
         number of items.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.array).__doc__ = \
+_method(uproot.tree.TBranchMethods.array).__doc__ = wrap(
 u"""Read the branch into an array (or other object if provided an alternate *interpretation*).
 
     Parameters
@@ -1473,9 +1496,9 @@ u"""Read the branch into an array (or other object if provided an alternate *int
     -------
     array or other object, depending on *interpretation*
         branch data.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.mempartitions).__doc__ = \
+_method(uproot.tree.TBranchMethods.mempartitions).__doc__ = wrap(
 u"""Return entry starts and stops as *(int, int)* pairs of (approximately) equal-memory partitions in this TBranch.
 
     Similar to :py:meth:`clusters <uproot.tree.TTreeMethods.clusters>` in that it provides a list of (start, stop) entry pairs, but instead of fitting baskets, this method attempts to keep the memory use constant.
@@ -1498,9 +1521,9 @@ u"""Return entry starts and stops as *(int, int)* pairs of (approximately) equal
     -------
     list of (int, int)
         start (inclusive) and stop (exclusive) pairs for each equal-memory partition.
-"""
+""", width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.lazyarray).__doc__ = \
+_method(uproot.tree.TBranchMethods.lazyarray).__doc__ = wrap(
 u"""Create a lazy array that would read the branch as needed.
 
     Parameters
@@ -1533,9 +1556,9 @@ u"""Create a lazy array that would read the branch as needed.
     -------
     ChunkedArray of VirtualArrays or VirtualArray
         lazy version of branch data.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.basket).__doc__ = \
+_method(uproot.tree.TBranchMethods.basket).__doc__ = wrap(
 u"""Read a single basket into an array.
 
     Parameters
@@ -1562,9 +1585,9 @@ u"""Read a single basket into an array.
     -------
     array or other object, depending on *interpretation*
         basket data.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.baskets).__doc__ = \
+_method(uproot.tree.TBranchMethods.baskets).__doc__ = wrap(
 u"""Read baskets into a list of arrays.
 
     Parameters
@@ -1595,9 +1618,9 @@ u"""Read baskets into a list of arrays.
     -------
     list of arrays or other objects, depending on *interpretation*
         basket data.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
-_method(uproot.tree.TBranchMethods.iterate_baskets).__doc__ = \
+_method(uproot.tree.TBranchMethods.iterate_baskets).__doc__ = wrap(
 u"""Iterate over baskets.
 
     Parameters
@@ -1624,11 +1647,11 @@ u"""Iterate over baskets.
     -------
     iterator over arrays or other objects, depending on *interpretation*
         basket data.
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
 ################################################################ uproot.tree.TTreeMethods.pandas
 
-_method(uproot._connect._pandas.TTreeMethods_pandas.df).__doc__ = \
+_method(uproot._connect._pandas.TTreeMethods_pandas.df).__doc__ = wrap(
 u"""Create a Pandas DataFrame from some branches.
 
     Parameters
@@ -1657,11 +1680,11 @@ u"""Create a Pandas DataFrame from some branches.
     -------
     Pandas DataFrame
         data frame (`see docs <http://pandas.pydata.org/pandas-docs/stable/api.html#dataframe>`_).
-""".format(**tree_fragments)
+""".format(**tree_fragments), width=TEXT_WIDTH)
 
 ################################################################ uproot.tree.lazyarray(s)
 
-uproot.tree.lazyarray.__doc__ = \
+uproot.tree.lazyarray.__doc__ = wrap(
 u"""Create a lazy array that would read from a set of files as needed.
 
     Parameters
@@ -1708,9 +1731,9 @@ u"""Create a lazy array that would read from a set of files as needed.
     -------
     ChunkedArray of VirtualArrays
         lazy files of lazy baskets.
-""".format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
+""".format(**dict(list(open_fragments.items()) + list(tree_fragments.items()))), width=TEXT_WIDTH)
 
-uproot.tree.lazyarrays.__doc__ = \
+uproot.tree.lazyarrays.__doc__ = wrap(
 u"""Create a lazy table that would read from a set of files as needed.
 
     Parameters
@@ -1756,11 +1779,11 @@ u"""Create a lazy table that would read from a set of files as needed.
     -------
     ChunkedArray of Table of VirtualArrays
         lazy files of branches of lazy baskets.
-""".format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
+""".format(**dict(list(open_fragments.items()) + list(tree_fragments.items()))), width=TEXT_WIDTH)
 
 ################################################################ uproot.tree.daskarray/daskframe
 
-uproot.tree.daskarray.__doc__ = \
+uproot.tree.daskarray.__doc__ = wrap(
 u"""Create a Dask array that would read from a set of files as needed.
 
     Parameters
@@ -1805,9 +1828,9 @@ u"""Create a Dask array that would read from a set of files as needed.
     -------
     dask.array.core.Array
         lazy files of lazy baskets.
-""".format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
+""".format(**dict(list(open_fragments.items()) + list(tree_fragments.items()))), width=TEXT_WIDTH)
 
-uproot.tree.daskframe.__doc__ = \
+uproot.tree.daskframe.__doc__ = wrap(
 u"""Create a Dask DataFrame that would read from a set of files as needed.
 
     Parameters
@@ -1849,11 +1872,11 @@ u"""Create a Dask DataFrame that would read from a set of files as needed.
     -------
     dask.dataframe.core.DataFrame
         lazy files of branches of lazy baskets.
-""".format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
+""".format(**dict(list(open_fragments.items()) + list(tree_fragments.items()))), width=TEXT_WIDTH)
 
 ################################################################ uproot.tree.numentries
 
-uproot.tree.numentries.__doc__ = \
+uproot.tree.numentries.__doc__ = wrap(
 u"""Get the number of entries in a TTree without fully opening the file.
 
     ``uproot.numentries("file.root", "tree")`` is a shortcut for ``uproot.open("file.root")["tree"].numentries`` that should be faster, particularly for files with many streamers and/or TTrees with many branches because it skips those steps in getting to the number of entries.
@@ -1885,11 +1908,11 @@ u"""Get the number of entries in a TTree without fully opening the file.
     -------
     int or ``OrderedDict``
         total number of entries or number of entries for each file, depending on *total*.
-""".format(**dict(list(open_fragments.items()) + list(tree_fragments.items())))
+""".format(**dict(list(open_fragments.items()) + list(tree_fragments.items()))), width=TEXT_WIDTH)
 
 ################################################################ uproot.interp.interp.Interpretation
 
-uproot.interp.interp.Interpretation.__doc__ = \
+uproot.interp.interp.Interpretation.__doc__ = wrap(
 u"""Interface for interpretations.
 
     Interpretations do not need to inherit from this class, but they do need to satisfy the interface described below.
@@ -1927,11 +1950,11 @@ u"""Interface for interpretations.
 
     **finalize(self, destination)**
         possibly post-process a ``destination`` to make it ready for consumption. This is needed if a different form must be used for filling than should be provided to the user--- for instance, offsets of a jagged array can't be computed when filling sections of it in parallel (sizes can), but the user should receive a jagged array based on offsets for random access.
-"""
+""", width=TEXT_WIDTH)
 
 ################################################################ uproot.interp.auto.interpret
 
-uproot.interp.auto.interpret.__doc__ = \
+uproot.interp.auto.interpret.__doc__ = wrap(
 u"""Generate a default interpretation of a branch.
 
     This function is called with default options on each branch in the following methods to generate a default interpretation. You can override the default either by calling this function explicitly with different parameters or by modifying its result.
@@ -1966,7 +1989,7 @@ u"""Generate a default interpretation of a branch.
     -------
     :py:class:`Interpretation <uproot.interp.interp.Interpretation>`
         the interpretation.
-"""
+""", width=TEXT_WIDTH)
 
 ################################################################ uproot.interp fragments
 
@@ -1995,7 +2018,7 @@ interp_numerical_fragments = {
 
 ################################################################ uproot.interp.numerical.asdtype
 
-uproot.interp.numerical.asdtype.__doc__ = \
+uproot.interp.numerical.asdtype.__doc__ = wrap(
 u"""Interpret branch data as a new Numpy array with given dtypes and dimensions.
 
     This interpretation directs branch-reading functions to allocate new Numpy arrays and fill them with the branch contents. See :py:class:`asarray <uproot.interp.numerical.asarray>` to fill an existing array, rather than filling a new array.
@@ -2018,9 +2041,9 @@ u"""Interpret branch data as a new Numpy array with given dtypes and dimensions.
     -----
 
     {see2}
-""".format(**dict(list(interp_fragments.items()) + list(interp_numerical_fragments.items())))
+""".format(**dict(list(interp_fragments.items()) + list(interp_numerical_fragments.items()))), width=TEXT_WIDTH)
 
-_method(uproot.interp.numerical.asdtype.to).__doc__ = \
+_method(uproot.interp.numerical.asdtype.to).__doc__ = wrap(
 u"""Create a new :py:class:`asdtype <uproot.interp.numerical.asdtype>` interpretation from this one.
 
     Parameters
@@ -2035,9 +2058,9 @@ u"""Create a new :py:class:`asdtype <uproot.interp.numerical.asdtype>` interpret
     -------
     :py:class:`asdtype <uproot.interp.numerical.asdtype>`
         new interpretation.
-"""
+""", width=TEXT_WIDTH)
 
-_method(uproot.interp.numerical.asdtype.toarray).__doc__ = \
+_method(uproot.interp.numerical.asdtype.toarray).__doc__ = wrap(
 u"""Create a :py:class:`asarray <uproot.interp.numerical.asarray>` interpretation from this one.
 
     Parameters
@@ -2049,7 +2072,7 @@ u"""Create a :py:class:`asarray <uproot.interp.numerical.asarray>` interpretatio
     -------
     :py:class:`asarray <uproot.interp.numerical.asarray>`
         new interpretation.
-"""
+""", width=TEXT_WIDTH)
 
 _method(uproot.interp.numerical.asdtype.empty).__doc__ = interp_fragments["see1"]
 _method(uproot.interp.numerical.asdtype.compatible).__doc__ = interp_fragments["see1"]
@@ -2063,7 +2086,7 @@ _method(uproot.interp.numerical.asdtype.finalize).__doc__ = interp_fragments["se
 
 ################################################################ uproot.interp.numerical.asarray
 
-uproot.interp.numerical.asarray.__doc__ = \
+uproot.interp.numerical.asarray.__doc__ = wrap(
 u"""Interpret branch as array data that should overwrite an existing array.
 
     This interpretation directs branch-reading functions to fill the given Numpy array with branch contents. See :py:class:`asdtype <uproot.interp.numerical.asdtype>` to allocate a new array, rather than filling an existing array.
@@ -2085,7 +2108,7 @@ u"""Interpret branch as array data that should overwrite an existing array.
     {see2}
 
     This class has *todtype* and *todims* parameters like :py:class:`asdtype <uproot.interp.numerical.asdtype>`, but they are derived from the *toarray* attribute.
-""".format(**dict(list(interp_fragments.items()) + list(interp_numerical_fragments.items())))
+""".format(**dict(list(interp_fragments.items()) + list(interp_numerical_fragments.items()))), width=TEXT_WIDTH)
 
 _method(uproot.interp.numerical.asarray.destination).__doc__ = interp_fragments["see1"]
 _method(uproot.interp.numerical.asarray.fill).__doc__ = interp_fragments["see1"]
@@ -2094,7 +2117,7 @@ _method(uproot.interp.numerical.asarray.finalize).__doc__ = interp_fragments["se
 
 ################################################################ uproot.interp.jagged.asjagged
 
-uproot.interp.jagged.asjagged.__doc__ = \
+uproot.interp.jagged.asjagged.__doc__ = wrap(
 u"""Interpret branch as a jagged array (array of non-uniformly sized arrays).
 
     This interpretation directs branch-reading to fill contiguous arrays and present them to the user in a ``JaggedArray`` interface. Such an object behaves as though it were an array of non-uniformly sized arrays, but it is more memory and cache-line efficient because the underlying data are contiguous.
@@ -2110,9 +2133,9 @@ u"""Interpret branch as a jagged array (array of non-uniformly sized arrays).
     -----
 
     {see2}
-""".format(**interp_fragments)
+""".format(**interp_fragments), width=TEXT_WIDTH)
 
-_method(uproot.interp.jagged.asjagged.to).__doc__ = \
+_method(uproot.interp.jagged.asjagged.to).__doc__ = wrap(
 u"""Create a new :py:class:`asjagged <uproot.interp.jagged.asjagged>` interpretation from this one.
 
     Parameters
@@ -2127,7 +2150,7 @@ u"""Create a new :py:class:`asjagged <uproot.interp.jagged.asjagged>` interpreta
     -------
     :py:class:`asjagged <uproot.interp.jagged.asjagged>`
         new interpretation.
-"""
+""", width=TEXT_WIDTH)
 
 _method(uproot.interp.jagged.asjagged.empty).__doc__ = interp_fragments["see1"]
 _method(uproot.interp.jagged.asjagged.compatible).__doc__ = interp_fragments["see1"]
@@ -2143,7 +2166,7 @@ _method(uproot.interp.jagged.asjagged.finalize).__doc__ = interp_fragments["see1
 
 ################################################################ uproot.source.cursor.Cursor
 
-uproot.source.cursor.Cursor.__doc__ = \
+uproot.source.cursor.Cursor.__doc__ = wrap(
 u"""Maintain a position in a :py:class:`Source <uproot.source.source.Source>` that updates as data are read.
 
     **Attributes, properties, and methods:**
@@ -2173,7 +2196,7 @@ u"""Maintain a position in a :py:class:`Source <uproot.source.source.Source>` th
 
     refs : ``None`` or ``dict``-like
        if ``None`` *(default)*, use a new dict as the **ref**; otherwise, use the value provided.
-"""
+""", width=TEXT_WIDTH)
 
 format_source_cursor = {
     # source
@@ -2181,7 +2204,7 @@ format_source_cursor = {
         data to be read."""
     }
 
-_method(uproot.source.cursor.Cursor.copied).__doc__ = \
+_method(uproot.source.cursor.Cursor.copied).__doc__ = wrap(
 u"""Return a copy of this :py:class:`Cursor <uproot.source.cursor.Cursor>` with modifications.
 
     Parameters
@@ -2204,9 +2227,9 @@ u"""Return a copy of this :py:class:`Cursor <uproot.source.cursor.Cursor>` with 
     -----
 
     This is a shallow copy--- the **refs** are shared with the parent and all other copies.
-""".format(**format_source_cursor)
+""".format(**format_source_cursor), width=TEXT_WIDTH)
 
-_method(uproot.source.cursor.Cursor.skipped).__doc__ = \
+_method(uproot.source.cursor.Cursor.skipped).__doc__ = wrap(
 u"""Return a copy of this :py:class:`Cursor <uproot.source.cursor.Cursor>` with the **index** moved forward.
 
     Parameters
@@ -2229,18 +2252,18 @@ u"""Return a copy of this :py:class:`Cursor <uproot.source.cursor.Cursor>` with 
     -----
 
     This is a shallow copy--- the **refs** are shared with the parent and all other copies.
-""".format(**format_source_cursor)
+""".format(**format_source_cursor), width=TEXT_WIDTH)
 
-_method(uproot.source.cursor.Cursor.skip).__doc__ = \
+_method(uproot.source.cursor.Cursor.skip).__doc__ = wrap(
 u"""Move the **index** of this :py:class:`Cursor <uproot.source.cursor.Cursor>` forward.
 
     Parameters
     ----------
     numbytes : int
         number of bytes to skip
-""".format(**format_source_cursor)
+""".format(**format_source_cursor), width=TEXT_WIDTH)
 
-_method(uproot.source.cursor.Cursor.fields).__doc__ = \
+_method(uproot.source.cursor.Cursor.fields).__doc__ = wrap(
 u"""Interpret bytes in the :py:class:`Source <uproot.source.source.Source>` with given data types and skip the **index** past them.
 
     Parameters
@@ -2254,9 +2277,9 @@ u"""Interpret bytes in the :py:class:`Source <uproot.source.source.Source>` with
     -------
     tuple
         field values (types determined by format)
-""".format(**format_source_cursor)
+""".format(**format_source_cursor), width=TEXT_WIDTH)
 
-_method(uproot.source.cursor.Cursor.field).__doc__ = \
+_method(uproot.source.cursor.Cursor.field).__doc__ = wrap(
 u"""Interpret bytes in the :py:class:`Source <uproot.source.source.Source>` with a given data type and skip the **index** past it.
 
     Parameters
@@ -2270,9 +2293,9 @@ u"""Interpret bytes in the :py:class:`Source <uproot.source.source.Source>` with
     -------
     type determined by format
         field value
-""".format(**format_source_cursor)
+""".format(**format_source_cursor), width=TEXT_WIDTH)
 
-_method(uproot.source.cursor.Cursor.bytes).__doc__ = \
+_method(uproot.source.cursor.Cursor.bytes).__doc__ = wrap(
 u"""Return a range of bytes from the :py:class:`Source <uproot.source.source.Source>` and skip the **index** past it.
 
     Parameters
@@ -2286,9 +2309,9 @@ u"""Return a range of bytes from the :py:class:`Source <uproot.source.source.Sou
     -------
     ``numpy.ndarray`` of ``numpy.uint8``
         raw view of data from source.
-""".format(**format_source_cursor)
+""".format(**format_source_cursor), width=TEXT_WIDTH)
 
-_method(uproot.source.cursor.Cursor.array).__doc__ = \
+_method(uproot.source.cursor.Cursor.array).__doc__ = wrap(
 u"""Return a range of bytes from the :py:class:`Source <uproot.source.source.Source>` as a typed Numpy array and skip the **index** past it.
 
     Parameters
@@ -2305,9 +2328,9 @@ u"""Return a range of bytes from the :py:class:`Source <uproot.source.source.Sou
     -------
     ``numpy.ndarray``
         interpreted view of data from source.
-""".format(**format_source_cursor)
+""".format(**format_source_cursor), width=TEXT_WIDTH)
 
-_method(uproot.source.cursor.Cursor.string).__doc__ = \
+_method(uproot.source.cursor.Cursor.string).__doc__ = wrap(
 u"""Read a string from the :py:class:`Source <uproot.source.source.Source>`, interpreting the first 1 or 5 bytes as a size and skip the **index** past it.
 
     Parameters
@@ -2318,9 +2341,9 @@ u"""Read a string from the :py:class:`Source <uproot.source.source.Source>`, int
     -------
     bytes
         Python string (``bytes`` in Python 3).
-""".format(**format_source_cursor)
+""".format(**format_source_cursor), width=TEXT_WIDTH)
 
-_method(uproot.source.cursor.Cursor.cstring).__doc__ = \
+_method(uproot.source.cursor.Cursor.cstring).__doc__ = wrap(
 u"""Read a null-terminated string from the :py:class:`Source <uproot.source.source.Source>` and skip the **index** past it.
 
     The index is also skipped past the null that terminates the string.
@@ -2333,17 +2356,17 @@ u"""Read a null-terminated string from the :py:class:`Source <uproot.source.sour
     -------
     bytes
         Python string (``bytes`` in Python 3).
-""".format(**format_source_cursor)
+""".format(**format_source_cursor), width=TEXT_WIDTH)
 
-_method(uproot.source.cursor.Cursor.skipstring).__doc__ = \
+_method(uproot.source.cursor.Cursor.skipstring).__doc__ = wrap(
 u"""Interpret the first 1 or 5 bytes as a size and skip the **index** past the string (without creating a Python string).
 
     Parameters
     ----------
     {source}
-""".format(**format_source_cursor)
+""".format(**format_source_cursor), width=TEXT_WIDTH)
 
-_method(uproot.source.cursor.Cursor.hexdump).__doc__ = \
+_method(uproot.source.cursor.Cursor.hexdump).__doc__ = wrap(
 u"""View a section of the :py:class:`Source <uproot.source.source.Source>` as formatted by the POSIX ``hexdump`` program and *do not* move the **index**.
 
     This is much more useful than simply hexdumping the whole file, since partial interpretation is necessary to find the right point in the file to dump.
@@ -2365,11 +2388,11 @@ u"""View a section of the :py:class:`Source <uproot.source.source.Source>` as fo
     -------
     str
         hexdump-formatted view to be printed
-""".format(**format_source_cursor)
+""".format(**format_source_cursor), width=TEXT_WIDTH)
 
 ################################################################ uproot.source.source.Source
 
-uproot.source.source.Source.__doc__ = \
+uproot.source.source.Source.__doc__ = wrap(
 u"""Interface for data sources.
 
     Sources do not need to inherit from this class, but they do need to satisfy the interface described below.
@@ -2385,7 +2408,7 @@ u"""Interface for data sources.
 
     **data(self, start, stop, dtype=None)**
         return a view of data from the starting byte (inclusive) to the stopping byte (exclusive), with a given Numpy type (numpy.uint8 if ``None``).
-"""
+""", width=TEXT_WIDTH)
 
 source_fragments = {
     # see1
@@ -2397,7 +2420,7 @@ source_fragments = {
 
 ################################################################ uproot.source.file.FileSource
 
-uproot.source.file.FileSource.__doc__ = \
+uproot.source.file.FileSource.__doc__ = wrap(
 u"""Emulate a memory-mapped interface with traditional file handles, opening many if necessary.
 
     :py:class:`FileSource <uproot.source.file.FileSource>` objects avoid double-reading and many small reads by caching data in chunks. All thread-local copies of a :py:class:`FileSource <uproot.source.file.FileSource>` share a :py:class:`ThreadSafeArrayCache <uproot.cache.ThreadSafeArrayCache>` to avoid double-reads across threads.
@@ -2417,7 +2440,7 @@ u"""Emulate a memory-mapped interface with traditional file handles, opening man
     -----
 
     {see2}
-""".format(**source_fragments)
+""".format(**source_fragments), width=TEXT_WIDTH)
 
 _method(uproot.source.file.FileSource.parent).__doc__ = source_fragments["see1"]
 _method(uproot.source.file.FileSource.threadlocal).__doc__ = source_fragments["see1"]
@@ -2426,7 +2449,7 @@ _method(uproot.source.file.FileSource.data).__doc__ = source_fragments["see1"]
 
 ################################################################ uproot.source.memmap.MemmapSource
 
-uproot.source.memmap.MemmapSource.__doc__ = \
+uproot.source.memmap.MemmapSource.__doc__ = wrap(
 u"""Thin wrapper around a memory-mapped file, which already behaves like a :py:class:`Source <uproot.source.source.Source>`.
 
     Parameters
@@ -2438,7 +2461,7 @@ u"""Thin wrapper around a memory-mapped file, which already behaves like a :py:c
     -----
 
     {see2}
-""".format(**source_fragments)
+""".format(**source_fragments), width=TEXT_WIDTH)
 
 _method(uproot.source.memmap.MemmapSource.parent).__doc__ = source_fragments["see1"]
 _method(uproot.source.memmap.MemmapSource.threadlocal).__doc__ = source_fragments["see1"]
@@ -2447,7 +2470,7 @@ _method(uproot.source.memmap.MemmapSource.data).__doc__ = source_fragments["see1
 
 ################################################################ uproot.source.xrootd.XRootDSource
 
-uproot.source.xrootd.XRootDSource.__doc__ = \
+uproot.source.xrootd.XRootDSource.__doc__ = wrap(
 u"""Emulate a memory-mapped interface with XRootD.
 
     XRootD is already thread-safe, but provides no caching. :py:class:`XRootDSource <uproot.source.xrootd.XRootDSource>` objects avoid double-reading and many small reads by caching data in chunks. They are not duplicated when splitting into threads.
@@ -2467,7 +2490,7 @@ u"""Emulate a memory-mapped interface with XRootD.
     -----
 
     {see2}
-""".format(**source_fragments)
+""".format(**source_fragments), width=TEXT_WIDTH)
 
 _method(uproot.source.xrootd.XRootDSource.parent).__doc__ = source_fragments["see1"]
 _method(uproot.source.xrootd.XRootDSource.threadlocal).__doc__ = source_fragments["see1"]
@@ -2476,7 +2499,7 @@ _method(uproot.source.xrootd.XRootDSource.data).__doc__ = source_fragments["see1
 
 ################################################################ uproot.source.compressed.Compression
 
-uproot.source.compressed.Compression.__doc__ = \
+uproot.source.compressed.Compression.__doc__ = wrap(
 u"""Describe the compression of a compressed block.
 
     **Attributes, properties, and methods:**
@@ -2491,11 +2514,11 @@ u"""Describe the compression of a compressed block.
     ----------
     fCompress : int
         ROOT fCompress field.
-"""
+""", width=TEXT_WIDTH)
 
 ################################################################ uproot.source.compressed.CompressedSource
 
-uproot.source.compressed.CompressedSource.__doc__ = \
+uproot.source.compressed.CompressedSource.__doc__ = wrap(
 u"""A :py:class:`Source <uproot.source.source.Source>` for compressed data.
 
     Decompresses on demand--- without caching the result--- so cache options in higher-level array functions are very important.
@@ -2518,11 +2541,11 @@ u"""A :py:class:`Source <uproot.source.source.Source>` for compressed data.
 
     uncompressedbytes : int
         number of bytes before compression.
-"""
+""", width=TEXT_WIDTH)
 
 ################################################################ uproot.cache.ArrayCache
 
-uproot.cache.ArrayCache.__doc__ = \
+uproot.cache.ArrayCache.__doc__ = wrap(
 u"""A cache (wrapping cachetools) whose eviction threshold is determined by total array size.
 
     Uses the nbytes property of all values to determine total size. By default, cachetools only counts the number of objects, ignoring their sizes.
@@ -2534,11 +2557,11 @@ u"""A cache (wrapping cachetools) whose eviction threshold is determined by tota
 
     method : "LRU" *(default)* or "LFU"
         least recently used or least frequently used
-"""
+""", width=TEXT_WIDTH)
 
 ################################################################ uproot.cache.ThreadSafeArrayCache
 
-uproot.cache.ThreadSafeArrayCache.__doc__ = \
+uproot.cache.ThreadSafeArrayCache.__doc__ = wrap(
 u"""An :py:class:`ArrayCache <uproot.cache.ArrayCache>` with locks for thread safety.
 
     Parameters
@@ -2548,4 +2571,4 @@ u"""An :py:class:`ArrayCache <uproot.cache.ArrayCache>` with locks for thread sa
 
     method : "LRU" *(default)* or "LFU"
         least recently used or least frequently used
-"""
+""", width=TEXT_WIDTH)
