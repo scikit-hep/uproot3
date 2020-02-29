@@ -336,7 +336,13 @@ class ROOTDirectory(object):
         if b"/" in name:
             out = self
             for n in name.split(b"/"):
-                out = out.get(n, cycle)
+                try:
+                    out = out.get(name=n, cycle=cycle)
+                except TypeError:
+                    # Probably unexpected `cycle` keyword
+                    # Try Tree `get` options
+                    # Set recursive to `False`, because we are looking for an explicit (sub)branch
+                    out = out.get(name=n, recursive=False)
             return out
 
         else:
