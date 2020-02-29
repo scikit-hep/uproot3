@@ -452,3 +452,12 @@ class Test(object):
             t1 = f['tree']
             arrays = t1.arrays(recursive=b'/')
             assert sorted(list(arrays.keys())) == expectedKeys
+
+    def test_issue444_subbranche_lookup_with_slash():
+        # Access subbranches directly
+        with uproot.open("tests/samples/issue447.root") as f:
+            assert numpy.all(f['l1CaloTowerEmuTree/L1CaloTowerTree/CaloTP']['nECALTP'].array()
+                == f['l1CaloTowerEmuTree/L1CaloTowerTree/CaloTP/nECALTP'].array())
+        # Specify subbranches in iterate
+        for arrays in uproot.iterate(["tests/samples/issue447.root"], 'l1CaloTowerEmuTree/L1CaloTowerTree', ['CaloTP/nECALTP']):
+            pass
