@@ -348,28 +348,31 @@ class TTreeMethods(object):
         return count
 
     def iterkeys(self, recursive=False, filtername=nofilter, filtertitle=nofilter, aliases=True):
-        for branch in self.itervalues(recursive, filtername, filtertitle):
-            if aliases:
-                for aliasname, branchname in self.aliases.items():
-                    if branch.name == branchname:
-                        yield aliasname
-            yield branch.name
+        for branch_name, branch in self.iteritems(recursive, filtername, filtertitle, aliases):
+            yield branch_name
 
     def itervalues(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
-        for branch in self._fBranches:
-            if filtername(branch.name) and filtertitle(branch.title):
-                yield branch
-            if recursive:
-                for x in branch.itervalues(recursive, filtername, filtertitle):
-                    yield x
+        for branch_name, branch in self.iteritems(recursive, filtername, filtertitle, aliases=False):
+            yield branch
 
     def iteritems(self, recursive=False, filtername=nofilter, filtertitle=nofilter, aliases=True):
-        for branch in self.itervalues(recursive, filtername, filtertitle):
+        for branch in self._fBranches:
+            branch_name = branch.name
             if aliases:
-                for aliasname, branchname in self.aliases.items():
-                    if branch.name == branchname:
-                        yield aliasname, branch
-            yield branch.name, branch
+                branch_name = self.aliases.get(branch_name, branch_name)
+            if filtername(branch_name) and filtertitle(branch.title):
+                yield branch_name, branch
+            if recursive:
+                try:
+                    iterator = branch.iteritems(recursive, filtername, filtertitle, aliases=aliases)
+                except TypeError:
+                    # Probably unknown `aliases` paramter
+                    # Try without
+                    iterator = branch.iteritems(recursive, filtername, filtertitle)
+                for n, b in iterator:
+                    if recursive == '/':
+                        n = branch_name + b'/' + n
+                    yield n, b
 
     def keys(self, recursive=False, filtername=nofilter, filtertitle=nofilter, aliases=True):
         return list(self.iterkeys(recursive=recursive, filtername=filtername, filtertitle=filtertitle, aliases=aliases))
@@ -393,16 +396,22 @@ class TTreeMethods(object):
     def allitems(self, filtername=nofilter, filtertitle=nofilter, aliases=True):
         return self.items(recursive=True, filtername=filtername, filtertitle=filtertitle, aliases=aliases)
 
+    def _get(self, name, recursive=True, filtername=nofilter, filtertitle=nofilter, aliases=True):
+        if b'/' in name:
+            # Look for exact subbranch
+            recursive = '/'
+        for n, b in self.iteritems(recursive=recursive, filtername=filtername, filtertitle=filtertitle, aliases=aliases):
+            if n == name:
+                self._branchlookup[name] = b
+                return b
+        raise uproot.rootio._KeyError("not found: {0}\n in file: {1}".format(repr(name), self._context.sourcepath))
+
     def get(self, name, recursive=True, filtername=nofilter, filtertitle=nofilter, aliases=True):
         name = _bytesid(name)
         try:
             return self._branchlookup[name]
         except KeyError:
-            for n, b in self.iteritems(recursive=recursive, filtername=filtername, filtertitle=filtertitle, aliases=aliases):
-                if n == name:
-                    self._branchlookup[name] = b
-                    return b
-            raise uproot.rootio._KeyError("not found: {0}\n in file: {1}".format(repr(name), self._context.sourcepath))
+            return self._get(name, recursive, filtername, filtertitle, aliases)
 
     def __contains__(self, name):
         try:
@@ -973,24 +982,24 @@ class TBranchMethods(object):
         return count
 
     def iterkeys(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
-        for branch in self.itervalues(recursive, filtername, filtertitle):
-            yield branch.name
+        for branch_name, branch in self.iteritems(recursive, filtername, filtertitle):
+            yield branch_name
 
     def itervalues(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
-        for branch in self._fBranches:
-            if filtername(branch.name) and filtertitle(branch.title):
-                yield branch
-            if recursive:
-                for x in branch.itervalues(recursive, filtername, filtertitle):
-                    yield x
+        for branch_name, branch in self.iteritems(recursive, filtername, filtertitle):
+            yield branch
 
     def iteritems(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
         for branch in self._fBranches:
-            if filtername(branch.name) and filtertitle(branch.title):
-                yield branch.name, branch
+            branch_name = branch.name
+            if filtername(branch_name) and filtertitle(branch.title):
+                yield branch_name, branch
             if recursive:
-                for x in branch.iteritems(recursive, filtername, filtertitle):
-                    yield x
+                iterator = branch.iteritems(recursive, filtername, filtertitle)
+                for n, b in iterator:
+                    if recursive == '/':
+                        n = branch_name + b'/' + n
+                    yield n, b
 
     def keys(self, recursive=False, filtername=nofilter, filtertitle=nofilter):
         return list(self.iterkeys(recursive=recursive, filtername=filtername, filtertitle=filtertitle))
@@ -1014,12 +1023,18 @@ class TBranchMethods(object):
     def allitems(self, filtername=nofilter, filtertitle=nofilter):
         return self.items(recursive=True, filtername=filtername, filtertitle=filtertitle)
 
-    def get(self, name, recursive=True, filtername=nofilter, filtertitle=nofilter, aliases=True):
-        name = _bytesid(name)
+    def _get(self, name, recursive=True, filtername=nofilter, filtertitle=nofilter):
+        if b'/' in name:
+            # Look for exact subbranch
+            recursive = '/'
         for n, b in self.iteritems(recursive=recursive, filtername=filtername, filtertitle=filtertitle):
             if n == name:
                 return b
         raise uproot.rootio._KeyError("not found: {0}\n in file: {1}".format(repr(name), self._context.sourcepath))
+
+    def get(self, name, recursive=True, filtername=nofilter, filtertitle=nofilter):
+        name = _bytesid(name)
+        return self._get(name, recursive, filtername, filtertitle)
 
     @property
     def numbaskets(self):
