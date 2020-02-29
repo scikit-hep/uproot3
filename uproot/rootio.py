@@ -342,7 +342,12 @@ class ROOTDirectory(object):
                     # Probably unexpected `cycle` keyword
                     # Try Tree `get` options
                     # Set recursive to `False`, because we are looking for an explicit (sub)branch
-                    out = out.get(name=n, recursive=False)
+                    try:
+                        out = out.get(name=n, recursive=False)
+                    except TypeError:
+                        # Probably unexpected `recursive` keyword
+                        # Try without options
+                        out = out.get(name=n)
             return out
 
         else:
