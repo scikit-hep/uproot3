@@ -454,6 +454,7 @@ class Test(object):
             assert sorted(list(arrays.keys())) == expectedKeys
 
     def test_issue444_subbranche_lookup_with_slash():
+        # Uses same test file as issue #447
         with uproot.open("tests/samples/issue447.root") as f:
             # Access subbranches directly from file
             assert numpy.all(f['l1CaloTowerEmuTree/L1CaloTowerTree/CaloTP']['nECALTP'].array()
@@ -463,12 +464,12 @@ class Test(object):
             assert numpy.all(tree['CaloTP']['nECALTP'].array()
                 == tree['CaloTP/nECALTP'].array())
             # Test different recursive schemes
-            assert 'CaloTP/nECALTP' in tree.keys(recursive='/')
-            assert 'CaloTP/nECALTP' not in tree.keys(recursive=True)
-            assert 'CaloTP/nECALTP' not in tree.keys(recursive=False)
-            assert 'nECALTP' not in tree.keys(recursive='/')
-            assert 'nECALTP' in tree.keys(recursive=True)
-            assert 'nECALTP' not in tree.keys(recursive=False)
+            assert b'CaloTP/nECALTP' in tree.keys(recursive='/')
+            assert b'CaloTP/nECALTP' not in tree.keys(recursive=True)
+            assert b'CaloTP/nECALTP' not in tree.keys(recursive=False)
+            assert b'nECALTP' not in tree.keys(recursive='/')
+            assert b'nECALTP' in tree.keys(recursive=True)
+            assert b'nECALTP' not in tree.keys(recursive=False)
         # Specify subbranches in iterate
         for arrays in uproot.iterate(["tests/samples/issue447.root"], 'l1CaloTowerEmuTree/L1CaloTowerTree', ['CaloTP/nECALTP']):
             pass
