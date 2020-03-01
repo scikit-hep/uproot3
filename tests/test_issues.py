@@ -453,7 +453,7 @@ class Test(object):
             arrays = t1.arrays(recursive=b'/')
             assert sorted(list(arrays.keys())) == expectedKeys
 
-    def test_issue444_subbranche_lookup_with_slash():
+    def test_issue444_subbranche_lookup_with_slash(self):
         # Uses same test file as issue #447
         with uproot.open("tests/samples/issue447.root") as f:
             # Access subbranches directly from file
