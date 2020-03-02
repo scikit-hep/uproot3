@@ -286,6 +286,11 @@ class TTreeMethods(object):
 
                 self._attachstreamer(subbranch, submembers.get(name, None), streamerinfosmap, isTClonesArray)
 
+    def _addprovenance(self, branch, context):
+        parents = [context.treename]
+        for x in branch.itervalues(recursive=True):
+            x._provenance = parents + [branch.name]
+
     def _postprocess(self, source, cursor, context, parent):
         self._context = context
         self._context.treename = self.name
@@ -293,6 +298,7 @@ class TTreeMethods(object):
 
         for branch in self._fBranches:
             self._attachstreamer(branch, context.streamerinfosmap.get(getattr(branch, "_fClassName", None), None), context.streamerinfosmap, False)
+            self._addprovenance(branch, context)
 
         self._branchlookup = {}
         self._fill_branchlookup(self._branchlookup)
@@ -351,8 +357,6 @@ class TTreeMethods(object):
                 yield branch
             if recursive:
                 for x in branch.itervalues(recursive, filtername, filtertitle):
-                    if branch.name not in x._provenance:
-                        x._provenance += [branch.name]
                     yield x
 
     def iteritems(self, recursive=False, filtername=nofilter, filtertitle=nofilter, aliases=True):
@@ -531,7 +535,7 @@ class TTreeMethods(object):
         futures = None
         if recursive and recursive is not True:
             def wrap_name(branch, namedecode):
-                if branch._provenance:
+                if len(branch._provenance) != 0:
                     if namedecode is None:
                         return recursive.join(branch._provenance + [branch.name])
                     else:
@@ -649,7 +653,7 @@ class TTreeMethods(object):
             starts = numpy.arange(entrystart, effectivestop, entrystepsize)
             stops = numpy.append(starts[1:], effectivestop)
             return zip(starts, stops)
-                    
+
         else:
             try:
                 iter(entrysteps)
@@ -677,7 +681,7 @@ class TTreeMethods(object):
 
         # for the case of outputtype == pandas.DataFrame, do some preparation to fill DataFrames efficiently
         ispandas = getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame"
-            
+
         def evaluate(branch, interpretation, future, past, cachekey, pythonize):
             if future is None:
                 return past
@@ -798,7 +802,7 @@ class TTreeMethods(object):
     def _normalize_branches(self, arg, awkward, allownone=True, allowcallable=True, allowdict=True, allowstring=True, aliases=True, recursive=True):
         if allownone and arg is None:                      # no specification; read all branches
             for branch in self.allvalues():                # that have interpretations
-                branch._provenance = [self.name] + branch._provenance
+                # branch._provenance = [self.name] + branch._provenance
                 interpretation = interpret(branch, awkward)
                 if interpretation is not None:
                     yield branch, interpretation
@@ -1865,7 +1869,7 @@ class _LazyFiles(object):
                 "xrootdsource": self.xrootdsource,
                 "httpsource": self.httpsource,
                 "options": self.options}
-                
+
     def __setstate__(self, state):
         self.paths = state["paths"]
         self.treepath = state["treepath"]
@@ -1933,7 +1937,7 @@ class _LazyTree(object):
 
     def __call__(self, branch, entrystart, entrystop):
         return self.tree[branch].array(interpretation=self.interpretation[branch], entrystart=entrystart, entrystop=entrystop, flatten=self.flatten, awkwardlib=self.awkwardlib, cache=None, basketcache=self.basketcache, keycache=self.keycache, executor=self.executor)
-        
+
 class _LazyBranch(object):
     def __init__(self, path, treepath, branchname, branch, interpretation, flatten, awkwardlib, basketcache, keycache, executor):
         self.path = path
