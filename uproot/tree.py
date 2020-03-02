@@ -519,7 +519,7 @@ class TTreeMethods(object):
 
     def arrays(self, branches=None, outputtype=dict, namedecode=None, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, recursive=True):
         awkward = _normalize_awkwardlib(awkwardlib)
-        branches = list(self._normalize_branches(branches, awkward, recursive=recursive))
+        branches = list(self._normalize_branches(branches, awkward))
         for branch, interpretation in branches:
             if branch._recoveredbaskets is None:
                 branch._tryrecover()
@@ -799,10 +799,9 @@ class TTreeMethods(object):
                 flagsbyte += re.X
         return flagsbyte
 
-    def _normalize_branches(self, arg, awkward, allownone=True, allowcallable=True, allowdict=True, allowstring=True, aliases=True, recursive=True):
+    def _normalize_branches(self, arg, awkward, allownone=True, allowcallable=True, allowdict=True, allowstring=True, aliases=True):
         if allownone and arg is None:                      # no specification; read all branches
             for branch in self.allvalues():                # that have interpretations
-                # branch._provenance = [self.name] + branch._provenance
                 interpretation = interpret(branch, awkward)
                 if interpretation is not None:
                     yield branch, interpretation
@@ -826,12 +825,12 @@ class TTreeMethods(object):
                 isregex = re.match(self._branch_regex, word)
                 if isregex is not None:
                     regex, flags = isregex.groups()
-                    for name, branch in self.iteritems(recursive=recursive, aliases=aliases):
+                    for name, branch in self.iteritems(recursive=True, aliases=aliases):
                         if re.match(regex, name, self._branch_flags(flags)):
                             yield branch, branch._normalize_dtype(interpretation, awkward)
 
                 elif b"*" in word or b"?" in word or b"[" in word:
-                    for name, branch in self.iteritems(recursive=recursive, aliases=aliases):
+                    for name, branch in self.iteritems(recursive=True, aliases=aliases):
                         if name == word or glob.fnmatch.fnmatchcase(name, word):
                             yield branch, branch._normalize_dtype(interpretation, awkward)
 
@@ -855,7 +854,7 @@ class TTreeMethods(object):
                     isregex = re.match(self._branch_regex, word)
                     if isregex is not None:
                         regex, flags = isregex.groups()
-                        for name, branch in self.iteritems(recursive=recursive, aliases=aliases):
+                        for name, branch in self.iteritems(recursive=True, aliases=aliases):
                             if re.match(regex, name, self._branch_flags(flags)):
                                 interpretation = interpret(branch, awkward)
                                 if interpretation is None:
@@ -865,7 +864,7 @@ class TTreeMethods(object):
                                     yield branch, interpretation
 
                     elif b"*" in word or b"?" in word or b"[" in word:
-                        for name, branch in self.iteritems(recursive=recursive, aliases=aliases):
+                        for name, branch in self.iteritems(recursive=True, aliases=aliases):
                             if name == word or glob.fnmatch.fnmatchcase(name, word):
                                 interpretation = interpret(branch, awkward)
                                 if interpretation is None:
