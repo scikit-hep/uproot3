@@ -26,7 +26,8 @@ from uproot.write.objects.TTree import TTree
 
 class TFileUpdate(object):
     def __init__(self, path):
-        self._openfile(path)
+        #FIXME: Need to fix self.compression attribute
+        #self._openfile(path)
         raise NotImplementedError
 
     def _openfile(self, path, compression):
