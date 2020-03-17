@@ -323,7 +323,7 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
                         if branch._isTClonesArray:
                             return asgenobj(SimpleArray(STLVector(asdtype(fromdtype, fromdtype))), branch._context, 6)
                         else:
-                            return asjagged(ascontent, skipbytes=10)
+                            return asjagged(ascontent, skipbytes=10, sizeat=6)
 
                     except _NotNumerical:
                         if branch._vecstreamer is not None:
@@ -348,9 +348,9 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
                                 return asgenobj(STLVector(streamerClass), branch._context, 6)
                             else:
                                 if streamerClass._methods is None:
-                                    return asjagged(astable(asdtype(recarray)), skipbytes=10)
+                                    return asjagged(astable(asdtype(recarray)), skipbytes=10, sizeat=6)
                                 else:
-                                    return asjagged(asobj(astable(asdtype(recarray)), streamerClass._methods), skipbytes=10)
+                                    return asjagged(asobj(astable(asdtype(recarray)), streamerClass._methods), skipbytes=10, sizeat=6)
 
                 if hasattr(branch._streamer, "_fTypeName"):
                     m = re.match(b"bitset<([1-9][0-9]*)>", branch._streamer._fTypeName)
@@ -358,27 +358,27 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
                         return asjagged(asstlbitset(int(m.group(1))), skipbytes=6)
 
                 if getattr(branch._streamer, "_fTypeName", None) == b"vector<bool>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<Bool_t>":
-                    return asjagged(asdtype(awkward.numpy.bool_), skipbytes=10)
+                    return asjagged(asdtype(awkward.numpy.bool_), skipbytes=10, sizeat=6)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<char>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<Char_t>":
-                    return asjagged(asdtype("i1"), skipbytes=10)
+                    return asjagged(asdtype("i1"), skipbytes=10, sizeat=6)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<unsigned char>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<UChar_t>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<Byte_t>":
-                    return asjagged(asdtype("u1"), skipbytes=10)
+                    return asjagged(asdtype("u1"), skipbytes=10, sizeat=6)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<short>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<Short_t>":
-                    return asjagged(asdtype("i2"), skipbytes=10)
+                    return asjagged(asdtype("i2"), skipbytes=10, sizeat=6)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<unsigned short>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<UShort_t>":
-                    return asjagged(asdtype("u2"), skipbytes=10)
+                    return asjagged(asdtype("u2"), skipbytes=10, sizeat=6)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<int>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<Int_t>":
-                    return asjagged(asdtype("i4"), skipbytes=10)
+                    return asjagged(asdtype("i4"), skipbytes=10, sizeat=6)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<unsigned int>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<UInt_t>":
-                    return asjagged(asdtype("u4"), skipbytes=10)
+                    return asjagged(asdtype("u4"), skipbytes=10, sizeat=6)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<long>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<Long_t>":
-                    return asjagged(asdtype("i8"), skipbytes=10)
+                    return asjagged(asdtype("i8"), skipbytes=10, sizeat=6)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<unsigned long>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<ULong64_t>":
-                    return asjagged(asdtype("u8"), skipbytes=10)
+                    return asjagged(asdtype("u8"), skipbytes=10, sizeat=6)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<float>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<Float_t>":
-                    return asjagged(asdtype("f4"), skipbytes=10)
+                    return asjagged(asdtype("f4"), skipbytes=10, sizeat=6)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<double>" or getattr(branch._streamer, "_fTypeName", None) == b"vector<Double_t>":
-                    return asjagged(asdtype("f8"), skipbytes=10)
+                    return asjagged(asdtype("f8"), skipbytes=10, sizeat=6)
                 elif getattr(branch._streamer, "_fTypeName", None) == b"vector<string>":
                     return asgenobj(STLVector(STLString(awkward)), branch._context, 6)
                 else:
@@ -445,27 +445,27 @@ def interpret(branch, awkwardlib=None, swapbytes=True, cntvers=False, tobject=Tr
                     return asstring(skipbytes=1)
 
                 if branch._fClassName == b"vector<bool>" or branch._fClassName == b"vector<Bool_t>":
-                    return asjagged(asdtype(awkward.numpy.bool_), skipbytes=10)
+                    return asjagged(asdtype(awkward.numpy.bool_), skipbytes=10, sizeat=6)
                 elif branch._fClassName == b"vector<char>" or branch._fClassName == b"vector<Char_t>":
-                    return asjagged(asdtype("i1"), skipbytes=10)
+                    return asjagged(asdtype("i1"), skipbytes=10, sizeat=6)
                 elif branch._fClassName == b"vector<unsigned char>" or branch._fClassName == b"vector<UChar_t>" or branch._fClassName == b"vector<Byte_t>":
-                    return asjagged(asdtype("u1"), skipbytes=10)
+                    return asjagged(asdtype("u1"), skipbytes=10, sizeat=6)
                 elif branch._fClassName == b"vector<short>" or branch._fClassName == b"vector<Short_t>":
-                    return asjagged(asdtype("i2"), skipbytes=10)
+                    return asjagged(asdtype("i2"), skipbytes=10, sizeat=6)
                 elif branch._fClassName == b"vector<unsigned short>" or branch._fClassName == b"vector<UShort_t>":
-                    return asjagged(asdtype("u2"), skipbytes=10)
+                    return asjagged(asdtype("u2"), skipbytes=10, sizeat=6)
                 elif branch._fClassName == b"vector<int>" or branch._fClassName == b"vector<Int_t>":
-                    return asjagged(asdtype("i4"), skipbytes=10)
+                    return asjagged(asdtype("i4"), skipbytes=10, sizeat=6)
                 elif branch._fClassName == b"vector<unsigned int>" or branch._fClassName == b"vector<UInt_t>":
-                    return asjagged(asdtype("u4"), skipbytes=10)
+                    return asjagged(asdtype("u4"), skipbytes=10, sizeat=6)
                 elif branch._fClassName == b"vector<long>" or branch._fClassName == b"vector<Long_t>":
-                    return asjagged(asdtype("i8"), skipbytes=10)
+                    return asjagged(asdtype("i8"), skipbytes=10, sizeat=6)
                 elif branch._fClassName == b"vector<unsigned long>" or branch._fClassName == b"vector<ULong64_t>":
-                    return asjagged(asdtype("u8"), skipbytes=10)
+                    return asjagged(asdtype("u8"), skipbytes=10, sizeat=6)
                 elif branch._fClassName == b"vector<float>" or branch._fClassName == b"vector<Float_t>":
-                    return asjagged(asdtype("f4"), skipbytes=10)
+                    return asjagged(asdtype("f4"), skipbytes=10, sizeat=6)
                 elif branch._fClassName == b"vector<double>" or branch._fClassName == b"vector<Double_t>":
-                    return asjagged(asdtype("f8"), skipbytes=10)
+                    return asjagged(asdtype("f8"), skipbytes=10, sizeat=6)
                 elif branch._fClassName == b"vector<string>":
                     return asgenobj(STLVector(STLString(awkward)), branch._context, 6)
 

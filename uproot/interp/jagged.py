@@ -31,12 +31,13 @@ class asjagged(uproot.interp.interp.Interpretation):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (uproot.interp.interp.Interpretation.__metaclass__,), {})
 
-    def __init__(self, content, skipbytes=0):
+    def __init__(self, content, skipbytes=0, sizeat=None):
         self.content = content
         self.skipbytes = skipbytes
+        self.sizeat = sizeat
 
     def __repr__(self):
-        return "asjagged({0}{1})".format(repr(self.content), "" if self.skipbytes == 0 else ", {0}".format(self.skipbytes))
+        return "asjagged({0}{1}{2})".format(repr(self.content), "" if self.skipbytes == 0 else ", {0}".format(self.skipbytes), "" if self.sizeat == 0 else ", {0}".format(self.sizeat))
 
     def to(self, todtype=None, todims=None, skipbytes=None):
         if skipbytes is None:
@@ -75,6 +76,16 @@ class asjagged(uproot.interp.interp.Interpretation):
                 return self.awkward.JaggedArray(starts, stops, content)
 
             else:
+                if self.sizeat is not None:
+                    sizeat_bytestarts = byteoffsets[local_entrystart : local_entrystop] + self.sizeat
+                    sizeat_good_bytestarts = sizeat_bytestarts[sizeat_bytestarts + 4 <= len(data)]
+                    sizeat_mask = self.awkward.numpy.zeros(len(data), dtype=self.awkward.numpy.int8)
+                    sizeat_mask[sizeat_good_bytestarts + 0] = 1
+                    sizeat_mask[sizeat_good_bytestarts + 1] = 1
+                    sizeat_mask[sizeat_good_bytestarts + 2] = 1
+                    sizeat_mask[sizeat_good_bytestarts + 3] = 1
+                    sizeat = data[sizeat_mask.view(self.awkward.numpy.bool_)].view(">i4")
+
                 bytestarts = byteoffsets[local_entrystart     : local_entrystop    ] + self.skipbytes
                 bytestops  = byteoffsets[local_entrystart + 1 : local_entrystop + 1]
 
@@ -106,7 +117,14 @@ class asjagged(uproot.interp.interp.Interpretation):
                 offsets[0] = 0
                 self.awkward.numpy.cumsum(counts, out=offsets[1:])
 
-                return self.awkward.JaggedArray(offsets[:-1], offsets[1:], content)
+                starts = offsets[:-1]
+                if self.sizeat is not None:
+                    stops = starts + sizeat
+                    if not (stops == offsets[1:]).all():
+                        return self.awkward.JaggedArray(starts, stops, content).compact()
+
+                stops = offsets[1:]
+                return self.awkward.JaggedArray(starts, stops, content)
 
     def destination(self, numitems, numentries):
         content = self.content.destination(numitems, numentries)
