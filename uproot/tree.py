@@ -286,10 +286,14 @@ class TTreeMethods(object):
 
                 self._attachstreamer(subbranch, submembers.get(name, None), streamerinfosmap, isTClonesArray)
 
-    def _addprovenance(self, branch, context):
-        parents = [context.treename]
-        for x in branch.itervalues(recursive=True):
+    def _addprovenance(self, branch, context, parents = None):
+        if parents is None:
+            parents = [context.treename]
+        if len(branch._provenance) == 0:
+            branch._provenance = parents
+        for x in branch.itervalues():
             x._provenance = parents + [branch.name]
+            self._addprovenance(x, context, x._provenance)
 
     def _postprocess(self, source, cursor, context, parent):
         self._context = context
