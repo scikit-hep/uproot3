@@ -447,8 +447,8 @@ class Test(object):
             'tree/b1/b2/b3',
             'tree/b1/b2/b3/b4',
         ]
-        expectedKeys = [k.encode(encoding='UTF-8') for k in expectedKeys]
+        expectedKeys = sorted([k.encode(encoding='UTF-8') for k in expectedKeys])
         with uproot.open('tests/samples/issue447_recursive.root') as f:
             t1 = f['tree']
             arrays = t1.arrays(recursive=b'/')
-            assert list(arrays.keys()) == expectedKeys
+            assert sorted(list(arrays.keys())) == expectedKeys
