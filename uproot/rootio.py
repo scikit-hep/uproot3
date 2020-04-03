@@ -1689,7 +1689,8 @@ builtin_classes = {"uproot_methods": uproot_methods,
                    "TArrayF":        TArrayF,
                    "TArrayD":        TArrayD,
                    "TRefArray":      TRefArray,
-                   "ROOT_3a3a_TIOFeatures": ROOT_3a3a_TIOFeatures}
+                   "ROOT_3a3a_TIOFeatures": ROOT_3a3a_TIOFeatures,
+                   "ROOT_3a3a_Experimental_3a3a_RNTuple": ROOT_3a3a_Experimental_3a3a_RNTuple}
 
 builtin_skip =    {"TBranch":    ["fBaskets"],
                    "TTree":      ["fUserInfo", "fBranchRef"]}
