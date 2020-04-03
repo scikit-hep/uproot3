@@ -1618,6 +1618,28 @@ class ROOT_3a3a_TIOFeatures(ROOTStreamedObject):
 
     _format1 = struct.Struct(">B")
 
+class ROOT_3a3a_Experimental_3a3a_RNTuple(ROOTStreamedObject):
+    _classname = b"ROOT::Experimental::RNTuple"
+    classname = "ROOT::Experimental::RNTuple"
+    _fields = ["fVersion",
+               "fSize",
+               "fSeekHeader",
+               "fNBytesHeader",
+               "fLenHeader",
+               "fSeekFooter",
+               "fNBytesFooter",
+               "fLenFooter",
+               "fReserved"]
+
+    @classmethod
+    def _readinto(cls, self, source, cursor, context, parent):
+        start, cnt, self._classversion = _startcheck(source, cursor)
+        cursor.skip(4)
+        self._fVersion, self._fSize, self._fSeekHeader, self._fNBytesHeader, self._fLenHeader, self._fSeekFooter, self._fNBytesFooter, self._fLenFooter, self._fReserved = cursor.fields(source, ROOT_3a3a_Experimental_3a3a_RNTuple._format1)
+        return self
+
+    _format1 = struct.Struct(">IIQIIQIIQ")
+
 class Undefined(ROOTStreamedObject):
     _classname = None
     classname = None
