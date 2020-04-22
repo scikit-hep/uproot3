@@ -23,12 +23,13 @@ from uproot.source.memmap import MemmapSource
 from uproot.source.xrootd import XRootDSource
 from uproot.source.http import HTTPSource
 from uproot.source.cursor import Cursor
+from uproot.source.s3 import S3Source
 
 import uproot_methods.classes
 
 ################################################################ high-level interface
 
-def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
+def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, s3source=S3Source.defaults, **options):
     if isinstance(path, getattr(os, "PathLike", ())):
         path = os.fspath(path)
     elif hasattr(path, "__fspath__"):
@@ -59,6 +60,9 @@ def open(path, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defa
     elif _bytesid(parsed.scheme) == b"http" or _bytesid(parsed.scheme) == b"https":
         return http(path, httpsource=httpsource, **options)
 
+    elif _bytesid(parsed.scheme) == b"s3http":
+        return s3http(path, s3source=s3source, **options)
+
     else:
         raise ValueError("URI scheme not recognized: {0}".format(path))
 
@@ -87,6 +91,19 @@ def http(path, httpsource=HTTPSource.defaults, **options):
     else:
         openfcn = httpsource
     return ROOTDirectory.read(openfcn(path), **options)
+
+def s3http(path, s3source=S3Source.defaults, **options):
+    if isinstance(s3source, dict):
+        kwargs = dict(S3Source.defaults)
+        kwargs.update(s3source)
+        for n in kwargs:
+            if n in options:
+                kwargs[n] = options.pop(n)
+        openfcn = lambda path: S3Source(path, **kwargs)
+    else:
+        openfcn = s3source
+    return ROOTDirectory.read(openfcn(path), **options)
+
 
 def nofilter(x): return True
 
