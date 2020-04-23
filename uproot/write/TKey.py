@@ -25,6 +25,8 @@ class BasketKey(object):
         self.fNevBuf = fNevBuf
         self.fNevBufSize = fNevBufSize
 
+        self.old_fLast = 0
+
     @property
     def fKeylen(self):
         return self._format1.size + uproot.write.sink.cursor.Cursor.length_strings([self.fClassName, self.fName, self.fTitle]) + self._format_basketkey.size + 1
@@ -36,7 +38,7 @@ class BasketKey(object):
     def update(self):
         self.cursor.update_fields(self.sink, self._format1, self.fNbytes, self._version, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
 
-    def write(self, cursor, sink):
+    def write(self, cursor, sink, awkward=False):
         self.cursor = uproot.write.sink.cursor.Cursor(cursor.index)
         self.sink = sink
 
@@ -48,7 +50,13 @@ class BasketKey(object):
         cursor.write_string(sink, self.fTitle)
 
         basketversion = 3
-        cursor.write_fields(sink, self._format_basketkey, basketversion, self.fBufferSize, self.fNevBufSize, self.fNevBuf, self.fLast)
+        if awkward:
+            if self.old_fLast == 0:
+                raise Exception("awkward flag should be False")
+            cursor.write_fields(sink, self._format_basketkey, basketversion, self.fBufferSize, self.fNevBufSize, self.fNevBuf, self.old_fLast)
+        else:
+            cursor.write_fields(sink, self._format_basketkey, basketversion, self.fBufferSize, self.fNevBufSize, self.fNevBuf, self.fLast)
+            self.old_fLast = self.fLast
         cursor.write_data(sink, b"\x00")
 
     _version = 1004
@@ -75,7 +83,9 @@ class TKey(object):
     def update(self):
         self.cursor.update_fields(self.sink, self._format1, self.fNbytes, self._version, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
 
-    def write(self, cursor, sink):
+    def write(self, cursor, sink, awkward=False):
+        if awkward:
+            raise Exception("awkward flag should be False")
         self.cursor = uproot.write.sink.cursor.Cursor(cursor.index)
         self.sink = sink
 

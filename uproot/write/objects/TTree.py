@@ -8,6 +8,7 @@ import sys
 import math
 
 import numpy
+import awkward
 
 import uproot
 import uproot.const
@@ -21,11 +22,13 @@ from uproot.write.objects.util import Util
 
 class newbranch(object):
 
-    def __init__(self, type, title="", shape=(1,), **options):
+    def __init__(self, type, title="", shape=(1,), awkward=False, **options):
         self.name = ""
         self.type = type
         self.title = title
         self.shape = shape
+        self.awkward = awkward
+        self.awkwardpadder = b""
         if "compression" in options:
             self.compression = options["compression"]
             del options["compression"]
@@ -50,13 +53,34 @@ class TTree(object):
         self._file = file
 
         self._branches = {}
+        checker = []
         for name, branch in newtree.branches.items():
             if isinstance(branch, newbranch) == False:
                 branch = newbranch(branch)
+            if branch.awkward == True:
+                if isinstance(newtree.branches[name].type, str):
+                    # FIXME: Cannot have different jagged arrays with same type but different endianness
+                    temptype = newtree.branches[name].type[1:].encode()
+                else:
+                    temptype = newtree.branches[name].type.str[1:].encode()
+                if temptype not in checker:
+                    branch.awkwardpadder = b"[awkwardcountsarraycreatedbyuproot" + temptype + b"]"
+                    checker += [temptype]
+                    if ("awkwardcountsarraycreatedbyuproot"+temptype.decode("utf-8")) not in newtree.branches.keys():
+                        dummybranch = newbranch(">i4")
+                        compression = getattr(dummybranch, "compression", getattr(newtree, "compression", file.compression))
+                        self._branches["awkwardcountsarraycreatedbyuproot"+temptype.decode("utf-8")] = TBranch("awkwardcountsarraycreatedbyuproot"+temptype.decode("utf-8"), dummybranch, compression, self, file)
+                        self._tree.fields["_fLeaves"].append(self._branches["awkwardcountsarraycreatedbyuproot"+temptype.decode("utf-8")]._branch.fields["_fLeaves"])
+                        self._tree.fields["_fBranches"].append(self._branches["awkwardcountsarraycreatedbyuproot"+temptype.decode("utf-8")]._branch)
+                    else:
+                        raise Exception("Cannot create branch with that name")
             compression = getattr(branch, "compression", getattr(newtree, "compression", file.compression))
             self._branches[name] = TBranch(name, branch, compression, self, file)
             self._tree.fields["_fLeaves"].append(self._branches[name]._branch.fields["_fLeaves"])
             self._tree.fields["_fBranches"].append(self._branches[name]._branch)
+            if branch.awkward == True:
+                self._branches[name]._branch._awkwardbranch = self._branches["awkwardcountsarraycreatedbyuproot"+temptype.decode("utf-8")]._branch.fields["_fLeaves"]
+
 
     def __getitem__(self, name):
         return self._branches[name]
@@ -72,27 +96,45 @@ class TTree(object):
     def _write(self, context, cursor, name, compression, key, keycursor, util):
         self._tree.write(context, cursor, name, key, copy(keycursor), util)
 
-    def extend(self, branchdict):
-        #Baskets need to be added to all the branches
-        if len(branchdict) != len(self._branches):
-            raise Exception("Basket data should be added to all branches")
+    def extend(self, branchdict, checker=True):
+        countsdict = {}
 
-        # Check for equal number of values in baskets
-        values = iter(branchdict.values())
-        first = next(values)
-        if all(len(first) == len(value) for value in values) == False:
-            raise Exception("Baskets of all branches should have the same length")
+        if checker:
+            numdummyarrays = 0
+            for key, name in self._branches.items():
+                if "awkwardcountsarraycreatedbyuproot" in key:
+                    numdummyarrays += 1
+
+            #Baskets need to be added to all the branches
+            if len(branchdict) != (len(self._branches) - numdummyarrays):
+                raise Exception("Basket data should be added to all branches")
+
+            # Check for equal number of values in baskets
+            values = iter(branchdict.values())
+            first = next(values)
+            if all(len(first) == len(value) for value in values) == False:
+                raise Exception("Baskets of all branches should have the same length")
 
         #Convert to numpy arrays of required dtype
         for key, value in branchdict.items():
-            branchdict[key] = numpy.array(value, dtype=self._branches[key]._branch.type, copy=False)
+            if not isinstance(value, awkward.array.jagged.JaggedArray):
+                branchdict[key] = numpy.array(value, dtype=self._branches[key]._branch.type, copy=False)
 
         for key, value in branchdict.items():
-            if value.ndim == 1:
+            if isinstance(value, awkward.array.jagged.JaggedArray):
+                dummylen = []
+                for i in range(0, value.shape[0]):
+                    dummylen += [len(value[i])]
+                countsdict["awkwardcountsarraycreatedbyuproot"+self._branches[key]._branch.type.str[1:]] = dummylen
+                self._branches[key].newbasket(value, value.shape[0])
+            elif value.ndim == 1:
                 self._branches[key].newbasket(value)
             else:
                 for i in range(0, value.shape[0]):
                     self._branches[key].newbasket(value[i], i + 1)
+
+        if len(countsdict) > 0:
+            self.extend(countsdict, checker=False)
 
     @property
     def name(self):
@@ -288,21 +330,42 @@ class TBranch(object):
             self._branch.fields["_fEntries"] = multidim
             self._branch.fields["_fEntryNumber"] = multidim
         self._branch.fields["_fBasketEntry"][self._branch.fields["_fWriteBasket"]] = self._branch.fields["_fEntries"]
-        basketdata = numpy.array(items, dtype=self._branch.type, copy=False)
+        if isinstance(items, awkward.array.jagged.JaggedArray):
+            givenbytes = b""
+            for i in range(items.shape[0]):
+                givenbytes += numpy.array(items[i], dtype=self._branch.type).tostring()
+        else:
+            givenbytes = numpy.array(items, dtype=self._branch.type, copy=False).tostring()
 
-        givenbytes = basketdata.tostring()
         cursor = uproot.write.sink.cursor.Cursor(self._branch.file._fSeekFree)
         self._branch.fields["_fBasketSeek"][self._branch.fields["_fWriteBasket"] - 1] = cursor.index
-        key = BasketKey(fName=self._branch.name,
-                        fTitle=self._treelvl1._tree.write_key.fName,
-                        fNevBuf=1 if multidim else len(items),
-                        fNevBufSize=numpy.dtype(self._branch.type).itemsize*len(items) if multidim else numpy.dtype(self._branch.type).itemsize,
-                        fSeekKey=copy(self._branch.file._fSeekFree),
-                        fSeekPdir=copy(self._branch.file._fBEGIN),
-                        fBufferSize=32000)
+        if isinstance(items, awkward.array.jagged.JaggedArray):
+            key = BasketKey(fName=self._branch.name,
+                            fTitle=self._treelvl1._tree.write_key.fName,
+                            fNevBuf=items.shape[0],
+                            fNevBufSize=1000, # FIXME: What does this mean?
+                            fSeekKey=copy(self._branch.file._fSeekFree),
+                            fSeekPdir=copy(self._branch.file._fBEGIN),
+                            fBufferSize=32000)
+        else:
+            key = BasketKey(fName=self._branch.name,
+                            fTitle=self._treelvl1._tree.write_key.fName,
+                            fNevBuf=1 if multidim else len(items),
+                            fNevBufSize=numpy.dtype(self._branch.type).itemsize*len(items) if multidim else numpy.dtype(self._branch.type).itemsize,
+                            fSeekKey=copy(self._branch.file._fSeekFree),
+                            fSeekPdir=copy(self._branch.file._fBEGIN),
+                            fBufferSize=32000)
         keycursor = uproot.write.sink.cursor.Cursor(key.fSeekKey)
         key.write(cursor, self._branch.file._sink)
         uproot.write.compress.write(self._branch.file, cursor, givenbytes, self._branch.compression, key, copy(keycursor))
+        if isinstance(items, awkward.array.jagged.JaggedArray):
+            offsetbytes = [items.shape[0] + 1, key.fKeylen]
+            for i in range(items.shape[0] - 1):
+                offsetbytes += [(len(items[i]) * numpy.dtype(self._branch.type).itemsize) + offsetbytes[-1]]
+            offsetbytes += [0]
+            offsetbytes = numpy.array(offsetbytes, dtype=">i4").tostring()
+            uproot.write.compress.write(self._branch.file, cursor, offsetbytes, self._branch.compression, key,
+                                        copy(keycursor), awkward=True)
 
         self._branch.file._expandfile(cursor)
 
@@ -312,6 +375,9 @@ class TBranch(object):
         self._treelvl1._tree.fields["_fTotBytes"] = self._branch.fields["_fTotBytes"]
         self._treelvl1._tree.fields["_fZipBytes"] = self._branch.fields["_fZipBytes"]
         self._branch.fields["_fBasketBytes"][self._branch.fields["_fWriteBasket"] - 1] = key.fNbytes
+        if self._branch.awkward and ((len(items[-1])*4) > 10):
+            self._branch.fields["_fEntryOffsetLen"] = len(items[-1])*4
+            self._branch._fentryoffsetlencursor.update_fields(self._branch.file._sink, self._branch._format_tbranch112, self._branch.fields["_fEntryOffsetLen"])
         self._treelvl1._tree.size_cursor.update_fields(self._branch.file._sink, self._tree_size, self._treelvl1._tree.fields["_fEntries"],
                                                        self._treelvl1._tree.fields["_fTotBytes"],
                                                        self._treelvl1._tree.fields["_fZipBytes"])
@@ -686,13 +752,16 @@ class TBranchImpl(object):
         self.type = numpy.dtype(branchobj.type).newbyteorder(">")
         self.shape = branchobj.shape
         self.compression = compression
+        self.awkward = branchobj.awkward
+        self.awkwardpadder = branchobj.awkwardpadder
+        self._awkwardbranch = None
         self.util = None
         self.keycursor = None
         self.file = file
 
         self.fields = {"_fCompress": 100,
                        "_fBasketSize": 32000,
-                       "_fEntryOffsetLen": 0,
+                       "_fEntryOffsetLen": 10 if self.awkward else 0,
                        "_fWriteBasket": 0,  # Number of baskets
                        "_fOffset": 0,
                        "_fMaxBaskets": 50,
@@ -748,6 +817,7 @@ class TBranchImpl(object):
             if len(self.shape) > 1:
                 self.nametitle = self.title + array_pad + title_pad
                 self.arraytitle = self.title + array_pad
+
             else:
                 self.nametitle = self.title + title_pad
         else:
@@ -814,12 +884,20 @@ class TBranchImpl(object):
                 fLen = fLen*self.shape[i]
         fLenType = numpy.dtype(self.type).itemsize
         fOffset = 0
-        fIsRange = False
+        if "awkwardcountsarraycreatedbyuproot" in self.name.decode("utf-8"):
+            fIsRange = True
+        else:
+            fIsRange = False
         fIsUnsigned = False
         fLeafCount = None
-        buff = (self.put_tnamed(cursor, self.name, self.arraytitle if len(self.shape)>1 else self.title) +
-                cursor.put_fields(self._format_tleaf1, fLen, fLenType, fOffset, fIsRange, fIsUnsigned) +
-                self.util.put_objany(cursor, (fLeafCount, "TLeaf"), self.keycursor))
+        if self.awkward:
+            buff = (self.put_tnamed(cursor, self.name, self.title + self.awkwardpadder) +
+                    cursor.put_fields(self._format_tleaf1, fLen, fLenType, fOffset, fIsRange, fIsUnsigned) +
+                    self.util.put_objany(cursor, (self._awkwardbranch[0], self._awkwardbranch[1]), self.keycursor))
+        else:
+            buff = (self.put_tnamed(cursor, self.name, self.arraytitle if len(self.shape)>1 else self.title) +
+                    cursor.put_fields(self._format_tleaf1, fLen, fLenType, fOffset, fIsRange, fIsUnsigned) +
+                    self.util.put_objany(cursor, (fLeafCount, "TLeaf"), self.keycursor))
         length = len(buff) + self._format_cntvers.size
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
         return copy_cursor.put_fields(self._format_cntvers, cnt, vers) + buff
@@ -830,7 +908,10 @@ class TBranchImpl(object):
         cursor.skip(self._format_cntvers.size)
         vers = 1
         fMinimum = 0
-        fMaximum = 0
+        if "awkwardcountsarraycreatedbyuproot" in self.name.decode("utf-8"):
+            fMaximum = min(numpy.iinfo(self.type).max, 1000) # FIXME: Make updateble
+        else:
+            fMaximum = 0
         buff = self.put_tleaf(cursor) + cursor.put_fields(self._format_tleafI1, fMinimum, fMaximum)
         length = len(buff) + self._format_cntvers.size
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
@@ -842,7 +923,10 @@ class TBranchImpl(object):
         cursor.skip(self._format_cntvers.size)
         vers = 1
         fMinimum = 0
-        fMaximum = 0
+        if "awkwardcountsarraycreatedbyuproot" in self.name.decode("utf-8"):
+            fMaximum = min(numpy.iinfo(self.type).max, 1000) # FIXME: Make updateble
+        else:
+            fMaximum = 0
         buff = self.put_tleaf(cursor) + cursor.put_fields(self._format_tleafB1, fMinimum, fMaximum)
         length = len(buff) + self._format_cntvers.size
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
@@ -854,7 +938,10 @@ class TBranchImpl(object):
         cursor.skip(self._format_cntvers.size)
         vers = 1
         fMinimum = 0
-        fMaximum = 0
+        if "awkwardcountsarraycreatedbyuproot" in self.name.decode("utf-8"):
+            fMaximum = 1000 # FIXME: Make updateble or set to maximum possible value
+        else:
+            fMaximum = 0
         buff = self.put_tleaf(cursor) + cursor.put_fields(self._format_tleafD1, fMinimum, fMaximum)
         length = len(buff) + self._format_cntvers.size
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
@@ -866,7 +953,10 @@ class TBranchImpl(object):
         cursor.skip(self._format_cntvers.size)
         vers = 1
         fMinimum = 0
-        fMaximum = 0
+        if "awkwardcountsarraycreatedbyuproot" in self.name.decode("utf-8"):
+            fMaximum = 1000 # FIXME: Make updateble or set to maximum possible value
+        else:
+            fMaximum = 0
         buff = self.put_tleaf(cursor) + cursor.put_fields(self._format_tleafF1, fMinimum, fMaximum)
         length = len(buff) + self._format_cntvers.size
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
@@ -878,7 +968,10 @@ class TBranchImpl(object):
         cursor.skip(self._format_cntvers.size)
         vers = 1
         fMinimum = 0
-        fMaximum = 0
+        if "awkwardcountsarraycreatedbyuproot" in self.name.decode("utf-8"):
+            fMaximum = min(numpy.iinfo(self.type).max, 1000) # FIXME: Make updateble
+        else:
+            fMaximum = 0
         buff = self.put_tleaf(cursor) + cursor.put_fields(self._format_tleafL1, fMinimum, fMaximum)
         length = len(buff) + self._format_cntvers.size
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
@@ -890,7 +983,10 @@ class TBranchImpl(object):
         cursor.skip(self._format_cntvers.size)
         vers = 1
         fMinimum = 0
-        fMaximum = 0
+        if "awkwardcountsarraycreatedbyuproot" in self.name.decode("utf-8"):
+            fMaximum = min(numpy.iinfo(self.type).max, 1000) # FIXME: Make updateble
+        else:
+            fMaximum = 0
         buff = self.put_tleaf(cursor) + cursor.put_fields(self._format_tleafO1, fMinimum, fMaximum)
         length = len(buff) + self._format_cntvers.size
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
@@ -902,7 +998,10 @@ class TBranchImpl(object):
         cursor.skip(self._format_cntvers.size)
         vers = 1
         fMinimum = 0
-        fMaximum = 0
+        if "awkwardcountsarraycreatedbyuproot" in self.name.decode("utf-8"):
+            fMaximum = min(numpy.iinfo(self.type).max, 1000) # FIXME: Make updateble
+        else:
+            fMaximum = 0
         buff = self.put_tleaf(cursor) + cursor.put_fields(self._format_tleafS1, fMinimum, fMaximum)
         length = len(buff) + self._format_cntvers.size
         cnt = numpy.int64(length - 4) | uproot.const.kByteCountMask
@@ -937,7 +1036,8 @@ class TBranchImpl(object):
         buff += cursor.put_fields(self._format_skiptobj2, fUniqueID, fBits)
         return buff
 
-    _format_tbranch11 = struct.Struct(">iii")
+    _format_tbranch111 = struct.Struct(">ii")
+    _format_tbranch112 = struct.Struct(">i")
     _format_tbranch12 = struct.Struct(">iq")
     _format_tbranch21 = struct.Struct(">iIi")
     _format_fentries = struct.Struct(">q")
@@ -949,13 +1049,18 @@ class TBranchImpl(object):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_cntvers.size)
         vers = 13
-        buff = (self.put_tnamed(cursor, self.name, self.nametitle, hexbytes=numpy.uint32(0x03400000)) +
-                self.put_tattfill(cursor))
+        if self.awkward:
+            buff = (self.put_tnamed(cursor, self.name, self.nametitle[:2] + self.awkwardpadder + self.nametitle[-2:], hexbytes=numpy.uint32(0x03400000)) +
+                    self.put_tattfill(cursor))
+        else:
+            buff = (self.put_tnamed(cursor, self.name, self.nametitle, hexbytes=numpy.uint32(0x03400000)) +
+                    self.put_tattfill(cursor))
         self.branch_compress_cursor = copy(cursor)
-        buff += (cursor.put_fields(self._format_tbranch11,
+        buff += (cursor.put_fields(self._format_tbranch111,
                                   self.fields["_fCompress"],
-                                  self.fields["_fBasketSize"],
-                                  self.fields["_fEntryOffsetLen"]))
+                                  self.fields["_fBasketSize"]))
+        self._fentryoffsetlencursor = copy(cursor)
+        buff += (cursor.put_fields(self._format_tbranch112, self.fields["_fEntryOffsetLen"]))
         self._writebasket_cursor = copy(cursor)
         buff += (cursor.put_fields(self._format_tbranch12,
                                    self.fields["_fWriteBasket"],
