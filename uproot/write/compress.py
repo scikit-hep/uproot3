@@ -53,7 +53,7 @@ algo = {uproot.const.kZLIB: ZLIB,
         uproot.const.kLZMA: LZMA,
         uproot.const.kLZ4: LZ4}
 
-def write(context, cursor, givenbytes, compression, key, keycursor, awkward=False):
+def write(context, cursor, givenbytes, compression, key, keycursor, isjagged=False):
     retaincursor = copy.copy(keycursor)
     if compression is None:
         algorithm, level = 0, 0
@@ -64,12 +64,12 @@ def write(context, cursor, givenbytes, compression, key, keycursor, awkward=Fals
     uncompressedbytes = len(givenbytes)
 
     if algorithm == 0 or level == 0:
-        if awkward:
+        if isjagged:
             key.fObjlen += uncompressedbytes
         else:
             key.fObjlen = uncompressedbytes
         key.fNbytes = key.fObjlen + key.fKeylen
-        key.write(keycursor, context._sink, awkward)
+        key.write(keycursor, context._sink, isjagged)
         cursor.write_data(context._sink, givenbytes)
         return
 
@@ -97,10 +97,10 @@ def write(context, cursor, givenbytes, compression, key, keycursor, awkward=Fals
             cursor.write_fields(context._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
             cursor.write_data(context._sink, after_compressed)
             key.fNbytes += compressedbytes + 9
-            key.write(keycursor, context._sink, awkward)
+            key.write(keycursor, context._sink, isjagged)
         else:
             key.fNbytes += uncompressedbytes
-            key.write(keycursor, context._sink, awkward)
+            key.write(keycursor, context._sink, isjagged)
             cursor.write_data(context._sink, givenbytes)
 
     elif algorithm == uproot.const.kLZ4:
@@ -128,10 +128,10 @@ def write(context, cursor, givenbytes, compression, key, keycursor, awkward=Fals
             cursor.write_data(context._sink, checksum)
             cursor.write_data(context._sink, after_compressed)
             key.fNbytes += compressedbytes + 9
-            key.write(keycursor, context._sink, awkward)
+            key.write(keycursor, context._sink, isjagged)
         else:
             key.fNbytes += uncompressedbytes
-            key.write(keycursor, context._sink, awkward)
+            key.write(keycursor, context._sink, isjagged)
             cursor.write_data(context._sink, givenbytes)
 
     elif algorithm == uproot.const.kLZMA:
@@ -154,10 +154,10 @@ def write(context, cursor, givenbytes, compression, key, keycursor, awkward=Fals
             cursor.write_fields(context._sink, _header, algo, method, c1, c2, c3, u1, u2, u3)
             cursor.write_data(context._sink, after_compressed)
             key.fNbytes += compressedbytes + 9
-            key.write(keycursor, context._sink, awkward)
+            key.write(keycursor, context._sink, isjagged)
         else:
             key.fNbytes += uncompressedbytes
-            key.write(keycursor, context._sink, awkward)
+            key.write(keycursor, context._sink, isjagged)
             cursor.write_data(context._sink, givenbytes)
 
     elif algorithm == uproot.const.kOldCompressionAlgo:

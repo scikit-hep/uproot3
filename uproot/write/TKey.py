@@ -38,7 +38,7 @@ class BasketKey(object):
     def update(self):
         self.cursor.update_fields(self.sink, self._format1, self.fNbytes, self._version, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
 
-    def write(self, cursor, sink, awkward=False):
+    def write(self, cursor, sink, isjagged=False):
         self.cursor = uproot.write.sink.cursor.Cursor(cursor.index)
         self.sink = sink
 
@@ -50,9 +50,9 @@ class BasketKey(object):
         cursor.write_string(sink, self.fTitle)
 
         basketversion = 3
-        if awkward:
+        if isjagged:
             if self.old_fLast == 0:
-                raise Exception("awkward flag should be False")
+                raise Exception("isjagged flag should be False")
             cursor.write_fields(sink, self._format_basketkey, basketversion, self.fBufferSize, self.fNevBufSize, self.fNevBuf, self.old_fLast)
         else:
             cursor.write_fields(sink, self._format_basketkey, basketversion, self.fBufferSize, self.fNevBufSize, self.fNevBuf, self.fLast)
@@ -83,9 +83,9 @@ class TKey(object):
     def update(self):
         self.cursor.update_fields(self.sink, self._format1, self.fNbytes, self._version, self.fObjlen, self.fDatime, self.fKeylen, self.fCycle, self.fSeekKey, self.fSeekPdir)
 
-    def write(self, cursor, sink, awkward=False):
-        if awkward:
-            raise Exception("awkward flag should be False")
+    def write(self, cursor, sink, isjagged=False):
+        if isjagged:
+            raise Exception("isjagged flag should be False")
         self.cursor = uproot.write.sink.cursor.Cursor(cursor.index)
         self.sink = sink
 

@@ -22,13 +22,13 @@ from uproot.write.objects.util import Util
 
 class newbranch(object):
 
-    def __init__(self, type, title="", shape=(1,), dependence=None, **options):
+    def __init__(self, type, title="", shape=(1,), counter=None, **options):
         self.name = ""
         self.type = type
         self.title = title
         self.shape = shape
-        self.dependence = dependence
-        self._isdependence = False
+        self.counter = counter
+        self._iscounter = False
         if "compression" in options:
             self.compression = options["compression"]
             del options["compression"]
@@ -57,7 +57,7 @@ class TTree(object):
         for name, branch in newtree.branches.items():
             if isinstance(branch, newbranch) == False:
                 branch = newbranch(branch)
-            if branch.dependence is not None:
+            if branch.counter is not None:
                 if isinstance(newtree.branches[name].type, str):
                     # FIXME: int8 and boolean cannot be read properly by ROOT yet
                     if newtree.branches[name].type == "int8" or newtree.branches[name].type == numpy.dtype("int8"):
@@ -70,23 +70,23 @@ class TTree(object):
                         raise NotImplementedError("int8 cannot be read properly by ROOT yet")
                     elif "?" in newtree.branches[name].type.str or newtree.branches[name].type.str == numpy.dtype(">?") or newtree.branches[name].type.str == numpy.dtype("<?"):
                         raise NotImplementedError("Booleans cannot be read properly by ROOT yet")
-                if branch.dependence not in checker:
-                    checker += [branch.dependence]
-                    if branch.dependence not in newtree.branches.keys():
+                if branch.counter not in checker:
+                    checker += [branch.counter]
+                    if branch.counter not in newtree.branches.keys():
                         dummybranch = newbranch(">i4")
-                        dummybranch._isdependence = True
+                        dummybranch._iscounter = True
                         compression = getattr(dummybranch, "compression", getattr(newtree, "compression", file.compression))
-                        self._branches[branch.dependence] = TBranch(branch.dependence, dummybranch, compression, self, file)
-                        self._tree.fields["_fLeaves"].append(self._branches[branch.dependence]._branch.fields["_fLeaves"])
-                        self._tree.fields["_fBranches"].append(self._branches[branch.dependence]._branch)
+                        self._branches[branch.counter] = TBranch(branch.counter, dummybranch, compression, self, file)
+                        self._tree.fields["_fLeaves"].append(self._branches[branch.counter]._branch.fields["_fLeaves"])
+                        self._tree.fields["_fBranches"].append(self._branches[branch.counter]._branch)
                     else:
-                        raise Exception(branch.dependence, " will be created automatically. Do not create it manually.")
+                        raise Exception(branch.counter, " will be created automatically. Do not create it manually.")
             compression = getattr(branch, "compression", getattr(newtree, "compression", file.compression))
             self._branches[name] = TBranch(name, branch, compression, self, file)
             self._tree.fields["_fLeaves"].append(self._branches[name]._branch.fields["_fLeaves"])
             self._tree.fields["_fBranches"].append(self._branches[name]._branch)
-            if branch.dependence is not None:
-                self._branches[name]._branch._awkwardbranch = self._branches[branch.dependence]._branch.fields["_fLeaves"]
+            if branch.counter is not None:
+                self._branches[name]._branch._awkwardbranch = self._branches[branch.counter]._branch.fields["_fLeaves"]
 
     def __getitem__(self, name):
         return self._branches[name]
@@ -116,12 +116,12 @@ class TTree(object):
         #Check if length of jaggedarrays depending on the same lengths branch is the same
         tempdict = {}
         for key, value in branchdict.items():
-            if self._branches[key]._branch.dependence is not None:
-                if self._branches[key]._branch.dependence in tempdict.keys():
-                    if not ((tempdict[self._branches[key]._branch.dependence].counts == value.counts).all()):
+            if self._branches[key]._branch.counter is not None:
+                if self._branches[key]._branch.counter in tempdict.keys():
+                    if not ((tempdict[self._branches[key]._branch.counter].counts == value.counts).all()):
                         raise Exception("Lengths of jagged arrays depending on the same lengths branch should be the same")
                 else:
-                    tempdict[self._branches[key]._branch.dependence] = value
+                    tempdict[self._branches[key]._branch.counter] = value
 
         #Convert to numpy arrays of required dtype
         for key, value in branchdict.items():
@@ -366,7 +366,7 @@ class TBranch(object):
             offsetbytes += [0]
             offsetbytes = numpy.array(offsetbytes, dtype=">i4").tostring()
             uproot.write.compress.write(self._branch.file, cursor, offsetbytes, self._branch.compression, key,
-                                        copy(keycursor), awkward=True)
+                                        copy(keycursor), isjagged=True)
 
         self._branch.file._expandfile(cursor)
 
@@ -376,7 +376,7 @@ class TBranch(object):
         self._treelvl1._tree.fields["_fTotBytes"] += self._branch.fields["_fTotBytes"]
         self._treelvl1._tree.fields["_fZipBytes"] += self._branch.fields["_fZipBytes"]
         self._branch.fields["_fBasketBytes"][self._branch.fields["_fWriteBasket"] - 1] = key.fNbytes
-        if self._branch.dependence and ((len(items[-1])*4) > 10):
+        if self._branch.counter and ((len(items[-1])*4) > 10):
             self._branch.fields["_fEntryOffsetLen"] = len(items[-1])*4
             self._branch._fentryoffsetlencursor.update_fields(self._branch.file._sink, self._branch._format_tbranch112, self._branch.fields["_fEntryOffsetLen"])
         self._treelvl1._tree.size_cursor.update_fields(self._branch.file._sink, self._tree_size, self._treelvl1._tree.fields["_fEntries"],
@@ -753,20 +753,20 @@ class TBranchImpl(object):
         self.type = numpy.dtype(branchobj.type).newbyteorder(">")
         self.shape = branchobj.shape
         self.compression = compression
-        self.dependence = branchobj.dependence
-        if self.dependence:
-            self.awkwardpadder = b"[" + self.dependence.encode("utf-8") + b"]"
+        self.counter = branchobj.counter
+        if self.counter:
+            self.awkwardpadder = b"[" + self.counter.encode("utf-8") + b"]"
         else:
             self.awkwardpadder = b""
         self._awkwardbranch = None
-        self._isdependence = branchobj._isdependence
+        self._iscounter = branchobj._iscounter
         self.util = None
         self.keycursor = None
         self.file = file
 
         self.fields = {"_fCompress": 100,
                        "_fBasketSize": 32000,
-                       "_fEntryOffsetLen": 10 if self.dependence else 0,
+                       "_fEntryOffsetLen": 10 if self.counter else 0,
                        "_fWriteBasket": 0,  # Number of baskets
                        "_fOffset": 0,
                        "_fMaxBaskets": 50,
@@ -889,13 +889,13 @@ class TBranchImpl(object):
                 fLen = fLen*self.shape[i]
         fLenType = numpy.dtype(self.type).itemsize
         fOffset = 0
-        if self._isdependence:
+        if self._iscounter:
             fIsRange = True
         else:
             fIsRange = False
         fIsUnsigned = False
         fLeafCount = None
-        if self.dependence:
+        if self.counter:
             buff = (self.put_tnamed(cursor, self.name, self.title + self.awkwardpadder) +
                     cursor.put_fields(self._format_tleaf1, fLen, fLenType, fOffset, fIsRange, fIsUnsigned) +
                     self.util.put_objany(cursor, (self._awkwardbranch[0], self._awkwardbranch[1]), self.keycursor))
@@ -913,7 +913,7 @@ class TBranchImpl(object):
         cursor.skip(self._format_cntvers.size)
         vers = 1
         fMinimum = 0
-        if self._isdependence:
+        if self._iscounter:
             fMaximum = min(numpy.iinfo(self.type).max, 1000) # FIXME: Make updateble
         else:
             fMaximum = 0
@@ -928,7 +928,7 @@ class TBranchImpl(object):
         cursor.skip(self._format_cntvers.size)
         vers = 1
         fMinimum = 0
-        if self._isdependence:
+        if self._iscounter:
             fMaximum = min(numpy.iinfo(self.type).max, 1000) # FIXME: Make updateble
         else:
             fMaximum = 0
@@ -943,7 +943,7 @@ class TBranchImpl(object):
         cursor.skip(self._format_cntvers.size)
         vers = 1
         fMinimum = 0
-        if self._isdependence:
+        if self._iscounter:
             fMaximum = 1000 # FIXME: Make updateble or set to maximum possible value
         else:
             fMaximum = 0
@@ -958,7 +958,7 @@ class TBranchImpl(object):
         cursor.skip(self._format_cntvers.size)
         vers = 1
         fMinimum = 0
-        if self._isdependence:
+        if self._iscounter:
             fMaximum = 1000 # FIXME: Make updateble or set to maximum possible value
         else:
             fMaximum = 0
@@ -973,7 +973,7 @@ class TBranchImpl(object):
         cursor.skip(self._format_cntvers.size)
         vers = 1
         fMinimum = 0
-        if self._isdependence:
+        if self._iscounter:
             fMaximum = min(numpy.iinfo(self.type).max, 1000) # FIXME: Make updateble
         else:
             fMaximum = 0
@@ -988,7 +988,7 @@ class TBranchImpl(object):
         cursor.skip(self._format_cntvers.size)
         vers = 1
         fMinimum = 0
-        if self._isdependence:
+        if self._iscounter:
             fMaximum = min(numpy.iinfo(self.type).max, 1000) # FIXME: Make updateble
         else:
             fMaximum = 0
@@ -1003,7 +1003,7 @@ class TBranchImpl(object):
         cursor.skip(self._format_cntvers.size)
         vers = 1
         fMinimum = 0
-        if self._isdependence:
+        if self._iscounter:
             fMaximum = min(numpy.iinfo(self.type).max, 1000) # FIXME: Make updateble
         else:
             fMaximum = 0
@@ -1054,7 +1054,7 @@ class TBranchImpl(object):
         copy_cursor = copy(cursor)
         cursor.skip(self._format_cntvers.size)
         vers = 13
-        if self.dependence:
+        if self.counter:
             buff = (self.put_tnamed(cursor, self.name, self.nametitle[:-2] + self.awkwardpadder + self.nametitle[-2:], hexbytes=numpy.uint32(0x03400000)) +
                     self.put_tattfill(cursor))
         else:
