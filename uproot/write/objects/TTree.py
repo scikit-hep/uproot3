@@ -59,13 +59,17 @@ class TTree(object):
                 branch = newbranch(branch)
             if branch.dependence is not None:
                 if isinstance(newtree.branches[name].type, str):
-                    # FIXME: int8 cannot be read properly by ROOT yet
-                    if newtree.branches[name].type == "int8":
+                    # FIXME: int8 and boolean cannot be read properly by ROOT yet
+                    if newtree.branches[name].type == "int8" or newtree.branches[name].type == numpy.dtype("int8"):
                         raise NotImplementedError("int8 cannot be read properly by ROOT yet")
+                    elif "?" in newtree.branches[name].type or newtree.branches[name].type == numpy.dtype(">?") or newtree.branches[name].type == numpy.dtype("<?"):
+                        raise NotImplementedError("Booleans cannot be read properly by ROOT yet")
                 else:
-                    # FIXME: int8 cannot be read properly by ROOT yet
-                    if newtree.branches[name].type.str == "int8":
+                    # FIXME: int8 and boolean cannot be read properly by ROOT yet
+                    if newtree.branches[name].type.str == "int8" or newtree.branches[name].type.str == numpy.dtype("int8"):
                         raise NotImplementedError("int8 cannot be read properly by ROOT yet")
+                    elif "?" in newtree.branches[name].type.str or newtree.branches[name].type.str == numpy.dtype(">?") or newtree.branches[name].type.str == numpy.dtype("<?"):
+                        raise NotImplementedError("Booleans cannot be read properly by ROOT yet")
                 if branch.dependence not in checker:
                     checker += [branch.dependence]
                     if branch.dependence not in newtree.branches.keys():
@@ -362,8 +366,8 @@ class TBranch(object):
         self._treelvl1._tree.fields["_fEntries"] = self._branch.fields["_fEntries"]
         self._branch.fields["_fTotBytes"] += key.fObjlen + key.fKeylen
         self._branch.fields["_fZipBytes"] += key.fNbytes
-        self._treelvl1._tree.fields["_fTotBytes"] = self._branch.fields["_fTotBytes"]
-        self._treelvl1._tree.fields["_fZipBytes"] = self._branch.fields["_fZipBytes"]
+        self._treelvl1._tree.fields["_fTotBytes"] += self._branch.fields["_fTotBytes"]
+        self._treelvl1._tree.fields["_fZipBytes"] += self._branch.fields["_fZipBytes"]
         self._branch.fields["_fBasketBytes"][self._branch.fields["_fWriteBasket"] - 1] = key.fNbytes
         if self._branch.dependence and ((len(items[-1])*4) > 10):
             self._branch.fields["_fEntryOffsetLen"] = len(items[-1])*4
@@ -1044,7 +1048,7 @@ class TBranchImpl(object):
         cursor.skip(self._format_cntvers.size)
         vers = 13
         if self.dependence:
-            buff = (self.put_tnamed(cursor, self.name, self.nametitle[:2] + self.awkwardpadder + self.nametitle[-2:], hexbytes=numpy.uint32(0x03400000)) +
+            buff = (self.put_tnamed(cursor, self.name, self.nametitle[:-2] + self.awkwardpadder + self.nametitle[-2:], hexbytes=numpy.uint32(0x03400000)) +
                     self.put_tattfill(cursor))
         else:
             buff = (self.put_tnamed(cursor, self.name, self.nametitle, hexbytes=numpy.uint32(0x03400000)) +

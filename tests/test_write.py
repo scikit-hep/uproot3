@@ -1924,40 +1924,6 @@ def test_jagged_uproot_i8(tmp_path):
         for j in range(len(array[i])):
             assert(array[i][j] == a[i][j])
 
-@pytest.mark.skip(reason="Have to fix")
-def test_jagged_int8(tmp_path):
-    filename = join(str(tmp_path), "example.root")
-
-    a = awkward.fromiter([[0],
-                          [1, 2],
-                          [10, 11, 12]])
-
-    with uproot.recreate(filename, compression=None) as f:
-        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype("int8"), dependence="n")})
-        f["t"].extend({"branch": a, "n": [1, 2, 3]})
-
-    f = ROOT.TFile.Open(filename)
-    tree = f.Get("t")
-    for i, event in enumerate(tree):
-        assert(numpy.all([x for x in event.branch] == a[i]))
-
-def test_jagged_uproot_int8(tmp_path):
-    filename = join(str(tmp_path), "example.root")
-
-    a = awkward.fromiter([[0],
-                          [1, 2],
-                          [10, 11, 12]])
-
-    with uproot.recreate(filename, compression=None) as f:
-        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype("int8"), dependence="n")})
-        f["t"].extend({"branch": a, "n": [1, 2, 3]})
-
-    f = uproot.open(filename)
-    array = f["t"].array(["branch"])
-    for i in range(len(array)):
-        for j in range(len(array[i])):
-            assert(array[i][j] == a[i][j])
-
 def test_jagged_f8(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
