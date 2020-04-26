@@ -61,8 +61,14 @@ class TTree(object):
                 if isinstance(newtree.branches[name].type, str):
                     # FIXME: Cannot have different jagged arrays with same type but different endianness
                     temptype = newtree.branches[name].type[1:].encode()
+                    # FIXME: int8 cannot be read properly by ROOT yet
+                    if newtree.branches[name].type == "int8":
+                        raise NotImplementedError("int8 cannot be read properly by ROOT yet")
                 else:
                     temptype = newtree.branches[name].type.str[1:].encode()
+                    # FIXME: int8 cannot be read properly by ROOT yet
+                    if newtree.branches[name].type.str == "int8":
+                        raise NotImplementedError("int8 cannot be read properly by ROOT yet")
                 if temptype not in checker:
                     branch.awkwardpadder = b"[awkwardcountsarraycreatedbyuproot" + temptype + b"]"
                     checker += [temptype]
