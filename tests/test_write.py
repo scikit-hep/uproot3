@@ -2050,3 +2050,89 @@ def test_jagged_uproot_i2(tmp_path):
     for i in range(len(array)):
         for j in range(len(array[i])):
             assert(array[i][j] == a[i][j])
+
+def test_jagged_i2_multiple_sametype(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    a = awkward.fromiter([[0],
+                          [1, 2]])
+
+    b = awkward.fromiter([[3],
+                          [7, 12]])
+
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = uproot.newtree({"branch1": uproot.newbranch(numpy.dtype(">i2"), awkward=True),
+                                 "branch2": uproot.newbranch(numpy.dtype(">i2"), awkward=True)})
+        f["t"].extend({"branch1": a,
+                       "branch2": b})
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    for i, event in enumerate(tree):
+        assert(numpy.all([x for x in event.branch1] == a[i]))
+        assert(numpy.all([x for x in event.branch2] == b[i]))
+
+def test_jagged_multiple_difftype(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    a = awkward.fromiter([[0],
+                          [1, 2]])
+
+    b = awkward.fromiter([[3],
+                          [7, 12]])
+
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = uproot.newtree({"branch1": uproot.newbranch(numpy.dtype(">i2"), awkward=True),
+                                 "branch2": uproot.newbranch(numpy.dtype(">i4"), awkward=True)})
+        f["t"].extend({"branch1": a,
+                       "branch2": b})
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    for i, event in enumerate(tree):
+        assert(numpy.all([x for x in event.branch1] == a[i]))
+        assert(numpy.all([x for x in event.branch2] == b[i]))
+
+def test_jagged_i2_multiple_difflen(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    a = awkward.fromiter([[0],
+                          [1, 2]])
+
+    b = awkward.fromiter([[3],
+                          [10, 11, 12]])
+
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = uproot.newtree({"branch1": uproot.newbranch(numpy.dtype(">i2"), awkward=True),
+                                 "branch2": uproot.newbranch(numpy.dtype(">i2"), awkward=True)})
+        f["t"].extend({"branch1": a,
+                       "branch2": b})
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    for i, event in enumerate(tree):
+        assert(numpy.all([x for x in event.branch1] == a[i]))
+        assert(numpy.all([x for x in event.branch2] == b[i]))
+
+@pytest.mark.skip(reason="NotImplemented")
+def test_jagged_i2_multiple_diffshape(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    a = awkward.fromiter([[0],
+                          [1, 2]])
+
+    b = awkward.fromiter([[3],
+                          [7, 12],
+                          [10,11]])
+
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = uproot.newtree({"branch1": uproot.newbranch(numpy.dtype(">i2"), awkward=True),
+                                 "branch2": uproot.newbranch(numpy.dtype(">i2"), awkward=True)})
+        f["t"].extend({"branch1": a,
+                       "branch2": b})
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    for i, event in enumerate(tree):
+        assert(numpy.all([x for x in event.branch1] == a[i]))
+        assert(numpy.all([x for x in event.branch2] == b[i]))
