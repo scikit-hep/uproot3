@@ -103,9 +103,6 @@ class TTree(object):
         self._tree.write(context, cursor, name, key, copy(keycursor), util)
 
     def extend(self, branchdict):
-
-        #FIXME: Enforce that the inner array lengths of multiple jagged array having the same dependence are the same
-
         #Baskets need to be added to all the branches
         if len(branchdict) != len(self._branches):
             raise Exception("Basket data should be added to all branches")
@@ -115,6 +112,16 @@ class TTree(object):
         first = next(values)
         if all(len(first) == len(value) for value in values) == False:
             raise Exception("Baskets of all branches should have the same length")
+
+        #Check if length of jaggedarrays depending on the same lengths branch is the same
+        tempdict = {}
+        for key, value in branchdict.items():
+            if self._branches[key]._branch.dependence is not None:
+                if self._branches[key]._branch.dependence in tempdict.keys():
+                    if not ((tempdict[self._branches[key]._branch.dependence].counts == value.counts).all()):
+                        raise Exception("Lengths of jagged arrays depending on the same lengths branch should be the same")
+                else:
+                    tempdict[self._branches[key]._branch.dependence] = value
 
         #Convert to numpy arrays of required dtype
         for key, value in branchdict.items():
