@@ -119,7 +119,7 @@ class TTree(object):
 
         for key, value in branchdict.items():
             if isinstance(value, awkward.array.jagged.JaggedArray):
-                self._branches[key].newbasket(value, value.shape[0])
+                self._branches[key].newbasket(value)
             elif value.ndim == 1:
                 self._branches[key].newbasket(value)
             else:
