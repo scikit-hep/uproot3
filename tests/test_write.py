@@ -6,6 +6,7 @@ from os.path import join
 
 import pytest
 import numpy
+import ctypes
 
 import awkward
 
@@ -1891,6 +1892,7 @@ def test_jagged_uproot_i4(tmp_path):
         for j in range(len(array[i])):
             assert(array[i][j] == a[i][j])
 
+#Need to use C++ code to read out because of bug in PyROOT layer (of Conda ROOT build?)
 def test_jagged_i8(tmp_path):
     filename = join(str(tmp_path), "example.root")
 
@@ -1902,10 +1904,29 @@ def test_jagged_i8(tmp_path):
         f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">i8"), dependence="n")})
         f["t"].extend({"branch": a, "n": [1, 2, 3]})
 
-    f = ROOT.TFile.Open(filename)
-    tree = f.Get("t")
-    for i, event in enumerate(tree):
-        assert(numpy.all([x for x in event.branch] == a[i]))
+    ROOT.gInterpreter.Declare("""
+        void assertint(bool &flag, char* filename) {
+            TFile *f = new TFile(filename);
+            Long64_t x;
+            Int_t num;
+            auto tree = f->Get<TTree>("t");
+            auto n = tree->GetBranch("n");
+            auto branch = tree->GetBranch("branch");
+            n->SetAddress(&num);
+            branch->SetAddress(&x);
+            Long64_t values[3][3] = {{0,0,0}, {1, 2, 0}, {10, 11, 12}};
+            for (int i=0; i<tree->GetEntries(); i++) {
+                tree->GetEvent(i);
+                for (int j=0; j<num; j++) {
+                    if (values[i][j] != x+j)
+                        flag = false;
+                }
+            }
+        }""")
+
+    flag = ctypes.c_bool(True)
+    ROOT.assertint(flag, filename)
+    assert(flag)
 
 def test_jagged_uproot_i8(tmp_path):
     filename = join(str(tmp_path), "example.root")
