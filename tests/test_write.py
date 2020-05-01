@@ -6,6 +6,9 @@ from os.path import join
 
 import pytest
 import numpy
+import ctypes
+
+import awkward
 
 import uproot
 from uproot.write.objects.TTree import newtree, newbranch
@@ -1855,3 +1858,279 @@ def test_tree_threedim(tmp_path):
         for j in range(3):
             for k in range(4):
                 assert a[i][j][k] == test[j][k]
+
+def test_jagged_i4(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    a = awkward.fromiter([[0],
+                          [1, 2],
+                          [10, 11, 12]])
+
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">i4"), counter="n")})
+        f["t"].extend({"branch": a, "n": [1, 2, 3]})
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    for i, event in enumerate(tree):
+        assert(numpy.all([x for x in event.branch] == a[i]))
+
+def test_jagged_uproot_i4(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    a = awkward.fromiter([[0],
+                          [1, 2],
+                          [10, 11, 12]])
+
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">i4"), counter="n")})
+        f["t"].extend({"branch": a, "n": [1, 2, 3]})
+
+    f = uproot.open(filename)
+    array = f["t"].array(["branch"])
+    for i in range(len(array)):
+        for j in range(len(array[i])):
+            assert(array[i][j] == a[i][j])
+
+#Need to use C++ code to read out because of bug in PyROOT layer (of Conda ROOT build?)
+def test_jagged_i8(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    a = awkward.fromiter([[0],
+                          [1, 2],
+                          [10, 11, 12]])
+
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">i8"), counter="n")})
+        f["t"].extend({"branch": a, "n": [1, 2, 3]})
+
+    ROOT.gInterpreter.Declare("""
+        void assertint(bool &flag, char* filename) {
+            TFile *f = new TFile(filename);
+            Long64_t x;
+            Int_t num;
+            auto tree = f->Get<TTree>("t");
+            auto n = tree->GetBranch("n");
+            auto branch = tree->GetBranch("branch");
+            n->SetAddress(&num);
+            branch->SetAddress(&x);
+            Long64_t values[3][3] = {{0,0,0}, {1, 2, 0}, {10, 11, 12}};
+            for (int i=0; i<tree->GetEntries(); i++) {
+                tree->GetEvent(i);
+                for (int j=0; j<num; j++) {
+                    if (values[i][j] != x+j)
+                        flag = false;
+                }
+            }
+        }""")
+
+    flag = ctypes.c_bool(True)
+    ROOT.assertint(flag, filename)
+    assert(flag)
+
+def test_jagged_uproot_i8(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    a = awkward.fromiter([[0],
+                          [1, 2],
+                          [10, 11, 12]])
+
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">i8"), counter="n")})
+        f["t"].extend({"branch": a, "n": [1, 2, 3]})
+
+    f = uproot.open(filename)
+    array = f["t"].array(["branch"])
+    for i in range(len(array)):
+        for j in range(len(array[i])):
+            assert(array[i][j] == a[i][j])
+
+def test_jagged_f8(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    a = awkward.fromiter([[0],
+                          [1, 2],
+                          [10, 11, 12]])
+
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">f8"), counter="n")})
+        f["t"].extend({"branch": a, "n": [1, 2, 3]})
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    for i, event in enumerate(tree):
+        assert(numpy.all([x for x in event.branch] == a[i]))
+
+def test_jagged_uproot_f8(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    a = awkward.fromiter([[0],
+                          [1, 2],
+                          [10, 11, 12]])
+
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">f8"), counter="n")})
+        f["t"].extend({"branch": a, "n": [1, 2, 3]})
+
+    f = uproot.open(filename)
+    array = f["t"].array(["branch"])
+    for i in range(len(array)):
+        for j in range(len(array[i])):
+            assert(array[i][j] == a[i][j])
+
+def test_jagged_f4(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    a = awkward.fromiter([[0],
+                          [1, 2],
+                          [10, 11, 12]])
+
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">f4"), counter="n")})
+        f["t"].extend({"branch": a, "n": [1, 2, 3]})
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    for i, event in enumerate(tree):
+        assert(numpy.all([x for x in event.branch] == a[i]))
+
+def test_jagged_uproot_f4(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    a = awkward.fromiter([[0],
+                          [1, 2],
+                          [10, 11, 12]])
+
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">f4"), counter="n")})
+        f["t"].extend({"branch": a, "n": [1, 2, 3]})
+
+    f = uproot.open(filename)
+    array = f["t"].array(["branch"])
+    for i in range(len(array)):
+        for j in range(len(array[i])):
+            assert(array[i][j] == a[i][j])
+
+def test_jagged_i2(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    a = awkward.fromiter([[0],
+                          [1, 2],
+                          [10, 11, 12]])
+
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">i2"), counter="n")})
+        f["t"].extend({"branch": a, "n": [1, 2, 3]})
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    for i, event in enumerate(tree):
+        assert(numpy.all([x for x in event.branch] == a[i]))
+
+def test_jagged_uproot_i2(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    a = awkward.fromiter([[0],
+                          [1, 2],
+                          [10, 11, 12]])
+
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">i2"), counter="n")})
+        f["t"].extend({"branch": a, "n": [1, 2, 3]})
+
+    f = uproot.open(filename)
+    array = f["t"].array(["branch"])
+    for i in range(len(array)):
+        for j in range(len(array[i])):
+            assert(array[i][j] == a[i][j])
+
+def test_jagged_i2_multiple_sametype(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    a = awkward.fromiter([[0],
+                          [1, 2]])
+
+    b = awkward.fromiter([[3],
+                          [7, 12]])
+
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = uproot.newtree({"branch1": uproot.newbranch(numpy.dtype(">i2"), counter="n"),
+                                 "branch2": uproot.newbranch(numpy.dtype(">i2"), counter="n")})
+        f["t"].extend({"branch1": a,
+                       "branch2": b,
+                       "n": [1, 2]})
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    for i, event in enumerate(tree):
+        assert(numpy.all([x for x in event.branch1] == a[i]))
+        assert(numpy.all([x for x in event.branch2] == b[i]))
+
+def test_jagged_multiple_difftype(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    a = awkward.fromiter([[0],
+                          [1, 2]])
+
+    b = awkward.fromiter([[3],
+                          [7, 12]])
+
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = uproot.newtree({"branch1": uproot.newbranch(numpy.dtype(">i2"), counter="n"),
+                                 "branch2": uproot.newbranch(numpy.dtype(">i4"), counter="n")})
+        f["t"].extend({"branch1": a,
+                       "branch2": b,
+                       "n": [1, 2]})
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    for i, event in enumerate(tree):
+        assert(numpy.all([x for x in event.branch1] == a[i]))
+        assert(numpy.all([x for x in event.branch2] == b[i]))
+
+def test_jagged_i2_multiple_difflen(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    a = awkward.fromiter([[0],
+                          [1, 2]])
+
+    b = awkward.fromiter([[3],
+                          [10, 11, 12]])
+
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = uproot.newtree({"branch1": uproot.newbranch(numpy.dtype(">i2"), counter="n1"),
+                                 "branch2": uproot.newbranch(numpy.dtype(">i2"), counter="n2")})
+        f["t"].extend({"branch1": a,
+                       "n1": [1, 2],
+                       "branch2": b,
+                       "n2": [1, 3]})
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    for i, event in enumerate(tree):
+        assert(numpy.all([x for x in event.branch1] == a[i]))
+        assert(numpy.all([x for x in event.branch2] == b[i]))
+
+def test_jagged_i4_manybasket(tmp_path):
+    filename = join(str(tmp_path), "example.root")
+
+    a = awkward.fromiter([[0],
+                          [1, 2],
+                          [10, 11, 12]])
+    b = awkward.fromiter([[10],
+                          [11, 12]])
+    tester = awkward.fromiter([[0],
+                               [1, 2],
+                               [10, 11, 12],
+                               [10],
+                               [11, 12]])
+
+    with uproot.recreate(filename, compression=None) as f:
+        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">i4"), counter="n")})
+        f["t"].extend({"branch": a, "n": [1, 2, 3]})
+        f["t"].extend({"branch": b, "n": [1, 2]})
+
+    f = ROOT.TFile.Open(filename)
+    tree = f.Get("t")
+    for i, event in enumerate(tree):
+        assert(numpy.all([x for x in event.branch] == tester[i]))
