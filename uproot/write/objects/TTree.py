@@ -22,12 +22,12 @@ from uproot.write.objects.util import Util
 
 class newbranch(object):
 
-    def __init__(self, type, title="", shape=(1,), counter=None, **options):
+    def __init__(self, type, title="", shape=(1,), size=None, **options):
         self.name = ""
         self.type = type
         self.title = title
         self.shape = shape
-        self.counter = counter
+        self.counter = size
         self._iscounter = False
         if "compression" in options:
             self.compression = options["compression"]
