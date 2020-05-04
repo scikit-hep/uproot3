@@ -1867,7 +1867,7 @@ def test_jagged_i4(tmp_path):
                           [10, 11, 12]])
 
     with uproot.recreate(filename, compression=None) as f:
-        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">i4"), counter="n")})
+        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">i4"), size="n")})
         f["t"].extend({"branch": a, "n": [1, 2, 3]})
 
     f = ROOT.TFile.Open(filename)
@@ -1883,7 +1883,7 @@ def test_jagged_uproot_i4(tmp_path):
                           [10, 11, 12]])
 
     with uproot.recreate(filename, compression=None) as f:
-        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">i4"), counter="n")})
+        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">i4"), size="n")})
         f["t"].extend({"branch": a, "n": [1, 2, 3]})
 
     f = uproot.open(filename)
@@ -1901,7 +1901,7 @@ def test_jagged_i8(tmp_path):
                           [10, 11, 12]])
 
     with uproot.recreate(filename, compression=None) as f:
-        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">i8"), counter="n")})
+        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">i8"), size="n")})
         f["t"].extend({"branch": a, "n": [1, 2, 3]})
 
     ROOT.gInterpreter.Declare("""
@@ -1936,7 +1936,7 @@ def test_jagged_uproot_i8(tmp_path):
                           [10, 11, 12]])
 
     with uproot.recreate(filename, compression=None) as f:
-        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">i8"), counter="n")})
+        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">i8"), size="n")})
         f["t"].extend({"branch": a, "n": [1, 2, 3]})
 
     f = uproot.open(filename)
@@ -1953,7 +1953,7 @@ def test_jagged_f8(tmp_path):
                           [10, 11, 12]])
 
     with uproot.recreate(filename, compression=None) as f:
-        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">f8"), counter="n")})
+        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">f8"), size="n")})
         f["t"].extend({"branch": a, "n": [1, 2, 3]})
 
     f = ROOT.TFile.Open(filename)
@@ -1969,7 +1969,7 @@ def test_jagged_uproot_f8(tmp_path):
                           [10, 11, 12]])
 
     with uproot.recreate(filename, compression=None) as f:
-        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">f8"), counter="n")})
+        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">f8"), size="n")})
         f["t"].extend({"branch": a, "n": [1, 2, 3]})
 
     f = uproot.open(filename)
@@ -1986,7 +1986,7 @@ def test_jagged_f4(tmp_path):
                           [10, 11, 12]])
 
     with uproot.recreate(filename, compression=None) as f:
-        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">f4"), counter="n")})
+        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">f4"), size="n")})
         f["t"].extend({"branch": a, "n": [1, 2, 3]})
 
     f = ROOT.TFile.Open(filename)
@@ -2002,7 +2002,7 @@ def test_jagged_uproot_f4(tmp_path):
                           [10, 11, 12]])
 
     with uproot.recreate(filename, compression=None) as f:
-        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">f4"), counter="n")})
+        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">f4"), size="n")})
         f["t"].extend({"branch": a, "n": [1, 2, 3]})
 
     f = uproot.open(filename)
@@ -2019,7 +2019,7 @@ def test_jagged_i2(tmp_path):
                           [10, 11, 12]])
 
     with uproot.recreate(filename, compression=None) as f:
-        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">i2"), counter="n")})
+        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">i2"), size="n")})
         f["t"].extend({"branch": a, "n": [1, 2, 3]})
 
     f = ROOT.TFile.Open(filename)
@@ -2035,7 +2035,7 @@ def test_jagged_uproot_i2(tmp_path):
                           [10, 11, 12]])
 
     with uproot.recreate(filename, compression=None) as f:
-        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">i2"), counter="n")})
+        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">i2"), size="n")})
         f["t"].extend({"branch": a, "n": [1, 2, 3]})
 
     f = uproot.open(filename)
@@ -2054,8 +2054,8 @@ def test_jagged_i2_multiple_sametype(tmp_path):
                           [7, 12]])
 
     with uproot.recreate(filename, compression=None) as f:
-        f["t"] = uproot.newtree({"branch1": uproot.newbranch(numpy.dtype(">i2"), counter="n"),
-                                 "branch2": uproot.newbranch(numpy.dtype(">i2"), counter="n")})
+        f["t"] = uproot.newtree({"branch1": uproot.newbranch(numpy.dtype(">i2"), size="n"),
+                                 "branch2": uproot.newbranch(numpy.dtype(">i2"), size="n")})
         f["t"].extend({"branch1": a,
                        "branch2": b,
                        "n": [1, 2]})
@@ -2076,8 +2076,8 @@ def test_jagged_multiple_difftype(tmp_path):
                           [7, 12]])
 
     with uproot.recreate(filename, compression=None) as f:
-        f["t"] = uproot.newtree({"branch1": uproot.newbranch(numpy.dtype(">i2"), counter="n"),
-                                 "branch2": uproot.newbranch(numpy.dtype(">i4"), counter="n")})
+        f["t"] = uproot.newtree({"branch1": uproot.newbranch(numpy.dtype(">i2"), size="n"),
+                                 "branch2": uproot.newbranch(numpy.dtype(">i4"), size="n")})
         f["t"].extend({"branch1": a,
                        "branch2": b,
                        "n": [1, 2]})
@@ -2098,8 +2098,8 @@ def test_jagged_i2_multiple_difflen(tmp_path):
                           [10, 11, 12]])
 
     with uproot.recreate(filename, compression=None) as f:
-        f["t"] = uproot.newtree({"branch1": uproot.newbranch(numpy.dtype(">i2"), counter="n1"),
-                                 "branch2": uproot.newbranch(numpy.dtype(">i2"), counter="n2")})
+        f["t"] = uproot.newtree({"branch1": uproot.newbranch(numpy.dtype(">i2"), size="n1"),
+                                 "branch2": uproot.newbranch(numpy.dtype(">i2"), size="n2")})
         f["t"].extend({"branch1": a,
                        "n1": [1, 2],
                        "branch2": b,
@@ -2126,7 +2126,7 @@ def test_jagged_i4_manybasket(tmp_path):
                                [11, 12]])
 
     with uproot.recreate(filename, compression=None) as f:
-        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">i4"), counter="n")})
+        f["t"] = uproot.newtree({"branch": uproot.newbranch(numpy.dtype(">i4"), size="n")})
         f["t"].extend({"branch": a, "n": [1, 2, 3]})
         f["t"].extend({"branch": b, "n": [1, 2]})
 
