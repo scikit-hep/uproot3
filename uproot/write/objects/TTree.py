@@ -360,7 +360,9 @@ class TBranch(object):
         key.write(cursor, self._branch.file._sink)
         uproot.write.compress.write(self._branch.file, cursor, givenbytes, self._branch.compression, key, copy(keycursor))
         if isinstance(items, awkward.array.jagged.JaggedArray):
-            offsetbytes = [items.shape[0] + 1, key.fKeylen]
+            # 3 looks like a harmless value for the first entry of offsetbytes
+            # Relevant code - https://github.com/root-project/root/blob/master/tree/tree/src/TBasket.cxx#L921-L954
+            offsetbytes = [3, key.fKeylen]
             for i in range(items.shape[0] - 1):
                 offsetbytes += [(len(items[i]) * numpy.dtype(self._branch.type).itemsize) + offsetbytes[-1]]
             offsetbytes += [0]
