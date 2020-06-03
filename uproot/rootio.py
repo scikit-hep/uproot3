@@ -659,7 +659,7 @@ def _longsize(issigned):
         if sys.version_info[0] <= 2:
             return "q" if issigned else "Q"
         else:
-            return "l" if issigned else "L"
+            return "q" if issigned else "Q"
     else:
         if sys.version_info[0] <= 2:
             return "q" if issigned else "Q"
