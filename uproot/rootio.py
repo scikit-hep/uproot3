@@ -659,12 +659,9 @@ def _longsize(issigned):
         if sys.version_info[0] <= 2:
             return "q" if issigned else "Q"
         else:
-            return "q" if issigned else "Q"
+            return "i" if issigned else "I"
     else:
-        if sys.version_info[0] <= 2:
-            return "q" if issigned else "Q"
-        else:
-            return "q" if issigned else "Q"
+        return "q" if issigned else "Q"
 
 def _ftype2struct(fType):
     if fType == uproot.const.kBool:
