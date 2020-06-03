@@ -654,6 +654,18 @@ def _ftype2dtype(fType):
     else:
         return "None"
 
+def _longsize(issigned):
+    if os.name == "nt":
+        if sys.version_info[0] <= 2:
+            return "l" if issigned else "L"
+        else:
+            return "q" if issigned else "Q"
+    else:
+        if sys.version_info[0] <= 2:
+            return "l" if issigned else "L"
+        else:
+            return "q" if issigned else "Q"
+
 def _ftype2struct(fType):
     if fType == uproot.const.kBool:
         return "?"
@@ -670,9 +682,9 @@ def _ftype2struct(fType):
     elif fType in (uproot.const.kBits, uproot.const.kUInt, uproot.const.kCounter):
         return "I"
     elif fType == uproot.const.kLong:
-        return "q" if numpy.dtype(numpy.long).itemsize == 8 else "l"
+        return _longsize(True)
     elif fType == uproot.const.kULong:
-        return "Q" if numpy.dtype(numpy.long).itemsize == 8 else "L"
+        return _longsize(False)
     elif fType == uproot.const.kLong64:
         return "q"
     elif fType == uproot.const.kULong64:
