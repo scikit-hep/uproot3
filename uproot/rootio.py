@@ -654,6 +654,15 @@ def _ftype2dtype(fType):
     else:
         return "None"
 
+def _longsize(issigned):
+    if os.name == "nt":
+        if sys.version_info[0] <= 2:
+            return "q" if issigned else "Q"
+        else:
+            return "i" if issigned else "I"   # wrong: gave up in PR #493
+    else:
+        return "q" if issigned else "Q"
+
 def _ftype2struct(fType):
     if fType == uproot.const.kBool:
         return "?"
@@ -670,9 +679,9 @@ def _ftype2struct(fType):
     elif fType in (uproot.const.kBits, uproot.const.kUInt, uproot.const.kCounter):
         return "I"
     elif fType == uproot.const.kLong:
-        return "l"
+        return _longsize(True)
     elif fType == uproot.const.kULong:
-        return "L"
+        return _longsize(False)
     elif fType == uproot.const.kLong64:
         return "q"
     elif fType == uproot.const.kULong64:
@@ -865,6 +874,9 @@ def _defineclasses(streamerinfos, classes):
                         code.append("        cursor.skip(6)")
                         code.append("        self._{0} = cursor.array(source, cursor.field(source, self._int32), '>f8')".format(_safename(element._fName)))
                         fields.append(_safename(element._fName))
+                    elif element._fTypeName == b"vector<string>":
+                        code.append("        cursor.skip(6)")
+                        code.append("        self._{0} = uproot.interp.objects.STLVector(uproot.interp.objects.STLString()).read(source, cursor, context, self)".format(_safename(element._fName)))
                     elif element._fTypeName == b"map<string,string>":
                         code.append("        self._{0} = _mapstrstr(source, cursor)".format(_safename(element._fName)))
                     else:
