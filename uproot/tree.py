@@ -286,6 +286,15 @@ class TTreeMethods(object):
 
                 self._attachstreamer(subbranch, submembers.get(name, None), streamerinfosmap, isTClonesArray)
 
+    def _addprovenance(self, branch, context, parents = None):
+        if parents is None:
+            parents = [context.treename]
+        if len(branch._provenance) == 0:
+            branch._provenance = parents
+        for x in branch.itervalues():
+            x._provenance = parents + [branch.name]
+            self._addprovenance(x, context, x._provenance)
+
     def _postprocess(self, source, cursor, context, parent):
         self._context = context
         self._context.treename = self.name
@@ -293,6 +302,7 @@ class TTreeMethods(object):
 
         for branch in self._fBranches:
             self._attachstreamer(branch, context.streamerinfosmap.get(getattr(branch, "_fClassName", None), None), context.streamerinfosmap, False)
+            self._addprovenance(branch, context)
 
         self._branchlookup = {}
         self._fill_branchlookup(self._branchlookup)
@@ -511,7 +521,7 @@ class TTreeMethods(object):
             raise ValueError("list of branch names or glob/regex matches more than one branch; use TTree.arrays (plural)")
         return tbranch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=flatten, awkwardlib=awkwardlib, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=blocking)
 
-    def arrays(self, branches=None, outputtype=dict, namedecode=None, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True):
+    def arrays(self, branches=None, outputtype=dict, namedecode=None, entrystart=None, entrystop=None, flatten=False, flatname=None, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, blocking=True, recursive=True):
         awkward = _normalize_awkwardlib(awkwardlib)
         branches = list(self._normalize_branches(branches, awkward))
         for branch, interpretation in branches:
@@ -526,7 +536,20 @@ class TTreeMethods(object):
         entrystart, entrystop = _normalize_entrystartstop(self.numentries, entrystart, entrystop)
 
         # start the job of filling the arrays
-        futures = [(branch.name if namedecode is None else branch.name.decode(namedecode), interpretation, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=(flatten and not ispandas), awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=False)) for branch, interpretation in branches]
+        futures = None
+        if recursive and recursive is not True:
+            def wrap_name(branch, namedecode):
+                if len(branch._provenance) != 0:
+                    if namedecode is None:
+                        return recursive.join(branch._provenance + [branch.name])
+                    else:
+                        return recursive.join([p.decode(namedecode) for p in (branch._provenance + [branch.name])])
+                else:
+                    return branch.name if namedecode is None else branch.name.decode(namedecode)
+
+            futures = [(wrap_name(branch, namedecode), interpretation, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=(flatten and not ispandas), awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=False)) for branch, interpretation in branches]
+        else:
+            futures = [(branch.name if namedecode is None else branch.name.decode(namedecode), interpretation, branch.array(interpretation=interpretation, entrystart=entrystart, entrystop=entrystop, flatten=(flatten and not ispandas), awkwardlib=awkward, cache=cache, basketcache=basketcache, keycache=keycache, executor=executor, blocking=False)) for branch, interpretation in branches]
 
         # make functions that wait for the filling job to be done and return the right outputtype
         if outputtype == namedtuple:
@@ -634,7 +657,7 @@ class TTreeMethods(object):
             starts = numpy.arange(entrystart, effectivestop, entrystepsize)
             stops = numpy.append(starts[1:], effectivestop)
             return zip(starts, stops)
-                    
+
         else:
             try:
                 iter(entrysteps)
@@ -662,7 +685,7 @@ class TTreeMethods(object):
 
         # for the case of outputtype == pandas.DataFrame, do some preparation to fill DataFrames efficiently
         ispandas = getattr(outputtype, "__name__", None) == "DataFrame" and getattr(outputtype, "__module__", None) == "pandas.core.frame"
-            
+
         def evaluate(branch, interpretation, future, past, cachekey, pythonize):
             if future is None:
                 return past
@@ -888,6 +911,7 @@ class TBranchMethods(object):
         self._context = context
         self._streamer = None
         self._interpretation = None
+        self._provenance = []
 
         self._numgoodbaskets = 0
         for i, x in enumerate(self._fBasketSeek):
@@ -1848,7 +1872,7 @@ class _LazyFiles(object):
                 "xrootdsource": self.xrootdsource,
                 "httpsource": self.httpsource,
                 "options": self.options}
-                
+
     def __setstate__(self, state):
         self.paths = state["paths"]
         self.treepath = state["treepath"]
@@ -1916,7 +1940,7 @@ class _LazyTree(object):
 
     def __call__(self, branch, entrystart, entrystop):
         return self.tree[branch].array(interpretation=self.interpretation[branch], entrystart=entrystart, entrystop=entrystop, flatten=self.flatten, awkwardlib=self.awkwardlib, cache=None, basketcache=self.basketcache, keycache=self.keycache, executor=self.executor)
-        
+
 class _LazyBranch(object):
     def __init__(self, path, treepath, branchname, branch, interpretation, flatten, awkwardlib, basketcache, keycache, executor):
         self.path = path

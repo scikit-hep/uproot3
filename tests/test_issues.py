@@ -425,3 +425,30 @@ class Test(object):
         tree = f['Events']
         assert len(tree.arrays(entrystop=0)) == 4179
         assert len(tree.arrays('recoMuons_muons__RECO.*', entrystop=10)) == 93
+
+    @pytest.mark.parametrize("treename, branchtest", [
+        ('l1CaloTowerEmuTree/L1CaloTowerTree', b'L1CaloTowerTree/L1CaloCluster/phi'),
+        ('l1CaloTowerTree/L1CaloTowerTree', b'L1CaloTowerTree/L1CaloTower/et'),
+    ])
+    def test_issue447_tree_arrays_omitting_variables(self, treename, branchtest):
+        with uproot.open("tests/samples/issue447.root") as f:
+            t1 = f[treename]
+            arrays = t1.arrays(recursive=b'/')
+            array_keys = arrays.keys()
+            n_array_vars = len(array_keys)
+            n_tree_vars = sum([len(t1[k].keys()) for k in t1.keys()])
+            assert n_tree_vars == n_array_vars
+            assert branchtest in array_keys
+
+    def test_issue447_recursive_provenance(self):
+        expectedKeys = [
+            'tree/b1',
+            'tree/b1/b2',
+            'tree/b1/b2/b3',
+            'tree/b1/b2/b3/b4',
+        ]
+        expectedKeys = sorted([k.encode(encoding='UTF-8') for k in expectedKeys])
+        with uproot.open('tests/samples/issue447_recursive.root') as f:
+            t1 = f['tree']
+            arrays = t1.arrays(recursive=b'/')
+            assert sorted(list(arrays.keys())) == expectedKeys
