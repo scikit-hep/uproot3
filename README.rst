@@ -2,6 +2,25 @@
    :alt: uproot
    :target: http://uproot.readthedocs.io/en/latest/
 
+This is a deprecated version of Uproot
+======================================
+
+See `scikit-hep/uproot4 <https://github.com/scikit-hep/uproot4>`__ for the latest version of Uproot. Old and new versions are available as separate packages,
+
+.. code-block:: bash
+
+    pip install uproot    # old
+    pip install uproot4   # new
+
+because the interface has changed. Later this year, "Uproot 4" will simply become the `uproot` package with version number 4.0. Then the two packages will shift to
+
+.. code-block:: bash
+
+    pip install uproot    # new
+    pip install uproot3   # old
+
+You can adopt the new library gradually by importing both in Python, switching to the old version as a contingency (missing feature or bug in the new version). Note that Uproot 3 returns old-style `Awkward 0 <https://github.com/scikit-hep/awkward-array#readme>`__ arrays and Uproot 4 returns new-style `Awkward 1 <https://github.com/scikit-hep/awkward-1.0#readme>`__ arrays. (The new version of Uproot was motivated by the new version of Awkward, to make a clear distinction.)
+
 uproot
 ======
 
