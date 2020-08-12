@@ -531,7 +531,7 @@ tree_fragments = {
 
     # recursive
     "recursive": u"""recursive : bool
-        if ``False`` *(default)*, only iterate at this tree/branch level; if ``True``, depth-first iterate over all subbranches as well.""",
+        if ``False`` *(default)*, only iterate at this tree/branch level; if ``True``, depth-first iterate over all subbranches as well. If ``'/'``, depth-first iterate over all subbranches and use fully qualified "paths" to the subbranches as keys, with '/' as level separator.""",
 
     # filtername
     "filtername": u"""filtername : function: str \u21d2 bool
@@ -712,6 +712,7 @@ u"""Return a branch by name (at any level of depth).
     ----------
     name : str
         name of the branch to return.
+        If `name` contains a '/', it is interpreted as path to a specific subbranch and the `recursive` parameter is ignored.
 
     Returns
     -------
@@ -1168,6 +1169,7 @@ u"""Return a subbranch by name (at any level of depth).
     ----------
     name : str
         name of the subbranch to return.
+        If `name` contains a '/', it is interpreted as path to a specific subbranch and the `recursive` parameter is ignored.
 
     Returns
     -------
