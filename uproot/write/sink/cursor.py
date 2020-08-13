@@ -5,6 +5,7 @@
 from __future__ import absolute_import
 
 import struct
+import sys
 
 class Cursor(object):
     def __init__(self, index):
@@ -81,10 +82,16 @@ class Cursor(object):
 
     def put_array(self, data):
         self.index += data.nbytes
-        return data.tostring()
+        if sys.version_info >= 8:
+            return data.tobytes()
+        else:
+            return data.tostring()
 
     def update_array(self, sink, data):
-        sink.write(data.tostring(), self.index)
+        if sys.version_info >= 8:
+            sink.write(data.tobytes(), self.index)
+        else:
+            sink.write(data.tostring(), self.index)
 
     def write_array(self, sink, data):
         self.update_array(sink, data)
