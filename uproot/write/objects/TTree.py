@@ -334,7 +334,7 @@ class TBranch(object):
         if isinstance(items, awkward.array.jagged.JaggedArray):
             givenbytes = b""
             for i in range(items.shape[0]):
-                                if sys.version_info.minor >= 8:
+                if sys.version_info.minor >= 8:
                     givenbytes += numpy.array(items[i], dtype=self._branch.type).tobytes()
                 else:
                     givenbytes += numpy.array(items[i], dtype=self._branch.type).tostring()
@@ -372,7 +372,7 @@ class TBranch(object):
             for i in range(items.shape[0] - 1):
                 offsetbytes += [(len(items[i]) * numpy.dtype(self._branch.type).itemsize) + offsetbytes[-1]]
             offsetbytes += [0]
-             if sys.version_info.minor >= 8:
+            if sys.version_info.minor >= 8:
                 offsetbytes = numpy.array(offsetbytes, dtype=">i4").tobytes()
             else:
                 offsetbytes = numpy.array(offsetbytes, dtype=">i4").tostring()
