@@ -334,9 +334,15 @@ class TBranch(object):
         if isinstance(items, awkward.array.jagged.JaggedArray):
             givenbytes = b""
             for i in range(items.shape[0]):
-                givenbytes += numpy.array(items[i], dtype=self._branch.type).tostring()
+                                if sys.version_info.minor >= 8:
+                    givenbytes += numpy.array(items[i], dtype=self._branch.type).tobytes()
+                else:
+                    givenbytes += numpy.array(items[i], dtype=self._branch.type).tostring()
         else:
-            givenbytes = numpy.array(items, dtype=self._branch.type, copy=False).tostring()
+            if sys.version_info.minor >= 8:
+                givenbytes = numpy.array(items, dtype=self._branch.type, copy=False).tobytes()
+            else:
+                givenbytes = numpy.array(items, dtype=self._branch.type, copy=False).tostring()
 
         cursor = uproot.write.sink.cursor.Cursor(self._branch.file._fSeekFree)
         self._branch.fields["_fBasketSeek"][self._branch.fields["_fWriteBasket"] - 1] = cursor.index
@@ -366,7 +372,10 @@ class TBranch(object):
             for i in range(items.shape[0] - 1):
                 offsetbytes += [(len(items[i]) * numpy.dtype(self._branch.type).itemsize) + offsetbytes[-1]]
             offsetbytes += [0]
-            offsetbytes = numpy.array(offsetbytes, dtype=">i4").tostring()
+             if sys.version_info.minor >= 8:
+                offsetbytes = numpy.array(offsetbytes, dtype=">i4").tobytes()
+            else:
+                offsetbytes = numpy.array(offsetbytes, dtype=">i4").tostring()
             uproot.write.compress.write(self._branch.file, cursor, offsetbytes, self._branch.compression, key,
                                         copy(keycursor), isjagged=True)
 
