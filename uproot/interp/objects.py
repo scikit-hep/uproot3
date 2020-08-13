@@ -15,6 +15,8 @@ import uproot.interp.interp
 import uproot.interp.numerical
 import uproot.interp.jagged
 
+from uproot._util import _tobytes
+
 class SimpleArray(object):
     def __init__(self, cls):
         self.cls = cls
@@ -131,7 +133,7 @@ class STLString(object):
         numitems = cursor.field(source, self._format1)
         if numitems == 255:
             numitems = cursor.field(source, self._format2)
-        return cursor.array(source, numitems, self.awkward.ObjectArray.CHARTYPE).tostring()
+        return _tobytes(cursor.array(source, numitems, self.awkward.ObjectArray.CHARTYPE))
 
 class Pointer(object):
     def __init__(self, cls):
@@ -404,7 +406,7 @@ class asstring(_variable):
     __metaclass__ = type.__new__(type, "type", (_variable.__metaclass__,), {})
 
     def __init__(self, skipbytes=1):
-        super(asstring, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(self.awkward.ObjectArray.CHARTYPE), skipbytes=skipbytes), lambda array: array.tostring())
+        super(asstring, self).__init__(uproot.interp.jagged.asjagged(uproot.interp.numerical.asdtype(self.awkward.ObjectArray.CHARTYPE), skipbytes=skipbytes), lambda array: _tobytes(array))
 
     def __repr__(self):
         return "asstring({0})".format("" if self.content.skipbytes == 1 else repr(self.content.skipbytes))

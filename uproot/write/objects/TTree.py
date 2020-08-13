@@ -15,6 +15,7 @@ import uproot.const
 from uproot.rootio import _bytesid
 from uproot.rootio import nofilter
 from uproot.rootio import _memsize
+from uproot._util import _tobytes
 import uproot.write.compress
 import uproot.write.sink.cursor
 from uproot.write.TKey import BasketKey
@@ -334,15 +335,9 @@ class TBranch(object):
         if isinstance(items, awkward.array.jagged.JaggedArray):
             givenbytes = b""
             for i in range(items.shape[0]):
-                if sys.version_info.minor >= 8:
-                    givenbytes += numpy.array(items[i], dtype=self._branch.type).tobytes()
-                else:
-                    givenbytes += numpy.array(items[i], dtype=self._branch.type).tostring()
+                givenbytes += _tobytes(numpy.array(items[i], dtype=self._branch.type))
         else:
-            if sys.version_info.minor >= 8:
-                givenbytes = numpy.array(items, dtype=self._branch.type, copy=False).tobytes()
-            else:
-                givenbytes = numpy.array(items, dtype=self._branch.type, copy=False).tostring()
+            givenbytes = _tobytes(numpy.array(items, dtype=self._branch.type, copy=False))
 
         cursor = uproot.write.sink.cursor.Cursor(self._branch.file._fSeekFree)
         self._branch.fields["_fBasketSeek"][self._branch.fields["_fWriteBasket"] - 1] = cursor.index
@@ -372,10 +367,7 @@ class TBranch(object):
             for i in range(items.shape[0] - 1):
                 offsetbytes += [(len(items[i]) * numpy.dtype(self._branch.type).itemsize) + offsetbytes[-1]]
             offsetbytes += [0]
-            if sys.version_info.minor >= 8:
-                offsetbytes = numpy.array(offsetbytes, dtype=">i4").tobytes()
-            else:
-                offsetbytes = numpy.array(offsetbytes, dtype=">i4").tostring()
+            offsetbytes = _tobytes(numpy.array(offsetbytes, dtype=">i4"))
             uproot.write.compress.write(self._branch.file, cursor, offsetbytes, self._branch.compression, key,
                                         copy(keycursor), isjagged=True)
 
