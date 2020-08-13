@@ -5,6 +5,9 @@
 from __future__ import absolute_import
 
 import struct
+import sys
+
+from uproot._util import _tobytes
 
 class Cursor(object):
     def __init__(self, index):
@@ -81,10 +84,10 @@ class Cursor(object):
 
     def put_array(self, data):
         self.index += data.nbytes
-        return data.tostring()
+        return _tobytes(data)
 
     def update_array(self, sink, data):
-        sink.write(data.tostring(), self.index)
+        sink.write(_tobytes(data), self.index)
 
     def write_array(self, sink, data):
         self.update_array(sink, data)

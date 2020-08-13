@@ -9,6 +9,8 @@ import string
 
 import numpy
 
+from uproot._util import _tobytes
+
 class Cursor(object):
     # makes __doc__ attribute mutable before Python 3.3
     __metaclass__ = type.__new__(type, "type", (type,), {})
@@ -70,7 +72,7 @@ class Cursor(object):
             length = source.data(start, stop, numpy.dtype(">u4"))[0]
         start = self.index
         stop = self.index = start + length
-        return source.data(start, stop).tostring()
+        return _tobytes(source.data(start, stop))
 
     def cstring(self, source):
         char = None

@@ -23,6 +23,7 @@ from uproot.source.memmap import MemmapSource
 from uproot.source.xrootd import XRootDSource
 from uproot.source.http import HTTPSource
 from uproot.source.cursor import Cursor
+from uproot._util import _tobytes
 
 import uproot_methods.classes
 
@@ -1561,8 +1562,11 @@ class TRefArray(list, ROOTStreamedObject):
     def nbytes(self):
         return len(self) * self._dtype.itemsize
 
+    def tobytes(self):
+        return _tobytes(numpy.asarray(self, dtype=self._dtype))
+
     def tostring(self):
-        return numpy.asarray(self, dtype=self._dtype).tostring()
+        return self.tobytes()
 
 class TArray(list, ROOTStreamedObject):
     _classname = b"TArray"
@@ -1579,8 +1583,11 @@ class TArray(list, ROOTStreamedObject):
     def nbytes(self):
         return len(self) * self._dtype.itemsize
 
+    def tobytes(self):
+        return _tobytes(numpy.asarray(self, dtype=self._dtype))
+
     def tostring(self):
-        return numpy.asarray(self, dtype=self._dtype).tostring()
+        return self.tobytes()
 
 class TArrayC(TArray):
     _classname = b"TArrayC"
