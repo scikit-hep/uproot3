@@ -82,13 +82,13 @@ class Cursor(object):
 
     def put_array(self, data):
         self.index += data.nbytes
-        if sys.version_info >= 8:
+        if sys.version_info.minor >= 8:
             return data.tobytes()
         else:
             return data.tostring()
 
     def update_array(self, sink, data):
-        if sys.version_info >= 8:
+        if sys.version_info.minor >= 8:
             sink.write(data.tobytes(), self.index)
         else:
             sink.write(data.tostring(), self.index)
