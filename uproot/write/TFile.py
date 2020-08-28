@@ -8,6 +8,12 @@ import os
 import sys
 import struct
 import uuid
+from itertools import chain
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
+
 
 import uproot_methods.convert
 
@@ -100,6 +106,60 @@ class TFileUpdate(object):
         self._expandfile(cursor)
 
         self._rootdir.setkey(newkey)
+        self._sink.flush()
+
+    def update(self, *args, **kwargs):
+        if len(args) > 1:
+            raise TypeError("update expected at most 1 argument, got %s" % len(args))
+        items = args[0] if args else ()
+        if isinstance(items, Mapping):
+            items = items.items()
+        items = chain(items, kwargs.items())
+        self.util = Util()
+
+        cursor = uproot.write.sink.cursor.Cursor(self._fSeekFree)
+        for where, what in items:
+            where, cycle = self._normalizewhere(where)
+
+            isTTree = what.__class__.__name__ in ("newtree", "TTree")
+            assert not isTTree  # prevent TTree writing, otherwise migth invoke nasty magic
+            if not isTTree:
+                what = uproot_methods.convert.towriteable(what)
+            elif what.__class__.__name__ == "newtree":
+                what = TTree(where, what, self)
+
+            newkey = uproot.write.TKey.TKey(
+                fClassName=what._fClassName,
+                fName=where,
+                fTitle=what._fTitle,
+                fObjlen=0,
+                fSeekKey=cursor.index,
+                fSeekPdir=self._fBEGIN,
+                fCycle=cycle if cycle is not None else self._rootdir.newcycle(where),
+            )
+            if isTTree:
+                # Need to (re)attach the cycle number to allow getitem to access writable TTree
+                tree_where = where + b";" + str(newkey.fCycle).encode("utf-8")
+                self._treedict[tree_where] = what
+
+            newkeycursor = uproot.write.sink.cursor.Cursor(newkey.fSeekKey)
+            newkey.write(cursor, self._sink)
+            what._write(self, cursor, where, self.compression, newkey, newkeycursor, self.util)
+
+            dirkey = (newkey.fName, newkey.fCycle)
+            if dirkey in self._rootdir.keys:
+                self._rootdir.headkey.fObjlen -= self._rootdir.keys[dirkey].fKeylen
+            self._rootdir.headkey.fObjlen += newkey.fKeylen
+            self._rootdir.keys[dirkey] = newkey
+
+        # write (root) TDirectory
+        self._rootdir.fNbytesKeys = self._rootdir._nbyteskeys()
+        while self._rootdir.fNbytesKeys > self._rootdir.allocationbytes:
+            self._rootdir.allocationbytes *= self._rootdir.growfactor
+
+        self._rootdir.writekeys(cursor)
+
+        self._expandfile(cursor)
         self._sink.flush()
 
     def __delitem__(self, where):
