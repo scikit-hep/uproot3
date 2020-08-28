@@ -8,6 +8,12 @@ import os
 import sys
 import struct
 import uuid
+from itertools import chain
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
+
 
 import uproot_methods.convert
 
@@ -102,11 +108,17 @@ class TFileUpdate(object):
         self._rootdir.setkey(newkey)
         self._sink.flush()
 
-    def bulk_write(self, content):
+    def update(self, *args, **kwargs):
+        if len(args) > 1:
+            raise TypeError("update expected at most 1 argument, got %s" % len(args))
+        items = args[0] if args else ()
+        if isinstance(items, Mapping):
+            items = items.items()
+        items = chain(items, kwargs.items())
         self.util = Util()
 
         cursor = uproot.write.sink.cursor.Cursor(self._fSeekFree)
-        for where, what in content:
+        for where, what in items:
             where, cycle = self._normalizewhere(where)
 
             isTTree = what.__class__.__name__ in ("newtree", "TTree")
@@ -134,11 +146,11 @@ class TFileUpdate(object):
             newkey.write(cursor, self._sink)
             what._write(self, cursor, where, self.compression, newkey, newkeycursor, self.util)
 
-            # prevent overwrite (migth be excessive and actually work fine)
-            assert (newkey.fName, newkey.fCycle) not in self._rootdir.keys
-
+            dirkey = (newkey.fName, newkey.fCycle)
+            if dirkey in self._rootdir.keys:
+                self._rootdir.headkey.fObjlen -= self._rootdir.keys[dirkey].fKeylen
             self._rootdir.headkey.fObjlen += newkey.fKeylen
-            self._rootdir.keys[(newkey.fName, newkey.fCycle)] = newkey
+            self._rootdir.keys[dirkey] = newkey
 
         # write (root) TDirectory
         self._rootdir.fNbytesKeys = self._rootdir._nbyteskeys()

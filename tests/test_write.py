@@ -2135,7 +2135,7 @@ def test_jagged_i4_manybasket(tmp_path):
     for i, event in enumerate(tree):
         assert(numpy.all([x for x in event.branch] == tester[i]))
 
-def test_bulk_write(tmp_path):
+def test_update(tmp_path):
     filename = join(str(tmp_path), "example.root")
     testfile = join(str(tmp_path), "test.root")
     n = 3
@@ -2148,7 +2148,7 @@ def test_bulk_write(tmp_path):
     t = uproot.open(testfile)
     hist = t["hvar"]
     with uproot.recreate(filename, compression=None) as f:
-        f.bulk_write(("test%d" % i, hist) for i in range(n))
+        f.update(("test%d" % i, hist) for i in range(n))
 
     f = ROOT.TFile.Open(filename)
     for i in range(n):
