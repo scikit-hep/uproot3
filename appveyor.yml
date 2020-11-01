@@ -40,6 +40,21 @@ environment:
       PYTHON_ARCH: "64"
       NUMPY: "numpy>=1.15"
 
+    - PYTHON: "C:\\Python37"
+      PYTHON_VERSION: "3.7.x"
+      PYTHON_ARCH: "32"
+      NUMPY: "numpy>=1.15"
+
+    - PYTHON: "C:\\Python38"
+      PYTHON_VERSION: "3.8.x"
+      PYTHON_ARCH: "32"
+      NUMPY: "numpy>=1.15"
+
+    - PYTHON: "C:\\Python39"
+      PYTHON_VERSION: "3.9.x"
+      PYTHON_ARCH: "32"
+      NUMPY: "numpy>=1.15"
+
 install:
   - "SET PATH=%PYTHON%;%PATH%"
   - "python --version"

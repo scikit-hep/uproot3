@@ -24,6 +24,8 @@ env:
 
   - PYVER=3.8 NPY="numpy>=1.15"
 
+  - PYVER=3.9 NPY="numpy>=1.15"
+
 #  - PYVER=pypy2.7 NPY="numpy>=1.15"
 
   - PYVER=pypy3.6 NPY="numpy>=1.15"
@@ -44,13 +46,13 @@ install:
   # FIXME: Mamba causes pip install numpy to be extremely slow
   - if [[ "${PYVER}" = pypy* ]]; then
       conda create --quiet --yes -n testenv ${PYVER};
-    elif [ "${PYVER}" = "2.7" ] || [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" || [ "${PYVER}" = "3.8" ]; then
+    elif [ "${PYVER}" = "2.7" ] || [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" || [ "${PYVER}" = "3.8" ] || [ "${PYVER}" = "3.9" ]; then
       conda create --quiet --yes -n testenv python=${PYVER} pip;
     else
       conda create --quiet --yes -n testenv python=${PYVER};
     fi
   - source activate testenv
-  - if [ "${PYVER}" = "2.7" ] || [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" || [ "${PYVER}" = "3.8" ]; then
+  - if [ "${PYVER}" = "2.7" ] || [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" || [ "${PYVER}" = "3.8" ] || [ "${PYVER}" = "3.9" ]; then
       conda install --quiet --yes python=${PYVER} pip root;
       source activate testenv;
     fi
@@ -78,7 +80,7 @@ addons:
       - libatlas-base-dev
 
 script:
-  if [ "${PYVER}" = "2.7" ] || [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" || [ "${PYVER}" = "3.8" ]; then
+  if [ "${PYVER}" = "2.7" ] || [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" || [ "${PYVER}" = "3.8" ] || [ "${PYVER}" = "3.9" ]; then
     pytest --error-for-skips -v tests;
   else
     pytest -v tests;
