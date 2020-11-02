@@ -60,8 +60,8 @@ install:
   - if [[ ${PYVER} = "2.7" ]] ; then pip install backports.lzma ; fi
   - pip install pandas
   # pyopenssl is for deployment
-  - if [[ ${PYVER} != pypy* ]] ; then
-      conda install -c anaconda python=${PYVER} pyopenssl;
+  - if [[ ${PYVER} != pypy* ]]; then
+      mamba install pyopenssl
     fi
   - wget -O tests/samples/Event.root http://scikit-hep.org/uproot/examples/Event.root
   - pip install pytest-error-for-skips
