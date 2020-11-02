@@ -45,10 +45,10 @@ install:
     else
       mamba create --quiet --yes -n testenv python=${PYVER} pyopenssl;
     fi
-  - source activate testenv
+  - conda activate testenv
   - if [ "${PYVER}" = "2.7" ] || [ "${PYVER}" = "3.6" ] || [ "${PYVER}" = "3.7" || [ "${PYVER}" = "3.8" ] || [ "${PYVER}" = "3.9" ]; then
-      mamba install --quiet --yes python=${PYVER} pip root;
-      source activate testenv;
+      mamba install --quiet --yes -n testenv python=${PYVER} pip root;
+      conda activate testenv;
     fi
   - pip install --upgrade setuptools-scm
   - pip install $NPY
