@@ -61,7 +61,7 @@ install:
   - pip install pandas
   # pyopenssl is for deployment
   - if [[ ${PYVER} != pypy* ]]; then
-      mamba install pyopenssl
+      mamba install pyopenssl;
     fi
   - wget -O tests/samples/Event.root http://scikit-hep.org/uproot/examples/Event.root
   - pip install pytest-error-for-skips
