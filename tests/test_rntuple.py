@@ -1,18 +1,18 @@
 #!/usr/bin/env python
 
-# BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
+# BSD 3-Clause License; see https://github.com/scikit-hep/uproot3/blob/master/LICENSE
 
 import os
 
 import numpy
 import pytest
 
-import awkward
-import uproot
+import awkward0
+import uproot3
 
 class Test(object):
     def test_read_anchor(self):
-        f = uproot.open("tests/samples/ntpl001_staff.root")
+        f = uproot3.open("tests/samples/ntpl001_staff.root")
         rntuple = f["Staff"]
         assert rntuple._fVersion == 0
         assert rntuple._fSize == 48

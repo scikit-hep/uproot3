@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
-# BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
+# BSD 3-Clause License; see https://github.com/scikit-hep/uproot3/blob/master/LICENSE
 
 import sys
 
 import pytest
 import numpy
 
-import uproot
-import awkward
+import uproot3
+import awkward0
 
 import uproot_methods.classes.TVector3
 import uproot_methods.classes.TLorentzVector
@@ -16,7 +16,7 @@ import uproot_methods.classes.TLorentzVector
 
 class Test(object):
     def test_issue21(self):
-        t = uproot.open("tests/samples/issue21.root")["nllscan"]
+        t = uproot3.open("tests/samples/issue21.root")["nllscan"]
 
         ### Explicit recover removed
         # assert t.array("mH").tolist() == []
@@ -50,25 +50,25 @@ class Test(object):
         ]
 
     def test_issue30(self):
-        uproot.open("tests/samples/issue30.root")
+        uproot3.open("tests/samples/issue30.root")
 
     def test_issue31(self):
-        t = uproot.open("tests/samples/issue31.root")["T"]
+        t = uproot3.open("tests/samples/issue31.root")["T"]
         assert t.array("name").tolist() == [
             b"one", b"two", b"three", b"four", b"five"
         ]
 
     def test_issue33(self):
-        h = uproot.open("tests/samples/issue33.root")["cutflow"]
+        h = uproot3.open("tests/samples/issue33.root")["cutflow"]
         assert h.xlabels == [
             "Dijet", "MET", "MuonVeto", "IsoMuonTrackVeto", "ElectronVeto",
             "IsoElectronTrackVeto", "IsoPionTrackVeto"
         ]
 
     def test_issue38(self):
-        before_hadd = uproot.open(
+        before_hadd = uproot3.open(
             "tests/samples/issue38a.root")["ntupler/tree"]
-        after_hadd = uproot.open("tests/samples/issue38b.root")["ntupler/tree"]
+        after_hadd = uproot3.open("tests/samples/issue38b.root")["ntupler/tree"]
 
         before = before_hadd.arrays()
         after = after_hadd.arrays()
@@ -80,21 +80,21 @@ class Test(object):
             assert before[key].tolist() * 3 == after[key].tolist()
 
     def test_issue46(self):
-        t = uproot.open("tests/samples/issue46.root")["tree"]
-        t["evt"].array(uproot.asdebug)
+        t = uproot3.open("tests/samples/issue46.root")["tree"]
+        t["evt"].array(uproot3.asdebug)
 
     def test_issue49(self):
-        t = uproot.open("tests/samples/issue49.root")["nllscan"]
+        t = uproot3.open("tests/samples/issue49.root")["nllscan"]
         t.arrays()
 
     def test_issue54(self):
-        h = uproot.open("tests/samples/hepdata-example.root")["hpx"]
+        h = uproot3.open("tests/samples/hepdata-example.root")["hpx"]
         assert h._fFunctions[0]._fParent is h
 
     def test_issue55(self):
-        withoffsets = uproot.open(
+        withoffsets = uproot3.open(
             "tests/samples/small-dy-withoffsets.root")["tree"]
-        nooffsets = uproot.open(
+        nooffsets = uproot3.open(
             "tests/samples/small-dy-nooffsets.root")["tree"]
         assert numpy.array_equal(withoffsets.array("nJet"),
                                  nooffsets.array("nJet"))
@@ -119,7 +119,7 @@ class Test(object):
         assert equal(withoffsets.array("event"), nooffsets.array("event"))
 
     def test_issue57(self):
-        tree = uproot.open("tests/samples/issue57.root")["outtree"]
+        tree = uproot3.open("tests/samples/issue57.root")["outtree"]
         for x in tree["sel_lep"].array():
             for y in x:
                 assert isinstance(
@@ -134,7 +134,7 @@ class Test(object):
                         y._fP, uproot_methods.classes.TVector3.Methods)
 
     def test_issue60(self):
-        t = uproot.open("tests/samples/issue60.root")["nllscan"]
+        t = uproot3.open("tests/samples/issue60.root")["nllscan"]
 
         assert t["status"].numbaskets == 2
         assert t["mH"].numbaskets == 3
@@ -158,18 +158,18 @@ class Test(object):
         ]
 
     def test_issue63(self):
-        t = uproot.open("tests/samples/issue63.root")["WtLoop_meta"]
+        t = uproot3.open("tests/samples/issue63.root")["WtLoop_meta"]
         assert t["initialState"].array().tolist() == [b"Wt"]
         assert t["generator"].array().tolist() == [b"PowhegPythia6"]
         assert t["sampleType"].array().tolist() == [b"Nominal"]
         assert t["campaign"].array().tolist() == [b"MC16a"]
 
     def test_issue64(self):
-        t = uproot.open("tests/samples/issue64.root")["events/events"]
+        t = uproot3.open("tests/samples/issue64.root")["events/events"]
         assert t["e_pri"].array().tolist() == [0.00698000006377697] * 500
 
     def test_issue66(self):
-        f = uproot.open("tests/samples/issue66.root")
+        f = uproot3.open("tests/samples/issue66.root")
         h, = f.values()
         assert h.values.tolist() == [
             4814.0, 45.0, 45.0, 25.0, 15.0, 4.0, 0.0, 6.0, 7.0, 5.0, 3.0, 3.0,
@@ -194,11 +194,11 @@ class Test(object):
         ]
 
     def test_issue70(self):
-        f = uproot.open("tests/samples/issue70.root")
+        f = uproot3.open("tests/samples/issue70.root")
         assert f.keys() == []
 
     def test_issue74(self):
-        t = uproot.open("tests/samples/issue74.root")["Events"]
+        t = uproot3.open("tests/samples/issue74.root")["Events"]
         assert all(
             isinstance(x[0], uproot_methods.classes.TVector3.Methods)
             for x in t.array("bees.xyzPosition"))
@@ -207,26 +207,26 @@ class Test(object):
                            1.0, 2.0, -1.0)
 
     def test_issue76(self):
-        t = uproot.open("tests/samples/issue76.root")["Events"]
+        t = uproot3.open("tests/samples/issue76.root")["Events"]
         assert list(t.array("rootStrings")[0]) == [b"2", b"4"]
         x, y = t.array("rootStrings")[0]
-        assert isinstance(x, uproot.rootio.TString)
+        assert isinstance(x, uproot3.rootio.TString)
 
     def test_issue79(self):
-        t = uproot.open("tests/samples/issue79.root")["taus"]
+        t = uproot3.open("tests/samples/issue79.root")["taus"]
         assert t["pt"].numbaskets == 2
         baskets = numpy.concatenate([t["pt"].basket(0), t["pt"].basket(1)])
         assert baskets.shape == (t["pt"].numentries, )
         assert numpy.array_equal(baskets, t["pt"].array())
 
     def test_issue96(self):
-        t = uproot.open("tests/samples/issue96.root")["tree"]
+        t = uproot3.open("tests/samples/issue96.root")["tree"]
         assert all(
             isinstance(x, uproot_methods.classes.TLorentzVector.Methods)
             for x in t.array("jet1P4"))
 
     def test_geant4(self):
-        f = uproot.open("tests/samples/from-geant4.root")
+        f = uproot3.open("tests/samples/from-geant4.root")
         arrays = f["Details"].arrays()
         assert arrays[b"numgood"][0] == 224
         assert [len(x) for x in f["HitStrips"].arrays().values()
@@ -236,20 +236,20 @@ class Test(object):
 
     ### file is too big to include
     # def test_issue168(self):
-    #     t = uproot.open("tests/samples/issue168.root")["Events"]
+    #     t = uproot3.open("tests/samples/issue168.root")["Events"]
     #     a1 = t["MRawEvtData.fHiGainFadcSamples"].array(t["MRawEvtData.fHiGainFadcSamples"].interpretation.speedbump(False), entrystop=4)
     #     assert a1[0]._fArray.shape == (108400,)
     #     a2 = t["MRawEvtData.fHiGainPixId"].array(t["MRawEvtData.fHiGainPixId"].interpretation.speedbump(False))
     #     assert a2[0]._fArray.shape == (1084,)
 
     def test_issue187(self):
-        t = uproot.open("tests/samples/issue187.root")["fTreeV0"]
+        t = uproot3.open("tests/samples/issue187.root")["fTreeV0"]
         assert (t.array("fMultiplicity") == -1).all()
         assert t.array("V0s.fEtaPos")[-3].tolist() == [-0.390625, 0.046875]
 
     def test_issue213(self):
         pytest.importorskip("xxhash")
-        t = uproot.open("tests/samples/issue213.root")["T"]
+        t = uproot3.open("tests/samples/issue213.root")["T"]
         assert t["fMCHits.fPosition"].array().x.tolist() == [
             [], [], [], [], [], [], [], [42.17024612426758, 50.63192367553711],
             [], [], [], [43.292755126953125], [], [], [], [], [], [], [], [],
@@ -271,25 +271,25 @@ class Test(object):
 
     def test_issue232(self):
         pytest.importorskip("pandas")
-        t = uproot.open("tests/samples/issue232.root")["fTreeV0"]
+        t = uproot3.open("tests/samples/issue232.root")["fTreeV0"]
         t.pandas.df(
             ["V0Hyper.fNsigmaHe3Pos", "V0Hyper.fDcaPos2PrimaryVertex"],
             flatten=True)
 
     def test_issue240(self):
         pytest.importorskip("pyxrootd")
-        t = uproot.open(
+        t = uproot3.open(
             "root://eospublic.cern.ch//eos/root-eos/cms_opendata_2012_nanoaod/Run2012B_DoubleMuParked.root"
         )["Events"]
         assert (abs(t.array("nMuon", entrystop=100000)) < 50).all()
 
     def test_issue243(self):
-        t = uproot.open("tests/samples/issue243.root")["triggerList"]
+        t = uproot3.open("tests/samples/issue243.root")["triggerList"]
         for x in t.array("triggerMap", entrystop=100):
             assert all(y == 1.0 for y in x.values())
 
     def test_issue243_new(self):
-        t = uproot.open("tests/samples/issue243-new.root")["triggerList"]
+        t = uproot3.open("tests/samples/issue243-new.root")["triggerList"]
         first = t["triggerMap.first"].array()
         second = t["triggerMap.second"].array()
         for i in range(t.numentries):
@@ -297,10 +297,10 @@ class Test(object):
             assert all(y == 1.0 for y in x.values())
 
     def test_issue327(self):
-        uproot.open("tests/samples/issue327.root")["DstTree"]
+        uproot3.open("tests/samples/issue327.root")["DstTree"]
 
     def test_issue371(self):
-        t = uproot.open("tests/samples/issue371.root")["Event"]
+        t = uproot3.open("tests/samples/issue371.root")["Event"]
         obj = t["DRIFT_0."].array()[0]
         assert obj._samplerName == b'DRIFT_0'
         assert obj._n == 1
@@ -308,7 +308,7 @@ class Test(object):
                                              dtype=numpy.float32)[0]
 
     def test_issue376_simple(self):
-        f = uproot.open("tests/samples/from-geant4.root")
+        f = uproot3.open("tests/samples/from-geant4.root")
         assert type(f).classname == 'TDirectory'
         assert f.classname == 'TDirectory'
         real_class_names = ['TTree'] * 4 + ['TH1D'] * 10 + ['TH2D'] * 5
@@ -321,7 +321,7 @@ class Test(object):
         assert [value.classname for value in f.values()] == real_class_names
 
     def test_issue376_nested(self):
-        f = uproot.open("tests/samples/nesteddirs.root")
+        f = uproot3.open("tests/samples/nesteddirs.root")
         top_level_class_names = ['TDirectory', 'TDirectory']
         recursive_class_names = [
             'TDirectory', 'TDirectory', 'TTree', 'TTree', 'TDirectory', 'TTree'
@@ -340,8 +340,8 @@ class Test(object):
         ] == recursive_class_names
 
     def test_issue367(self):
-        t = uproot.open("tests/samples/issue367.root")["tree"]
-        assert awkward.fromiter(
+        t = uproot3.open("tests/samples/issue367.root")["tree"]
+        assert awkward0.fromiter(
             t.array("weights.second"))[0].counts.tolist() == [
                 1000, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
                 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 1000, 1000,
@@ -351,12 +351,12 @@ class Test(object):
 
     def test_issue390(self):
         pytest.importorskip("pandas")
-        t = uproot.open("tests/samples/issue390.root")["E"]
+        t = uproot3.open("tests/samples/issue390.root")["E"]
         t.pandas.df("hits.*")
         t.pandas.df("trks.*")
 
     def test_issue399(self):
-        t = uproot.open("tests/samples/issue399.root")["Event"]
+        t = uproot3.open("tests/samples/issue399.root")["Event"]
         a = t["Histos.histograms1D"].array()
         for i in range(t.numentries):
             assert [x.title for x in a[i]] == [
@@ -366,13 +366,13 @@ class Test(object):
             ]
 
     def test_issue404(self):
-        t = uproot.open("tests/samples/issue404.root")["Beam"]
+        t = uproot3.open("tests/samples/issue404.root")["Beam"]
         assert t["Beam.GMAD::BeamBase.beamParticleName"].array().tolist() == [
             b"proton"
         ]
 
     def test_issue124_and_followup_issue419_with_pr420(self):
-        f = uproot.open("tests/samples/issue124.root")
+        f = uproot3.open("tests/samples/issue124.root")
         branch = f[b'KM3NET_TIMESLICE;1'][b'KM3NET_TIMESLICE']
         assert branch.interpretation is None
         assert 0 == branch.compressedbytes()
@@ -385,34 +385,34 @@ class Test(object):
         else:
             fix = lambda name: name
 
-        file = uproot.open("tests/samples/issue429.root")
+        file = uproot3.open("tests/samples/issue429.root")
         tree = file["data_tr"]
         branch = tree["data_ana_kk"]
-        # FIXME: how can uproot.interp.auto.interpret *infer* the 4 bytes of padding?
+        # FIXME: how can uproot3.interp.auto.interpret *infer* the 4 bytes of padding?
         dtype = [(fix(x._fName), "float32" if type(x).__name__ == "TLeafF" else "int32") for x in branch._fLeaves]
-        array = branch.array(uproot.asdtype(dtype + [("padding", "S4")]))
+        array = branch.array(uproot3.asdtype(dtype + [("padding", "S4")]))
         assert (array["padding"] == b"\xff\xff\xff\xff").all()
 
     def test_issue431(self):
-        file = uproot.open("tests/samples/issue431.root")
+        file = uproot3.open("tests/samples/issue431.root")
         head = file["Head"]
         assert head._map_3c_string_2c_string_3e_ == {b'DAQ': b'394', b'PDF': b'4      58', b'XSecFile': b'', b'can': b'0 1027 888.4', b'can_user': b'0.00 1027.00  888.40', b'coord_origin': b'0 0 0', b'cut_in': b'0 0 0 0', b'cut_nu': b'100 1e+08 -1 1', b'cut_primary': b'0 0 0 0', b'cut_seamuon': b'0 0 0 0', b'decay': b'doesnt happen', b'detector': b'NOT', b'drawing': b'Volume', b'end_event': b'', b'genhencut': b'2000 0', b'genvol': b'0 1027 888.4 2.649e+09 100000', b'kcut': b'2', b'livetime': b'0 0', b'model': b'1       2       0       1      12', b'muon_desc_file': b'', b'ngen': b'0.1000E+06', b'norma': b'0 0', b'nuflux': b'0       3       0 0.500E+00 0.000E+00 0.100E+01 0.300E+01', b'physics': b'GENHEN 7.2-220514 181116 1138', b'seed': b'GENHEN 3  305765867         0         0', b'simul': b'JSirene 11012 11/17/18 07', b'sourcemode': b'diffuse', b'spectrum': b'-1.4', b'start_run': b'1', b'target': b'isoscalar', b'usedetfile': b'false', b'xlat_user': b'0.63297', b'xparam': b'OFF', b'zed_user': b'0.00 3450.00'}
 
     def test_issue434(self):
-        f = uproot.open("tests/samples/issue434.root")
+        f = uproot3.open("tests/samples/issue434.root")
         fromdtype = [("pmt", "u1"), ("tdc", "<u4"), ("tot", "u1")]
         todtype = [("pmt", "u1"), ("tdc", ">u4"), ("tot", "u1")]
         tree = f[b'KM3NET_TIMESLICE_L1'][b'KM3NETDAQ::JDAQTimeslice']
         superframes = tree[b'vector<KM3NETDAQ::JDAQSuperFrame>']
         hits_buffer = superframes[b'vector<KM3NETDAQ::JDAQSuperFrame>.buffer']
         hits = hits_buffer.lazyarray(
-                uproot.asjagged(
-                    uproot.astable(
-                        uproot.asdtype(fromdtype, todtype)), skipbytes=6))
+                uproot3.asjagged(
+                    uproot3.astable(
+                        uproot3.asdtype(fromdtype, todtype)), skipbytes=6))
         assert 486480 == hits['tdc'][0][0]
 
     def test_issue438_accessing_memory_mapped_objects_outside_of_context_raises(self):
-        with uproot.open("tests/samples/issue434.root") as f:
+        with uproot3.open("tests/samples/issue434.root") as f:
             a = f['KM3NET_EVENT']['KM3NET_EVENT']['KM3NETDAQ::JDAQPreamble'].array()
             b = f['KM3NET_EVENT']['KM3NET_EVENT']['KM3NETDAQ::JDAQPreamble'].lazyarray()
         assert 4 == len(a[0])
@@ -421,7 +421,7 @@ class Test(object):
 
     def test_issue448(self):
         pytest.importorskip("pyxrootd")
-        f = uproot.open('root://eospublic.cern.ch//eos/opendata/cms/Run2010B/MuOnia/AOD/Apr21ReReco-v1/0000/02186E3C-D277-E011-8A05-00215E21D516.root')
+        f = uproot3.open('root://eospublic.cern.ch//eos/opendata/cms/Run2010B/MuOnia/AOD/Apr21ReReco-v1/0000/02186E3C-D277-E011-8A05-00215E21D516.root')
         tree = f['Events']
         assert len(tree.arrays(entrystop=0)) == 4179
         assert len(tree.arrays('recoMuons_muons__RECO.*', entrystop=10)) == 93
@@ -431,7 +431,7 @@ class Test(object):
         ('l1CaloTowerTree/L1CaloTowerTree', b'L1CaloTowerTree/L1CaloTower/et'),
     ])
     def test_issue447_tree_arrays_omitting_variables(self, treename, branchtest):
-        with uproot.open("tests/samples/issue447.root") as f:
+        with uproot3.open("tests/samples/issue447.root") as f:
             t1 = f[treename]
             arrays = t1.arrays(recursive=b'/')
             array_keys = arrays.keys()
@@ -448,14 +448,14 @@ class Test(object):
             'tree/b1/b2/b3/b4',
         ]
         expectedKeys = sorted([k.encode(encoding='UTF-8') for k in expectedKeys])
-        with uproot.open('tests/samples/issue447_recursive.root') as f:
+        with uproot3.open('tests/samples/issue447_recursive.root') as f:
             t1 = f['tree']
             arrays = t1.arrays(recursive=b'/')
             assert sorted(list(arrays.keys())) == expectedKeys
 
     def test_issue444_subbranche_lookup_with_slash(self):
         # Uses same test file as issue #447
-        with uproot.open("tests/samples/issue447.root") as f:
+        with uproot3.open("tests/samples/issue447.root") as f:
             # Access subbranches directly from file
             assert numpy.all(f['l1CaloTowerEmuTree/L1CaloTowerTree/CaloTP']['nECALTP'].array()
                 == f['l1CaloTowerEmuTree/L1CaloTowerTree/CaloTP/nECALTP'].array())
@@ -471,5 +471,5 @@ class Test(object):
             assert b'nECALTP' in tree.keys(recursive=True)
             assert b'nECALTP' not in tree.keys(recursive=False)
         # Specify subbranches in iterate
-        for arrays in uproot.iterate(["tests/samples/issue447.root"], 'l1CaloTowerEmuTree/L1CaloTowerTree', ['CaloTP/nECALTP']):
+        for arrays in uproot3.iterate(["tests/samples/issue447.root"], 'l1CaloTowerEmuTree/L1CaloTowerTree', ['CaloTP/nECALTP']):
             pass

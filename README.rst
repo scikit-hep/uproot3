@@ -9,41 +9,18 @@ See `scikit-hep/uproot4 <https://github.com/scikit-hep/uproot4>`__ for the lates
 
 .. code-block:: bash
 
-    pip install uproot    # old
-    pip install uproot4   # new
-
-because the interface has changed. Later this year, "Uproot 4" will simply become the `uproot` package with version number 4.0. Then the two packages will shift to
-
-.. code-block:: bash
-
-    pip install uproot    # new
     pip install uproot3   # old
+    pip install uproot    # new
 
-You can adopt the new library gradually by importing both in Python, switching to the old version as a contingency (missing feature or bug in the new version). Note that Uproot 3 returns old-style `Awkward 0 <https://github.com/scikit-hep/awkward-array#readme>`__ arrays and Uproot 4 returns new-style `Awkward 1 <https://github.com/scikit-hep/awkward-1.0#readme>`__ arrays. (The new version of Uproot was motivated by the new version of Awkward, to make a clear distinction.)
+because the interface has changed.
+
+You can adopt the new library gradually by importing both in Python, switching to the old version as a contingency (missing feature or bug in the new version). Note that Uproot 3 returns old-style `Awkward 0 <https://github.com/scikit-hep/awkward-0.x#readme>`__ arrays and Uproot 4 returns new-style `Awkward 1 <https://github.com/scikit-hep/awkward-1.0#readme>`__ arrays. (The new version of Uproot was motivated by the new version of Awkward, to make a clear distinction.)
 
 uproot
 ======
 
-.. image:: https://travis-ci.org/scikit-hep/uproot.svg?branch=master
-   :target: https://travis-ci.org/scikit-hep/uproot
-
-.. image:: https://readthedocs.org/projects/uproot/badge/?version=latest
-   :target: https://uproot.readthedocs.io/en/latest/?badge=latest
-
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.1173083.svg
    :target: https://doi.org/10.5281/zenodo.1173083
-
-.. image:: https://mybinder.org/badge_logo.svg
-   :target: https://mybinder.org/v2/gh/scikit-hep/uproot/master?urlpath=lab/tree/binder%2Ftutorial.ipynb
-
-|PyPI version|
-|Conda-Forge|
-
-.. |PyPI version| image:: https://badge.fury.io/py/uproot.svg
-   :target: https://badge.fury.io/py/uproot
-
-.. |Conda-Forge| image:: https://img.shields.io/conda/vn/conda-forge/uproot
-   :target: https://github.com/conda-forge/uproot-feedstock
 
 .. inclusion-marker-1-do-not-remove
 
@@ -59,11 +36,11 @@ Python does not necessarily mean slow. As long as the data blocks ("baskets") ar
 
 .. raw:: html
 
-    <table border="0"><tr><td><img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/root-none-muon.png" width="100%"></td><td><img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/rootnumpy-none-muon.png" width="100%"></td></tr></table>
+    <table border="0"><tr><td><img src="https://raw.githubusercontent.com/scikit-hep/uproot3/master/docs/root-none-muon.png" width="100%"></td><td><img src="https://raw.githubusercontent.com/scikit-hep/uproot3/master/docs/rootnumpy-none-muon.png" width="100%"></td></tr></table>
 
 .. inclusion-marker-replaceplots-stop
 
-uproot is not maintained by the ROOT project team, so post bug reports here as `GitHub issues <https://github.com/scikit-hep/uproot/issues>`__, not on a ROOT forum. Thanks!
+uproot is not maintained by the ROOT project team, so post bug reports here as `GitHub issues <https://github.com/scikit-hep/uproot3/issues>`__, not on a ROOT forum. Thanks!
 
 .. inclusion-marker-2-do-not-remove
 
@@ -74,14 +51,7 @@ Install uproot like any other Python package:
 
 .. code-block:: bash
 
-    pip install uproot                       # maybe with sudo or --user, or in virtualenv
-
-or install with `conda <https://conda.io/en/latest/miniconda.html>`__:
-
-.. code-block:: bash
-
-    conda config --add channels conda-forge  # if you haven't added conda-forge already
-    conda install uproot
+    pip install uproot3                      # maybe with sudo or --user, or in virtualenv
 
 The pip installer automatically installs strict dependencies; the conda installer also installs optional dependencies (except for Pandas).
 
@@ -89,8 +59,8 @@ Strict dependencies:
 --------------------
 
 - `numpy <https://scipy.org/install.html>`__ (1.13.1+)
-- `awkward-array <https://github.com/scikit-hep/awkward-array>`__ (0.12.0+)
-- `uproot-methods <https://github.com/scikit-hep/uproot-methods>`__ (0.7.0+)
+- `Awkward Array 0.x <https://github.com/scikit-hep/awkward-0.x>`__
+- `uproot-methods <https://github.com/scikit-hep/uproot-methods>`__ (0.9.1+)
 - `cachetools <https://pypi.org/project/cachetools>`__
 
 Optional dependencies:
@@ -105,39 +75,21 @@ Optional dependencies:
 
 **Reminder: you do not need C++ ROOT to run uproot.**
 
-Testing and development requirements
-------------------------------------
-
-The packages need to run the test suite can be installed via ``pip install
-"uproot[testing]"``. Here is an example how to set up a development
-
-.. code-block:: bash
-
-    git clone https://github.com/scikit-hep/uproot.git  # alternatively your own fork
-    cd uproot
-    python -m venv venv  # create a virtual environment in the folder venv
-    . venv/bin/activate  # activate the Python environment
-    pip install -e ".[testing]"   # installs uproot in editable mode with all packages required for testing
-    pytest               # run the test suite
-
-
 .. inclusion-marker-3-do-not-remove
 
 Questions
 =========
 
-If you have a question about how to use uproot that is not answered in the document below, I recommend asking your question on `StackOverflow <https://stackoverflow.com/questions/tagged/uproot>`__ with the ``[uproot]`` tag. (I get notified of questions with this tag.)
+If you have a question about how to use uproot that is not answered in the document below, I recommend asking your question on `StackOverflow <https://stackoverflow.com/questions/tagged/uproot>`__ with the ``[uproot]`` tag. (I get notified of questions with this tag.) Note that this tag is primarily intended for the new version of Uproot, so if you're using this version (Uproot 3.x), be sure to mention that.
 
 .. raw:: html
 
    <p align="center"><a href="https://stackoverflow.com/questions/tagged/uproot"><img src="https://cdn.sstatic.net/Sites/stackoverflow/company/img/logos/so/so-logo.png" width="30%"></a></p>
 
-If you believe you have found a bug in uproot, post it on the `GitHub issues tab <https://github.com/scikit-hep/uproot/issues>`__.
+If you believe you have found a bug in uproot, post it on the `GitHub issues tab <https://github.com/scikit-hep/uproot3/issues>`__.
 
 Tutorial
 ========
-
-Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?urlpath=lab/tree/binder%2Ftutorial.ipynb>`__ on Binder.
 
 **Tutorial contents:**
 
@@ -192,52 +144,18 @@ Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?urlpath=
   - `Writing histograms <#writing-histograms>`__
   - `Writing TTrees <#writing-ttrees>`__
 
-Reference documentation
-=======================
-
-For a list of all functions, classes, methods, and their parameters, click below.
-
-* `Opening files <http://uproot.readthedocs.io/en/latest/opening-files.html>`__
-
-  - `uproot.open <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-open>`__
-  - `uproot.xrootd <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-xrootd>`__
-  - `uproot.http <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-http>`__
-  - `uproot.iterate <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-iterate>`__
-  - `uproot.pandas.iterate <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-pandas-iterate>`__
-  - `uproot.lazyarray(s) <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-lazyarray-and-lazyarrays>`__
-  - `uproot.daskarray/daskframe <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-daskarray-and-daskframe>`__
-  - `uproot.numentries <http://uproot.readthedocs.io/en/latest/opening-files.html#uproot-numentries>`__
-
-* `ROOT I/O <http://uproot.readthedocs.io/en/latest/root-io.html>`__
-
-  - `uproot.rootio.ROOTDirectory <http://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootdirectory>`__
-  - `uproot.rootio.ROOTObject <http://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootobject>`__
-  - `uproot.rootio.ROOTStreamedObject <http://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootstreamedobject>`__
-
-* `TTree Handling <http://uproot.readthedocs.io/en/latest/ttree-handling.html>`__
-
-  - `uproot.tree.TTreeMethods <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__
-  - `uproot.tree.TBranchMethods <http://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods>`__
-
-* `Interpretation <http://uproot.readthedocs.io/en/latest/interpretation.html>`__
-* `Caches <http://uproot.readthedocs.io/en/latest/caches.html>`__
-* `Parallel I/O <http://uproot.readthedocs.io/en/latest/parallel-io.html>`__
-
 Introduction
 ============
 
-This tutorial is designed to help you start using uproot. Unlike the
-`reference documentation <https://uproot.readthedocs.io/en/latest/>`__,
-which defines every parameter of every function, this tutorial provides
-introductory examples to help you learn how to use them.
+This tutorial is designed to help you start using uproot.
 
 The original tutorial `has been
 archived <https://github.com/scikit-hep/uproot/blob/master/docs/old-tutorial.rst>`__—this
 version was written in June 2019 in response to feedback from a series
 of tutorials I presented early this year and common questions in the
-`GitHub issues <https://github.com/scikit-hep/uproot/issues>`__. The new
+`GitHub issues <https://github.com/scikit-hep/uproot3/issues>`__. The new
 tutorial is `executable on
-Binder <https://mybinder.org/v2/gh/scikit-hep/uproot/master?urlpath=lab/tree/binder%2Ftutorial.ipynb>`__
+Binder <https://mybinder.org/v2/gh/scikit-hep/uproot3/master?urlpath=lab/tree/binder%2Ftutorial.ipynb>`__
 and may be read in any order, though it has to be executed from top to
 bottom because some variables are reused.
 
@@ -255,7 +173,7 @@ In short, you should never see a segmentation fault.
 
 .. raw:: html
 
-   <p align="center"><img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/abstraction-layers.png" width="75%"></p>
+   <p align="center"><img src="https://raw.githubusercontent.com/scikit-hep/uproot3/master/docs/abstraction-layers.png" width="75%"></p>
 
 Uproot is strictly concerned with file I/O only—all other functionality
 is handled by other libraries:
@@ -264,7 +182,7 @@ is handled by other libraries:
    physics methods for types read from ROOT files, such as histograms
    and Lorentz vectors. It is intended to be largely user-contributed
    (and is).
--  `awkward-array <https://github.com/scikit-hep/awkward-array>`__:
+-  `awkward-array <https://github.com/scikit-hep/awkward-0.x>`__:
    array manipulation beyond
    `Numpy <https://docs.scipy.org/doc/numpy/reference/>`__. Several are
    encountered in this tutorial, particularly lazy arrays and jagged
@@ -277,32 +195,28 @@ MAGIC (gamma ray astronomy), and IceCube (neutrino astronomy).
 
 .. raw:: html
 
-   <p align="center"><img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/all_file_project.png" width="75%"></p>
+   <p align="center"><img src="https://raw.githubusercontent.com/scikit-hep/uproot3/master/docs/all_file_project.png" width="75%"></p>
 
 Exploring a file
 ================
 
-`uproot.open <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-open>`__
-is the entry point for reading a single file.
+``uproot3.open`` is the entry point for reading a single file.
 
 It takes a local filename path or a remote ``http://`` or ``root://``
 URL. (HTTP requires the Python
 `requests <https://pypi.org/project/requests/>`__ library and XRootD
 requires `pyxrootd <http://xrootd.org/>`__, both of which have to be
-explicitly pip-installed if you installed uproot with pip, but are
-automatically installed if you installed uproot with conda.)
+explicitly pip-installed.)
 
 .. code-block:: python3
 
-    import uproot
+    import uproot3
 
-    file = uproot.open("http://scikit-hep.org/uproot/examples/nesteddirs.root")
+    file = uproot3.open("http://scikit-hep.org/uproot3/examples/nesteddirs.root")
     file
     # <ROOTDirectory b'tests/nesteddirs.root' at 0x7f37504ecc50>
 
-`uproot.open <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-open>`__
-returns a
-`ROOTDirectory <https://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootdirectory>`__,
+``uproot3.open`` returns a ``ROOTDirectory``,
 which behaves like a Python dict; it has ``keys()``, ``values()``, and
 key-value access with square brackets.
 
@@ -314,8 +228,7 @@ key-value access with square brackets.
     file["one"]
     # <ROOTDirectory b'one' at 0x7f3750588710>
 
-Subdirectories also have type
-`ROOTDirectory <https://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootdirectory>`__,
+Subdirectories also have type ``ROOTDirectory``,
 so they behave like Python dicts, too.
 
 .. code-block:: python3
@@ -328,7 +241,7 @@ so they behave like Python dicts, too.
 
 **What’s the `b` before each object name?** Python 3 distinguishes
 between bytestrings and encoded strings. ROOT object names have no
-encoding, such as Latin-1 or Unicode, so uproot presents them as raw
+encoding, such as Latin-1 or Unicode, so Uproot presents them as raw
 bytestrings. However, if you enter a Python string (no ``b``) and it
 matches an object name (interpreted as plain ASCII), it will count as a
 match, as ``"one"`` does above.
@@ -359,20 +272,20 @@ Here are a few more tricks for finding your way around a file:
    ``allkeys()``, ``allvalues()``, ``allitems()`` variants that
    recursively search through all subdirectories;
 -  all of these functions can be filtered by name or class: see
-   `ROOTDirectory.keys <https://uproot.readthedocs.io/en/latest/root-io.html#uproot.rootio.ROOTDirectory.keys>`__.
+   ``ROOTDirectory.keys``.
 
 Here’s how you would search the subdirectories to find all TTrees:
 
 .. code-block:: python3
 
-    file.allkeys(filterclass=lambda cls: issubclass(cls, uproot.tree.TTreeMethods))
+    file.allkeys(filterclass=lambda cls: issubclass(cls, uproot3.tree.TTreeMethods))
     # [b'one/two/tree;1', b'one/tree;1', b'three/tree;1']
 
 Or get a Python dict of them:
 
 .. code-block:: python3
 
-    all_ttrees = dict(file.allitems(filterclass=lambda cls: issubclass(cls, uproot.tree.TTreeMethods)))
+    all_ttrees = dict(file.allitems(filterclass=lambda cls: issubclass(cls, uproot3.tree.TTreeMethods)))
     all_ttrees
     # {b'one/two/tree;1': <TTree b'tree' at 0x7f37504f85f8>,
     #  b'one/tree;1': <TTree b'tree' at 0x7f37504f8710>,
@@ -396,16 +309,12 @@ decompressor and gives you the objects transparently: you don’t have to
 specify anything. However, if an object is compressed with LZ4 and you
 don’t have the `lz4 <https://pypi.org/project/lz4/>`__ library
 installed, you’ll get an error with installation instructions in the
-message. (It is automatically installed if you installed uproot with
-conda.) ZLIB is part of the Python Standard Library, and LZMA is part of
+message. ZLIB is part of the Python Standard Library, and LZMA is part of
 the Python 3 Standard Library, so you won’t get error messages about
 these except for LZMA in Python 2 (for which there is
-`backports.lzma <https://pypi.org/project/backports.lzma/>`__,
-automatically installed if you installed uproot with conda).
+`backports.lzma <https://pypi.org/project/backports.lzma/>`__).
 
-The
-`ROOTDirectory <https://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootdirectory>`__
-class has a ``compression`` property that tells you the compression
+The ``ROOTDirectory`` class has a ``compression`` property that tells you the compression
 algorithm and level associated with this file,
 
 .. code-block:: python3
@@ -421,25 +330,20 @@ Exploring a TTree
 -----------------
 
 TTrees are special objects in ROOT files: they contain most of the
-physics data. Uproot presents TTrees as subclasses of
-`TTreeMethods <https://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__.
+physics data. Uproot presents TTrees as subclasses of ``TTreeMethods``.
 
 (**Why subclass?** Different ROOT files can have different versions of a
-class, so uproot generates Python classes to fit the data, as needed.
-All TTrees inherit from
-`TTreeMethods <https://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__
-so that they get the same data-reading methods.)
+class, so Uproot generates Python classes to fit the data, as needed.
+All TTrees inherit from ``TTreeMethods`` so that they get the same data-reading methods.)
 
 .. code-block:: python3
 
-    events = uproot.open("http://scikit-hep.org/uproot/examples/Zmumu.root")["events"]
+    events = uproot3.open("http://scikit-hep.org/uproot3/examples/Zmumu.root")["events"]
     events
     # <TTree b'events' at 0x7f375051fc18>
 
-Although
-`TTreeMethods <https://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__
-objects behave like Python dicts of
-`TBranchMethods <https://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods>`__
+Although ``TTreeMethods``
+objects behave like Python dicts of ``TBranchMethods``
 objects, the easiest way to browse a TTree is by calling its ``show()``
 method, which prints the branches and their interpretations as arrays.
 
@@ -485,16 +389,16 @@ Some terminology
 ----------------
 
 ROOT files contain objects internally referred to via ``TKeys``
-(dict-like lookup in uproot). ``TTree`` organizes data in ``TBranches``,
-and uproot interprets one ``TBranch`` as one array, either a `Numpy
+(dict-like lookup in Uproot). ``TTree`` organizes data in ``TBranches``,
+and Uproot interprets one ``TBranch`` as one array, either a `Numpy
 array <https://docs.scipy.org/doc/numpy/reference/generated/numpy.array.html>`__
-or an `awkward array <https://github.com/scikit-hep/awkward-array>`__.
-``TBranch`` data are stored in chunks called ``TBaskets``, though uproot
+or an `Awkward Array <https://github.com/scikit-hep/awkward-0.x>`__.
+``TBranch`` data are stored in chunks called ``TBaskets``, though Uproot
 hides this level of granularity unless you dig into the details.
 
 .. raw:: html
 
-   <p align="center"><img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/terminology.png" width="75%"></p>
+   <p align="center"><img src="https://raw.githubusercontent.com/scikit-hep/uproot3/master/docs/terminology.png" width="75%"></p>
 
 Reading arrays from a TTree
 ===========================
@@ -502,31 +406,18 @@ Reading arrays from a TTree
 The bulk data in a TTree are not read until requested. There are many
 ways to do that:
 
--  select a TBranch and call
-   `TBranchMethods.array <https://uproot.readthedocs.io/en/latest/ttree-handling.html#id11>`__;
--  call
-   `TTreeMethods.array <https://uproot.readthedocs.io/en/latest/ttree-handling.html#array>`__
+-  select a TBranch and call ``TBranchMethods.array``;
+-  call ``TTreeMethods.array``
    directly from the TTree object;
--  call
-   `TTreeMethods.arrays <https://uproot.readthedocs.io/en/latest/ttree-handling.html#arrays>`__
+-  call ``TTreeMethods.arrays``
    to get several arrays at a time;
 -  call
-   `TBranch.lazyarray <https://uproot.readthedocs.io/en/latest/ttree-handling.html#id13>`__,
-   `TTreeMethods.lazyarray <https://uproot.readthedocs.io/en/latest/ttree-handling.html#lazyarray>`__,
-   `TTreeMethods.lazyarrays <https://uproot.readthedocs.io/en/latest/ttree-handling.html#lazyarrays>`__,
-   or
-   `uproot.lazyarrays <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-lazyarray-and-lazyarrays>`__
-   to get array-like objects that read on demand;
--  call
-   `TTreeMethods.iterate <https://uproot.readthedocs.io/en/latest/ttree-handling.html#iterate>`__
-   or
-   `uproot.iterate <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-iterate>`__
+   ``TBranch.lazyarray``, ``TTreeMethods.lazyarray``, ``TTreeMethods.lazyarrays``, or
+   ``uproot3.lazyarrays`` to get array-like objects that read on demand;
+-  call ``TTreeMethods.iterate`` or ``uproot3.iterate``
    to explicitly iterate over chunks of data (to avoid reading more than
    would fit into memory);
--  call
-   `TTreeMethods.pandas <https://uproot.readthedocs.io/en/latest/ttree-handling.html#id7>`__
-   or
-   `uproot.pandas.iterate <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-pandas-iterate>`__
+-  call ``TTreeMethods.pandas`` or ``uproot3.pandas.iterate``
    to get Pandas DataFrames (`Pandas <https://pandas.pydata.org/>`__
    must be installed).
 
@@ -570,10 +461,7 @@ introduction <https://www.tensorflow.org/guide/low_level_intro>`__, or
 introduction <https://scikit-learn.org/stable/tutorial/basic/tutorial.html>`__
 to see how to put Numpy arrays to work in machine learning.
 
-The
-`TBranchMethods.array <https://uproot.readthedocs.io/en/latest/ttree-handling.html#id11>`__
-method is the same as
-`TTreeMethods.array <https://uproot.readthedocs.io/en/latest/ttree-handling.html#array>`__
+The ``TBranchMethods.array`` method is the same as ``TTreeMethods.array``
 except that you don’t have to specify the TBranch name (naturally).
 Sometimes one is more convenient, sometimes the other.
 
@@ -625,10 +513,10 @@ special features below.
 Caching data
 ============
 
-Every time you ask for arrays, uproot goes to the file and re-reads
+Every time you ask for arrays, Uproot goes to the file and re-reads
 them. For especially large arrays, this can take a long time.
 
-For quicker access, uproot’s array-reading functions have a **cache**
+For quicker access, Uproot’s array-reading functions have a **cache**
 parameter, which is an entry point for you to manage your own cache. The
 **cache** only needs to behave like a dict (many third-party Python
 caches do).
@@ -690,18 +578,16 @@ This manual process of clearing the cache when you run out of memory is
 not very robust. What you want instead is a dict-like object that drops
 elements on its own when memory is scarce.
 
-Uproot has an
-`ArrayCache <https://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-arraycache>`__
+Uproot has an ``ArrayCache``
 class for this purpose, though it’s a thin wrapper around the
 third-party `cachetools <https://pypi.org/project/cachetools/>`__
 library. Whereas `cachetools <https://pypi.org/project/cachetools/>`__
-drops old data from cache when a maximum number of items is reached,
-`ArrayCache <https://uproot.readthedocs.io/en/latest/caches.html#uproot-cache-arraycache>`__
+drops old data from cache when a maximum number of items is reached, ``ArrayCache``
 drops old data when the data usage reaches a limit, specified in bytes.
 
 .. code-block:: python3
 
-    mycache = uproot.ArrayCache("100 kB")
+    mycache = uproot3.ArrayCache("100 kB")
     events.arrays("*", cache=mycache);
 
     len(mycache), len(events.keys())
@@ -710,7 +596,7 @@ drops old data when the data usage reaches a limit, specified in bytes.
 With a limit of 100 kB, only 6 of the 20 arrays fit into cache, the rest
 have been evicted.
 
-All data sizes in uproot are specified as an integer in bytes (integers)
+All data sizes in Uproot are specified as an integer in bytes (integers)
 or a string with the appropriate unit (interpreted as powers of 1024,
 not 1000).
 
@@ -736,21 +622,17 @@ middle of a basket (see below). There is also a **keycache** for caching
 ROOT’s TKey objects, which use negligible memory but would be a
 bottleneck to re-read when TBaskets are provided by a **basketcache**.
 
-For more on these high and mid-level caching parameters, see `reference
-documentation <https://uproot.readthedocs.io/en/latest/caches.html>`__.
-
 At the lowest level of abstraction, raw bytes are cached by the HTTP and
 XRootD remote file readers. You can control the memory remote file
-memory use with ``uproot.HTTPSource.defaults["limitbytes"]`` and
-``uproot.XRootDSource.defaults["limitbytes"]``, either by globally
+memory use with ``uproot3.HTTPSource.defaults["limitbytes"]`` and
+``uproot3.XRootDSource.defaults["limitbytes"]``, either by globally
 setting these parameters before opening a file, or by passing them to
-`uproot.open <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-open>`__
-through the **limitbytes** parameter.
+``uproot3.open`` through the **limitbytes** parameter.
 
 .. code-block:: python3
 
     # default remote file caches in MB
-    uproot.HTTPSource.defaults["limitbytes"] / 1024**2, uproot.XRootDSource.defaults["limitbytes"] / 1024**2
+    uproot3.HTTPSource.defaults["limitbytes"] / 1024**2, uproot3.XRootDSource.defaults["limitbytes"] / 1024**2
     # (32.0, 32.0)
 
 If you want to limit this cache to less than the default **chunkbytes**
@@ -759,7 +641,7 @@ able to load at least one chunk!
 
 .. code-block:: python3
 
-    uproot.open("http://scikit-hep.org/uproot/examples/Zmumu.root", limitbytes="100 kB", chunkbytes="10 kB")
+    uproot3.open("http://scikit-hep.org/uproot3/examples/Zmumu.root", limitbytes="100 kB", chunkbytes="10 kB")
     # <ROOTDirectory b'Zmumu.root' at 0x7f375041f278>
 
 By default (unless **localsource** is overridden), local files are
@@ -769,21 +651,13 @@ Lazy arrays
 ===========
 
 If you call
-`TBranchMethods.array <https://uproot.readthedocs.io/en/latest/ttree-handling.html#id11>`__,
-`TTreeMethods.array <https://uproot.readthedocs.io/en/latest/ttree-handling.html#array>`__,
-or
-`TTreeMethods.arrays <https://uproot.readthedocs.io/en/latest/ttree-handling.html#arrays>`__,
-uproot reads the file or cache immediately and returns an in-memory
+``TBranchMethods.array``, ``TTreeMethods.array``, or
+``TTreeMethods.arrays``, Uproot reads the file or cache immediately and returns an in-memory
 array. For exploratory work or to control memory usage, you might want
 to let the data be read on demand.
 
-The
-`TBranch.lazyarray <https://uproot.readthedocs.io/en/latest/ttree-handling.html#id13>`__,
-`TTreeMethods.lazyarray <https://uproot.readthedocs.io/en/latest/ttree-handling.html#lazyarray>`__,
-`TTreeMethods.lazyarrays <https://uproot.readthedocs.io/en/latest/ttree-handling.html#lazyarrays>`__,
-and
-`uproot.lazyarrays <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-lazyarray-and-lazyarrays>`__
-functions take most of the same parameters but return lazy array
+The ``TBranch.lazyarray``, ``TTreeMethods.lazyarray``, ``TTreeMethods.lazyarrays``, and
+``uproot.lazyarrays`` functions take most of the same parameters but return lazy array
 objects, rather than Numpy arrays.
 
 .. code-block:: python3
@@ -852,14 +726,8 @@ contiguous whole.)
 Lazy array of many files
 ------------------------
 
-There’s a lazy version of each of the array-reading functions in
-`TTreeMethods <https://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-ttreemethods>`__
-and
-`TBranchMethods <https://uproot.readthedocs.io/en/latest/ttree-handling.html#uproot-tree-tbranchmethods>`__,
-but there’s also module-level
-`uproot.lazyarray <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot.tree.lazyarray>`__
-and
-`uproot.lazyarrays <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot.tree.lazyarrays>`__.
+There’s a lazy version of each of the array-reading functions in ``TTreeMethods``
+and ``TBranchMethods``, but there’s also module-level ``uproot.lazyarray`` and ``uproot.lazyarrays``.
 These functions let you make a lazy array that spans many files.
 
 These functions may be thought of as alternatives to ROOT’s TChain: a
@@ -869,9 +737,9 @@ single array. See `Iteration <#iteration>`__ below as a more explicit TChain alt
 
 .. code-block:: python3
 
-    data = uproot.lazyarray(
+    data = uproot3.lazyarray(
         # list of files; local files can have wildcards (*)
-        ["http://scikit-hep.org/uproot/examples/sample-%s-zlib.root" % x
+        ["http://scikit-hep.org/uproot3/examples/sample-%s-zlib.root" % x
             for x in ["5.23.02", "5.24.00", "5.25.02", "5.26.00", "5.27.02", "5.28.00",
                       "5.29.02", "5.30.00", "6.08.04", "6.10.05", "6.14.00"]],
         # TTree name in each file
@@ -885,15 +753,14 @@ This ``data`` represents the entire set of files, and the only up-front
 processing that had to be done was to find out how many entries each
 TTree contains.
 
-It uses the
-`uproot.numentries <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-numentries>`__
+It uses the ``uproot3.numentries``
 shortcut method (which reads less data than normal file-opening):
 
 .. code-block:: python3
 
-    dict(uproot.numentries(
+    dict(uproot3.numentries(
         # list of files; local files can have wildcards (*)
-        ["http://scikit-hep.org/uproot/examples/sample-%s-zlib.root" % x
+        ["http://scikit-hep.org/uproot3/examples/sample-%s-zlib.root" % x
             for x in ["5.23.02", "5.24.00", "5.25.02", "5.26.00", "5.27.02", "5.28.00",
                       "5.29.02", "5.30.00", "6.08.04", "6.10.05", "6.14.00"]],
         # TTree name in each file
@@ -901,17 +768,17 @@ shortcut method (which reads less data than normal file-opening):
         # total=True adds all values; total=False leaves them as a dict
         total=False))
 
-    # {'http://scikit-hep.org/uproot/examples/sample-5.23.02-zlib.root': 30,
-    #  'http://scikit-hep.org/uproot/examples/sample-5.24.00-zlib.root': 30,
-    #  'http://scikit-hep.org/uproot/examples/sample-5.25.02-zlib.root': 30,
-    #  'http://scikit-hep.org/uproot/examples/sample-5.26.00-zlib.root': 30,
-    #  'http://scikit-hep.org/uproot/examples/sample-5.27.02-zlib.root': 30,
-    #  'http://scikit-hep.org/uproot/examples/sample-5.28.00-zlib.root': 30,
-    #  'http://scikit-hep.org/uproot/examples/sample-5.29.02-zlib.root': 30,
-    #  'http://scikit-hep.org/uproot/examples/sample-5.30.00-zlib.root': 30,
-    #  'http://scikit-hep.org/uproot/examples/sample-6.08.04-zlib.root': 30,
-    #  'http://scikit-hep.org/uproot/examples/sample-6.10.05-zlib.root': 30,
-    #  'http://scikit-hep.org/uproot/examples/sample-6.14.00-zlib.root': 30}
+    # {'http://scikit-hep.org/uproot3/examples/sample-5.23.02-zlib.root': 30,
+    #  'http://scikit-hep.org/uproot3/examples/sample-5.24.00-zlib.root': 30,
+    #  'http://scikit-hep.org/uproot3/examples/sample-5.25.02-zlib.root': 30,
+    #  'http://scikit-hep.org/uproot3/examples/sample-5.26.00-zlib.root': 30,
+    #  'http://scikit-hep.org/uproot3/examples/sample-5.27.02-zlib.root': 30,
+    #  'http://scikit-hep.org/uproot3/examples/sample-5.28.00-zlib.root': 30,
+    #  'http://scikit-hep.org/uproot3/examples/sample-5.29.02-zlib.root': 30,
+    #  'http://scikit-hep.org/uproot3/examples/sample-5.30.00-zlib.root': 30,
+    #  'http://scikit-hep.org/uproot3/examples/sample-6.08.04-zlib.root': 30,
+    #  'http://scikit-hep.org/uproot3/examples/sample-6.10.05-zlib.root': 30,
+    #  'http://scikit-hep.org/uproot3/examples/sample-6.14.00-zlib.root': 30}
 
 Lazy arrays with caching
 ------------------------
@@ -925,7 +792,7 @@ This is caching, and the caching mechanism is the same as before:
 
 .. code-block:: python3
 
-    mycache = uproot.cache.ArrayCache(100*1024)   # 100 kB
+    mycache = uproot3.cache.ArrayCache(100*1024)   # 100 kB
 
     data = events.lazyarrays(entrysteps=500, cache=mycache)
     data
@@ -958,8 +825,8 @@ Lazy arrays as lightweight skims
 --------------------------------
 
 The ``ChunkedArray`` and ``VirtualArray`` classes are defined in the
-`awkward-array <https://github.com/scikit-hep/awkward-array#awkward-array>`__
-library installed with uproot. These arrays can be saved to files in a
+`Awkward Array <https://github.com/scikit-hep/awkward-0.x#awkward-array>`__
+library installed with Uproot. These arrays can be saved to files in a
 way that preserves their virtualness, which allows you to save a “diff”
 with respect to the original ROOT files.
 
@@ -973,22 +840,22 @@ and add a derived feature:
     data["mass"] = numpy.sqrt((data["E1"] + data["E2"])**2 - (data["px1"] + data["px2"])**2 -
                               (data["py1"] + data["py2"])**2 - (data["pz1"] + data["pz2"])**2)
 
-and save the whole thing to an awkward-array file (``.awkd``).
+and save the whole thing to an Awkward Array file (``.awkd``).
 
 .. code-block:: python3
 
-    import awkward
+    import awkward0
 
-    awkward.save("derived-feature.awkd", data, mode="w")
+    awkward0.save("derived-feature.awkd", data, mode="w")
 
-When we read it back, the derived features come from the awkward-array
+When we read it back, the derived features come from the Awkward Array
 file but the original features are loaded as pointers to the original
 ROOT files (``VirtualArrays`` whose array-making function knows the
 original ROOT filenames—don’t move them!).
 
 .. code-block:: python3
 
-    data2 = awkward.load("derived-feature.awkd")
+    data2 = awkward0.load("derived-feature.awkd")
 
     # reads from derived-feature.awkd
     data2["mass"]
@@ -1010,9 +877,9 @@ as a lightweight skim.
     selected
     # <ChunkedArray [<Row 16> <Row 17> <Row 18> <Row 19> <Row 47> <Row 48> <Row 49> ...] at 0x7f3739b3e7f0>
 
-    awkward.save("selected-events.awkd", selected, mode="w")
+    awkward0.save("selected-events.awkd", selected, mode="w")
 
-    data3 = awkward.load("selected-events.awkd")
+    data3 = awkward0.load("selected-events.awkd")
     data3
     # <ChunkedArray [<Row 16> <Row 17> <Row 18> ... <Row 2297> <Row 2298> <Row 2299>] at 0x7f3739b1e048>
 
@@ -1020,21 +887,18 @@ Lazy arrays in Dask
 -------------------
 
 `Dask <https://dask.org/>`__ is a framework for delayed and distributed
-computation with lazy array and dataframe interfaces. To turn uproot’s
-lazy arrays into Dask objects, use the
-`uproot.daskarray <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot.tree.daskarray>`__
-and
-`uproot.daskframe <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot.tree.daskframe>`__
+computation with lazy array and dataframe interfaces. To turn Uproot’s
+lazy arrays into Dask objects, use the ``uproot3.daskarray`` and ``uproot3.daskframe``
 functions.
 
 .. code-block:: python3
 
-    uproot.daskarray("http://scikit-hep.org/uproot/examples/Zmumu.root", "events", "E1")
+    uproot3.daskarray("http://scikit-hep.org/uproot3/examples/Zmumu.root", "events", "E1")
     # dask.array<array, shape=(2304,), dtype=float64, chunksize=(2304,)>
 
 .. code-block:: python3
 
-    uproot.daskframe("http://scikit-hep.org/uproot/examples/Zmumu.root", "events")
+    uproot3.daskframe("http://scikit-hep.org/uproot3/examples/Zmumu.root", "events")
 
 .. raw:: html
 
@@ -1149,9 +1013,7 @@ impression that you have a larger array than memory can hold all at
 once. The next two methods *explicitly* step through chunks of data, to
 give you more control over the process.
 
-`TTreeMethods.iterate <https://uproot.readthedocs.io/en/latest/ttree-handling.html#iterate>`__
-iterates over chunks of a TTree and
-`uproot.iterate <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-iterate>`__
+``TTreeMethods.iterate`` iterates over chunks of a TTree and ``uproot3.iterate``
 iterates through files.
 
 Like a file-spanning lazy array, a file-spanning iterator erases the
@@ -1200,15 +1062,14 @@ need.
 Filenames and entry numbers while iterating
 -------------------------------------------
 
-`uproot.iterate <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot.tree.iterate>`__
+``uproot3.iterate``
 crosses file boundaries as part of its iteration, and that’s information
 we might need in the loop. If the following are ``True``, each step in
 iteration is a tuple containing the arrays and the additional
 information.
 
 -  **reportpath:** the full path or URL of the (possibly remote) file;
--  **reportfile:** the
-   `ROOTDirectory <https://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootdirectory>`__
+-  **reportfile:** the ``ROOTDirectory``
    object itself (so that you don’t need to re-open it at each iteration
    step);
 -  **reportentries:** the starting and stopping entry numbers for this
@@ -1217,8 +1078,8 @@ information.
 
 .. code-block:: python3
 
-    for path, file, start, stop, arrays in uproot.iterate(
-        ["http://scikit-hep.org/uproot/examples/sample-%s-zlib.root" % x
+    for path, file, start, stop, arrays in uproot3.iterate(
+        ["http://scikit-hep.org/uproot3/examples/sample-%s-zlib.root" % x
             for x in ["5.23.02", "5.24.00", "5.25.02", "5.26.00", "5.27.02", "5.28.00",
                       "5.29.02", "5.30.00", "6.08.04", "6.10.05", "6.14.00"]],
         "sample",
@@ -1226,27 +1087,27 @@ information.
          reportpath=True, reportfile=True, reportentries=True):
         print(path, file, start, stop, len(arrays))
 
-    # http://scikit-hep.org/uproot/examples/sample-5.23.02-zlib.root
+    # http://scikit-hep.org/uproot3/examples/sample-5.23.02-zlib.root
     #     <ROOTDirectory b'sample-5.23.02-zlib.root' at 0x7f36441c3c50> 0 30 1
-    # http://scikit-hep.org/uproot/examples/sample-5.24.00-zlib.root
+    # http://scikit-hep.org/uproot3/examples/sample-5.24.00-zlib.root
     #     <ROOTDirectory b'sample-5.24.00-zlib.root' at 0x7f364418e8d0> 30 60 1
-    # http://scikit-hep.org/uproot/examples/sample-5.25.02-zlib.root
+    # http://scikit-hep.org/uproot3/examples/sample-5.25.02-zlib.root
     #     <ROOTDirectory b'sample-5.25.02-zlib.root' at 0x7f36441034e0> 60 90 1
-    # http://scikit-hep.org/uproot/examples/sample-5.26.00-zlib.root
+    # http://scikit-hep.org/uproot3/examples/sample-5.26.00-zlib.root
     #     <ROOTDirectory b'sample-5.26.00-zlib.root' at 0x7f3644095f98> 90 120 1
-    # http://scikit-hep.org/uproot/examples/sample-5.27.02-zlib.root
+    # http://scikit-hep.org/uproot3/examples/sample-5.27.02-zlib.root
     #     <ROOTDirectory b'sample-5.27.02-zlib.root' at 0x7f36440c4c88> 120 150 1
-    # http://scikit-hep.org/uproot/examples/sample-5.28.00-zlib.root
+    # http://scikit-hep.org/uproot3/examples/sample-5.28.00-zlib.root
     #     <ROOTDirectory b'sample-5.28.00-zlib.root' at 0x7f3644083898> 150 180 1
-    # http://scikit-hep.org/uproot/examples/sample-5.29.02-zlib.root
+    # http://scikit-hep.org/uproot3/examples/sample-5.29.02-zlib.root
     #     <ROOTDirectory b'sample-5.29.02-zlib.root' at 0x7f36440765c0> 180 210 1
-    # http://scikit-hep.org/uproot/examples/sample-5.30.00-zlib.root
+    # http://scikit-hep.org/uproot3/examples/sample-5.30.00-zlib.root
     #     <ROOTDirectory b'sample-5.30.00-zlib.root' at 0x7f36440dec88> 210 240 1
-    # http://scikit-hep.org/uproot/examples/sample-6.08.04-zlib.root
+    # http://scikit-hep.org/uproot3/examples/sample-6.08.04-zlib.root
     #     <ROOTDirectory b'sample-6.08.04-zlib.root' at 0x7f364418e550> 240 270 1
-    # http://scikit-hep.org/uproot/examples/sample-6.10.05-zlib.root
+    # http://scikit-hep.org/uproot3/examples/sample-6.10.05-zlib.root
     #     <ROOTDirectory b'sample-6.10.05-zlib.root' at 0x7f36441b76a0> 270 300 1
-    # http://scikit-hep.org/uproot/examples/sample-6.14.00-zlib.root
+    # http://scikit-hep.org/uproot3/examples/sample-6.14.00-zlib.root
     #     <ROOTDirectory b'sample-6.14.00-zlib.root' at 0x7f3644128cf8> 300 330 1
 
 Limiting the number of entries to be read
@@ -1284,7 +1145,7 @@ between basket boundaries.
 .. code-block:: python3
 
     # This file has small TBaskets
-    tree = uproot.open("http://scikit-hep.org/uproot/examples/foriter.root")["foriter"]
+    tree = uproot3.open("http://scikit-hep.org/uproot3/examples/foriter.root")["foriter"]
     branch = tree["data"]
     [branch.basket_numentries(i) for i in range(branch.numbaskets)]
     # [6, 6, 6, 6, 6, 6, 6, 4]
@@ -1331,23 +1192,17 @@ iteration functions also have:
     # [500, 500, 500, 500, 304]
 
 The TTree lazy array/iteration functions
-(`TTreeMethods.array <https://uproot.readthedocs.io/en/latest/ttree-handling.html#array>`__,
-`TTreeMethods.arrays <https://uproot.readthedocs.io/en/latest/ttree-handling.html#arrays>`__,
-`TBranch.lazyarray <https://uproot.readthedocs.io/en/latest/ttree-handling.html#id13>`__,
-`TTreeMethods.lazyarray <https://uproot.readthedocs.io/en/latest/ttree-handling.html#lazyarray>`__,
-and
-`TTreeMethods.lazyarrays <https://uproot.readthedocs.io/en/latest/ttree-handling.html#lazyarrays>`__)
+(``TTreeMethods.array``, ``TTreeMethods.arrays``, ``TBranch.lazyarray``, ``TTreeMethods.lazyarray``, and
+``TTreeMethods.lazyarrays``)
 use basket or cluster sizes as a default **entrysteps**, while
 multi-file lazy array/iteration functions
-(`uproot.lazyarrays <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-lazyarray-and-lazyarrays>`__
-and
-`uproot.iterate <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-iterate>`__)
+(``uproot3.lazyarrays`` and ``uproot3.iterate``)
 use the maximum per file: ``numpy.inf``.
 
 .. code-block:: python3
 
     # This file has small TBaskets
-    tree = uproot.open("http://scikit-hep.org/uproot/examples/foriter.root")["foriter"]
+    tree = uproot3.open("http://scikit-hep.org/uproot3/examples/foriter.root")["foriter"]
     branch = tree["data"]
     [len(a["data"]) for a in tree.iterate(namedecode="utf-8")]
     # [6, 6, 6, 6, 6, 6, 6, 4]
@@ -1355,8 +1210,8 @@ use the maximum per file: ``numpy.inf``.
 .. code-block:: python3
 
     # This file has small TBaskets
-    [len(a["data"]) for a in uproot.iterate(["http://scikit-hep.org/uproot/examples/foriter.root"] * 3,
-                                            "foriter", namedecode="utf-8")]
+    [len(a["data"]) for a in uproot3.iterate(["http://scikit-hep.org/uproot3/examples/foriter.root"] * 3,
+                                             "foriter", namedecode="utf-8")]
     # [46, 46, 46]
 
 One particularly useful way to specify the **entrysteps** is with a
@@ -1396,9 +1251,7 @@ Caching and iteration
 Since iteration gives you more precise control over which set of events
 you’re processing at a given time, caching with the **cache** parameter
 is less useful than it is with lazy arrays. For consistency’s sake, the
-`TTreeMethods.iterate <https://uproot.readthedocs.io/en/latest/ttree-handling.html#iterate>`__
-and
-`uproot.iterate <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-iterate>`__
+``TTreeMethods.iterate`` and ``uproot3.iterate``
 functions provide a **cache** parameter and it works the same way that
 it does in other array-reading functions, but its effect would be to
 retain the previous step’s arrays while working on a new step in the
@@ -1414,15 +1267,11 @@ caching it for exactly one iteration step is ideal: it avoids the need
 to reread it and decompress it again.
 
 It is such a useful feature that it’s built into
-`TTreeMethods.iterate <https://uproot.readthedocs.io/en/latest/ttree-handling.html#iterate>`__
-and
-`uproot.iterate <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-iterate>`__
+``TTreeMethods.iterate`` and ``uproot3.iterate``
 by default. If you don’t set a **basketcache**, these functions will
 create one with no memory limit and save TBaskets in it for exactly one
 iteration step, eliminating that temporary cache at the end of
-iteration. (The same is true of the **keycache**; see `reference
-documentation <https://uproot.readthedocs.io/en/latest/caches.html>`__
-for detail.)
+iteration. (The same is true of the **keycache**.)
 
 Thus, you probably don’t want to set any explicit caches while
 iterating. Setting an explicit **basketcache** would introduce an upper
@@ -1434,12 +1283,7 @@ running out of memory during iteration, try reducing the **entrysteps**.
 Changing the output container type
 ==================================
 
-When we ask for
-`TTreeMethods.arrays <https://uproot.readthedocs.io/en/latest/ttree-handling.html#arrays>`__
-(plural),
-`TTreeMethods.iterate <https://uproot.readthedocs.io/en/latest/ttree-handling.html#iterate>`__,
-or
-`uproot.iterate <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-iterate>`__,
+When we ask for ``TTreeMethods.arrays`` (plural), ``TTreeMethods.iterate``, or ``uproot3.iterate``,
 we get a Python dict mapping branch names to arrays. (As a reminder,
 **namedecode=“utf-8”** makes those branch names Python strings, rather
 than bytestrings.) Sometimes, we want a different kind of container.
@@ -1460,10 +1304,7 @@ a tuple-assignment.
     # array([-41.19528764,  35.11804977,  35.11804977, ...,  32.37749196,
     #         32.37749196,  32.48539387])
 
-Using ``tuple`` as an **outputtype** in
-`TTreeMethods.iterate <https://uproot.readthedocs.io/en/latest/ttree-handling.html#iterate>`__
-and
-`uproot.iterate <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-iterate>`__
+Using ``tuple`` as an **outputtype** in ``TTreeMethods.iterate`` and ``uproot3.iterate``
 lets us unpack the arrays in Python’s for statement.
 
 .. code-block:: python3
@@ -1599,9 +1440,7 @@ The previous example filled a
 `pandas.DataFrame <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html>`__
 by explicitly passing it as an **outputtype**. Pandas is such an
 important container type that there are specialized functions for it:
-`TTreeMethods.pandas.df <https://uproot.readthedocs.io/en/latest/ttree-handling.html#id7>`__
-and
-`uproot.pandas.df <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-pandas-iterate>`__.
+``TTreeMethods.pandas.df`` and ``uproot3.pandas.df``.
 
 .. code-block:: python3
 
@@ -1780,15 +1619,14 @@ entry numbers in the file. For instance, counting from the end:
     </table>
     </div>
 
-The
-`uproot.pandas.df <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-pandas-iterate>`__
+The ``uproot3.pandas.df``
 function doesn’t have a **reportentries** because they’re included in
 the DataFrame itself.
 
 .. code-block:: python3
 
-    for df in uproot.pandas.iterate("http://scikit-hep.org/uproot/examples/Zmumu.root", "events", "p[xyz]1",
-                                    entrysteps=500):
+    for df in uproot3.pandas.iterate("http://scikit-hep.org/uproot3/examples/Zmumu.root", "events", "p[xyz]1",
+                                     entrysteps=500):
         print(df[:3])
 
     #              px1        py1        pz1
@@ -1830,7 +1668,7 @@ it’s usually desirable for DataFrames.
 
 .. code-block:: python3
 
-    events2 = uproot.open("http://scikit-hep.org/uproot/examples/HZZ.root")["events"]   # non-flat data
+    events2 = uproot3.open("http://scikit-hep.org/uproot3/examples/HZZ.root")["events"]   # non-flat data
 
 .. code-block:: python3
 
@@ -2438,8 +2276,7 @@ Note that the return values must be strictly ``True`` and ``False``, not
 anything that `Python evaluates to true or
 false <https://itnext.io/you-shouldnt-use-truthy-tests-753b39ef8893>`__.
 If the function returns anything else, it will be used as a new
-`Interpretation <https://uproot.readthedocs.io/en/latest/interpretation.html>`__
-for the branch.
+``Interpretation`` for the branch.
 
 TBranch interpretations
 -----------------------
@@ -2486,7 +2323,7 @@ but it wouldn’t be meaningful.
 
 .. code-block:: python3
 
-    events["E1"].array(uproot.asdtype(">i8"))
+    events["E1"].array(uproot3.asdtype(">i8"))
     # array([4635484859043618393, 4633971086021346367, 4633971086021346367, ...,
     #        4635419294316473354, 4635419294316473354, 4635440129219414362])
 
@@ -2498,9 +2335,9 @@ Reading data into a preexisting array
 -------------------------------------
 
 One actually useful TBranch reinterpretation is
-`uproot.asarray <https://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-numerical-asarray>`__.
+``uproot3.asarray``.
 It differs from
-`uproot.asdtype <https://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-numerical-asdtype>`__
+``uproot3.asdtype``
 only in that the latter creates a new array when reading data while the
 former fills a user-specified array.
 
@@ -2511,8 +2348,7 @@ former fills a user-specified array.
     reinterpretation
     # asarray('>f8', <array float32 (2304,) at 0x7f36247ad990>)
 
-Passing the new
-`uproot.asarray <https://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-numerical-asarray>`__
+Passing the new ``uproot3.asarray``
 interpretation to the array-reading function
 
 .. code-block:: python3
@@ -2549,7 +2385,7 @@ literally ``True``, not an object that Python would evaluate to
 
 .. code-block:: python3
 
-    events.arrays(lambda branch: isinstance(branch.interpretation, uproot.asdtype) and
+    events.arrays(lambda branch: isinstance(branch.interpretation, uproot3.asdtype) and
                                  str(branch.interpretation.fromdtype) == ">f8").keys()
     # dict_keys([b'E1', b'px1', b'py1', b'pz1', b'pt1', b'eta1', b'phi1',
     #            b'E2', b'px2', b'py2', b'pz2', b'pt2', b'eta2', b'phi2', b'M'])
@@ -2559,7 +2395,7 @@ sets their interpretations in one pass.
 
 .. code-block:: python3
 
-    events.arrays(lambda branch: uproot.asdtype(">f8", "<f4") if branch.name.startswith(b"px") else None)
+    events.arrays(lambda branch: uproot3.asdtype(">f8", "<f4") if branch.name.startswith(b"px") else None)
     # {b'px1': array([-41.195286,  35.11805 ,  35.11805 , ...,  32.37749 ,  32.37749 ,
     #          32.485394], dtype=float32),
     #  b'px2': array([ 34.144436, -41.195286, -40.883324, ..., -68.041916, -68.794136,
@@ -2568,16 +2404,15 @@ sets their interpretations in one pass.
 The above selects TBranch names that start with ``"px"``,
 read-interprets them as big-endian 8-byte floats and writes them as
 little-endian 4-byte floats. The selector returns ``None`` for the
-TBranches to exclude and an
-`Interpretation <https://uproot.readthedocs.io/en/latest/interpretation.html>`__
+TBranches to exclude and an ``Interpretation``
 for the ones to reinterpret.
 
 The same could have been said in a less functional way with a dict:
 
 .. code-block:: python3
 
-    events.arrays({"px1": uproot.asdtype(">f8", "<f4"),
-                   "px2": uproot.asdtype(">f8", "<f4")})
+    events.arrays({"px1": uproot3.asdtype(">f8", "<f4"),
+                   "px2": uproot3.asdtype(">f8", "<f4")})
     # {b'px1': array([-41.195286,  35.11805 ,  35.11805 , ...,  32.37749 ,  32.37749 ,
     #          32.485394], dtype=float32),
     #  b'px2': array([ 34.144436, -41.195286, -40.883324, ..., -68.041916, -68.794136,
@@ -2596,7 +2431,7 @@ Here’s an artificial example:
 
 .. code-block:: python3
 
-    tree = uproot.open("http://scikit-hep.org/uproot/examples/nesteddirs.root")["one/two/tree"]
+    tree = uproot3.open("http://scikit-hep.org/uproot3/examples/nesteddirs.root")["one/two/tree"]
     array = tree.array("ArrayInt64", entrystop=20)
     array
     # array([[ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
@@ -2979,7 +2814,7 @@ or without padding).
 
 .. code-block:: python3
 
-    tree = uproot.open("http://scikit-hep.org/uproot/examples/leaflist.root")["tree"]
+    tree = uproot3.open("http://scikit-hep.org/uproot3/examples/leaflist.root")["tree"]
     array = tree.array("leaflist")
     array
     # array([(1.1, 1,  97), (2.2, 2,  98), (3.3, 3,  99), (4. , 4, 100),
@@ -3089,7 +2924,7 @@ as a
 
 The **flatname** parameter determines how fixed-width arrays and field
 names are translated into Pandas names; the default is
-``uproot._connect._pandas.default_flatname`` (a function from
+``uproot3._connect._pandas.default_flatname`` (a function from
 **branchname** *(str)*, **fieldname** *(str)*, **index** *(int)* to
 Pandas column name *(str)*).
 
@@ -3109,12 +2944,12 @@ have seen above, Pandas has some support for this so-called “jagged”
 (`pandas.MultiIndex <https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html>`__),
 not the data themselves.
 
-For this, uproot fills a new ``JaggedArray`` data structure (from the
-awkward-array library, like ``ChunkedArray`` and ``VirtualArray``).
+For this, Uproot fills a new ``JaggedArray`` data structure (from the
+Awkward Array library, like ``ChunkedArray`` and ``VirtualArray``).
 
 .. code-block:: python3
 
-    tree = uproot.open("http://scikit-hep.org/uproot/examples/nesteddirs.root")["one/two/tree"]
+    tree = uproot3.open("http://scikit-hep.org/uproot3/examples/nesteddirs.root")["one/two/tree"]
     array = tree.array("SliceInt64", entrystop=20)
     array
     # <JaggedArray [[] [1] [2 2] ... [17 17 17 ... 17 17 17] [18 18 18 ... 18 18 18]
@@ -3127,8 +2962,8 @@ rules <https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html>`__,
 including `advanced
 indexing <https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#advanced-indexing>`__.
 
-Awkward-array generalizes Numpy in many ways—details can be found `in
-its documentation <https://github.com/scikit-hep/awkward-array>`__.
+Awkward Array generalizes Numpy in many ways—details can be found `in
+its documentation <https://github.com/scikit-hep/awkward-0.x>`__.
 
 .. code-block:: python3
 
@@ -3159,7 +2994,7 @@ Here is an example of ``JaggedArrays`` in physics data:
 
 .. code-block:: python3
 
-    events2 = uproot.open("http://scikit-hep.org/uproot/examples/HZZ.root")["events"]
+    events2 = uproot3.open("http://scikit-hep.org/uproot3/examples/HZZ.root")["events"]
 
     E, px, py, pz = events2.arrays(["Muon_E", "Muon_P[xyz]"], outputtype=tuple)
     E
@@ -3309,19 +3144,19 @@ Fortunately, ROOT files are themselves structured this way, with
 variable-width data represented by contents and offsets in a TBasket.
 These arrays do not need to be deserialized individually, but can be
 merely cast as Numpy arrays in one Python call. The lack of per-event
-processing is why reading in uproot and processing data with
-awkward-array can be fast, despite being written in Python.
+processing is why reading in Uproot and processing data with
+Awkward Array can be fast, despite being written in Python.
 
 .. raw:: html
 
-   <p align="center"><img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/logscales.png" width="75%"></p>
+   <p align="center"><img src="https://raw.githubusercontent.com/scikit-hep/uproot3/master/docs/logscales.png" width="75%"></p>
 
 Special physics objects: Lorentz vectors
 ----------------------------------------
 
 Although any C++ type can in principle be read (see below), some are
 important enough to be given convenience methods for analysis. These are
-not defined in uproot (which is strictly concerned with I/O), but in
+not defined in Uproot (which is strictly concerned with I/O), but in
 `uproot-methods <https://github.com/scikit-hep/uproot-methods>`__. If
 you need certain classes to have user-friendly methods in Python, you’re
 encouraged to contribute them to
@@ -3332,7 +3167,7 @@ One of these classes is ``TLorentzVectorArray``, which defines an
 
 .. code-block:: python3
 
-    events3 = uproot.open("http://scikit-hep.org/uproot/examples/HZZ-objects.root")["events"]
+    events3 = uproot3.open("http://scikit-hep.org/uproot3/examples/HZZ-objects.root")["events"]
 
 .. code-block:: python3
 
@@ -3379,7 +3214,7 @@ method on each).
     muons.mass   # some mass**2 are slightly negative, hence the Numpy warning about negative square roots
     # /home/pivarski/miniconda3/lib/python3.7/site-packages/uproot_methods-0.6.1-py3.7.egg/uproot_methods/
     #                       classes/TLorentzVector.py:189: RuntimeWarning: invalid value encountered in sqrt
-    #   return self._trymemo("mass", lambda self: self.awkward.numpy.sqrt(self.mag2))
+    #   return self._trymemo("mass", lambda self: self.awkward0.numpy.sqrt(self.mag2))
     # <JaggedArray [[0.10559298741436905 0.10545247041042287] [0.105499240400313]
     #               [0.10696309110601164 0.10513788128369116] ... [0.1054382466674704] [0.0975059956172863]
     #               [0.10447224169767522]] at 0x7f36246f8080>
@@ -3401,7 +3236,7 @@ into ``TLorentzVectorArrays``. Although they’re in wide use, the C++
 `ROOT::Math::LorentzVector <https://root.cern/doc/v612/classROOT_1_1Math_1_1LorentzVector.html>`__.
 Unlike the old class, the new vectors can be represented with a variety
 of data types and coordinate systems, and they’re split into multiple
-branches, so uproot sees them as four branches, each representing the
+branches, so Uproot sees them as four branches, each representing the
 components.
 
 You can still use the ``TLorentzVectorArray`` Python class; you just
@@ -3451,7 +3286,7 @@ demand) to the same Python string type.
 
 .. code-block:: python3
 
-    branch = uproot.open("http://scikit-hep.org/uproot/examples/sample-6.14.00-zlib.root")["sample"]["str"]
+    branch = uproot3.open("http://scikit-hep.org/uproot3/examples/sample-6.14.00-zlib.root")["sample"]["str"]
     branch.array()
     # <ObjectArray [b'hey-0' b'hey-1' b'hey-2' ... b'hey-27' b'hey-28' b'hey-29'] at 0x7f364412ef28>
 
@@ -3473,7 +3308,7 @@ Arbitrary objects in TTrees
 Uproot does not have a hard-coded deserialization for every C++ class
 type; it uses the “streamers” that ROOT includes in each file to learn
 how to deserialize the objects in that file. Even if you defined your
-own C++ classes, uproot should be able to read them. (**Caveat:** not
+own C++ classes, Uproot should be able to read them. (**Caveat:** not
 all structure types have been implemented, so the coverage of C++ types
 is a work in progress.)
 
@@ -3489,7 +3324,7 @@ split into ``fTracks.fUniqueID``, ``fTracks.fBits``, ``fTracks.fPx``,
 
 .. code-block:: python3
 
-    tree = uproot.open("http://scikit-hep.org/uproot/examples/Event.root")["T"]
+    tree = uproot3.open("http://scikit-hep.org/uproot3/examples/Event.root")["T"]
     tree.show()
     # event                      TStreamerInfo              None
     # TObject                    TStreamerInfo              None
@@ -3726,10 +3561,8 @@ The criteria for whether an object can be read vectorially in Numpy
 (fast) or individually in Python (slow) is whether it has a fixed
 width—all objects having the same number of bytes—or a variable width.
 You can see this in the TBranch’s ``interpretation`` as the distinction
-between
-`uproot.asobj <https://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-objects-asobj>`__
-(fixed width, vector read) and
-`uproot.asgenobj <https://uproot.readthedocs.io/en/latest/interpretation.html#uproot-interp-objects-asgenobj>`__
+between ``uproot3.asobj``
+(fixed width, vector read) and ``uproot3.asgenobj``
 (variable width, read into Python objects).
 
 .. code-block:: python3
@@ -3755,7 +3588,7 @@ such as ``std::vector<std::vector<T>>``.
 
 .. code-block:: python3
 
-    branch = uproot.open("http://scikit-hep.org/uproot/examples/vectorVectorDouble.root")["t"]["x"]
+    branch = uproot3.open("http://scikit-hep.org/uproot3/examples/vectorVectorDouble.root")["t"]["x"]
     branch.interpretation
     # asgenobj(STLVector(STLVector(asdtype('>f8'))))
 
@@ -3785,12 +3618,12 @@ usual ``JaggedArray`` slicing.
         print(type(err), err)
     # <class 'AttributeError'> 'ObjectArray' object has no attribute 'counts'
 
-To get ``JaggedArray`` semantics, use ``awkward.fromiter`` to convert
-the arbitrary Python objects into awkward-arrays.
+To get ``JaggedArray`` semantics, use ``awkward0.fromiter`` to convert
+the arbitrary Python objects into Awkward Arrays.
 
 .. code-block:: python3
 
-    jagged = awkward.fromiter(array)
+    jagged = awkward0.fromiter(array)
     jagged
     # <JaggedArray [[] [[] []] [[10.0] [] [10.0 20.0]] [[20.0 -21.0 -22.0]]
     #               [[200.0] [-201.0] [202.0]]] at 0x7f3644225da0>
@@ -3798,7 +3631,7 @@ the arbitrary Python objects into awkward-arrays.
     jagged[jagged.counts > 0, 0]
     # <JaggedArray [[] [10.0] [20.0 -21.0 -22.0] [200.0]] at 0x7f3644229c88>
 
-Doubly nested ``JaggedArrays`` are a native type in awkward-array: they
+Doubly nested ``JaggedArrays`` are a native type in Awkward Array: they
 can be any number of levels deep.
 
 .. code-block:: python3
@@ -3839,7 +3672,7 @@ parallel. All of the array-reading functions have **executor** and
 
     result = tree.array("fTracks.fVertex[3]", executor=executor, blocking=False)
     result
-    # <function uproot.tree.TBranchMethods.array.<locals>.wait()>
+    # <function uproot3.tree.TBranchMethods.array.<locals>.wait()>
 
 We can work on other things while the array is being read.
 
@@ -3943,7 +3776,7 @@ zero-argument function to reveal it.
    immediately return a future
 -  **executor=None**, **blocking=False**: not useful but not excluded.
 
-Although parallel processing has been integrated into uproot’s design,
+Although parallel processing has been integrated into Uproot’s design,
 it only provides a performance improvement in cases that are dominated
 by read time in non-Python functions. Python’s `Global Interpreter
 Lock <https://realpython.com/python-gil/>`__ (GIL) severely limits
@@ -3951,7 +3784,7 @@ parallel scaling of Python calls, but external functions that release
 the GIL (not all do) are immune.
 
 Thus, if reading is slow because the ROOT file has a lot of small
-TBaskets, requiring uproot to step through them using Python calls,
+TBaskets, requiring Uproot to step through them using Python calls,
 parallelizing that work in many threads has limited benefit because
 those threads stop and wait for each other due to Python’s GIL. If
 reading is slow because the ROOT file is heavily compressed—for
@@ -3960,7 +3793,7 @@ with the number of threads.
 
 .. raw:: html
 
-   <p align="center"><img src="https://raw.githubusercontent.com/scikit-hep/uproot/master/docs/scaling.png" width="75%"></p>
+   <p align="center"><img src="https://raw.githubusercontent.com/scikit-hep/uproot3/master/docs/scaling.png" width="75%"></p>
 
 If, on the other other hand, processing time is dominated by your
 analysis code and not file-reading, then parallelizing the file-reading
@@ -3993,12 +3826,12 @@ useful:
 
 .. code-block:: python3
 
-    file = uproot.open("http://scikit-hep.org/uproot/examples/Event.root")
+    file = uproot3.open("http://scikit-hep.org/uproot3/examples/Event.root")
     dict(file.classes())
-    # {b'ProcessID0;1': uproot.rootio.TProcessID,
-    #  b'htime;1': uproot.rootio.TH1F,
-    #  b'T;1': uproot.rootio.TTree,
-    #  b'hstat;1': uproot.rootio.TH1F}
+    # {b'ProcessID0;1': uproot3.rootio.TProcessID,
+    #  b'htime;1': uproot3.rootio.TH1F,
+    #  b'T;1': uproot3.rootio.TTree,
+    #  b'hstat;1': uproot3.rootio.TH1F}
 
 .. code-block:: python3
 
@@ -4075,7 +3908,7 @@ conversion to common Python formats.
 
 .. code-block:: python3
 
-    uproot.open("http://scikit-hep.org/uproot/examples/issue33.root")["cutflow"].show()
+    uproot3.open("http://scikit-hep.org/uproot3/examples/issue33.root")["cutflow"].show()
 
     #                            0                                               41529
     #                            +---------------------------------------------------+
@@ -4229,7 +4062,7 @@ ecosystem, are just a tuple of counts/bin contents and edge positions.
     #        dtype=float32),
     #  array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.]))
 
-    uproot.open("http://scikit-hep.org/uproot/examples/hepdata-example.root")["hpxpy"].numpy()
+    uproot3.open("http://scikit-hep.org/uproot3/examples/hepdata-example.root")["hpxpy"].numpy()
     # (array([[0., 0., 0., ..., 0., 0., 0.],
     #         [0., 0., 0., ..., 0., 0., 0.],
     #         [0., 0., 0., ..., 0., 0., 0.],
@@ -4253,18 +4086,17 @@ Uproot has a limited ability to *write* ROOT files, including TTrees of
 flat data (non-jagged: single number per event), a variety of histogram
 types, and ``TObjString`` (for metadata).
 
-To write to a ROOT file in uproot, the file must be opened for writing
-using ``uproot.create``, ``uproot.recreate``, or ``uproot.update``
+To write to a ROOT file in Uproot, the file must be opened for writing
+using ``uproot3.create``, ``uproot3.recreate``, or ``uproot3.update``
 (corresponding to ROOT’s ``"CREATE"``, ``"RECREATE"``, and ``"UPDATE"``
-file modes). The compression level is given by ``uproot.ZLIB(n)``,
-``uproot.LZMA(n)``, ``uproot.LZ4(n)``, or ``None``.
+file modes). The compression level is given by ``uproot3.ZLIB(n)``,
+``uproot3.LZMA(n)``, ``uproot3.LZ4(n)``, or ``None``.
 
 .. code-block:: python3
 
-    file = uproot.recreate("tmp.root", compression=uproot.ZLIB(4))
+    file = uproot3.recreate("tmp.root", compression=uproot3.ZLIB(4))
 
-Unlike objects created by
-`uproot.open <https://uproot.readthedocs.io/en/latest/opening-files.html#uproot-open>`__,
+Unlike objects created by ``uproot3.open``,
 you can *assign* to this ``file``. Just as reading behaves like getting
 an object from a Python dict, writing behaves like putting an object
 into a Python dict.
@@ -4272,8 +4104,7 @@ into a Python dict.
 **Note:** this is a fundamental departure from how ROOT uses names. In
 ROOT, a name is a part of an object that is *also* used for lookup. With
 a dict-like interface, the object need not have a name; only the lookup
-mechanism (e.g.
-`ROOTDirectory <https://uproot.readthedocs.io/en/latest/root-io.html#uproot-rootio-rootdirectory>`__)
+mechanism (e.g. ``ROOTDirectory``)
 needs to manage names.
 
 When you write objects to the ROOT file, they can be unnamed things like
@@ -4299,7 +4130,7 @@ read the data, like this:
    root [4] data->GetString()
    (const TString &) "Some object, like a TObjString."[31]
 
-We can also read it back in uproot, like this:
+We can also read it back in Uproot, like this:
 
 .. code-block:: python3
 
@@ -4307,7 +4138,7 @@ We can also read it back in uproot, like this:
     # [b'name;1']
 
     dict(file.classes())
-    # {b'name;1': uproot.rootio.TObjString}
+    # {b'name;1': uproot3.rootio.TObjString}
 
     file["name"]
     # b'Some object, like a TObjString.'
@@ -4323,7 +4154,7 @@ from another file and modified,
 
 .. code-block:: python3
 
-    histogram = uproot.open("http://scikit-hep.org/uproot/examples/histograms.root")["one"]
+    histogram = uproot3.open("http://scikit-hep.org/uproot3/examples/histograms.root")["one"]
     histogram.show()
     norm = histogram.allvalues.sum()
     for i in range(len(histogram)):
@@ -4405,7 +4236,7 @@ or it may be created entirely in Python.
     # [5, inf]            0 |                                                        |
     #                       +--------------------------------------------------------+
 
-But it is particularly useful that uproot recognizes `Numpy
+But it is particularly useful that Uproot recognizes `Numpy
 histograms <https://docs.scipy.org/doc/numpy/reference/generated/numpy.histogram.html>`__,
 which may have come from other libraries.
 
@@ -4461,29 +4292,29 @@ which may have come from other libraries.
 Writing TTrees
 --------------
 
-As of now, uproot can write TTrees whose branches are basic types
+As of now, Uproot can write TTrees whose branches are basic types
 (integers and floating-point numbers).
 
 Basic usage:
 
 .. code-block:: python3
 
-    import uproot
+    import uproot3
     import numpy
     
-    with uproot.recreate("example.root") as f:
-        f["t"] = uproot.newtree({"branch": "int32"})
+    with uproot3.recreate("example.root") as f:
+        f["t"] = uproot3.newtree({"branch": "int32"})
         f["t"].extend({"branch": numpy.array([1, 2, 3, 4, 5])})
 
 You can specify the branches in your TTree explicitly:
 
 .. code-block:: python3
 
-    t = uproot.newtree({"branch1": int,
-                        "branch2": numpy.int32,
-                        "branch3": uproot.newbranch(numpy.float64, title="This is the title")})
+    t = uproot3.newtree({"branch1": int,
+                         "branch2": numpy.int32,
+                         "branch3": uproot3.newbranch(numpy.float64, title="This is the title")})
 
-uproot.newtree() takes a python dictionary as an argument, where the key
+``uproot3.newtree()`` takes a Python dictionary as an argument, where the key
 is the name of the branch and the value is the branch object or type of
 branch.
 
@@ -4494,14 +4325,14 @@ This is an example of how you would add a title to your tree:
 
 .. code-block:: python3
 
-    tree = uproot.newtree(branchdict, title="TTree Title")
+    tree = uproot3.newtree(branchdict, title="TTree Title")
 
 To specify the title of the branch, similar to how you would add a title
 to a tree:
 
 .. code-block:: python3
 
-    b = uproot.newbranch("int32", title="This is the title")
+    b = uproot3.newbranch("int32", title="This is the title")
 
 Writing baskets
 ~~~~~~~~~~~~~~~
@@ -4525,7 +4356,7 @@ extend method:
 | Remember to add entries to all the branches and the number of entries added to the branches is the same!
 |
 
-What must be kept in mind is that if you write a lot of small baskets, it is going to be much less performant(slow and will increase the size of the file) than writing large arrays into the TTree as a single basket -> uproot's implementation is optimized for large array oriented operations.
+What must be kept in mind is that if you write a lot of small baskets, it is going to be much less performant(slow and will increase the size of the file) than writing large arrays into the TTree as a single basket -> Uproot's implementation is optimized for large array oriented operations.
 
 **Low level interface**
 
@@ -4551,19 +4382,19 @@ By default, the baskets of all the branches are compressed depending on
 the compression set for the file.
 
 You can specify the compression of all the branches if you want it to be
-separate from the compression specified for the entire file by using the uproot.newtree() method.
+separate from the compression specified for the entire file by using the ``uproot3.newtree()`` method.
 
-You can also specify the compression of each branch individually by using the uproot.newbranch() method.
+You can also specify the compression of each branch individually by using the ``uproot3.newbranch()`` method.
 
 .. code-block:: python3
 
-    b1 = uproot.newbranch("i4", compression=uproot.ZLIB(5))
-    b2 = uproot.newbranch("i8", compression=uproot.LZMA(4))
-    b3 = uproot.newbranch("f4")
+    b1 = uproot3.newbranch("i4", compression=uproot3.ZLIB(5))
+    b2 = uproot3.newbranch("i8", compression=uproot3.LZMA(4))
+    b3 = uproot3.newbranch("f4")
     
     branchdict = {"branch1": b1, "branch2": b2, "branch3": b3}
-    tree = uproot.newtree(branchdict, compression=uproot.LZ4(4))
-    with uproot.recreate("example.root", compression=uproot.LZMA(5)) as f:
+    tree = uproot3.newtree(branchdict, compression=uproot3.LZ4(4))
+    with uproot3.recreate("example.root", compression=uproot3.LZMA(5)) as f:
         f["t"] = tree
         f["t"].extend({"branch1": [1]*1000, "branch2": [2]*1000, "branch3": [3]*1000})
 
@@ -4572,7 +4403,7 @@ Acknowledgements
 
 Support for this work was provided by NSF cooperative agreement OAC-1836650 (IRIS-HEP), grant OAC-1450377 (DIANA/HEP) and PHY-1520942 (US-CMS LHC Ops).
 
-Thanks especially to the gracious help of `uproot contributors <https://github.com/scikit-hep/uproot/graphs/contributors>`__!
+Thanks especially to the gracious help of `Uproot contributors <https://github.com/scikit-hep/uproot3/graphs/contributors>`__!
 
 .. inclusion-marker-4-do-not-remove
 

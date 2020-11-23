@@ -1,18 +1,18 @@
 #!/usr/bin/env python
 
-# BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
+# BSD 3-Clause License; see https://github.com/scikit-hep/uproot3/blob/master/LICENSE
 
 import pytest
 import mock
 HTTPError = pytest.importorskip('requests.exceptions').HTTPError
 
-import uproot
+import uproot3
 
 FILE = "foriter"
 LOCAL = "tests/samples/{FILE}.root".format(FILE=FILE)
-URL = "http://scikit-hep.org/uproot/examples/{FILE}.root".format(FILE=FILE)
-URL_AUTH = "http://scikit-hep.org/uproot/authentication/{FILE}.root".format(FILE=FILE)
-AUTH = ("scikit-hep", "uproot")
+URL = "http://scikit-hep.org/uproot3/examples/{FILE}.root".format(FILE=FILE)
+URL_AUTH = "http://scikit-hep.org/uproot3/authentication/{FILE}.root".format(FILE=FILE)
+AUTH = ("scikit-hep", "uproot3")
 
 def mock_get_local_instead_of_http(url="", headers={}, auth=None, **kwargs):
     class MockResponse:
@@ -41,21 +41,21 @@ def mock_get_local_instead_of_http(url="", headers={}, auth=None, **kwargs):
 @mock.patch("requests.get", mock_get_local_instead_of_http)
 class Test(object):
     def test_no_auth_needed_no_auth(self):
-        f = uproot.open(URL)
-        assert type(f) == uproot.rootio.ROOTDirectory
+        f = uproot3.open(URL)
+        assert type(f) == uproot3.rootio.ROOTDirectory
 
     def test_no_auth_needed_with_auth(self):
-        f = uproot.open(URL, httpsource={"auth": AUTH})
-        assert type(f) == uproot.rootio.ROOTDirectory
+        f = uproot3.open(URL, httpsource={"auth": AUTH})
+        assert type(f) == uproot3.rootio.ROOTDirectory
 
     def test_auth_needed_no_auth(self):
         with pytest.raises(HTTPError):
-            f = uproot.open(URL_AUTH)
+            f = uproot3.open(URL_AUTH)
 
     def test_auth_needed_correct_auth(self):
-        f = uproot.open(URL_AUTH, httpsource={"auth": AUTH})
-        assert type(f) == uproot.rootio.ROOTDirectory
+        f = uproot3.open(URL_AUTH, httpsource={"auth": AUTH})
+        assert type(f) == uproot3.rootio.ROOTDirectory
 
     def test_auth_needed_wrong_auth(self):
         with pytest.raises(HTTPError):
-            f = uproot.open(URL_AUTH, httpsource={"auth": ("", "")})
+            f = uproot3.open(URL_AUTH, httpsource={"auth": ("", "")})
