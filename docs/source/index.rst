@@ -1,10 +1,10 @@
 .. image:: logo-300px.png
    :alt: uproot
-   :target: https://github.com/scikit-hep/uproot
+   :target: https://github.com/scikit-hep/uproot3
    :align: center
 
-uproot
-======
+Uproot 3.x
+==========
 
 .. include:: ../../README.rst
   :start-after: inclusion-marker-1-do-not-remove
@@ -13,9 +13,9 @@ uproot
 Tutorial
 --------
 
-See the `project homepage <https://github.com/scikit-hep/uproot>`__ for a `tutorial <https://github.com/scikit-hep/uproot#tutorial>`__.
+See the `project homepage <https://github.com/scikit-hep/uproot3>`__ for a `tutorial <https://github.com/scikit-hep/uproot3#tutorial>`__.
 
-Run `the tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot/master?urlpath=lab/tree/binder%2Ftutorial.ipynb>`__ on Binder.
+Run `the tutorial <https://mybinder.org/v2/gh/scikit-hep/uproot3/master?urlpath=lab/tree/binder%2Ftutorial.ipynb>`__ on Binder.
 
 Reference documentation
 -----------------------

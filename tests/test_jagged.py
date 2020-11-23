@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
-# BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
+# BSD 3-Clause License; see https://github.com/scikit-hep/uproot3/blob/master/LICENSE
 
 import pytest
 
-import uproot
+import uproot3
 
 
 class Test(object):
@@ -14,7 +14,7 @@ class Test(object):
         try:
             self._sample
         except AttributeError:
-            self._sample = uproot.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]
+            self._sample = uproot3.open("tests/samples/sample-6.10.05-uncompressed.root")["sample"]
         return self._sample
 
     def test_flatten_False(self):

@@ -22,13 +22,13 @@ source_suffix = ".rst"
 source_encoding = "utf-8"
 master_doc = "index"
 
-project = u"uproot"
+project = u"uproot3"
 copyright = u"2019, IRIS-HEP"
 author = u"Jim Pivarski"
 
 def get_version():
     g = {}
-    exec(open(os.path.join("..", "..", "uproot", "version.py")).read(), g)
+    exec(open(os.path.join("..", "..", "uproot3", "version.py")).read(), g)
     return g["__version__"]
 
 version = get_version()
@@ -187,7 +187,7 @@ latex_documents = [(master_doc, "uproot.tex", u"uproot Documentation", u"Jim Piv
 
 # -- Options for manual page output ---------------------------------------
 
-man_pages = [(master_doc, "uproot", u"uproot Documentation", [author], 1)]
+man_pages = [(master_doc, "uproot", u"Uproot 3.x Documentation", [author], 1)]
 
 # If true, show URL addresses after external links.
 # man_show_urls = False
@@ -197,7 +197,7 @@ man_pages = [(master_doc, "uproot", u"uproot Documentation", [author], 1)]
 # Grouping the document tree into Texinfo files. List of tuples
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
-texinfo_documents = [(master_doc, "uproot", u"uproot Documentation", author, "uproot", "Minimalist ROOT I/O in pure Python and Numpy.", "Miscellaneous"),]
+texinfo_documents = [(master_doc, "uproot", u"Uproot 3.x Documentation", author, "uproot", "Minimalist ROOT I/O in pure Python and Numpy.", "Miscellaneous"),]
 
 # Documents to append as an appendix to all manuals.
 # texinfo_appendices = []
