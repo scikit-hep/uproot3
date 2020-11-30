@@ -15,7 +15,7 @@ except ImportError:
     from collections import Mapping
 
 
-import uproot_methods.convert
+import uproot3_methods.convert
 
 import uproot3.const
 import uproot3.source.file
@@ -85,7 +85,7 @@ class TFileUpdate(object):
         self.util = Util()
         where, cycle = self._normalizewhere(where)
         if what.__class__.__name__ != "TTree" and what.__class__.__name__ != "newtree":
-            what = uproot_methods.convert.towriteable(what)
+            what = uproot3_methods.convert.towriteable(what)
         elif what.__class__.__name__ == "newtree":
             what = TTree(where, what, self)
         cursor = uproot3.write.sink.cursor.Cursor(self._fSeekFree)
@@ -124,7 +124,7 @@ class TFileUpdate(object):
             isTTree = what.__class__.__name__ in ("newtree", "TTree")
             assert not isTTree  # prevent TTree writing, otherwise migth invoke nasty magic
             if not isTTree:
-                what = uproot_methods.convert.towriteable(what)
+                what = uproot3_methods.convert.towriteable(what)
             elif what.__class__.__name__ == "newtree":
                 what = TTree(where, what, self)
 

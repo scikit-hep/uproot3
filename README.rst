@@ -60,7 +60,7 @@ Strict dependencies:
 
 - `numpy <https://scipy.org/install.html>`__ (1.13.1+)
 - `Awkward Array 0.x <https://github.com/scikit-hep/awkward-0.x>`__
-- `uproot-methods <https://github.com/scikit-hep/uproot-methods>`__ (0.9.1+)
+- `uproot3-methods <https://github.com/scikit-hep/uproot3-methods>`__
 - `cachetools <https://pypi.org/project/cachetools>`__
 
 Optional dependencies:
@@ -178,7 +178,7 @@ In short, you should never see a segmentation fault.
 Uproot is strictly concerned with file I/O only—all other functionality
 is handled by other libraries:
 
--  `uproot-methods <https://github.com/scikit-hep/uproot-methods>`__:
+-  `uproot3-methods <https://github.com/scikit-hep/uproot3-methods>`__:
    physics methods for types read from ROOT files, such as histograms
    and Lorentz vectors. It is intended to be largely user-contributed
    (and is).
@@ -3157,10 +3157,10 @@ Special physics objects: Lorentz vectors
 Although any C++ type can in principle be read (see below), some are
 important enough to be given convenience methods for analysis. These are
 not defined in Uproot (which is strictly concerned with I/O), but in
-`uproot-methods <https://github.com/scikit-hep/uproot-methods>`__. If
+`uproot3-methods <https://github.com/scikit-hep/uproot3-methods>`__. If
 you need certain classes to have user-friendly methods in Python, you’re
 encouraged to contribute them to
-`uproot-methods <https://github.com/scikit-hep/uproot-methods>`__.
+`uproot3-methods <https://github.com/scikit-hep/uproot3-methods>`__.
 
 One of these classes is ``TLorentzVectorArray``, which defines an
 *array* of Lorentz vectors.
@@ -3190,7 +3190,7 @@ at individuals.
 
     muon = muons[0, 0]
     type(muon), muon
-    # (uproot_methods.classes.TLorentzVector.TLorentzVector,
+    # (uproot3_methods.classes.TLorentzVector.TLorentzVector,
     #  TLorentzVector(-52.899, -11.655, -8.1608, 54.779))
 
 This object has all the usual kinematics methods,
@@ -3211,10 +3211,7 @@ method on each).
 
 .. code-block:: python3
 
-    muons.mass   # some mass**2 are slightly negative, hence the Numpy warning about negative square roots
-    # /home/pivarski/miniconda3/lib/python3.7/site-packages/uproot_methods-0.6.1-py3.7.egg/uproot_methods/
-    #                       classes/TLorentzVector.py:189: RuntimeWarning: invalid value encountered in sqrt
-    #   return self._trymemo("mass", lambda self: self.awkward0.numpy.sqrt(self.mag2))
+    muons.mass
     # <JaggedArray [[0.10559298741436905 0.10545247041042287] [0.105499240400313]
     #               [0.10696309110601164 0.10513788128369116] ... [0.1054382466674704] [0.0975059956172863]
     #               [0.10447224169767522]] at 0x7f36246f8080>
@@ -3249,9 +3246,9 @@ need to use a special constructor to build the object from its branches.
 
 .. code-block:: python3
 
-    import uproot_methods
+    import uproot3_methods
 
-    array = uproot_methods.TLorentzVectorArray.from_cartesian(px, py, pz, E)
+    array = uproot3_methods.TLorentzVectorArray.from_cartesian(px, py, pz, E)
     array
     # <JaggedArrayMethods [[TLorentzVector(-52.899, -11.655, -8.1608, 54.779)
     #                       TLorentzVector(37.738, 0.69347, -11.308, 39.402)]
@@ -3268,7 +3265,7 @@ converts to other systems on demand.
 
 .. code-block:: python3
 
-    [x for x in dir(uproot_methods.TLorentzVectorArray) if x.startswith("from_")]
+    [x for x in dir(uproot3_methods.TLorentzVectorArray) if x.startswith("from_")]
     # ['from_cartesian',
     #  'from_cylindrical',
     #  'from_p3',
@@ -3569,7 +3566,7 @@ between ``uproot3.asobj``
 
     # TLorentzVectors all have the same number of fixed width components, so they can be read vectorially.
     events3["muonp4"].interpretation
-    # asjagged(asobj(<uproot_methods.classes.TLorentzVector.Methods>), 10)
+    # asjagged(asobj(<uproot3_methods.classes.TLorentzVector.Methods>), 10)
 
 .. code-block:: python3
 
@@ -3860,7 +3857,7 @@ Python. Here’s a way to find out which ones have been defined so far:
 
     import pkgutil
 
-    [modname for importer, modname, ispkg in pkgutil.walk_packages(uproot_methods.classes.__path__)]
+    [modname for importer, modname, ispkg in pkgutil.walk_packages(uproot3_methods.classes.__path__)]
     # ['TGraph',
     #  'TGraphAsymmErrors',
     #  'TGraphErrors',
@@ -4199,9 +4196,9 @@ or it may be created entirely in Python.
 .. code-block:: python3
 
     import types
-    import uproot_methods.classes.TH1
+    import uproot3_methods.classes.TH1
 
-    class MyTH1(uproot_methods.classes.TH1.Methods, list):
+    class MyTH1(uproot3_methods.classes.TH1.Methods, list):
         def __init__(self, low, high, values, title=""):
             self._fXaxis = types.SimpleNamespace()
             self._fXaxis._fNbins = len(values)

@@ -28,7 +28,7 @@ import numpy
 import cachetools
 
 import awkward0
-import uproot_methods.profiles
+import uproot3_methods.profiles
 
 import uproot3.rootio
 from uproot3.rootio import _bytesid
@@ -643,7 +643,7 @@ class TTreeMethods(object):
                 out[name].__doc__ = branch.title.decode('ascii')
 
         if profile is not None:
-            out = uproot_methods.profiles.transformer(profile)(out)
+            out = uproot3_methods.profiles.transformer(profile)(out)
         return out
 
     def _normalize_entrysteps(self, entrysteps, branches, entrystart, entrystop, keycache):
@@ -2059,7 +2059,7 @@ def lazyarrays(path, treepath, branches=None, namedecode="utf-8", entrysteps=flo
         out[name] = awkward0.ChunkedArray(chunks, counts)
 
     if profile is not None:
-        out = uproot_methods.profiles.transformer(profile)(out)
+        out = uproot3_methods.profiles.transformer(profile)(out)
     return out
 
 def daskarray(path, treepath, branchname, interpretation=None, namedecode="utf-8", entrysteps=float("inf"), flatten=False, awkwardlib=None, cache=None, basketcache=None, keycache=None, executor=None, localsource=MemmapSource.defaults, xrootdsource=XRootDSource.defaults, httpsource=HTTPSource.defaults, **options):
