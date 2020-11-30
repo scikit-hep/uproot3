@@ -10,8 +10,8 @@ import numpy
 import uproot3
 import awkward0
 
-import uproot_methods.classes.TVector3
-import uproot_methods.classes.TLorentzVector
+import uproot3_methods.classes.TVector3
+import uproot3_methods.classes.TLorentzVector
 
 
 class Test(object):
@@ -123,15 +123,15 @@ class Test(object):
         for x in tree["sel_lep"].array():
             for y in x:
                 assert isinstance(
-                    y, uproot_methods.classes.TLorentzVector.
+                    y, uproot3_methods.classes.TLorentzVector.
                     Methods) and isinstance(
-                        y._fP, uproot_methods.classes.TVector3.Methods)
+                        y._fP, uproot3_methods.classes.TVector3.Methods)
         for x in tree["selJet"].array():
             for y in x:
                 assert isinstance(
-                    y, uproot_methods.classes.TLorentzVector.
+                    y, uproot3_methods.classes.TLorentzVector.
                     Methods) and isinstance(
-                        y._fP, uproot_methods.classes.TVector3.Methods)
+                        y._fP, uproot3_methods.classes.TVector3.Methods)
 
     def test_issue60(self):
         t = uproot3.open("tests/samples/issue60.root")["nllscan"]
@@ -200,10 +200,10 @@ class Test(object):
     def test_issue74(self):
         t = uproot3.open("tests/samples/issue74.root")["Events"]
         assert all(
-            isinstance(x[0], uproot_methods.classes.TVector3.Methods)
+            isinstance(x[0], uproot3_methods.classes.TVector3.Methods)
             for x in t.array("bees.xyzPosition"))
         assert t.array("bees.xyzPosition"
-                       )[0][0] == uproot_methods.classes.TVector3.TVector3(
+                       )[0][0] == uproot3_methods.classes.TVector3.TVector3(
                            1.0, 2.0, -1.0)
 
     def test_issue76(self):
@@ -222,7 +222,7 @@ class Test(object):
     def test_issue96(self):
         t = uproot3.open("tests/samples/issue96.root")["tree"]
         assert all(
-            isinstance(x, uproot_methods.classes.TLorentzVector.Methods)
+            isinstance(x, uproot3_methods.classes.TLorentzVector.Methods)
             for x in t.array("jet1P4"))
 
     def test_geant4(self):

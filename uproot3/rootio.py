@@ -25,7 +25,7 @@ from uproot3.source.http import HTTPSource
 from uproot3.source.cursor import Cursor
 from uproot3._util import _tobytes
 
-import uproot_methods.classes
+import uproot3_methods.classes
 
 ################################################################ high-level interface
 
@@ -937,7 +937,7 @@ def _defineclasses(streamerinfos, classes):
             code.insert(0, "    _fields = [{0}]".format(", ".join(repr(str(x)) for x in fields)))
             code.insert(0, "    @classmethod\n    def _recarray(cls):\n        out = []\n        out.append((' cnt', 'u4'))\n        out.append((' vers', 'u2'))\n        for base in cls._bases:\n            out.extend(base._recarray())\n        {0}\n        return out".format("\n        ".join(recarray)))
             code.insert(0, "    _bases = [{0}]".format(", ".join(bases)))
-            code.insert(0, "    _methods = {0}".format("uproot_methods.classes.{0}.Methods".format(pyclassname) if uproot_methods.classes.hasmethods(pyclassname) else "None"))
+            code.insert(0, "    _methods = {0}".format("uproot3_methods.classes.{0}.Methods".format(pyclassname) if uproot3_methods.classes.hasmethods(pyclassname) else "None"))
 
             if len(bases) == 0:
                 bases.append("ROOTStreamedObject")
@@ -946,8 +946,8 @@ def _defineclasses(streamerinfos, classes):
                 bases.insert(0, "uproot3.tree.TTreeMethods")
             if pyclassname == "TBranch":
                 bases.insert(0, "uproot3.tree.TBranchMethods")
-            if uproot_methods.classes.hasmethods(pyclassname):
-                bases.insert(0, "uproot_methods.classes.{0}.Methods".format(pyclassname))
+            if uproot3_methods.classes.hasmethods(pyclassname):
+                bases.insert(0, "uproot3_methods.classes.{0}.Methods".format(pyclassname))
 
             code.insert(0, "class {0}({1}):".format(pyclassname, ", ".join(bases)))
 
@@ -1701,24 +1701,24 @@ class Undefined(ROOTStreamedObject):
         else:
             return "<{0} at 0x{1:012x}>".format(self.__class__.__name__, id(self))
 
-builtin_classes = {"uproot_methods": uproot_methods,
-                   "TObject":        TObject,
-                   "TString":        TString,
-                   "TNamed":         TNamed,
-                   "TObjArray":      TObjArray,
-                   "TObjString":     TObjString,
-                   "TList":          TList,
-                   "THashList":      THashList,
-                   "TRef":           TRef,
-                   "TArray":         TArray,
-                   "TArrayC":        TArrayC,
-                   "TArrayS":        TArrayS,
-                   "TArrayI":        TArrayI,
-                   "TArrayL":        TArrayL,
-                   "TArrayL64":      TArrayL64,
-                   "TArrayF":        TArrayF,
-                   "TArrayD":        TArrayD,
-                   "TRefArray":      TRefArray,
+builtin_classes = {"uproot3_methods": uproot3_methods,
+                   "TObject":         TObject,
+                   "TString":         TString,
+                   "TNamed":          TNamed,
+                   "TObjArray":       TObjArray,
+                   "TObjString":      TObjString,
+                   "TList":           TList,
+                   "THashList":       THashList,
+                   "TRef":            TRef,
+                   "TArray":          TArray,
+                   "TArrayC":         TArrayC,
+                   "TArrayS":         TArrayS,
+                   "TArrayI":         TArrayI,
+                   "TArrayL":         TArrayL,
+                   "TArrayL64":       TArrayL64,
+                   "TArrayF":         TArrayF,
+                   "TArrayD":         TArrayD,
+                   "TRefArray":       TRefArray,
                    "ROOT_3a3a_TIOFeatures": ROOT_3a3a_TIOFeatures,
                    "ROOT_3a3a_Experimental_3a3a_RNTuple": ROOT_3a3a_Experimental_3a3a_RNTuple}
 
