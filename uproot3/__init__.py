@@ -135,7 +135,7 @@ In Python:
     >>> with uproot.open(...) as file:
     ...
 """,
-    DeprecationWarning
+    FutureWarning
 )
 
 # high-level entry points
