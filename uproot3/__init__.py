@@ -123,21 +123,6 @@ The same procedure sets options for uproot3.XRootDSource and uproot3.HTTPSource.
 
 from __future__ import absolute_import
 
-import warnings
-warnings.warn(
-    """Consider switching from 'uproot3' to 'uproot', since the new interface became the default in 2020.
-
-    pip install -U uproot
-
-In Python:
-
-    >>> import uproot
-    >>> with uproot.open(...) as file:
-    ...
-""",
-    FutureWarning
-)
-
 # high-level entry points
 from uproot3.rootio import open, xrootd, http
 from uproot3.tree import iterate, numentries, lazyarray, lazyarrays, daskarray, daskframe
