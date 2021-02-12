@@ -333,9 +333,7 @@ class TBranch(object):
             self._branch.fields["_fEntryNumber"] = multidim
         self._branch.fields["_fBasketEntry"][self._branch.fields["_fWriteBasket"]] = self._branch.fields["_fEntries"]
         if isinstance(items, awkward0.array.jagged.JaggedArray):
-            givenbytes = b""
-            for i in range(items.shape[0]):
-                givenbytes += _tobytes(numpy.array(items[i], dtype=self._branch.type))
+            givenbytes = _tobytes(numpy.array(items.flatten(), dtype=self._branch.type, copy=False))
         else:
             givenbytes = _tobytes(numpy.array(items, dtype=self._branch.type, copy=False))
 
