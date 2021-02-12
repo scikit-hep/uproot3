@@ -652,9 +652,9 @@ def _ftype2dtype(fType):
     elif fType in (uproot3.const.kBits, uproot3.const.kUInt, uproot3.const.kCounter):
         return "numpy.dtype('>u4')"
     elif fType == uproot3.const.kLong:
-        return "numpy.dtype(numpy.long).newbyteorder('>')"
+        return "numpy.dtype(numpy.compat.long).newbyteorder('>')"
     elif fType == uproot3.const.kULong:
-        return "numpy.dtype('>u' + repr(numpy.dtype(numpy.long).itemsize))"
+        return "numpy.dtype('>u' + repr(numpy.dtype(numpy.compat.long).itemsize))"
     elif fType == uproot3.const.kLong64:
         return "numpy.dtype('>i8')"
     elif fType == uproot3.const.kULong64:
